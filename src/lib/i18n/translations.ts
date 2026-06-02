@@ -73,6 +73,12 @@ export const translations = {
       allProducts: 'All Products', categories: 'Categories', sort: 'Sort',
       noProducts: 'No products found', clearFilters: 'Clear filters', products: 'products',
     },
+    niches: {
+      cars:    { name: 'Auto & Cars',           description: 'Everything your vehicle needs — parts, accessories & care',       categoryLabels: ['Accessories','Spare Parts','Car Care','Electronics','Tires & Wheels'] },
+      animals: { name: 'Pets & Animals',         description: 'Spoil your furry, feathered & finned companions',                categoryLabels: ['Dog Supplies','Cat Supplies','Bird Supplies','Fish & Aquarium','Pet Food'] },
+      kids:    { name: 'Kids & Baby',            description: 'Safe, fun & educational products for little ones',               categoryLabels: ['Toys & Games','Baby Clothing','Educational','Baby Care','Nursery'] },
+      deco:    { name: 'Home Decor',             description: 'Transform your home with trending furniture & accessories',      categoryLabels: ['Furniture','Wall Decor','Lighting','Textiles','Storage'] },
+    },
   },
 
   fr: {
@@ -147,6 +153,12 @@ export const translations = {
       allProducts: 'Tous les produits', categories: 'Catégories', sort: 'Trier',
       noProducts: 'Aucun produit trouvé', clearFilters: 'Effacer les filtres', products: 'produits',
     },
+    niches: {
+      cars:    { name: 'Auto & Voitures',        description: 'Tout ce dont votre véhicule a besoin — pièces, accessoires & entretien', categoryLabels: ['Accessoires','Pièces détachées','Entretien auto','Électronique','Pneus & Jantes'] },
+      animals: { name: 'Animaux de Compagnie',   description: 'Gâtez vos compagnons à poils, plumes & écailles',                       categoryLabels: ['Chiens','Chats','Oiseaux','Poissons & Aquarium','Alimentation animale'] },
+      kids:    { name: 'Enfants & Bébé',         description: 'Produits sûrs, amusants et éducatifs pour les petits',                  categoryLabels: ['Jouets & Jeux','Vêtements bébé','Éducatif','Soins bébé','Chambre enfant'] },
+      deco:    { name: 'Décoration Intérieure',  description: 'Transformez votre maison avec des meubles et accessoires tendance',     categoryLabels: ['Meubles','Décoration Murale','Éclairage','Textiles','Rangement'] },
+    },
   },
 
   ar: {
@@ -220,6 +232,12 @@ export const translations = {
       lowStock: 'متبقي {n} فقط', category: 'الفئة', tags: 'الوسوم',
       allProducts: 'جميع المنتجات', categories: 'الفئات', sort: 'ترتيب',
       noProducts: 'لا توجد منتجات', clearFilters: 'مسح الفلاتر', products: 'منتجات',
+    },
+    niches: {
+      cars:    { name: 'السيارات والإكسسوارات',   description: 'كل ما تحتاجه سيارتك — قطع غيار وإكسسوارات وعناية',           categoryLabels: ['إكسسوارات','قطع الغيار','العناية بالسيارة','إلكترونيات','الإطارات والجنوط'] },
+      animals: { name: 'الحيوانات الأليفة',        description: 'دلل حيواناتك بأفضل المستلزمات والأغذية',                     categoryLabels: ['مستلزمات الكلاب','مستلزمات القطط','مستلزمات الطيور','الأسماك والأحواض','أغذية الحيوانات'] },
+      kids:    { name: 'الأطفال والرضع',           description: 'منتجات آمنة وممتعة وتعليمية للصغار',                         categoryLabels: ['ألعاب وترفيه','ملابس الأطفال','تعليمية','العناية بالرضع','غرفة الأطفال'] },
+      deco:    { name: 'ديكور وأثاث المنزل',       description: 'حوّل منزلك بأحدث الأثاث والإكسسوارات',                      categoryLabels: ['الأثاث','ديكور الجدران','الإضاءة','المفروشات','التخزين والتنظيم'] },
     },
   },
 } as const

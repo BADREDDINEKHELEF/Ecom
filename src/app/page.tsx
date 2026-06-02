@@ -62,8 +62,8 @@ export default function HomePage() {
                   <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full mb-2 ${styles.badge}`}>
                     {niche.categories.length} {t.home.categories}
                   </span>
-                  <h2 className="text-xl font-black text-white mb-1">{niche.name}</h2>
-                  <p className="text-sm text-gray-300 leading-relaxed mb-4">{niche.description}</p>
+                  <h2 className="text-xl font-black text-white mb-1">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</h2>
+                  <p className="text-sm text-gray-300 leading-relaxed mb-4">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.description ?? niche.description}</p>
                   <span className={`inline-flex items-center gap-2 ${styles.btn} text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors`}>
                     {t.home.shopNow} <ArrowRight className="w-4 h-4" />
                   </span>
@@ -122,8 +122,8 @@ export default function HomePage() {
               <div className="flex items-center gap-3">
                 <span className="text-4xl">{niche.emoji}</span>
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900">{niche.name}</h2>
-                  <p className="text-sm text-gray-500">{niche.description}</p>
+                  <h2 className="text-xl sm:text-2xl font-black text-gray-900">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</h2>
+                  <p className="text-sm text-gray-500">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.description ?? niche.description}</p>
                 </div>
               </div>
               <Link
@@ -143,7 +143,7 @@ export default function HomePage() {
                 href={`/${niche.id}`}
                 className="inline-flex items-center gap-1.5 text-indigo-600 font-semibold text-sm hover:underline"
               >
-                {t.common.viewAll} {niche.name} <ArrowRight className="w-4 h-4" />
+                {t.common.viewAll} {t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name} <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </section>
@@ -169,7 +169,7 @@ export default function HomePage() {
                   href={`/${niche.id}`}
                   className={`${styles.btn} font-bold px-7 py-3 rounded-xl transition-colors w-full sm:w-auto text-center`}
                 >
-                  {niche.emoji} {niche.name}
+                  {niche.emoji} {t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}
                 </Link>
               )
             })}

@@ -36,8 +36,8 @@ export const niches: Niche[] = [
   },
   {
     id: 'deco',
-    name: 'Décoration Intérieure',
-    description: 'Transformez votre maison avec des meubles et accessoires tendance',
+    name: 'Home Decor',
+    description: 'Transform your home with trending furniture & accessories',
     emoji: '🛋️',
     gradient: 'from-stone-900 via-amber-950 to-stone-800',
     accentColor: 'bg-amber-600',

@@ -64,7 +64,7 @@ export default function Header() {
                     >
                       <span className="text-xl">{niche.emoji}</span>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{niche.name}</p>
+                        <p className="text-sm font-semibold text-gray-900">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</p>
                         <p className="text-xs text-gray-500">{niche.categories.length} {t.home.categories}</p>
                       </div>
                     </Link>
@@ -163,8 +163,8 @@ export default function Header() {
               >
                 <span className="text-2xl">{niche.emoji}</span>
                 <div>
-                  <p className="font-semibold text-gray-900">{niche.name}</p>
-                  <p className="text-xs text-gray-500">{niche.description}</p>
+                  <p className="font-semibold text-gray-900">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</p>
+                  <p className="text-xs text-gray-500">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.description ?? niche.description}</p>
                 </div>
               </Link>
             ))}
