@@ -7,6 +7,7 @@ import { niches } from '@/lib/data/niches'
 import { getFeaturedProducts } from '@/lib/data/products'
 import ProductCard from '@/components/shop/ProductCard'
 import { useT } from '@/lib/store/langStore'
+import SellerSignupSection from '@/components/home/SellerSignupSection'
 
 const nicheAccentStyles: Record<string, { btn: string; badge: string }> = {
   cars:    { btn: 'bg-orange-500 hover:bg-orange-400',               badge: 'bg-orange-500/20 text-orange-300' },
@@ -148,6 +149,9 @@ export default function HomePage() {
           </section>
         )
       })}
+
+      {/* ── Seller Signup ────────────────────────────────────────────────── */}
+      <SellerSignupSection />
 
       {/* ── CTA Banner ───────────────────────────────────────────────────── */}
       <section className="bg-indigo-600 text-white mx-4 sm:mx-6 lg:mx-8 rounded-2xl mb-8 overflow-hidden">
