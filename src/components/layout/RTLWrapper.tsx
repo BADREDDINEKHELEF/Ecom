@@ -1,15 +1,19 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRTL } from '@/lib/store/langStore'
+import { useRTL, useLang } from '@/lib/store/langStore'
 
 export default function RTLWrapper({ children }: { children: React.ReactNode }) {
   const isRTL = useRTL()
+  const lang  = useLang()
 
   useEffect(() => {
-    document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr')
-    document.documentElement.setAttribute('lang', isRTL ? 'ar' : 'fr')
-  }, [isRTL])
+    const html = document.documentElement
+    html.setAttribute('dir',  isRTL ? 'rtl' : 'ltr')
+    html.setAttribute('lang', lang)
+    // Toggle Cairo font class — picked up by globals.css [dir="rtl"] rule
+    html.classList.toggle('font-arabic', isRTL)
+  }, [isRTL, lang])
 
   return <>{children}</>
 }

@@ -5,13 +5,43 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    font-family: var(--font-inter), system-ui, sans-serif;
   }
+
+  /* Switch to Cairo for Arabic — applies automatically when RTLWrapper sets dir="rtl" */
+  html[dir="rtl"] {
+    font-family: var(--font-cairo), 'Cairo', sans-serif;
+  }
+
   body {
     @apply antialiased text-gray-900 bg-gray-50;
   }
+
   * {
     @apply box-border;
   }
+}
+
+/* ── RTL layout helpers ─────────────────────────────────────────── */
+
+/* Flip left/right positioned elements in RTL */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Ensure inputs and textareas align correctly in Arabic */
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select {
+  text-align: right;
+}
+
+/* Keep numbers and phone inputs LTR even in RTL mode */
+[dir="rtl"] input[type="tel"],
+[dir="rtl"] input[type="number"],
+[dir="rtl"] input[type="email"] {
+  direction: ltr;
+  text-align: left;
 }
 
 @layer utilities {
