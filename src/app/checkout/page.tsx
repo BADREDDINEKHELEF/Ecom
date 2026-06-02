@@ -68,20 +68,14 @@ export default function CheckoutPage() {
       async (pos) => {
         try {
           const { latitude: lat, longitude: lon } = pos.coords
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=fr`,
-            { headers: { 'Accept-Language': 'fr' } }
-          )
+          const res = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`)
+          if (!res.ok) throw new Error('geocode failed')
           const data = await res.json()
-          const addr = data.address ?? {}
-          const street = [addr.house_number, addr.road].filter(Boolean).join(' ')
-          const city   = addr.city ?? addr.town ?? addr.village ?? addr.suburb ?? ''
-          const state  = addr.state ?? addr.county ?? ''
           setForm((prev) => ({
             ...prev,
-            ...(street  && { address: street }),
-            ...(city    && { city }),
-            ...(matchWilaya(state) && { wilaya: matchWilaya(state) }),
+            ...(data.street && { address: data.street }),
+            ...(data.city   && { city: data.city }),
+            ...(matchWilaya(data.state) && { wilaya: matchWilaya(data.state) }),
           }))
         } catch {
           setLocError(t.checkout.locationFailed)

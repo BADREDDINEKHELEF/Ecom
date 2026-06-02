@@ -13,15 +13,15 @@ interface LangStore {
 
 export const useLangStore = create<LangStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       lang: 'fr' as Lang,
       isRTL: false,
       t: translations.fr,
-      setLang: (lang: Lang) =>
-        set({ lang, t: translations[lang], isRTL: lang === 'ar' }),
+      setLang: (lang: Lang) => set({ lang, t: translations[lang], isRTL: lang === 'ar' }),
     }),
     {
-      name: 'shopdz-lang',
+      name: 'casbah-lang',
+      partialize: (state) => ({ lang: state.lang }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.t = translations[state.lang]
@@ -32,7 +32,10 @@ export const useLangStore = create<LangStore>()(
   )
 )
 
-// Convenience hook with t shortcut
-export const useT = () => useLangStore((s) => s.t)
+// useT always derives fresh from lang — never stale
+export const useT = () => {
+  const lang = useLangStore((s) => s.lang)
+  return translations[lang]
+}
 export const useLang = () => useLangStore((s) => s.lang)
 export const useRTL = () => useLangStore((s) => s.isRTL)

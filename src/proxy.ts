@@ -1,18 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { jwtVerify } from 'jose'
 
-export function proxy(request: NextRequest) {
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get('x-real-ip') ??
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    '0.0.0.0'
+  )
+}
+
+function isIpAllowed(ip: string): boolean {
+  const allowlist = process.env.ADMIN_IP_ALLOWLIST
+  // If no allowlist configured, allow all IPs (open mode)
+  if (!allowlist) return true
+  const allowed = allowlist.split(',').map((s) => s.trim())
+  return allowed.includes(ip)
+}
+
+async function verifyAdminJwt(token: string): Promise<boolean> {
+  try {
+    const secret = process.env.ADMIN_JWT_SECRET
+    if (!secret) return false
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
+    return payload.role === 'admin'
+  } catch {
+    return false
+  }
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Skip the login page itself
+  if (pathname === '/admin/login') return NextResponse.next()
+
   if (pathname.startsWith('/admin')) {
-    const token = request.cookies.get('shopdz_admin')?.value
-    // In development skip the gate so the dashboard is accessible.
-    // In production, remove the NODE_ENV check and require a real token.
-    if (process.env.NODE_ENV === 'production' && token !== process.env.ADMIN_SECRET) {
-      const login = request.nextUrl.clone()
-      login.pathname = '/auth'
-      login.searchParams.set('redirect', pathname)
-      login.searchParams.set('role', 'admin')
-      return NextResponse.redirect(login)
+    const ip = getClientIp(request)
+
+    // Layer 1 — IP allowlist
+    if (!isIpAllowed(ip)) {
+      return new NextResponse('Forbidden', { status: 403 })
+    }
+
+    // Layer 2 — JWT verification
+    const token = request.cookies.get('casbah_admin_token')?.value
+    if (!token || !(await verifyAdminJwt(token))) {
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = '/admin/login'
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
     }
   }
 

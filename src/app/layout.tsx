@@ -7,6 +7,7 @@ import CartSidebar from '@/components/shop/CartSidebar'
 import Toaster from '@/components/ui/Toast'
 import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import RTLWrapper from '@/components/layout/RTLWrapper'
+import LocaleBanner from '@/components/ui/LocaleBanner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CartSidebar />
           <Toaster />
           <WhatsAppButton />
+          <LocaleBanner />
           <main>{children}</main>
           <Footer />
         </RTLWrapper>
