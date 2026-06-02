@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:3003/deals -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:3003/search -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:3003/orders -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:3003/auth -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:3003/admin -o /dev/null -w \"%{http_code}\")",
+      "Bash(npx next *)"
+    ]
+  }
+}
