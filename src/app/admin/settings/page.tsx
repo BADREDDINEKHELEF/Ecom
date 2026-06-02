@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { Save, Store, Truck, CreditCard, Bell } from 'lucide-react'
+import { Save, Store, Truck, CreditCard, Bell, Zap, ExternalLink, CheckCircle, Circle } from 'lucide-react'
+import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 
 export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState({
-    storeName: 'Casbah Store',
+    storeName: process.env.NEXT_PUBLIC_STORE_NAME ?? 'Casbah Store',
     storeEmail: 'support@shopdz.dz',
     phone: '+213 555 000 000',
+    whatsappNumber: '',
     freeShippingThreshold: '5000',
     shippingCost: '500',
     cashOnDelivery: true,
@@ -68,7 +70,7 @@ export default function AdminSettingsPage() {
     <div className="p-8 max-w-2xl">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900">Settings</h1>
-        <p className="text-gray-500 text-sm mt-1">Configure your store preferences</p>
+        <p className="text-gray-500 text-sm mt-1">Configure your store preferences and integrations</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -77,12 +79,17 @@ export default function AdminSettingsPage() {
             <Field label="Store Name"><Input field="storeName" /></Field>
             <Field label="Support Email"><Input field="storeEmail" type="email" /></Field>
           </div>
-          <Field label="Phone Number"><Input field="phone" /></Field>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Phone Number"><Input field="phone" /></Field>
+            <Field label="WhatsApp Number (for notifications)">
+              <Input field="whatsappNumber" placeholder="213XXXXXXXXX" />
+            </Field>
+          </div>
         </Section>
 
         <Section icon={Truck} title="Shipping">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Shipping Cost (DZD)"><Input field="shippingCost" type="number" /></Field>
+            <Field label="Default Shipping Cost (DZD)"><Input field="shippingCost" type="number" /></Field>
             <Field label="Free Shipping From (DZD)"><Input field="freeShippingThreshold" type="number" /></Field>
           </div>
           <p className="text-xs text-gray-500 bg-gray-50 px-4 py-3 rounded-xl">
@@ -115,6 +122,76 @@ export default function AdminSettingsPage() {
           {saved ? 'Saved!' : 'Save Settings'}
         </button>
       </form>
+
+      {/* Integrations — read-only config guide */}
+      <div className="mt-6 bg-white rounded-2xl p-6 shadow-sm space-y-5">
+        <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
+          <Zap className="w-5 h-5 text-indigo-600" />
+          <h2 className="font-bold text-gray-900">Delivery Integrations</h2>
+        </div>
+
+        <p className="text-sm text-gray-500">
+          Configure delivery providers via environment variables on your hosting platform (Vercel, Railway, etc.).
+          All providers support manual tracking entry. Yalidine also supports auto-shipment creation via API.
+        </p>
+
+        {/* Yalidine */}
+        <div className="border border-orange-200 rounded-xl p-4 bg-orange-50">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-orange-500" />
+              <span className="font-bold text-gray-900">Yalidine</span>
+              <span className="text-xs text-orange-600 font-semibold px-2 py-0.5 rounded-full bg-orange-100">API Auto-Create</span>
+            </div>
+            <a href="https://yalidine.app" target="_blank" rel="noopener noreferrer"
+              className="text-xs text-orange-600 hover:underline flex items-center gap-1">
+              Website <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          <div className="space-y-2">
+            <EnvVar name="YALIDINE_API_ID" description="Your Yalidine API ID (from account settings)" />
+            <EnvVar name="YALIDINE_API_TOKEN" description="Your Yalidine API token" />
+          </div>
+          <p className="text-xs text-orange-700 mt-3 bg-orange-100 px-3 py-2 rounded-lg">
+            Once set, the Ship modal will offer to auto-create parcels and fetch tracking numbers directly from Yalidine.
+          </p>
+        </div>
+
+        {/* Other providers */}
+        <div className="space-y-3">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Other Providers (Manual Tracking)</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {DELIVERY_PROVIDERS.filter((p) => p.id !== 'yalidine').map((provider) => (
+              <div key={provider.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl">
+                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: provider.color }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{provider.name}</p>
+                  <p className="text-xs text-gray-400 truncate">Manual tracking entry</p>
+                </div>
+                <a href={provider.dashboardUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-gray-700 transition-colors flex-shrink-0">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500">
+            Create shipments on each provider&apos;s dashboard, then paste the tracking number when shipping an order in the Orders page.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EnvVar({ name, description }: { name: string; description: string }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Circle className="w-3.5 h-3.5 text-orange-400 mt-0.5 flex-shrink-0" />
+      <div>
+        <code className="text-xs font-mono font-bold text-orange-800 bg-orange-100 px-1.5 py-0.5 rounded">{name}</code>
+        <p className="text-xs text-orange-700 mt-0.5">{description}</p>
+      </div>
     </div>
   )
 }

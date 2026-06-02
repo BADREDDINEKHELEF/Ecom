@@ -9,8 +9,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing lat/lon' }, { status: 400 })
   }
 
+  const latNum = parseFloat(lat)
+  const lonNum = parseFloat(lon)
+  if (
+    isNaN(latNum) || isNaN(lonNum) ||
+    latNum < -90 || latNum > 90 ||
+    lonNum < -180 || lonNum > 180
+  ) {
+    return NextResponse.json({ error: 'Invalid coordinates' }, { status: 400 })
+  }
+
   const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=fr`,
+    `https://nominatim.openstreetmap.org/reverse?lat=${latNum}&lon=${lonNum}&format=json&accept-language=fr`,
     {
       headers: {
         'User-Agent': 'CasbahStore/1.0 (support@casbahstore.dz)',

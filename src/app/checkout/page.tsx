@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
@@ -62,6 +62,13 @@ export default function CheckoutPage() {
   const [locError, setLocError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const [promoInput, setPromoInput] = useState('')
+  const [promoApplying, setPromoApplying] = useState(false)
+  const [promoResult, setPromoResult] = useState<{
+    id: string; discountType: 'percentage' | 'fixed'; discountValue: number; discountAmount: number; code: string
+  } | null>(null)
+  const [promoError, setPromoError] = useState('')
+
   const handleLocate = () => {
     if (!navigator.geolocation) { setLocError(t.checkout.locationFailed); return }
     setLocating(true)
@@ -95,7 +102,44 @@ export default function CheckoutPage() {
     [form.wilaya, cartTotal, lang]
   )
 
-  const orderTotal = cartTotal + delivery.cost
+  const discountAmount = promoResult?.discountAmount ?? 0
+  const orderTotal = cartTotal - discountAmount + delivery.cost
+
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) return
+    setPromoApplying(true)
+    setPromoError('')
+    setPromoResult(null)
+    try {
+      const res = await fetch('/api/promo/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoInput.trim(), orderTotal: cartTotal }),
+      })
+      const data = await res.json()
+      if (data.valid) {
+        setPromoResult({
+          id: data.promo.id,
+          discountType: data.promo.discount_type,
+          discountValue: data.promo.discount_value,
+          discountAmount: data.discountAmount,
+          code: data.promo.code,
+        })
+      } else {
+        const msgMap: Record<string, string> = {
+          invalid: t.checkout.promoInvalid,
+          expired: t.checkout.promoExpired,
+          maxed: t.checkout.promoMaxed,
+          min_order: t.checkout.promoMinOrder,
+        }
+        setPromoError(msgMap[data.message] ?? t.checkout.promoInvalid)
+      }
+    } catch {
+      setPromoError(t.checkout.promoInvalid)
+    } finally {
+      setPromoApplying(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,6 +155,8 @@ export default function CheckoutPage() {
         subtotal: cartTotal,
         shippingCost: delivery.cost,
         total: orderTotal,
+        promoCodeId: promoResult?.id,
+        discountAmount: discountAmount || undefined,
         items: items.map(({ product, quantity }) => ({
           productId: product.id,
           productName: product.name,
@@ -323,6 +369,50 @@ export default function CheckoutPage() {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-2xl p-5 shadow-sm sticky top-24">
             <h2 className="font-bold text-gray-900 mb-4">{t.checkout.orderSummary}</h2>
+
+            {/* Promo Code */}
+            {!promoResult ? (
+              <div className="mb-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoInput}
+                    onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError('') }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
+                    placeholder={t.checkout.promoPlaceholder}
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    disabled={promoApplying || !promoInput.trim()}
+                    className="flex items-center gap-1.5 bg-gray-900 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                  >
+                    {promoApplying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Tag className="w-3.5 h-3.5" />}
+                    {t.checkout.apply}
+                  </button>
+                </div>
+                {promoError && <p className="text-xs text-red-500 mt-1.5">{promoError}</p>}
+              </div>
+            ) : (
+              <div className="mb-4 flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-green-600" />
+                  <div>
+                    <p className="text-xs font-bold text-green-800">{promoResult.code}</p>
+                    <p className="text-xs text-green-600">{t.checkout.promoApplied}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setPromoResult(null); setPromoInput('') }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
               {items.map(({ product, quantity }) => (
                 <div key={product.id} className="flex items-center gap-3">
@@ -353,9 +443,15 @@ export default function CheckoutPage() {
               {!form.wilaya && (
                 <p className="text-xs text-gray-400">{t.checkout.selectWilaya}</p>
               )}
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-600 font-semibold">
+                  <span>{t.checkout.discount}</span>
+                  <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-black text-gray-900 border-t pt-2 text-base">
                 <span>{t.cart.total}</span>
-                <span>{formatPrice(orderTotal)}</span>
+                <span>{formatPrice(Math.max(0, orderTotal))}</span>
               </div>
             </div>
             {/* Trust micro-badges */}

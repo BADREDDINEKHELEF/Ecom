@@ -1,6 +1,7 @@
-import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, Eye } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, Eye, Truck, XCircle, RotateCcw, Clock } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { niches } from '@/lib/data/niches'
+import { getCodStats } from '@/lib/supabase/queries'
 
 const MONTHLY = [
   { month: 'Jul', revenue: 185000, orders: 72 },
@@ -21,7 +22,12 @@ const TOP_PRODUCTS = [
   { name: 'HD Dash Cam 4K WiFi', niche: 'cars', sales: 24, revenue: 213600 },
 ]
 
-export default function AnalyticsPage() {
+export default async function AnalyticsPage() {
+  const cod = await getCodStats().catch(() => ({ total: 0, delivered: 0, failed: 0, returned: 0, pending: 0 }))
+  const deliveryRate = cod.total > 0 ? Math.round((cod.delivered / cod.total) * 100) : 0
+  const failureRate  = cod.total > 0 ? Math.round((cod.failed  / cod.total) * 100) : 0
+  const returnRate   = cod.total > 0 ? Math.round((cod.returned / cod.total) * 100) : 0
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -102,6 +108,42 @@ export default function AnalyticsPage() {
             })}
           </div>
         </div>
+      </div>
+
+      {/* COD Performance — Algeria's #1 differentiator */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Truck className="w-5 h-5 text-indigo-600" />
+          <h2 className="font-bold text-gray-900">COD Performance</h2>
+          <span className="text-xs text-gray-400 ml-auto">{cod.total} total COD orders</span>
+        </div>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {[
+            { label: 'Delivered', value: cod.delivered, rate: deliveryRate, icon: Truck, color: 'text-green-600 bg-green-50', bar: 'bg-green-500' },
+            { label: 'Failed', value: cod.failed, rate: failureRate, icon: XCircle, color: 'text-red-600 bg-red-50', bar: 'bg-red-500' },
+            { label: 'Returned', value: cod.returned, rate: returnRate, icon: RotateCcw, color: 'text-amber-600 bg-amber-50', bar: 'bg-amber-500' },
+            { label: 'Pending', value: cod.pending, rate: cod.total > 0 ? Math.round((cod.pending / cod.total) * 100) : 0, icon: Clock, color: 'text-gray-600 bg-gray-100', bar: 'bg-gray-400' },
+          ].map(({ label, value, rate, icon: Icon, color, bar }) => (
+            <div key={label} className="space-y-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-2xl font-black text-gray-900">{value}</p>
+                <p className="text-sm text-gray-500">{label}</p>
+              </div>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${bar}`} style={{ width: `${rate}%` }} />
+              </div>
+              <p className="text-xs font-bold text-gray-500">{rate}%</p>
+            </div>
+          ))}
+        </div>
+        {cod.total === 0 && (
+          <p className="text-sm text-gray-400 mt-4 text-center">
+            Mark orders as delivered/failed in the Orders page to see COD analytics.
+          </p>
+        )}
       </div>
 
       {/* Top Products */}

@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from 'crypto'
 import QRCode from 'qrcode'
 
-const BASE32_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWPRSTUVWXYZ234567'
+const BASE32_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 
 function base32Decode(encoded: string): Buffer {
   let bits = 0
