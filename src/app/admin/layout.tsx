@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import AdminNav from '@/components/admin/AdminNav'
+import Logo from '@/components/ui/Logo'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,11 +9,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside className="w-60 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-20">
         <div className="p-5 border-b border-gray-800">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-black text-sm">S</span>
-            </div>
-            <span className="font-black text-white">ShopDZ</span>
+          <div className="mb-1">
+            <Logo size="sm" dark />
           </div>
           <span className="text-xs text-gray-500 font-medium ml-10">Admin Panel</span>
         </div>

@@ -19,14 +19,21 @@ export default function AuthPage() {
 
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-black text-xl">S</span>
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+                  <path d="M20 8 C13 8 10 13 10 18 L10 32 L30 32 L30 18 C30 13 27 8 20 8 Z" fill="#6366f1"/>
+                  <path d="M20 16 C17.2 16 15 18.2 15 21 L15 32 L25 32 L25 21 C25 18.2 22.8 16 20 16 Z" fill="white" opacity="0.2"/>
+                  <ellipse cx="13" cy="22" rx="2" ry="2.5" fill="white" opacity="0.5"/>
+                  <ellipse cx="27" cy="22" rx="2" ry="2.5" fill="white" opacity="0.5"/>
+                </svg>
+              </div>
             </div>
             <h1 className="text-2xl font-black text-gray-900">
               {mode === 'login' ? 'Welcome back' : 'Create account'}
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              {mode === 'login' ? 'Sign in to your ShopDZ account' : 'Join ShopDZ today'}
+              {mode === 'login' ? 'Sign in to your Casbah Store account' : 'Join Casbah Store today'}
             </p>
           </div>
 

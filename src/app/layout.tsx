@@ -11,11 +11,11 @@ import RTLWrapper from '@/components/layout/RTLWrapper'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: { default: 'ShopDZ — متجر الجزائر الأول', template: '%s | ShopDZ' },
+  title: { default: 'Casbah Store — متجر الجزائر الأول', template: '%s | Casbah Store' },
   description: 'تسوق إكسسوارات السيارات، مستلزمات الحيوانات، ومنتجات الأطفال. توصيل لجميع ولايات الجزائر.',
   keywords: ['algerie', 'algérie', 'الجزائر', 'shopping', 'livraison', 'cars', 'kids', 'animals'],
   openGraph: {
-    siteName: 'ShopDZ',
+    siteName: 'Casbah Store',
     locale: 'fr_DZ',
     type: 'website',
   },

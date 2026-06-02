@@ -6,7 +6,7 @@ import { Save, Store, Truck, CreditCard, Bell } from 'lucide-react'
 export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState({
-    storeName: 'ShopDZ',
+    storeName: 'Casbah Store',
     storeEmail: 'support@shopdz.dz',
     phone: '+213 555 000 000',
     freeShippingThreshold: '5000',

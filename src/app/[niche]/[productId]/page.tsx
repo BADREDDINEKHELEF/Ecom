@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: product.name,
     description: product.description,
     openGraph: {
-      title: `${product.name} | ShopDZ`,
+      title: `${product.name} | Casbah Store`,
       description: product.description,
       images: [{ url: product.images[0], width: 600, height: 600 }],
     },

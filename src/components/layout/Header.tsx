@@ -9,6 +9,7 @@ import { useWishlistStore } from '@/lib/store/wishlistStore'
 import { useT } from '@/lib/store/langStore'
 import { niches } from '@/lib/data/niches'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import Logo from '@/components/ui/Logo'
 
 export default function Header() {
   const { toggleCart, itemCount } = useCartStore()
@@ -38,11 +39,8 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 gap-3">
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0 flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-black text-sm">S</span>
-            </div>
-            <span className="font-black text-gray-900 text-lg tracking-tight">ShopDZ</span>
+          <Link href="/" className="flex-shrink-0">
+            <Logo size="sm" />
           </Link>
 
           {/* Desktop nav */}

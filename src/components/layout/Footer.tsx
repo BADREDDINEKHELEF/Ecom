@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { niches } from '@/lib/data/niches'
 import { Mail, Phone, MapPin } from 'lucide-react'
+import Logo from '@/components/ui/Logo'
 
 export default function Footer() {
   return (
@@ -9,12 +10,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-black text-sm">S</span>
-              </div>
-              <span className="font-black text-white text-lg">ShopDZ</span>
-            </div>
+            <Logo size="sm" dark />
             <p className="text-sm leading-relaxed">
               Algeria&apos;s premier multi-niche marketplace. Quality products across cars, pets and kids.
             </p>
@@ -25,7 +21,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                <span>support@shopdz.dz</span>
+                <span>support@casbahstore.dz</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-indigo-400 flex-shrink-0" />
@@ -84,7 +80,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-          <p>&copy; 2024 ShopDZ. All rights reserved.</p>
+          <p>&copy; 2024 Casbah Store. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>

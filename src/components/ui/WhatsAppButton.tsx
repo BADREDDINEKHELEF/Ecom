@@ -12,7 +12,7 @@ interface WhatsAppButtonProps {
 
 export default function WhatsAppButton({ message, variant = 'float', className }: WhatsAppButtonProps) {
   const t = useT()
-  const encoded = encodeURIComponent(message ?? `مرحباً، أريد الاستفسار عن منتج في ShopDZ`)
+  const encoded = encodeURIComponent(message ?? `مرحباً، أريد الاستفسار عن منتج في Casbah Store`)
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`
 
   if (variant === 'inline') {

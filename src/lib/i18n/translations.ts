@@ -11,7 +11,7 @@ export const translations = {
       title: 'Shop Everything', accent: 'You Love',
       sub: 'Cars accessories, pet supplies, and kids products — fast delivery across Algeria.',
       shopNow: 'Shop Now', categories: 'categories',
-      whyUs: 'Why ShopDZ?', trendingTitle: 'Featured Products', trendingBadge: 'Hand-picked for you',
+      whyUs: 'Why Casbah Store?', trendingTitle: 'Featured Products', trendingBadge: 'Hand-picked for you',
     },
     trust: {
       delivery: 'Fast Delivery', deliveryText: 'All 58 wilayas',
@@ -52,7 +52,7 @@ export const translations = {
     search: { title: 'Search Products', results: '{n} results for', noResults: 'No products found', hint: 'Start typing to search' },
     auth: {
       welcome: 'Welcome back', createAccount: 'Create account',
-      signInSub: 'Sign in to your ShopDZ account', joinSub: 'Join ShopDZ today',
+      signInSub: 'Sign in to your Casbah Store account', joinSub: 'Join Casbah Store today',
       name: 'Full Name', email: 'Email Address', password: 'Password',
       forgot: 'Forgot password?', signIn: 'Sign In', signUp: 'Create Account',
       noAccount: "Don't have an account?", hasAccount: 'Already have an account?',
@@ -77,7 +77,7 @@ export const translations = {
       title: 'Achetez Tout', accent: 'Ce Que Vous Aimez',
       sub: 'Accessoires auto, produits animaux et enfants — livraison rapide partout en Algérie.',
       shopNow: 'Acheter maintenant', categories: 'catégories',
-      whyUs: 'Pourquoi ShopDZ ?', trendingTitle: 'Produits Vedettes', trendingBadge: 'Sélectionnés pour vous',
+      whyUs: 'Pourquoi Casbah Store ?', trendingTitle: 'Produits Vedettes', trendingBadge: 'Sélectionnés pour vous',
     },
     trust: {
       delivery: 'Livraison rapide', deliveryText: '58 wilayas couvertes',
@@ -118,7 +118,7 @@ export const translations = {
     search: { title: 'Recherche', results: '{n} résultats pour', noResults: 'Aucun produit trouvé', hint: 'Commencez à taper pour chercher' },
     auth: {
       welcome: 'Bon retour', createAccount: 'Créer un compte',
-      signInSub: 'Connectez-vous à votre compte ShopDZ', joinSub: 'Rejoignez ShopDZ aujourd\'hui',
+      signInSub: 'Connectez-vous à votre compte Casbah Store', joinSub: 'Rejoignez Casbah Store aujourd\'hui',
       name: 'Nom complet', email: 'Adresse e-mail', password: 'Mot de passe',
       forgot: 'Mot de passe oublié ?', signIn: 'Se connecter', signUp: 'Créer un compte',
       noAccount: "Pas encore de compte ?", hasAccount: 'Déjà un compte ?',
@@ -143,7 +143,7 @@ export const translations = {
       title: 'تسوق كل ما', accent: 'تحبه',
       sub: 'إكسسوارات السيارات، مستلزمات الحيوانات، ومنتجات الأطفال — توصيل سريع لكل أنحاء الجزائر.',
       shopNow: 'تسوق الآن', categories: 'فئة',
-      whyUs: 'لماذا ShopDZ؟', trendingTitle: 'منتجات مميزة', trendingBadge: 'مختارة لك خصيصاً',
+      whyUs: 'لماذا Casbah Store؟', trendingTitle: 'منتجات مميزة', trendingBadge: 'مختارة لك خصيصاً',
     },
     trust: {
       delivery: 'توصيل سريع', deliveryText: '58 ولاية مغطاة',
@@ -184,7 +184,7 @@ export const translations = {
     search: { title: 'البحث عن منتجات', results: '{n} نتيجة لـ', noResults: 'لا توجد منتجات', hint: 'ابدأ الكتابة للبحث' },
     auth: {
       welcome: 'مرحباً بعودتك', createAccount: 'إنشاء حساب',
-      signInSub: 'سجّل دخولك إلى حسابك في ShopDZ', joinSub: 'انضم إلى ShopDZ اليوم',
+      signInSub: 'سجّل دخولك إلى حسابك في Casbah Store', joinSub: 'انضم إلى Casbah Store اليوم',
       name: 'الاسم الكامل', email: 'البريد الإلكتروني', password: 'كلمة المرور',
       forgot: 'نسيت كلمة المرور؟', signIn: 'تسجيل الدخول', signUp: 'إنشاء حساب',
       noAccount: 'ليس لديك حساب؟', hasAccount: 'لديك حساب بالفعل؟',
