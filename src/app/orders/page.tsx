@@ -1,32 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { Package, ArrowRight, ShoppingBag } from 'lucide-react'
+import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { getOrdersByPhone, OrderRow } from '@/lib/supabase/queries'
 
-const MOCK_USER_ORDERS = [
-  {
-    id: '#ORD-1041',
-    date: '28 Dec 2024',
-    status: 'delivered' as const,
-    items: [
-      { name: 'HD Dash Cam 4K WiFi', qty: 1, price: 8900 },
-      { name: 'Magnetic Car Phone Holder', qty: 2, price: 1500 },
-    ],
-    total: 11900,
-  },
-  {
-    id: '#ORD-1035',
-    date: '15 Dec 2024',
-    status: 'shipped' as const,
-    items: [
-      { name: 'Premium Dry Dog Food 15kg', qty: 1, price: 5500 },
-    ],
-    total: 5500,
-  },
-]
-
-const STATUS_STYLES = {
+const STATUS_STYLES: Record<string, { label: string; style: string }> = {
   pending:   { label: 'Pending',   style: 'bg-amber-100 text-amber-700' },
   confirmed: { label: 'Confirmed', style: 'bg-blue-100 text-blue-700' },
   shipped:   { label: 'Shipped',   style: 'bg-indigo-100 text-indigo-700' },
@@ -34,7 +14,31 @@ const STATUS_STYLES = {
   cancelled: { label: 'Cancelled', style: 'bg-red-100 text-red-700' },
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default function OrdersPage() {
+  const [phone, setPhone] = useState('')
+  const [orders, setOrders] = useState<OrderRow[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!phone.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      const result = await getOrdersByPhone(phone)
+      setOrders(result)
+    } catch {
+      setError('Could not load orders. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex items-center justify-between mb-8">
@@ -44,56 +48,93 @@ export default function OrdersPage() {
         </Link>
       </div>
 
-      {MOCK_USER_ORDERS.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center shadow-sm">
-          <ShoppingBag className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-          <p className="font-semibold text-gray-700 mb-2">No orders yet</p>
-          <Link href="/" className="text-indigo-600 text-sm font-semibold hover:underline">
-            Start shopping
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {MOCK_USER_ORDERS.map((order) => {
-            const statusCfg = STATUS_STYLES[order.status]
-            return (
-              <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono font-bold text-indigo-600">{order.id}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${statusCfg.style}`}>
-                        {statusCfg.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">Placed on {order.date}</p>
-                  </div>
-                  <span className="font-black text-gray-900 text-lg">{formatPrice(order.total)}</span>
-                </div>
+      {/* Phone lookup */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+        <p className="text-sm text-gray-500 mb-4">Enter your phone number to find your orders.</p>
+        <form onSubmit={handleSearch} className="flex gap-3">
+          <div className="relative flex-1">
+            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0555 00 00 00"
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading || !phone.trim()}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            Search
+          </button>
+        </form>
+        {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+      </div>
 
-                <div className="space-y-2 border-t border-gray-100 pt-4">
-                  {order.items.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-700">{item.name}</span>
-                        {item.qty > 1 && <span className="text-gray-400">×{item.qty}</span>}
+      {/* Results */}
+      {orders !== null && (
+        orders.length === 0 ? (
+          <div className="bg-white rounded-2xl p-16 text-center shadow-sm">
+            <ShoppingBag className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+            <p className="font-semibold text-gray-700 mb-2">No orders found for this number</p>
+            <Link href="/" className="text-indigo-600 text-sm font-semibold hover:underline">
+              Start shopping
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {orders.map((order) => {
+              const statusCfg = STATUS_STYLES[order.status] ?? { label: order.status, style: 'bg-gray-100 text-gray-700' }
+              const items = order.order_items || []
+              return (
+                <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono font-bold text-indigo-600 text-sm">
+                          {order.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${statusCfg.style}`}>
+                          {statusCfg.label}
+                        </span>
                       </div>
-                      <span className="font-semibold text-gray-900">{formatPrice(item.price * item.qty)}</span>
+                      <p className="text-xs text-gray-500">Placed on {formatDate(order.created_at)}</p>
                     </div>
-                  ))}
-                </div>
-
-                {order.status === 'shipped' && (
-                  <div className="mt-4 bg-indigo-50 rounded-xl px-4 py-3 text-sm text-indigo-700 font-medium flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Your order is on its way! Expected delivery in 1–2 days.
+                    <span className="font-black text-gray-900 text-lg">{formatPrice(order.total)}</span>
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+
+                  <div className="space-y-2 border-t border-gray-100 pt-4">
+                    {items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="text-gray-700">{item.product_name}</span>
+                          {item.quantity > 1 && <span className="text-gray-400">×{item.quantity}</span>}
+                        </div>
+                        <span className="font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400">
+                    <span>{order.city}, {order.wilaya}</span>
+                    <span className="capitalize">{order.payment_method === 'cash' ? '💵 Cash on Delivery' : '💳 ' + order.payment_method}</span>
+                  </div>
+
+                  {order.status === 'shipped' && (
+                    <div className="mt-4 bg-indigo-50 rounded-xl px-4 py-3 text-sm text-indigo-700 font-medium flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Your order is on its way! Expected delivery in 1–2 days.
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
       )}
 
       <div className="mt-8 bg-white rounded-2xl p-6 shadow-sm">

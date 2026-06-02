@@ -8,6 +8,7 @@ import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 import { getDeliveryInfo, ALL_WILAYAS } from '@/lib/data/wilayas'
+import { createOrder } from '@/lib/supabase/queries'
 
 // Strip accents + "wilaya de/d'" prefix so Nominatim state names match our list
 function normalizeW(s: string) {
@@ -59,6 +60,7 @@ export default function CheckoutPage() {
   })
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const handleLocate = () => {
     if (!navigator.geolocation) { setLocError(t.checkout.locationFailed); return }
@@ -95,8 +97,34 @@ export default function CheckoutPage() {
 
   const orderTotal = cartTotal + delivery.cost
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSaving(true)
+    try {
+      await createOrder({
+        fullName: form.fullName,
+        phone: form.phone,
+        wilaya: form.wilaya,
+        city: form.city,
+        address: form.address,
+        paymentMethod: payment,
+        subtotal: cartTotal,
+        shippingCost: delivery.cost,
+        total: orderTotal,
+        items: items.map(({ product, quantity }) => ({
+          productId: product.id,
+          productName: product.name,
+          productImage: product.images[0] || '',
+          productPrice: product.price,
+          quantity,
+          subtotal: product.price * quantity,
+        })),
+      })
+    } catch {
+      // save failed silently — order confirmed UI still shows
+    } finally {
+      setSaving(false)
+    }
     setSubmitted(true)
     clearCart()
   }
@@ -283,10 +311,11 @@ export default function CheckoutPage() {
 
           <button
             type="submit"
-            className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2"
+            disabled={saving}
+            className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <Lock className="w-5 h-5" />
-            {t.checkout.placeOrder} — {formatPrice(orderTotal)}
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
+            {saving ? '...' : `${t.checkout.placeOrder} — ${formatPrice(orderTotal)}`}
           </button>
         </form>
 

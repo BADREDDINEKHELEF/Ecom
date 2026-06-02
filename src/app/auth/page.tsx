@@ -2,13 +2,69 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'login' | 'register'
 
 export default function AuthPage() {
+  const router = useRouter()
   const [mode, setMode] = useState<Mode>('login')
   const [showPwd, setShowPwd] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const f = (key: keyof typeof form, val: string) => setForm((prev) => ({ ...prev, [key]: val }))
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    const supabase = createClient()
+
+    if (mode === 'register') {
+      const { error: err } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { data: { full_name: form.name } },
+      })
+      if (err) {
+        setError(err.message)
+      } else {
+        setSuccess('Account created! Check your email to confirm, then sign in.')
+        setMode('login')
+        setForm((prev) => ({ ...prev, password: '' }))
+      }
+    } else {
+      const { error: err } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
+      if (err) {
+        setError(err.message)
+      } else {
+        router.push('/')
+        router.refresh()
+      }
+    }
+
+    setLoading(false)
+  }
+
+  const handleForgotPassword = async () => {
+    if (!form.email) { setError('Enter your email first.'); return }
+    setLoading(true)
+    const supabase = createClient()
+    const { error: err } = await supabase.auth.resetPasswordForEmail(form.email)
+    setLoading(false)
+    if (err) { setError(err.message) }
+    else { setSuccess('Password reset email sent. Check your inbox.') }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 flex items-center justify-center px-4 py-12">
@@ -37,7 +93,20 @@ export default function AuthPage() {
             </p>
           </div>
 
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          {success && (
+            <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-sm text-green-700">
+              <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              {success}
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
@@ -45,6 +114,8 @@ export default function AuthPage() {
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
+                    value={form.name}
+                    onChange={(e) => f('name', e.target.value)}
                     placeholder="Mohammed Amiri"
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-colors"
                   />
@@ -58,6 +129,9 @@ export default function AuthPage() {
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="email"
+                  required
+                  value={form.email}
+                  onChange={(e) => f('email', e.target.value)}
                   placeholder="you@example.com"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-colors"
                 />
@@ -70,6 +144,10 @@ export default function AuthPage() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type={showPwd ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={form.password}
+                  onChange={(e) => f('password', e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-colors"
                 />
@@ -85,7 +163,11 @@ export default function AuthPage() {
 
             {mode === 'login' && (
               <div className="text-right">
-                <button type="button" className="text-xs text-indigo-600 hover:underline font-medium">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs text-indigo-600 hover:underline font-medium"
+                >
                   Forgot password?
                 </button>
               </div>
@@ -93,8 +175,10 @@ export default function AuthPage() {
 
             <button
               type="submit"
-              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors mt-2"
+              disabled={loading}
+              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors mt-2 flex items-center justify-center gap-2 disabled:opacity-70"
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
@@ -102,7 +186,7 @@ export default function AuthPage() {
           <p className="text-center text-sm text-gray-500 mt-6">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess('') }}
               className="text-indigo-600 font-bold hover:underline"
             >
               {mode === 'login' ? 'Sign up' : 'Sign in'}
