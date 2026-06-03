@@ -1,58 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, ExternalLink, Loader2, Check } from 'lucide-react'
+import { Loader2, Check } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { updateVendor } from '@/lib/supabase/queries'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
+import SellerSidebar from '@/components/seller/SellerSidebar'
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
-}
-
-function SellerSidebar({ storeName, onLogout }: { storeName: string; onLogout: () => void }) {
-  const NAV = [
-    { href: '/seller/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/seller/products', label: 'My Products', icon: Package },
-    { href: '/seller/orders', label: 'My Orders', icon: ShoppingBag },
-    { href: '/seller/settings', label: 'Store Settings', icon: Settings, active: true },
-  ]
-  return (
-    <aside className="w-60 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-20">
-      <div className="p-5 border-b border-gray-800">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Store className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-white text-sm truncate">{storeName}</span>
-        </div>
-        <span className="text-xs text-gray-500 ml-10">Seller Dashboard</span>
-      </div>
-      <nav className="flex-1 p-3 space-y-0.5 flex flex-col">
-        <div className="flex-1 space-y-0.5">
-          {NAV.map(({ href, label, icon: Icon, active }) => (
-            <Link key={href} href={href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                active ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}>
-              <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} />
-              {label}
-            </Link>
-          ))}
-        </div>
-        <div className="space-y-0.5 pt-2 border-t border-gray-800">
-          <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-            <ExternalLink className="w-4 h-4 text-gray-500" /> View Store
-          </Link>
-          <button onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-            <LogOut className="w-4 h-4 text-gray-500" /> Logout
-          </button>
-        </div>
-      </nav>
-    </aside>
-  )
 }
 
 export default function SellerSettingsPage() {
@@ -105,8 +61,8 @@ export default function SellerSettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <SellerSidebar storeName={vendor.store_name} onLogout={signOut} />
+    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
       <main className="flex-1 ml-60 p-8 max-w-3xl">
         <div className="mb-8">
           <h1 className="text-2xl font-black text-gray-900">Store Settings</h1>

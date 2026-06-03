@@ -3,94 +3,66 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import {
-  LayoutDashboard, Package, ShoppingBag, Settings, LogOut,
-  Store, TrendingUp, DollarSign, Clock, Plus, ExternalLink,
-  ArrowRight, CheckCircle2, Truck, AlertCircle,
+  TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock,
+  Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
+  Users, Award, AlertTriangle,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts, getVendorOrders, VendorOrderSummary } from '@/lib/supabase/queries'
+import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { formatPrice } from '@/lib/utils'
+import { useT } from '@/lib/store/langStore'
+import SellerSidebar from '@/components/seller/SellerSidebar'
+import type { Product } from '@/types'
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────
+// ─── Status config ────────────────────────────────────────────────────────────
 
-function SellerSidebar({ storeName, slug, onLogout }: { storeName: string; slug: string; onLogout: () => void }) {
-  const NAV = [
-    { href: '/seller/dashboard', label: 'Dashboard',      icon: LayoutDashboard },
-    { href: '/seller/products',  label: 'My Products',    icon: Package },
-    { href: '/seller/orders',    label: 'My Orders',      icon: ShoppingBag },
-    { href: '/seller/settings',  label: 'Store Settings', icon: Settings },
-  ]
-  const active = typeof window !== 'undefined' ? window.location.pathname : ''
-
-  return (
-    <aside className="w-60 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-20">
-      <div className="p-5 border-b border-gray-800">
-        <div className="flex items-center gap-2.5 mb-0.5">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Store className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-white text-sm truncate">{storeName}</span>
-        </div>
-        <span className="text-xs text-gray-500 ml-10">Seller Dashboard</span>
-      </div>
-      <nav className="flex-1 p-3 flex flex-col">
-        <div className="flex-1 space-y-0.5">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const isActive = active === href
-            return (
-              <Link key={href} href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? 'bg-emerald-600/20 text-emerald-400' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                }`}>
-                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-gray-500'}`} />
-                {label}
-              </Link>
-            )
-          })}
-        </div>
-        <div className="space-y-0.5 pt-2 border-t border-gray-800">
-          <a href={`/shop/${slug}`} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-            <ExternalLink className="w-4 h-4 text-gray-500" />
-            View My Store
-          </a>
-          <button onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-            <LogOut className="w-4 h-4 text-gray-500" />
-            Logout
-          </button>
-        </div>
-      </nav>
-    </aside>
-  )
+const STATUS_CFG: Record<string, { icon: React.ElementType; color: string }> = {
+  pending:   { icon: Clock,        color: 'text-amber-600 bg-amber-50' },
+  confirmed: { icon: CheckCircle2, color: 'text-blue-600 bg-blue-50' },
+  shipped:   { icon: Truck,        color: 'text-indigo-600 bg-indigo-50' },
+  delivered: { icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
+  cancelled: { icon: AlertCircle,  color: 'text-red-600 bg-red-50' },
 }
 
-// ─── Analytics helpers ────────────────────────────────────────────────────────
+// ─── Analytics ────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  pending:   { label: 'Pending',   icon: Clock,         color: 'text-amber-600 bg-amber-50' },
-  confirmed: { label: 'Confirmed', icon: CheckCircle2,  color: 'text-blue-600 bg-blue-50' },
-  shipped:   { label: 'Shipped',   icon: Truck,         color: 'text-indigo-600 bg-indigo-50' },
-  delivered: { label: 'Delivered', icon: CheckCircle2,  color: 'text-green-600 bg-green-50' },
-  cancelled: { label: 'Cancelled', icon: AlertCircle,   color: 'text-red-600 bg-red-50' },
-}
-
-function processOrders(orders: VendorOrderSummary[]) {
+function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
   const monthlyMap: Record<string, number> = {}
-  const productMap: Record<string, { sales: number; revenue: number }> = {}
+  const productMap: Record<string, { id: string; sales: number; revenue: number }> = {}
+  const customerMap: Record<string, { name: string; wilaya: string; orders: number; spend: number }> = {}
+  const deliveryMap: Record<string, number> = {}
   let pending = 0
 
   for (const { order, items, vendorTotal } of orders) {
+    // Monthly
     const key = new Date(order.created_at).toLocaleString('en', { month: 'short' })
     monthlyMap[key] = (monthlyMap[key] ?? 0) + vendorTotal
+
+    // Pending
     if (order.status === 'pending' || order.status === 'confirmed') pending++
+
+    // Products (keyed by product_id for worst-seller cross-reference)
     for (const item of items) {
-      if (!productMap[item.product_name]) productMap[item.product_name] = { sales: 0, revenue: 0 }
-      productMap[item.product_name].sales += item.quantity
-      productMap[item.product_name].revenue += item.subtotal
+      const pid = item.product_id ?? item.product_name
+      if (!productMap[pid]) productMap[pid] = { id: item.product_id ?? '', sales: 0, revenue: 0 }
+      productMap[pid].sales += item.quantity
+      productMap[pid].revenue += item.subtotal
+    }
+
+    // Customers (group by phone)
+    const phone = order.phone
+    if (!customerMap[phone]) customerMap[phone] = { name: order.full_name, wilaya: order.wilaya, orders: 0, spend: 0 }
+    customerMap[phone].orders++
+    customerMap[phone].spend += vendorTotal
+
+    // Delivery provider
+    if (order.delivery_provider) {
+      deliveryMap[order.delivery_provider] = (deliveryMap[order.delivery_provider] ?? 0) + 1
     }
   }
 
+  // Monthly chart — last 6 months
   const monthly = Array.from({ length: 6 }, (_, i) => {
     const d = new Date()
     d.setMonth(d.getMonth() - (5 - i))
@@ -98,89 +70,109 @@ function processOrders(orders: VendorOrderSummary[]) {
     return { month: key, revenue: monthlyMap[key] ?? 0 }
   })
 
-  const topProducts = Object.entries(productMap)
+  // Best sellers — by revenue from orders
+  const soldIds = new Set(Object.keys(productMap))
+  const bestSellers = Object.entries(productMap)
     .sort((a, b) => b[1].revenue - a[1].revenue)
-    .slice(0, 4)
-    .map(([name, s]) => ({ name, ...s }))
+    .slice(0, 5)
+    .map(([key, s]) => {
+      const prod = allProducts.find((p) => p.id === s.id || p.id === key)
+      return { name: prod?.name ?? key, sales: s.sales, revenue: s.revenue, image: prod?.images[0] }
+    })
 
+  // Worst sellers — products with ZERO sales
+  const worstSellers = allProducts
+    .filter((p) => !soldIds.has(p.id))
+    .slice(0, 4)
+
+  // Top customers
+  const topCustomers = Object.values(customerMap)
+    .sort((a, b) => b.spend - a.spend)
+    .slice(0, 5)
+
+  // Delivery breakdown
+  const totalDelivered = Object.values(deliveryMap).reduce((s, n) => s + n, 0)
+  const deliveryBreakdown = Object.entries(deliveryMap)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, count]) => {
+      const provider = DELIVERY_PROVIDERS.find((p) => p.id === id)
+      return { id, name: provider?.name ?? id, color: provider?.color ?? '#6b7280', count, pct: Math.round((count / totalDelivered) * 100) }
+    })
+
+  // Recent 5 orders
   const recent = [...orders]
     .sort((a, b) => new Date(b.order.created_at).getTime() - new Date(a.order.created_at).getTime())
     .slice(0, 5)
 
-  return { monthly, topProducts, recent, pending }
+  return { monthly, bestSellers, worstSellers, topCustomers, deliveryBreakdown, recent, pending }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SellerDashboardPage() {
   const { vendor, loading, signOut } = useSellerAuth()
-  const [products, setProducts] = useState(0)
+  const t = useT()
+  const sd = t.sellerDash
+  const [allProducts, setAllProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<VendorOrderSummary[]>([])
   const [fetching, setFetching] = useState(true)
 
   useEffect(() => {
     if (!vendor) return
-    Promise.all([getVendorProducts(vendor.id), getVendorOrders(vendor.id)]).then(([prods, ords]) => {
-      setProducts(prods.length)
-      setOrders(ords)
-    }).finally(() => setFetching(false))
+    Promise.all([getVendorProducts(vendor.id), getVendorOrders(vendor.id)])
+      .then(([prods, ords]) => { setAllProducts(prods); setOrders(ords) })
+      .finally(() => setFetching(false))
   }, [vendor])
 
-  const analytics = useMemo(() => processOrders(orders), [orders])
+  const analytics = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])
   const grossRevenue = orders.reduce((s, o) => s + o.vendorTotal, 0)
   const netEarnings  = grossRevenue * (1 - (vendor?.commission_rate ?? 10) / 100)
   const maxMonthly   = Math.max(...analytics.monthly.map((m) => m.revenue), 1)
+  const hour         = new Date().getHours()
+  const greeting     = hour < 12 ? sd.goodMorning : hour < 18 ? sd.goodAfternoon : sd.goodEvening
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
   if (!vendor) return null
 
   return (
     <div className="flex min-h-screen bg-gray-50" dir="ltr">
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-
-      <main className="flex-1 ml-60 p-8 max-w-[1200px]">
+      <main className="flex-1 ml-60 p-8">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-black text-gray-900">
-              {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, {vendor.store_name.split(' ')[0]} 👋
-            </h1>
+            <h1 className="text-2xl font-black text-gray-900">{greeting}, {vendor.store_name.split(' ')[0]} 👋</h1>
             <p className="text-gray-500 text-sm mt-1">
-              Store:{' '}
+              {t.sellerDash.viewMyStore}:{' '}
               <a href={`/shop/${vendor.store_slug}`} target="_blank" rel="noopener noreferrer"
-                className="text-emerald-600 hover:underline font-medium">
-                /shop/{vendor.store_slug}
-              </a>
+                className="text-emerald-600 hover:underline font-medium">/shop/{vendor.store_slug}</a>
             </p>
           </div>
           <Link href="/seller/products?new=1"
             className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm">
-            <Plus className="w-4 h-4" /> Add Product
+            <Plus className="w-4 h-4" /> {sd.addProduct}
           </Link>
         </div>
 
-        {/* KPI Stats */}
+        {/* KPIs */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
           {[
-            { label: 'Net Earnings', value: formatPrice(Math.round(netEarnings)), icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', sub: `after ${vendor.commission_rate}% commission` },
-            { label: 'Total Orders', value: orders.length.toLocaleString(), icon: ShoppingBag, color: 'text-blue-600 bg-blue-50', sub: 'all time' },
-            { label: 'Pending', value: analytics.pending.toLocaleString(), icon: Clock, color: 'text-amber-600 bg-amber-50', sub: 'need attention' },
-            { label: 'Products', value: products.toLocaleString(), icon: Package, color: 'text-violet-600 bg-violet-50', sub: 'listed in store' },
+            { label: sd.netEarnings, value: formatPrice(Math.round(netEarnings)), icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', sub: sd.afterCommission.replace('{n}', String(vendor.commission_rate)) },
+            { label: sd.totalOrders, value: orders.length.toLocaleString(), icon: ShoppingBag, color: 'text-blue-600 bg-blue-50', sub: sd.allTime },
+            { label: sd.pending, value: analytics.pending.toLocaleString(), icon: Clock, color: analytics.pending > 0 ? 'text-amber-600 bg-amber-50' : 'text-gray-400 bg-gray-50', sub: sd.needAttention },
+            { label: sd.products, value: allProducts.length.toLocaleString(), icon: Package, color: 'text-violet-600 bg-violet-50', sub: sd.listedInStore },
           ].map(({ label, value, icon: Icon, color, sub }) => (
             <div key={label} className="bg-white rounded-2xl p-5 shadow-sm">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
                 <Icon className="w-5 h-5" />
               </div>
               <p className="text-2xl font-black text-gray-900">{value}</p>
-              <p className="text-sm text-gray-700 font-medium mt-0.5">{label}</p>
+              <p className="text-sm font-semibold text-gray-700 mt-0.5">{label}</p>
               <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
             </div>
           ))}
@@ -190,28 +182,35 @@ export default function SellerDashboardPage() {
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-bold text-gray-900">Revenue — Last 6 Months</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Gross sales from your products</p>
+              <h2 className="font-bold text-gray-900">{sd.revenueChart}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{sd.grossSalesFrom}</p>
             </div>
             <div className="text-right">
               <p className="text-xl font-black text-gray-900">{formatPrice(grossRevenue)}</p>
-              <p className="text-xs text-gray-400">gross total</p>
+              <p className="text-xs text-gray-400">{sd.grossTotal}</p>
             </div>
           </div>
           {fetching || analytics.monthly.every((m) => m.revenue === 0) ? (
-            <div className="h-40 flex items-center justify-center text-gray-300 text-sm">
-              {fetching ? 'Loading…' : 'Revenue will appear here once you receive orders.'}
+            <div className="h-36 flex items-center justify-center text-gray-300 text-sm">
+              {fetching ? sd.loadingChart : sd.noRevenueYet}
             </div>
           ) : (
-            <div className="flex items-end gap-2 h-40">
-              {analytics.monthly.map((m) => {
-                const h = Math.max(Math.round((m.revenue / maxMonthly) * 100), m.revenue > 0 ? 6 : 0)
+            <div className="flex items-end gap-2 h-36">
+              {analytics.monthly.map((m, i) => {
+                const prev = analytics.monthly[i - 1]?.revenue ?? 0
+                const up = m.revenue >= prev
+                const h = Math.max(Math.round((m.revenue / maxMonthly) * 100), m.revenue > 0 ? 4 : 0)
                 return (
                   <div key={m.month} className="flex-1 flex flex-col items-center gap-1.5">
                     {m.revenue > 0 && (
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        {m.revenue >= 1000 ? `${Math.round(m.revenue / 1000)}k` : m.revenue}
-                      </span>
+                      <div className="flex items-center gap-0.5">
+                        {prev > 0 && (up
+                          ? <TrendingUp className="w-3 h-3 text-emerald-500" />
+                          : <TrendingDown className="w-3 h-3 text-red-400" />)}
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          {m.revenue >= 1000 ? `${Math.round(m.revenue / 1000)}k` : m.revenue}
+                        </span>
+                      </div>
                     )}
                     <div className="w-full flex-1 flex items-end">
                       <div
@@ -228,43 +227,37 @@ export default function SellerDashboardPage() {
           )}
         </div>
 
-        {/* Recent Orders + Top Products */}
+        {/* Best Sellers + Recent Orders */}
         <div className="grid xl:grid-cols-5 gap-6 mb-6">
 
-          {/* Recent Orders */}
-          <div className="xl:col-span-3 bg-white rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-gray-900">Recent Orders</h2>
-              <Link href="/seller/orders" className="text-xs text-emerald-600 font-semibold hover:underline flex items-center gap-1">
-                View all <ArrowRight className="w-3 h-3" />
-              </Link>
+          {/* Best Sellers */}
+          <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <Award className="w-5 h-5 text-emerald-600" />
+              <h2 className="font-bold text-gray-900">{sd.bestSellers}</h2>
             </div>
             {fetching ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}
-              </div>
-            ) : analytics.recent.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 text-sm">
-                No orders yet. Share your store link to start selling!
-              </div>
+              <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+            ) : analytics.bestSellers.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">{sd.noSalesYet}</p>
             ) : (
-              <div className="space-y-3">
-                {analytics.recent.map(({ order, vendorTotal }) => {
-                  const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending
-                  const Icon = cfg.icon
+              <div className="space-y-4">
+                {analytics.bestSellers.map((p, i) => {
+                  const pct = Math.round((p.revenue / (analytics.bestSellers[0]?.revenue || 1)) * 100)
                   return (
-                    <div key={order.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
-                        <Icon className="w-3.5 h-3.5" />
+                    <div key={p.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
+                          <span className="text-emerald-500 font-bold mr-1.5">#{i + 1}</span>{p.name}
+                        </p>
+                        <p className="text-xs font-bold text-gray-700 flex-shrink-0">{formatPrice(p.revenue)}</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{order.full_name}</p>
-                        <p className="text-xs text-gray-400">{order.wilaya} · {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-bold text-gray-900">{formatPrice(vendorTotal)}</p>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.label}</span>
-                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {(p.sales === 1 ? sd.unitsSold : sd.unitsSoldPlural).replace('{n}', String(p.sales))}
+                      </p>
                     </div>
                   )
                 })}
@@ -272,38 +265,33 @@ export default function SellerDashboardPage() {
             )}
           </div>
 
-          {/* Top Products */}
-          <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
+          {/* Recent Orders */}
+          <div className="xl:col-span-3 bg-white rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-gray-900">Top Products</h2>
-              <Link href="/seller/products" className="text-xs text-emerald-600 font-semibold hover:underline flex items-center gap-1">
-                All <ArrowRight className="w-3 h-3" />
+              <h2 className="font-bold text-gray-900">{sd.recentOrders}</h2>
+              <Link href="/seller/orders" className="text-xs text-emerald-600 font-semibold hover:underline flex items-center gap-1">
+                {sd.viewAll} <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
             {fetching ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}
-              </div>
-            ) : analytics.topProducts.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 text-sm">
-                Sales will appear here once orders come in.
-              </div>
+              <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+            ) : analytics.recent.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">{sd.noOrdersYet}</p>
             ) : (
-              <div className="space-y-4">
-                {analytics.topProducts.map((p, i) => {
-                  const pct = Math.round((p.revenue / (analytics.topProducts[0]?.revenue || 1)) * 100)
+              <div className="space-y-2">
+                {analytics.recent.map(({ order, vendorTotal }) => {
+                  const cfg = STATUS_CFG[order.status] ?? STATUS_CFG.pending
+                  const Icon = cfg.icon
                   return (
-                    <div key={p.name}>
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium text-gray-800 truncate max-w-[140px]">
-                          <span className="text-gray-400 mr-1.5">#{i + 1}</span>{p.name}
-                        </p>
-                        <p className="text-xs font-bold text-gray-700 flex-shrink-0">{formatPrice(p.revenue)}</p>
+                    <div key={order.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
+                        <Icon className="w-3.5 h-3.5" />
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{order.full_name}</p>
+                        <p className="text-xs text-gray-400">{order.wilaya} · {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{p.sales} unit{p.sales !== 1 ? 's' : ''} sold</p>
+                      <p className="text-sm font-bold text-gray-900 flex-shrink-0">{formatPrice(vendorTotal)}</p>
                     </div>
                   )
                 })}
@@ -312,26 +300,125 @@ export default function SellerDashboardPage() {
           </div>
         </div>
 
-        {/* Commission breakdown */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-5">
-            <TrendingUp className="w-5 h-5 text-emerald-600" />
-            <h2 className="font-bold text-gray-900">Earnings Breakdown</h2>
+        {/* Worst Sellers + Top Customers */}
+        <div className="grid xl:grid-cols-2 gap-6 mb-6">
+
+          {/* Worst Sellers */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <h2 className="font-bold text-gray-900">{sd.worstSellers}</h2>
+            </div>
+            {fetching ? (
+              <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+            ) : analytics.worstSellers.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">🎉 All your products have sold at least once!</p>
+            ) : (
+              <>
+                <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mb-4">{sd.noSalesProducts}</p>
+                <div className="space-y-3">
+                  {analytics.worstSellers.map((p) => (
+                    <div key={p.id} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <Package className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
+                        <p className="text-xs text-gray-400">{p.category} · {formatPrice(p.price)}</p>
+                      </div>
+                      <span className="text-xs text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">0 sales</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-2xl font-black text-gray-900">{formatPrice(grossRevenue)}</p>
-              <p className="text-sm text-gray-500 mt-1">Gross Sales</p>
+
+          {/* Top Customers */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <Users className="w-5 h-5 text-blue-500" />
+              <h2 className="font-bold text-gray-900">{sd.topCustomers}</h2>
             </div>
-            <div className="bg-red-50 rounded-xl p-4">
-              <p className="text-2xl font-black text-red-600">{vendor.commission_rate}%</p>
-              <p className="text-sm text-gray-500 mt-1">Platform fee</p>
-              <p className="text-xs text-gray-400">{formatPrice(Math.round(grossRevenue * vendor.commission_rate / 100))}</p>
+            {fetching ? (
+              <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+            ) : analytics.topCustomers.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">{sd.noOrdersYet}</p>
+            ) : (
+              <div className="space-y-3">
+                {analytics.topCustomers.map((c, i) => (
+                  <div key={c.name + i} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-sm font-bold text-blue-600">
+                      {c.name[0]?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{c.name}</p>
+                      <p className="text-xs text-gray-400">{c.wilaya} · {sd.customerOrders.replace('{n}', String(c.orders))}</p>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900 flex-shrink-0">{formatPrice(c.spend)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Delivery Breakdown + Earnings */}
+        <div className="grid xl:grid-cols-2 gap-6">
+
+          {/* Delivery Company Breakdown */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <Truck className="w-5 h-5 text-indigo-600" />
+              <h2 className="font-bold text-gray-900">{sd.deliveryBreakdown}</h2>
             </div>
-            <div className="bg-emerald-50 rounded-xl p-4">
-              <p className="text-2xl font-black text-emerald-700">{formatPrice(Math.round(netEarnings))}</p>
-              <p className="text-sm text-gray-500 mt-1">You earn</p>
-              <p className="text-xs text-gray-400">{100 - vendor.commission_rate}% of sales</p>
+            {fetching ? (
+              <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+            ) : analytics.deliveryBreakdown.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">{sd.noDeliveryData}</p>
+            ) : (
+              <div className="space-y-4">
+                {analytics.deliveryBreakdown.map((d) => (
+                  <div key={d.id}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                        <span className="text-sm font-medium text-gray-800">{d.name}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 font-medium">
+                        {sd.deliveryOrders.replace('{n}', String(d.count))} · {d.pct}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${d.pct}%`, backgroundColor: d.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Earnings Breakdown */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <TrendingUp className="w-5 h-5 text-emerald-600" />
+              <h2 className="font-bold text-gray-900">{sd.earningsBreakdown}</h2>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-lg font-black text-gray-900">{formatPrice(grossRevenue)}</p>
+                <p className="text-xs text-gray-500 mt-1">{sd.grossSalesLabel}</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-4">
+                <p className="text-lg font-black text-red-600">{vendor.commission_rate}%</p>
+                <p className="text-xs text-gray-500 mt-1">{sd.platformFee}</p>
+                <p className="text-xs text-red-400 mt-0.5">{formatPrice(Math.round(grossRevenue * vendor.commission_rate / 100))}</p>
+              </div>
+              <div className="bg-emerald-50 rounded-xl p-4">
+                <p className="text-lg font-black text-emerald-700">{formatPrice(Math.round(netEarnings))}</p>
+                <p className="text-xs text-gray-500 mt-1">{sd.youEarn}</p>
+                <p className="text-xs text-emerald-500 mt-0.5">{sd.ofSales.replace('{n}', String(100 - vendor.commission_rate))}</p>
+              </div>
             </div>
           </div>
         </div>

@@ -4,56 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, Plus, Edit2, Trash2, X, Check, Loader2, ExternalLink, Search } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
 import { niches } from '@/lib/data/niches'
+import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { Product } from '@/types'
-
-function SellerSidebar({ storeName, onLogout }: { storeName: string; onLogout: () => void }) {
-  const NAV = [
-    { href: '/seller/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/seller/products', label: 'My Products', icon: Package, active: true },
-    { href: '/seller/orders', label: 'My Orders', icon: ShoppingBag },
-    { href: '/seller/settings', label: 'Store Settings', icon: Settings },
-  ]
-  return (
-    <aside className="w-60 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-20">
-      <div className="p-5 border-b border-gray-800">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Store className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-white text-sm truncate">{storeName}</span>
-        </div>
-        <span className="text-xs text-gray-500 ml-10">Seller Dashboard</span>
-      </div>
-      <nav className="flex-1 p-3 space-y-0.5 flex flex-col">
-        <div className="flex-1 space-y-0.5">
-          {NAV.map(({ href, label, icon: Icon, active }) => (
-            <Link key={href} href={href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                active ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}>
-              <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-gray-500'}`} />
-              {label}
-            </Link>
-          ))}
-        </div>
-        <div className="space-y-0.5 pt-2 border-t border-gray-800">
-          <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-            <ExternalLink className="w-4 h-4 text-gray-500" /> View Store
-          </Link>
-          <button onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-            <LogOut className="w-4 h-4 text-gray-500" /> Logout
-          </button>
-        </div>
-      </nav>
-    </aside>
-  )
-}
 
 const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',
@@ -149,8 +106,8 @@ export default function SellerProductsPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <SellerSidebar storeName={vendor.store_name} onLogout={signOut} />
+    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
       <main className="flex-1 ml-60 p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
