@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getOrdersByPhone, OrderRow } from '@/lib/supabase/queries'
-import { useT } from '@/lib/store/langStore'
+import { useT, useLang } from '@/lib/store/langStore'
 
 function formatDate(iso: string, lang: string) {
   const locale = lang === 'ar' ? 'ar-DZ' : lang === 'fr' ? 'fr-DZ' : 'en-GB'
@@ -14,6 +14,7 @@ function formatDate(iso: string, lang: string) {
 
 export default function OrdersPage() {
   const t = useT()
+  const lang = useLang()
   const [phone, setPhone] = useState('')
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -104,7 +105,7 @@ export default function OrdersPage() {
                           {statusCfg.label}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">{t.orders.placedOn} {formatDate(order.created_at, 'fr')}</p>
+                      <p className="text-xs text-gray-500">{t.orders.placedOn} {formatDate(order.created_at, lang)}</p>
                     </div>
                     <span className="font-black text-gray-900 text-lg">{formatPrice(order.total)}</span>
                   </div>

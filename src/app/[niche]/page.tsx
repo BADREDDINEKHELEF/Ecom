@@ -50,7 +50,7 @@ export default async function NichePage({ params, searchParams }: PageProps) {
   if (sort === 'price-asc')  products = [...products].sort((a, b) => a.price - b.price)
   else if (sort === 'price-desc') products = [...products].sort((a, b) => b.price - a.price)
   else if (sort === 'rating')     products = [...products].sort((a, b) => b.rating - a.rating)
-  else if (sort === 'new')        products = [...products].sort((a) => (a.isNew ? -1 : 1))
+  else if (sort === 'new')        products = [...products].sort((a, b) => (a.isNew === b.isNew ? 0 : a.isNew ? -1 : 1))
 
   return <NicheShell nicheId={nicheId} category={category} products={products} />
 }

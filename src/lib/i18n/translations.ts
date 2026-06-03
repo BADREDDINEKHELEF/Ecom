@@ -60,6 +60,7 @@ export const translations = {
       promoInvalid: 'Invalid code', promoExpired: 'Code expired',
       promoMaxed: 'Code limit reached', promoMinOrder: 'Min. order not met',
       phonePattern: 'Algerian number: 05xx, 06xx or 07xx',
+      orderFailed: 'Could not place your order. Please try again.',
     },
     search: { title: 'Search Products', results: '{n} results for', noResults: 'No products found', hint: 'Start typing to search' },
     auth: {
@@ -326,6 +327,7 @@ export const translations = {
       promoInvalid: 'Code invalide', promoExpired: 'Code expiré',
       promoMaxed: 'Limite atteinte', promoMinOrder: 'Commande min. non atteinte',
       phonePattern: 'Numéro algérien : 05xx, 06xx ou 07xx',
+      orderFailed: 'Impossible de passer votre commande. Veuillez réessayer.',
     },
     search: { title: 'Recherche', results: '{n} résultats pour', noResults: 'Aucun produit trouvé', hint: 'Commencez à taper pour chercher' },
     auth: {
@@ -592,6 +594,7 @@ export const translations = {
       promoInvalid: 'كود غير صالح', promoExpired: 'انتهت صلاحية الكود',
       promoMaxed: 'تم الوصول للحد الأقصى', promoMinOrder: 'الحد الأدنى للطلب لم يتحقق',
       phonePattern: 'رقم جزائري: 05xx أو 06xx أو 07xx',
+      orderFailed: 'تعذر إتمام طلبك. يرجى المحاولة مرة أخرى.',
     },
     search: { title: 'البحث عن منتجات', results: '{n} نتيجة لـ', noResults: 'لا توجد منتجات', hint: 'ابدأ الكتابة للبحث' },
     auth: {

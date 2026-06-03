@@ -61,6 +61,7 @@ export default function CheckoutPage() {
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const [promoInput, setPromoInput] = useState('')
   const [promoApplying, setPromoApplying] = useState(false)
@@ -144,6 +145,7 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
+    setSaveError('')
     try {
       await createOrder({
         fullName: form.fullName,
@@ -166,13 +168,13 @@ export default function CheckoutPage() {
           subtotal: product.price * quantity,
         })),
       })
+      setSubmitted(true)
+      clearCart()
     } catch {
-      // save failed silently — order confirmed UI still shows
+      setSaveError(t.checkout.orderFailed)
     } finally {
       setSaving(false)
     }
-    setSubmitted(true)
-    clearCart()
   }
 
   const f = (key: keyof typeof form, val: string) => setForm({ ...form, [key]: val })
@@ -355,6 +357,11 @@ export default function CheckoutPage() {
             )}
           </div>
 
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 mb-2">
+              {saveError}
+            </div>
+          )}
           <button
             type="submit"
             disabled={saving}
