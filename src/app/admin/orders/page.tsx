@@ -229,6 +229,9 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null)
@@ -238,11 +241,27 @@ export default function AdminOrdersPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setOrders(await getAllOrders())
+      const result = await getAllOrders(0)
+      setOrders(result.orders)
+      setHasMore(result.hasMore)
+      setPage(0)
     } finally {
       setLoading(false)
     }
   }, [])
+
+  const loadMore = async () => {
+    setLoadingMore(true)
+    try {
+      const nextPage = page + 1
+      const result = await getAllOrders(nextPage)
+      setOrders((prev) => [...prev, ...result.orders])
+      setHasMore(result.hasMore)
+      setPage(nextPage)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -477,6 +496,17 @@ export default function AdminOrdersPage() {
         )}
         {!loading && filtered.length === 0 && (
           <div className="py-16 text-center text-gray-500">No orders found</div>
+        )}
+        {!loading && hasMore && !search && !filterStatus && (
+          <div className="px-6 py-4 border-t border-gray-100 text-center">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="text-sm text-indigo-600 font-semibold hover:underline disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading…' : 'Load more orders'}
+            </button>
+          </div>
         )}
       </div>
 

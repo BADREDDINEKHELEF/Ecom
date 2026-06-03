@@ -23,12 +23,12 @@ function dbToProduct(row: any): Product {
   }
 }
 
-export async function getProducts(): Promise<Product[]> {
+export async function getProducts(nicheId?: string, category?: string): Promise<Product[]> {
   const supabase = createClient()
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('created_at', { ascending: false })
+  let query = supabase.from('products').select('*').order('created_at', { ascending: false })
+  if (nicheId) query = query.eq('niche_id', nicheId)
+  if (category) query = query.eq('category', category)
+  const { data, error } = await query
   if (error) throw error
   return (data || []).map(dbToProduct)
 }
@@ -472,14 +472,18 @@ export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
   return (data || []) as OrderRow[]
 }
 
-export async function getAllOrders(): Promise<OrderRow[]> {
+export async function getAllOrders(page = 0, pageSize = 50): Promise<{ orders: OrderRow[]; hasMore: boolean }> {
   const supabase = createClient()
+  const from = page * pageSize
+  const to = from + pageSize
   const { data, error } = await supabase
     .from('orders')
     .select('*, order_items(*)')
     .order('created_at', { ascending: false })
+    .range(from, to)
   if (error) throw error
-  return (data || []) as OrderRow[]
+  const orders = (data || []) as OrderRow[]
+  return { orders: orders.slice(0, pageSize), hasMore: orders.length > pageSize }
 }
 
 export async function updateOrderStatus(id: string, status: string): Promise<void> {

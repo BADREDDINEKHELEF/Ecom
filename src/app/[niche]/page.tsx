@@ -39,13 +39,10 @@ export default async function NichePage({ params, searchParams }: PageProps) {
 
   let products: Product[] = []
   try {
-    const all = await getProducts()
-    products = all.filter((p) => p.nicheId === nicheId)
+    products = await getProducts(nicheId, category)
   } catch {
     products = []
   }
-
-  if (category) products = products.filter((p) => p.category === category)
 
   if (sort === 'price-asc')  products = [...products].sort((a, b) => a.price - b.price)
   else if (sort === 'price-desc') products = [...products].sort((a, b) => b.price - a.price)
