@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { X, MapPin, ChevronDown } from 'lucide-react'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { COUNTRY_LOCALE } from '@/lib/locale/currencies'
-import { useLangStore } from '@/lib/store/langStore'
+import { useLangStore, useT } from '@/lib/store/langStore'
 import type { Lang } from '@/lib/i18n/translations'
 
 const CURRENCY_LABELS: Record<string, string> = {
@@ -24,6 +24,7 @@ const REGIONS = [
 export default function LocaleBanner() {
   const { locale, showBanner, dismissBanner, changeLocale } = useGeolocation()
   const { setLang } = useLangStore()
+  const t = useT()
   const [showRegions, setShowRegions] = useState(false)
 
   if (!showBanner || !locale) return null
@@ -51,11 +52,11 @@ export default function LocaleBanner() {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900">
             {locale.detected
-              ? `We detected you're in ${locale.city}`
-              : 'Shopping from Algeria'}
+              ? `${t.localeBanner.detected} ${locale.city}`
+              : t.localeBanner.shoppingFrom}
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
-            Shopping in <span className="font-semibold text-gray-700">{currencyLabel}</span>
+            {t.localeBanner.shoppingIn} <span className="font-semibold text-gray-700">{currencyLabel}</span>
           </p>
 
           <div className="flex items-center gap-2 mt-3">
@@ -63,13 +64,13 @@ export default function LocaleBanner() {
               onClick={handleAccept}
               className="flex-1 bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-indigo-700 transition-colors"
             >
-              Continue
+              {t.localeBanner.continue}
             </button>
             <button
               onClick={() => setShowRegions(!showRegions)}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 font-medium transition-colors"
             >
-              Change region <ChevronDown className={`w-3 h-3 transition-transform ${showRegions ? 'rotate-180' : ''}`} />
+              {t.localeBanner.changeRegion} <ChevronDown className={`w-3 h-3 transition-transform ${showRegions ? 'rotate-180' : ''}`} />
             </button>
           </div>
 
@@ -92,7 +93,7 @@ export default function LocaleBanner() {
         <button
           onClick={dismissBanner}
           className="p-1 text-gray-400 hover:text-gray-600 flex-shrink-0"
-          aria-label="Dismiss"
+          aria-label={t.localeBanner.dismiss}
         >
           <X className="w-4 h-4" />
         </button>

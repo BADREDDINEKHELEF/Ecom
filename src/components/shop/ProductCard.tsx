@@ -7,6 +7,7 @@ import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
 import { useToastStore } from '@/lib/store/toastStore'
+import { useT } from '@/lib/store/langStore'
 import { formatPrice, discount } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import StarRating from '@/components/ui/StarRating'
@@ -19,6 +20,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem)
   const { toggle, has } = useWishlistStore()
   const addToast = useToastStore((s) => s.add)
+  const t = useT()
   const wishlisted = has(product.id)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
@@ -27,13 +29,16 @@ export default function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     addItem(product)
-    addToast(`${product.name} added to cart`)
+    addToast(`${product.name} ${t.product.addedMsg}`)
   }
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault()
     toggle(product)
-    addToast(wishlisted ? 'Removed from wishlist' : 'Saved to wishlist', wishlisted ? 'info' : 'success')
+    addToast(
+      wishlisted ? t.product.removedWishlist : t.product.savedWishlist,
+      wishlisted ? 'info' : 'success',
+    )
   }
 
   return (
@@ -48,7 +53,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
-            {product.isNew && <Badge variant="new">New</Badge>}
+            {product.isNew && <Badge variant="new">{t.common.new}</Badge>}
             {hasDiscount && <Badge variant="sale">-{discountPct}%</Badge>}
           </div>
           <button
@@ -97,10 +102,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {product.stock > 0 && product.stock < 10 && (
-          <p className="text-xs text-orange-500 font-medium mt-2">Only {product.stock} left</p>
+          <p className="text-xs text-orange-500 font-medium mt-2">
+            {t.common.lowStock.replace('{n}', String(product.stock))}
+          </p>
         )}
         {product.stock === 0 && (
-          <p className="text-xs text-red-500 font-medium mt-2">Out of stock</p>
+          <p className="text-xs text-red-500 font-medium mt-2">{t.product.outOfStock}</p>
         )}
       </div>
     </div>

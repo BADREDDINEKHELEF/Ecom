@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, Store } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getVendorByUserId } from '@/lib/supabase/queries'
+import { useT } from '@/lib/store/langStore'
 
 export default function SellerLoginPage() {
   const router = useRouter()
+  const t = useT()
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -26,13 +28,13 @@ export default function SellerLoginPage() {
 
     const vendor = await getVendorByUserId(data.user.id)
     if (!vendor) {
-      setError('No seller account found for this email. Please register first.')
+      setError(t.seller.noSellerFound)
       await supabase.auth.signOut()
       setLoading(false)
       return
     }
     if (!vendor.is_active) {
-      setError('Your seller account has been suspended. Contact support.')
+      setError(t.seller.suspended)
       await supabase.auth.signOut()
       setLoading(false)
       return
@@ -45,7 +47,7 @@ export default function SellerLoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <Link href="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-8 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to store
+          <ArrowLeft className="w-4 h-4" /> {t.seller.backToStore}
         </Link>
 
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
@@ -55,8 +57,8 @@ export default function SellerLoginPage() {
                 <Store className="w-6 h-6 text-white" />
               </div>
             </div>
-            <h1 className="text-2xl font-black text-gray-900">Seller Login</h1>
-            <p className="text-gray-500 text-sm mt-1">Access your ShopDZ seller dashboard</p>
+            <h1 className="text-2xl font-black text-gray-900">{t.seller.loginTitle}</h1>
+            <p className="text-gray-500 text-sm mt-1">{t.seller.loginSub}</p>
           </div>
 
           {error && (
@@ -67,7 +69,7 @@ export default function SellerLoginPage() {
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.emailLabel}</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -79,7 +81,7 @@ export default function SellerLoginPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.passwordLabel}</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -98,14 +100,14 @@ export default function SellerLoginPage() {
             <button type="submit" disabled={loading}
               className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors mt-2 flex items-center justify-center gap-2 disabled:opacity-70">
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Sign In to Dashboard
+              {t.seller.loginBtn}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            Don&apos;t have a seller account?{' '}
+            {t.seller.noSellerAccount}{' '}
             <Link href="/become-seller" className="text-emerald-600 font-bold hover:underline">
-              Apply now
+              {t.seller.applyNow}
             </Link>
           </p>
         </div>

@@ -3,8 +3,11 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { useT } from '@/lib/store/langStore'
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const t = useT()
+
   useEffect(() => {
     console.error('App error:', error)
   }, [error])
@@ -14,22 +17,20 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
       <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
         <AlertTriangle className="w-8 h-8 text-red-500" />
       </div>
-      <h1 className="text-2xl font-black text-gray-900 mb-2">Something went wrong</h1>
-      <p className="text-gray-500 mb-8 max-w-sm text-sm">
-        We encountered an unexpected error. Please try again or return to the homepage.
-      </p>
+      <h1 className="text-2xl font-black text-gray-900 mb-2">{t.error.title}</h1>
+      <p className="text-gray-500 mb-8 max-w-sm text-sm">{t.error.message}</p>
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={reset}
           className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-700 transition-colors"
         >
-          <RefreshCw className="w-4 h-4" /> Try Again
+          <RefreshCw className="w-4 h-4" /> {t.error.tryAgain}
         </button>
         <Link
           href="/"
           className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-semibold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition-colors"
         >
-          Back to Home
+          {t.error.backToHome}
         </Link>
       </div>
     </div>

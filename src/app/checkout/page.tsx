@@ -272,7 +272,7 @@ export default function CheckoutPage() {
                 <input required type="tel" value={form.phone} onChange={(e) => f('phone', e.target.value)}
                   placeholder="0555 00 00 00"
                   pattern="(05|06|07)[0-9]{8}"
-                  title="Numéro algérien: 05xx, 06xx ou 07xx"
+                  title={t.checkout.phonePattern}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
               <div>
