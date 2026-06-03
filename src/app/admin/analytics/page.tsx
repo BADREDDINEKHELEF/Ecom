@@ -1,79 +1,106 @@
-import { TrendingUp, TrendingDown, Users, ShoppingBag, DollarSign, Eye, Truck, XCircle, RotateCcw, Clock } from 'lucide-react'
+import { TrendingUp, ShoppingBag, DollarSign, Truck, XCircle, RotateCcw, Clock, Package } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { niches } from '@/lib/data/niches'
-import { getCodStats } from '@/lib/supabase/queries'
+import { getCodStats, getAnalyticsData } from '@/lib/supabase/queries'
 
-const MONTHLY = [
-  { month: 'Jul', revenue: 185000, orders: 72 },
-  { month: 'Aug', revenue: 220000, orders: 89 },
-  { month: 'Sep', revenue: 198000, orders: 81 },
-  { month: 'Oct', revenue: 267000, orders: 104 },
-  { month: 'Nov', revenue: 312000, orders: 128 },
-  { month: 'Dec', revenue: 389000, orders: 156 },
-]
-
-const maxRevenue = Math.max(...MONTHLY.map((m) => m.revenue))
-
-const TOP_PRODUCTS = [
-  { name: 'Baby Stroller Travel System', niche: 'kids', sales: 43, revenue: 1032000 },
-  { name: 'Kids Learning Tablet 7"', niche: 'kids', sales: 38, revenue: 456000 },
-  { name: 'Portable Jump Starter 2000A', niche: 'cars', sales: 31, revenue: 356500 },
-  { name: 'Multi-Level Cat Tree Tower', niche: 'animals', sales: 28, revenue: 249200 },
-  { name: 'HD Dash Cam 4K WiFi', niche: 'cars', sales: 24, revenue: 213600 },
-]
+export const revalidate = 120
 
 export default async function AnalyticsPage() {
-  const cod = await getCodStats().catch(() => ({ total: 0, delivered: 0, failed: 0, returned: 0, pending: 0 }))
+  const [analytics, cod] = await Promise.all([
+    getAnalyticsData().catch(() => ({
+      totalRevenue: 0,
+      totalOrders: 0,
+      monthly: [],
+      topProducts: [],
+    })),
+    getCodStats().catch(() => ({ total: 0, delivered: 0, failed: 0, returned: 0, pending: 0 })),
+  ])
+
   const deliveryRate = cod.total > 0 ? Math.round((cod.delivered / cod.total) * 100) : 0
   const failureRate  = cod.total > 0 ? Math.round((cod.failed  / cod.total) * 100) : 0
   const returnRate   = cod.total > 0 ? Math.round((cod.returned / cod.total) * 100) : 0
+  const maxRevenue   = Math.max(...analytics.monthly.map((m) => m.revenue), 1)
+
+  const kpis = [
+    {
+      label: 'Revenue (6 months)',
+      value: formatPrice(analytics.totalRevenue),
+      icon: DollarSign,
+      color: 'text-indigo-600 bg-indigo-50',
+      sub: analytics.totalRevenue === 0 ? 'No orders yet' : 'All time in period',
+    },
+    {
+      label: 'Total Orders',
+      value: analytics.totalOrders.toLocaleString(),
+      icon: ShoppingBag,
+      color: 'text-emerald-600 bg-emerald-50',
+      sub: 'Last 6 months',
+    },
+    {
+      label: 'COD Orders',
+      value: cod.total.toLocaleString(),
+      icon: Truck,
+      color: 'text-violet-600 bg-violet-50',
+      sub: `${deliveryRate}% delivery rate`,
+    },
+    {
+      label: 'Avg. Order Value',
+      value: analytics.totalOrders > 0 ? formatPrice(Math.round(analytics.totalRevenue / analytics.totalOrders)) : '—',
+      icon: TrendingUp,
+      color: 'text-amber-600 bg-amber-50',
+      sub: 'Last 6 months',
+    },
+  ]
 
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900">Analytics</h1>
-        <p className="text-gray-500 text-sm mt-1">Last 6 months performance overview</p>
+        <p className="text-gray-500 text-sm mt-1">Last 6 months — live data from your orders</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-        {[
-          { label: 'Total Revenue', value: formatPrice(389000), change: '+24.7%', up: true, icon: DollarSign, color: 'text-indigo-600 bg-indigo-50' },
-          { label: 'Total Orders', value: '1,041', change: '+18.3%', up: true, icon: ShoppingBag, color: 'text-emerald-600 bg-emerald-50' },
-          { label: 'Unique Visitors', value: '14,238', change: '+9.1%', up: true, icon: Eye, color: 'text-violet-600 bg-violet-50' },
-          { label: 'Conversion Rate', value: '7.3%', change: '-0.4%', up: false, icon: Users, color: 'text-amber-600 bg-amber-50' },
-        ].map(({ label, value, change, up, icon: Icon, color }) => (
+        {kpis.map(({ label, value, icon: Icon, color, sub }) => (
           <div key={label} className="bg-white rounded-2xl p-5 shadow-sm">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
               <Icon className="w-5 h-5" />
             </div>
             <p className="text-2xl font-black text-gray-900">{value}</p>
             <p className="text-sm text-gray-500 mt-0.5">{label}</p>
-            <div className={`flex items-center gap-1 mt-2 text-xs font-bold ${up ? 'text-green-600' : 'text-red-500'}`}>
-              {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {change} vs last period
-            </div>
+            <p className="text-xs text-gray-400 mt-1">{sub}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        {/* Revenue Chart */}
-        <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="font-bold text-gray-900 mb-6">Monthly Revenue</h2>
+      {/* Revenue Chart */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+        <h2 className="font-bold text-gray-900 mb-6">Monthly Revenue</h2>
+        {analytics.monthly.every((m) => m.revenue === 0) ? (
+          <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
+            No orders yet — revenue will appear here once you start selling.
+          </div>
+        ) : (
           <div className="flex items-end gap-3 h-48">
-            {MONTHLY.map((m) => {
-              const height = Math.round((m.revenue / maxRevenue) * 100)
+            {analytics.monthly.map((m) => {
+              const height = Math.max(Math.round((m.revenue / maxRevenue) * 100), m.revenue > 0 ? 4 : 0)
               return (
                 <div key={m.month} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-xs text-gray-500 font-medium">{formatPrice(m.revenue / 1000)}k</span>
-                  <div className="w-full relative group">
-                    <div
-                      className="w-full bg-indigo-500 rounded-t-lg hover:bg-indigo-600 transition-colors cursor-default"
-                      style={{ height: `${height * 1.5}px` }}
-                    />
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                      {m.orders} orders
+                  {m.revenue > 0 && (
+                    <span className="text-xs text-gray-500 font-medium">
+                      {m.revenue >= 1000 ? `${Math.round(m.revenue / 1000)}k` : m.revenue}
+                    </span>
+                  )}
+                  <div className="w-full flex-1 flex items-end">
+                    <div className="w-full relative group">
+                      <div
+                        className="w-full bg-indigo-500 rounded-t-lg hover:bg-indigo-600 transition-colors cursor-default"
+                        style={{ height: `${height * 1.5}px` }}
+                      />
+                      {m.orders > 0 && (
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                          {m.orders} order{m.orders !== 1 ? 's' : ''}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <span className="text-xs font-semibold text-gray-600">{m.month}</span>
@@ -81,99 +108,79 @@ export default async function AnalyticsPage() {
               )
             })}
           </div>
-        </div>
-
-        {/* Niche Breakdown */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="font-bold text-gray-900 mb-6">Traffic by Niche</h2>
-          <div className="space-y-4">
-            {[
-              { niche: 'kids', visits: 5842, pct: 41 },
-              { niche: 'cars', visits: 4721, pct: 33 },
-              { niche: 'animals', visits: 3675, pct: 26 },
-            ].map(({ niche, visits, pct }) => {
-              const n = niches.find((x) => x.id === niche)!
-              const barColors: Record<string, string> = { cars: 'bg-orange-400', animals: 'bg-amber-400', kids: 'bg-pink-400' }
-              return (
-                <div key={niche}>
-                  <div className="flex items-center justify-between mb-1.5 text-sm">
-                    <span className="font-medium text-gray-700">{n.emoji} {n.name.split(' ')[0]}</span>
-                    <span className="text-gray-500">{visits.toLocaleString()} visits · {pct}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${barColors[niche]}`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* COD Performance — Algeria's #1 differentiator */}
+      {/* COD Performance */}
       <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
         <div className="flex items-center gap-2 mb-6">
           <Truck className="w-5 h-5 text-indigo-600" />
           <h2 className="font-bold text-gray-900">COD Performance</h2>
           <span className="text-xs text-gray-400 ml-auto">{cod.total} total COD orders</span>
         </div>
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {[
-            { label: 'Delivered', value: cod.delivered, rate: deliveryRate, icon: Truck, color: 'text-green-600 bg-green-50', bar: 'bg-green-500' },
-            { label: 'Failed', value: cod.failed, rate: failureRate, icon: XCircle, color: 'text-red-600 bg-red-50', bar: 'bg-red-500' },
-            { label: 'Returned', value: cod.returned, rate: returnRate, icon: RotateCcw, color: 'text-amber-600 bg-amber-50', bar: 'bg-amber-500' },
-            { label: 'Pending', value: cod.pending, rate: cod.total > 0 ? Math.round((cod.pending / cod.total) * 100) : 0, icon: Clock, color: 'text-gray-600 bg-gray-100', bar: 'bg-gray-400' },
-          ].map(({ label, value, rate, icon: Icon, color, bar }) => (
-            <div key={label} className="space-y-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-gray-900">{value}</p>
-                <p className="text-sm text-gray-500">{label}</p>
-              </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${bar}`} style={{ width: `${rate}%` }} />
-              </div>
-              <p className="text-xs font-bold text-gray-500">{rate}%</p>
-            </div>
-          ))}
-        </div>
-        {cod.total === 0 && (
-          <p className="text-sm text-gray-400 mt-4 text-center">
-            Mark orders as delivered/failed in the Orders page to see COD analytics.
+        {cod.total === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">
+            Mark orders as delivered / failed in the Orders page to see COD analytics.
           </p>
+        ) : (
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            {[
+              { label: 'Delivered', value: cod.delivered, rate: deliveryRate, icon: Truck,       color: 'text-green-600 bg-green-50',  bar: 'bg-green-500' },
+              { label: 'Failed',    value: cod.failed,    rate: failureRate,  icon: XCircle,     color: 'text-red-600 bg-red-50',      bar: 'bg-red-500' },
+              { label: 'Returned',  value: cod.returned,  rate: returnRate,   icon: RotateCcw,   color: 'text-amber-600 bg-amber-50',  bar: 'bg-amber-500' },
+              { label: 'Pending',   value: cod.pending,   rate: cod.total > 0 ? Math.round((cod.pending / cod.total) * 100) : 0, icon: Clock, color: 'text-gray-600 bg-gray-100', bar: 'bg-gray-400' },
+            ].map(({ label, value, rate, icon: Icon, color, bar }) => (
+              <div key={label} className="space-y-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-gray-900">{value}</p>
+                  <p className="text-sm text-gray-500">{label}</p>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${bar}`} style={{ width: `${rate}%` }} />
+                </div>
+                <p className="text-xs font-bold text-gray-500">{rate}%</p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
       {/* Top Products */}
       <div className="bg-white rounded-2xl p-6 shadow-sm">
-        <h2 className="font-bold text-gray-900 mb-5">Top Selling Products</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['#', 'Product', 'Niche', 'Sales', 'Revenue'].map((h) => (
-                  <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide pb-3 pr-6">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {TOP_PRODUCTS.map((p, i) => {
-                const n = niches.find((x) => x.id === p.niche)!
-                return (
+        <div className="flex items-center gap-2 mb-5">
+          <Package className="w-5 h-5 text-indigo-600" />
+          <h2 className="font-bold text-gray-900">Top Selling Products</h2>
+        </div>
+        {analytics.topProducts.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">
+            Top products will appear here once orders come in.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['#', 'Product', 'Units Sold', 'Revenue'].map((h) => (
+                    <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide pb-3 pr-6">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {analytics.topProducts.map((p, i) => (
                   <tr key={p.name} className="hover:bg-gray-50">
                     <td className="py-3 pr-6 font-bold text-gray-400 text-xs">{i + 1}</td>
-                    <td className="py-3 pr-6 font-semibold text-gray-900">{p.name}</td>
-                    <td className="py-3 pr-6 text-gray-600">{n.emoji} {n.name.split(' ')[0]}</td>
+                    <td className="py-3 pr-6 font-semibold text-gray-900 max-w-[200px] truncate">{p.name}</td>
                     <td className="py-3 pr-6 font-bold text-gray-900">{p.sales}</td>
                     <td className="py-3 font-bold text-indigo-600">{formatPrice(p.revenue)}</td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

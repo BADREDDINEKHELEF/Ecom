@@ -491,3 +491,129 @@ export async function updateOrderStatus(id: string, status: string): Promise<voi
   const { error } = await supabase.from('orders').update({ status }).eq('id', id)
   if (error) throw error
 }
+
+// ─── Store Settings ────────────────────────────────────────────────────────────
+
+export interface StoreSettings {
+  storeName: string
+  storeEmail: string
+  phone: string
+  whatsappNumber: string
+  freeShippingThreshold: number
+  zone1Cost: number
+  zone2Cost: number
+  zone3Cost: number
+  zone4Cost: number
+  cashOnDelivery: boolean
+  cardPayment: boolean
+}
+
+const SETTINGS_DEFAULTS: StoreSettings = {
+  storeName: 'Casbah Store',
+  storeEmail: 'support@casbahstore.dz',
+  phone: '+213 555 000 000',
+  whatsappNumber: '213555000000',
+  freeShippingThreshold: 5000,
+  zone1Cost: 350,
+  zone2Cost: 450,
+  zone3Cost: 600,
+  zone4Cost: 850,
+  cashOnDelivery: true,
+  cardPayment: false,
+}
+
+export async function getStoreSettings(): Promise<StoreSettings> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single()
+  if (error || !data) return SETTINGS_DEFAULTS
+  return {
+    storeName: data.store_name,
+    storeEmail: data.store_email,
+    phone: data.phone,
+    whatsappNumber: data.whatsapp_number,
+    freeShippingThreshold: data.free_shipping_threshold,
+    zone1Cost: data.zone1_cost,
+    zone2Cost: data.zone2_cost,
+    zone3Cost: data.zone3_cost,
+    zone4Cost: data.zone4_cost,
+    cashOnDelivery: data.cash_on_delivery,
+    cardPayment: data.card_payment,
+  }
+}
+
+export async function saveStoreSettings(s: StoreSettings): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('store_settings').upsert({
+    id: 1,
+    store_name: s.storeName,
+    store_email: s.storeEmail,
+    phone: s.phone,
+    whatsapp_number: s.whatsappNumber,
+    free_shipping_threshold: s.freeShippingThreshold,
+    zone1_cost: s.zone1Cost,
+    zone2_cost: s.zone2Cost,
+    zone3_cost: s.zone3Cost,
+    zone4_cost: s.zone4Cost,
+    cash_on_delivery: s.cashOnDelivery,
+    card_payment: s.cardPayment,
+    updated_at: new Date().toISOString(),
+  })
+  if (error) throw error
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export interface AnalyticsData {
+  totalRevenue: number
+  totalOrders: number
+  monthly: { month: string; revenue: number; orders: number }[]
+  topProducts: { name: string; sales: number; revenue: number }[]
+}
+
+export async function getAnalyticsData(): Promise<AnalyticsData> {
+  const supabase = createClient()
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+  const [ordersRes, itemsRes] = await Promise.all([
+    supabase.from('orders').select('id, total, created_at').gte('created_at', sixMonthsAgo.toISOString()),
+    supabase.from('order_items').select('product_name, quantity, subtotal').limit(1000),
+  ])
+
+  const orders = ordersRes.data || []
+  const items = itemsRes.data || []
+
+  // Monthly aggregation — last 6 months in order
+  const monthlyMap: Record<string, { revenue: number; orders: number }> = {}
+  for (const order of orders) {
+    const key = new Date(order.created_at).toLocaleString('en', { month: 'short' })
+    if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, orders: 0 }
+    monthlyMap[key].revenue += order.total
+    monthlyMap[key].orders += 1
+  }
+  const monthly = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - (5 - i))
+    const key = d.toLocaleString('en', { month: 'short' })
+    return { month: key, ...(monthlyMap[key] ?? { revenue: 0, orders: 0 }) }
+  })
+
+  // Top products by revenue
+  const productMap: Record<string, { sales: number; revenue: number }> = {}
+  for (const item of items) {
+    if (!productMap[item.product_name]) productMap[item.product_name] = { sales: 0, revenue: 0 }
+    productMap[item.product_name].sales += item.quantity
+    productMap[item.product_name].revenue += item.subtotal
+  }
+  const topProducts = Object.entries(productMap)
+    .sort((a, b) => b[1].revenue - a[1].revenue)
+    .slice(0, 5)
+    .map(([name, stats]) => ({ name, ...stats }))
+
+  return {
+    totalRevenue: orders.reduce((s, o) => s + o.total, 0),
+    totalOrders: orders.length,
+    monthly,
+    topProducts,
+  }
+}

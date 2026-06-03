@@ -42,20 +42,37 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <div className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+    <div className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
       <Link href={`/${product.nicheId}/${product.id}`}>
-        <div className="relative overflow-hidden bg-gray-50 aspect-square">
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
+        <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
+          {product.images[0] ? (
+            <Image
+              src={product.images[0]}
+              alt={product.name}
+              fill
+              className={`object-cover transition-transform duration-500 group-hover:scale-105 ${product.stock === 0 ? 'opacity-60' : ''}`}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+              <ShoppingCart className="w-10 h-10" />
+            </div>
+          )}
+
+          {/* Out-of-stock overlay */}
+          {product.stock === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                {t.product.outOfStock}
+              </span>
+            </div>
+          )}
+
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
             {product.isNew && <Badge variant="new">{t.common.new}</Badge>}
             {hasDiscount && <Badge variant="sale">-{discountPct}%</Badge>}
           </div>
+
           <button
             onClick={handleWishlist}
             className={`absolute top-2.5 right-2.5 p-2 rounded-full transition-all ${
@@ -68,6 +85,15 @@ export default function ProductCard({ product }: ProductCardProps) {
               className={`w-4 h-4 transition-colors ${wishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'}`}
             />
           </button>
+
+          {/* Multi-image indicator */}
+          {product.images.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+              {product.images.slice(0, 4).map((_, i) => (
+                <span key={i} className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/50'}`} />
+              ))}
+            </div>
+          )}
         </div>
       </Link>
 
@@ -105,9 +131,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-xs text-orange-500 font-medium mt-2">
             {t.common.lowStock.replace('{n}', String(product.stock))}
           </p>
-        )}
-        {product.stock === 0 && (
-          <p className="text-xs text-red-500 font-medium mt-2">{t.product.outOfStock}</p>
         )}
       </div>
     </div>
