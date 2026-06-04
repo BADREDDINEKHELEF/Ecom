@@ -77,8 +77,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     })
   )
 
-  const totalRevenue = monthly.reduce((s, m) => s + m.revenue, 0)
-  const totalOrders  = monthly.reduce((s, m) => s + m.orders, 0)
+  const totalRevenue = monthly.reduce((s: number, m: { revenue: number; orders: number; month: string }) => s + m.revenue, 0)
+  const totalOrders  = monthly.reduce((s: number, m: { revenue: number; orders: number; month: string }) => s + m.orders, 0)
 
   return { totalRevenue, totalOrders, monthly, topProducts }
 }
@@ -116,7 +116,7 @@ export async function getSellerAnalytics(
     } | null
   }
 
-  const rows = (items ?? []) as ItemRow[]
+  const rows = (items ?? []) as unknown as ItemRow[]
 
   const orderMap   = new Map<string, { order: ItemRow['orders']; vendorTotal: number }>()
   const productMap: Record<string, { units: number; revenue: number }> = {}

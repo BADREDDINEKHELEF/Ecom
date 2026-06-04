@@ -1,6 +1,5 @@
-import { unstable_cache, revalidateTag } from 'next/cache'
+import { unstable_cache } from 'next/cache'
 import { createClient } from './client'
-import { createAdminClient } from './admin'
 
 export interface StoreSettings {
   storeName:             string
@@ -61,23 +60,3 @@ export const getStoreSettings = unstable_cache(
   { revalidate: 300, tags: ['store-settings'] }
 )
 
-export async function saveStoreSettings(s: StoreSettings): Promise<void> {
-  const supabase = createAdminClient()
-  const { error } = await supabase.from('store_settings').upsert({
-    id:                     1,
-    store_name:             s.storeName,
-    store_email:            s.storeEmail,
-    phone:                  s.phone,
-    whatsapp_number:        s.whatsappNumber,
-    free_shipping_threshold: s.freeShippingThreshold,
-    zone1_cost:             s.zone1Cost,
-    zone2_cost:             s.zone2Cost,
-    zone3_cost:             s.zone3Cost,
-    zone4_cost:             s.zone4Cost,
-    cash_on_delivery:       s.cashOnDelivery,
-    card_payment:           s.cardPayment,
-    updated_at:             new Date().toISOString(),
-  })
-  if (error) throw error
-  revalidateTag('store-settings')
-}

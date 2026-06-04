@@ -55,9 +55,11 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const { promoCodeId: rawPromoCodeId, ...rest } = parsed.data
   const input = {
-    ...parsed.data,
+    ...rest,
     phone: normalizePhone(parsed.data.phone),
+    promoCodeId: rawPromoCodeId ?? undefined,
   }
 
   try {
