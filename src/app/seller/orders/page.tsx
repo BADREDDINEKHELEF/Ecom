@@ -1,7 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ShoppingBag, Search, Loader2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import {
+  ShoppingBag, Search, Loader2, CheckCircle2, XCircle, Truck,
+  Clock, AlertCircle, ChevronDown, Download, Phone, Package,
+  RefreshCw, Filter,
+} from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorOrders } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
@@ -9,57 +13,264 @@ import { useT } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { VendorOrderSummary } from '@/lib/supabase/queries'
 
-const STATUS_STYLES: Record<string, string> = {
-  pending:   'bg-amber-100 text-amber-700',
-  confirmed: 'bg-blue-100 text-blue-700',
-  shipped:   'bg-indigo-100 text-indigo-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-600',
+// ── Status config ─────────────────────────────────────────────────────────────
+const STATUS_CFG: Record<string, { label: string; icon: React.ElementType; badge: string }> = {
+  pending:   { label: 'En attente',  icon: Clock,        badge: 'bg-amber-100 text-amber-700 border-amber-200' },
+  confirmed: { label: 'Confirmée',   icon: CheckCircle2, badge: 'bg-blue-100 text-blue-700 border-blue-200' },
+  shipped:   { label: 'Expédiée',    icon: Truck,        badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  delivered: { label: 'Livrée',      icon: CheckCircle2, badge: 'bg-green-100 text-green-700 border-green-200' },
+  cancelled: { label: 'Annulée',     icon: XCircle,      badge: 'bg-red-100 text-red-600 border-red-200' },
+  returned:  { label: 'Retournée',   icon: AlertCircle,  badge: 'bg-orange-100 text-orange-700 border-orange-200' },
 }
+
+const STATUS_TABS = [
+  { key: '',          label: 'Toutes' },
+  { key: 'pending',   label: 'En attente' },
+  { key: 'confirmed', label: 'Confirmées' },
+  { key: 'shipped',   label: 'Expédiées' },
+  { key: 'delivered', label: 'Livrées' },
+  { key: 'cancelled', label: 'Annulées' },
+]
+
+const NEXT_ACTIONS: Record<string, { label: string; status: string; cls: string; icon: React.ElementType }[]> = {
+  pending:   [
+    { label: 'Confirmer', status: 'confirmed', cls: 'bg-emerald-600 hover:bg-emerald-700 text-white', icon: CheckCircle2 },
+    { label: 'Annuler',   status: 'cancelled', cls: 'border border-red-200 text-red-600 hover:bg-red-50', icon: XCircle },
+  ],
+  confirmed: [
+    { label: 'Marquer expédiée', status: 'shipped',   cls: 'bg-indigo-600 hover:bg-indigo-700 text-white', icon: Truck },
+    { label: 'Annuler',          status: 'cancelled', cls: 'border border-red-200 text-red-600 hover:bg-red-50', icon: XCircle },
+  ],
+  shipped: [
+    { label: 'Marquer livrée', status: 'delivered', cls: 'bg-green-600 hover:bg-green-700 text-white', icon: CheckCircle2 },
+  ],
+}
+
+function urgencyLevel(createdAt: string, status: string): 'none' | 'warn' | 'urgent' {
+  if (status !== 'pending') return 'none'
+  const ageH = (Date.now() - new Date(createdAt).getTime()) / 3_600_000
+  if (ageH >= 4) return 'urgent'
+  if (ageH >= 2) return 'warn'
+  return 'none'
+}
+
+function timeAgo(iso: string) {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
+  if (mins < 60)  return `il y a ${mins}min`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)   return `il y a ${hrs}h`
+  return `il y a ${Math.floor(hrs / 24)}j`
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SellerOrdersPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const t = useT()
   const sd = t.sellerDash
-  const [orders, setOrders] = useState<VendorOrderSummary[]>([])
-  const [loadingOrders, setLoadingOrders] = useState(true)
-  const [search, setSearch] = useState('')
-  const [expanded, setExpanded] = useState<string | null>(null)
 
-  useEffect(() => {
+  const [orders, setOrders]             = useState<VendorOrderSummary[]>([])
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const [search, setSearch]             = useState('')
+  const [statusTab, setStatusTab]       = useState('')
+  const [expanded, setExpanded]         = useState<string | null>(null)
+  const [revealedPhone, setRevealedPhone] = useState<Set<string>>(new Set())
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [selected, setSelected]         = useState<Set<string>>(new Set())
+  const [bulkLoading, setBulkLoading]   = useState(false)
+
+  const load = useCallback(async () => {
     if (!vendor) return
-    getVendorOrders(vendor.id).then((data) => { setOrders(data); setLoadingOrders(false) })
+    setLoadingOrders(true)
+    const data = await getVendorOrders(vendor.id)
+    setOrders(data)
+    setLoadingOrders(false)
   }, [vendor])
 
-  const filtered = orders.filter((o) =>
-    o.order.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    o.order.phone.includes(search) ||
-    o.order.wilaya.toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => { load() }, [load])
+
+  // ── Filter ───────────────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return orders.filter((o) => {
+      if (statusTab && o.order.status !== statusTab) return false
+      if (!q) return true
+      return (
+        o.order.full_name.toLowerCase().includes(q) ||
+        o.order.phone.includes(q) ||
+        o.order.wilaya.toLowerCase().includes(q) ||
+        o.order.id.includes(q)
+      )
+    })
+  }, [orders, search, statusTab])
+
+  const pendingCount = useMemo(() => orders.filter((o) => o.order.status === 'pending').length, [orders])
+
+  // ── Status action ─────────────────────────────────────────────────────────────
+  const handleAction = async (orderId: string, status: string) => {
+    setActionLoading(orderId + status)
+    try {
+      const res = await fetch('/api/seller/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.order.id === orderId ? { ...o, order: { ...o.order, status } } : o
+        )
+      )
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // ── Bulk confirm ──────────────────────────────────────────────────────────────
+  const bulkConfirm = async () => {
+    const targets = [...selected].filter((id) => {
+      const o = orders.find((x) => x.order.id === id)
+      return o?.order.status === 'pending'
+    })
+    if (!targets.length) return
+    setBulkLoading(true)
+    await Promise.all(targets.map((id) => handleAction(id, 'confirmed')))
+    setSelected(new Set())
+    setBulkLoading(false)
+  }
+
+  // ── CSV export ────────────────────────────────────────────────────────────────
+  const exportCSV = () => {
+    const rows = filtered.filter((o) => selected.size === 0 || selected.has(o.order.id))
+    const header = ['ID', 'Client', 'Téléphone', 'Wilaya', 'Statut', 'Total vendeur', 'Date']
+    const csv = [
+      header.join(','),
+      ...rows.map(({ order, vendorTotal }) => [
+        order.id.slice(0, 8),
+        `"${order.full_name}"`,
+        order.phone,
+        order.wilaya,
+        order.status,
+        vendorTotal,
+        new Date(order.created_at).toLocaleDateString('fr-DZ'),
+      ].join(',')),
+    ].join('\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    a.download = `commandes-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+  }
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selected)
+    next.has(id) ? next.delete(id) : next.add(id)
+    setSelected(next)
+  }
+
+  const allSelected = filtered.length > 0 && filtered.every((o) => selected.has(o.order.id))
 
   if (loading || !vendor) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (
     <div className="flex min-h-screen bg-gray-50" dir="ltr">
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
       <main className="flex-1 ml-60 p-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-black text-gray-900">{sd.myOrders}</h1>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+              <ShoppingBag className="w-6 h-6 text-emerald-600" /> Commandes
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">{orders.length} commandes au total</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={exportCSV}
+              className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
+              <Download className="w-4 h-4" /> Exporter CSV
+            </button>
+            <button onClick={load}
+              className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
+              <RefreshCw className="w-4 h-4" /> Actualiser
+            </button>
+          </div>
         </div>
 
-        <div className="relative mb-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder={sd.searchOrders}
-            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white" />
+        {/* Urgency strip */}
+        {pendingCount > 0 && (
+          <div className="mb-5 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <p className="text-sm font-semibold text-amber-800">
+                {pendingCount} commande{pendingCount > 1 ? 's' : ''} en attente de confirmation
+              </p>
+            </div>
+            <button onClick={() => setStatusTab('pending')}
+              className="text-sm font-bold text-amber-700 hover:text-amber-900 underline">
+              Voir maintenant →
+            </button>
+          </div>
+        )}
+
+        {/* Status tab filters */}
+        <div className="flex gap-1 mb-4 bg-gray-100 rounded-xl p-1 w-fit overflow-x-auto">
+          {STATUS_TABS.map(({ key, label }) => {
+            const count = key ? orders.filter((o) => o.order.status === key).length : orders.length
+            return (
+              <button key={key} onClick={() => setStatusTab(key)}
+                className={`px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+                  statusTab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                {label}
+                {count > 0 && (
+                  <span className={`ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                    key === 'pending' && count > 0
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                  }`}>{count}</span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
+        {/* Search + bulk actions bar */}
+        <div className="flex gap-3 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher client, téléphone, wilaya, ID commande…"
+              className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white" />
+          </div>
+          {selected.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-600">{selected.size} sélectionnée(s)</span>
+              <button onClick={bulkConfirm} disabled={bulkLoading}
+                className="flex items-center gap-1.5 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 text-sm disabled:opacity-60">
+                {bulkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Confirmer sélection
+              </button>
+              <button onClick={exportCSV}
+                className="flex items-center gap-1.5 border border-gray-200 bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
+                <Download className="w-4 h-4" /> CSV
+              </button>
+              <button onClick={() => setSelected(new Set())}
+                className="text-sm text-gray-400 hover:text-gray-600">Désélectionner</button>
+            </div>
+          )}
+        </div>
+
+        {/* Orders list */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {loadingOrders ? (
             <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-              <Loader2 className="w-5 h-5 animate-spin" /> {sd.loadingChart}
+              <Loader2 className="w-5 h-5 animate-spin" /> Chargement…
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
@@ -67,55 +278,165 @@ export default function SellerOrdersPage() {
               <p className="font-medium">{orders.length === 0 ? sd.noOrdersYet : sd.noResults}</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
-              {filtered.map(({ order, items, vendorTotal }) => {
-                const itemCount = items.length
-                return (
-                  <div key={order.id}>
-                    <button
-                      onClick={() => setExpanded(expanded === order.id ? null : order.id)}
-                      className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 text-left transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-gray-900 text-sm">{order.full_name}</span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                            {t.orders.status[order.status as keyof typeof t.orders.status] ?? order.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">{order.phone} · {order.wilaya} · {new Date(order.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-black text-gray-900">{formatPrice(vendorTotal)}</p>
-                        <p className="text-xs text-gray-400">
-                          {(itemCount === 1 ? sd.items : sd.itemsPlural).replace('{n}', String(itemCount))}
-                        </p>
-                      </div>
-                    </button>
+            <>
+              {/* Table header */}
+              <div className="flex items-center gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100">
+                <input type="checkbox" checked={allSelected}
+                  onChange={(e) => setSelected(e.target.checked ? new Set(filtered.map((o) => o.order.id)) : new Set())}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide flex-1">Client</span>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 hidden md:block">Wilaya</span>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-32 hidden lg:block">Statut</span>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 text-right">Montant</span>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-36">Actions</span>
+              </div>
 
-                    {expanded === order.id && (
-                      <div className="px-5 pb-4 bg-gray-50">
-                        <div className="divide-y divide-gray-100">
-                          {items.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between py-2.5 text-sm">
-                              <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
-                              <span className="font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
-                            </div>
-                          ))}
+              <div className="divide-y divide-gray-50">
+                {filtered.map(({ order, items, vendorTotal }) => {
+                  const urgency = urgencyLevel(order.created_at, order.status)
+                  const cfg = STATUS_CFG[order.status] ?? STATUS_CFG.pending
+                  const StatusIcon = cfg.icon
+                  const actions = NEXT_ACTIONS[order.status] ?? []
+                  const isExpanded = expanded === order.id
+                  const isRevealed = revealedPhone.has(order.id)
+                  const maskedPhone = order.phone.slice(0, 4) + '•••' + order.phone.slice(-3)
+
+                  return (
+                    <div key={order.id}
+                      className={`transition-colors ${
+                        urgency === 'urgent' ? 'border-l-4 border-l-red-500 bg-red-50/30'
+                        : urgency === 'warn'   ? 'border-l-4 border-l-amber-400 bg-amber-50/20'
+                        : ''
+                      }`}>
+                      {/* Row */}
+                      <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50">
+                        {/* Checkbox */}
+                        <input type="checkbox" checked={selected.has(order.id)} onChange={() => toggleSelect(order.id)}
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 flex-shrink-0" />
+
+                        {/* Client + expand toggle */}
+                        <button
+                          onClick={() => setExpanded(isExpanded ? null : order.id)}
+                          className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900 text-sm">{order.full_name}</span>
+                            {urgency !== 'none' && (
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                                urgency === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {timeAgo(order.created_at)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            #{order.id.slice(0, 8)} · {
+                              isRevealed || order.status !== 'pending'
+                                ? order.phone
+                                : maskedPhone
+                            }
+                            {order.status === 'pending' && !isRevealed && (
+                              <button onClick={(e) => { e.stopPropagation(); setRevealedPhone((prev) => new Set([...prev, order.id])) }}
+                                className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold flex items-center gap-0.5 inline-flex">
+                                <Phone className="w-3 h-3" /> Afficher
+                              </button>
+                            )}
+                          </p>
+                        </button>
+
+                        {/* Wilaya */}
+                        <span className="text-sm text-gray-600 w-28 hidden md:block truncate">{order.wilaya}</span>
+
+                        {/* Status badge */}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border w-32 hidden lg:flex ${cfg.badge}`}>
+                          <StatusIcon className="w-3.5 h-3.5" />{cfg.label}
+                        </span>
+
+                        {/* Amount */}
+                        <span className="font-black text-gray-900 w-28 text-right text-sm flex-shrink-0">
+                          {formatPrice(vendorTotal)}
+                        </span>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1.5 w-36 flex-shrink-0">
+                          {actions.map((act) => {
+                            const ActIcon = act.icon
+                            const isLoading = actionLoading === order.id + act.status
+                            return (
+                              <button key={act.status}
+                                onClick={() => handleAction(order.id, act.status)}
+                                disabled={!!actionLoading}
+                                title={act.label}
+                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-60 ${act.cls}`}>
+                                {isLoading
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <ActIcon className="w-3.5 h-3.5" />}
+                                <span className="hidden xl:inline">{act.label}</span>
+                              </button>
+                            )
+                          })}
+                          <button onClick={() => setExpanded(isExpanded ? null : order.id)}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+                            <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </button>
                         </div>
-                        <div className="pt-2 mt-2 border-t border-gray-200 flex justify-between text-sm font-bold">
-                          <span>{sd.yourTotal}</span>
-                          <span className="text-emerald-600">{formatPrice(vendorTotal)}</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {sd.afterCommissionShort.replace('{n}', String(vendor.commission_rate))}: {formatPrice(Math.round(vendorTotal * (1 - vendor.commission_rate / 100)))}
-                        </p>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+
+                      {/* Expanded detail */}
+                      {isExpanded && (
+                        <div className="px-16 pb-4 bg-gray-50/80 border-t border-gray-100">
+                          <div className="grid md:grid-cols-2 gap-4 pt-3">
+                            {/* Items */}
+                            <div>
+                              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Articles</p>
+                              <div className="space-y-2">
+                                {items.map((item) => (
+                                  <div key={item.id} className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                      {item.product_image
+                                        ? <img src={item.product_image} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                                        : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
+                                      }
+                                      <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
+                                    </div>
+                                    <span className="font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            {/* Summary */}
+                            <div>
+                              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Résumé</p>
+                              <div className="space-y-1.5 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Adresse</span>
+                                  <span className="text-gray-900 font-medium text-right max-w-[180px]">{order.address}, {order.city}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Paiement</span>
+                                  <span className="text-gray-900 font-medium capitalize">{order.payment_method}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Votre total</span>
+                                  <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-gray-400">Après commission ({vendor.commission_rate}%)</span>
+                                  <span className="text-gray-700 font-semibold">{formatPrice(Math.round(vendorTotal * (1 - vendor.commission_rate / 100)))}</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-gray-400">Date commande</span>
+                                  <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       </main>

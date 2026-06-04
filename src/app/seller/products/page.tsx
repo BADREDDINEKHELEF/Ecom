@@ -4,19 +4,20 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
 import { niches } from '@/lib/data/niches'
 import { useT } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
+import VariantBuilder, { type ProductVariant } from '@/components/seller/VariantBuilder'
 import type { Product } from '@/types'
 
 const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',
   price: 0, comparePrice: 0, stock: 1, tags: '', images: '',
-  isNew: false, isFeatured: false,
+  isNew: false, isFeatured: false, hasVariants: false,
 }
 
 export default function SellerProductsPage() {
@@ -30,8 +31,9 @@ export default function SellerProductsPage() {
   const [showForm, setShowForm] = useState(searchParams.get('new') === '1')
   const [editing, setEditing] = useState<Product | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]     = useState(false)
   const [formError, setFormError] = useState('')
+  const [variants, setVariants] = useState<ProductVariant[]>([])
 
   const load = useCallback(async () => {
     if (!vendor) return
@@ -49,12 +51,12 @@ export default function SellerProductsPage() {
       id: p.id, nicheId: p.nicheId, category: p.category, name: p.name,
       description: p.description, price: p.price, comparePrice: p.comparePrice || 0,
       stock: p.stock, tags: p.tags.join(', '), images: p.images.join('\n'),
-      isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false,
+      isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false, hasVariants: false,
     })
     setShowForm(true)
   }
 
-  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); setFormError('') }
+  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); setFormError(''); setVariants([]) }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,7 +84,10 @@ export default function SellerProductsPage() {
       })
       const { createClient } = await import('@/lib/supabase/client')
       const sb = createClient()
-      await sb.from('products').update({ vendor_id: vendor.id }).eq('id', productId)
+      await sb.from('products').update({
+        vendor_id: vendor.id,
+        ...(form.hasVariants ? { variants: variants.length > 0 ? variants : null } : { variants: null }),
+      }).eq('id', productId)
       await load()
       closeForm()
     } catch (err: unknown) {
@@ -183,6 +188,31 @@ export default function SellerProductsPage() {
                   rows={3} placeholder="https://example.com/image.jpg"
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 resize-none" />
               </div>
+              {/* Variants toggle */}
+              <div className="sm:col-span-2">
+                <label className="flex items-center gap-3 cursor-pointer bg-gray-50 border border-gray-200 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <input type="checkbox" checked={form.hasVariants}
+                    onChange={(e) => setForm({ ...form, hasVariants: e.target.checked })}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Ce produit a des variantes</p>
+                      <p className="text-xs text-gray-500">Taille × Couleur × Pointure… avec stock et prix individuels</p>
+                    </div>
+                  </div>
+                </label>
+                {form.hasVariants && (
+                  <div className="mt-3 bg-white border border-gray-200 rounded-xl p-4">
+                    <VariantBuilder
+                      basePrice={form.price}
+                      variants={variants}
+                      onChange={setVariants}
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.isNew} onChange={(e) => setForm({ ...form, isNew: e.target.checked })}

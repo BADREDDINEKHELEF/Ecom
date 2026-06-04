@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock,
   Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
-  Users, Award, AlertTriangle,
+  Users, Award, AlertTriangle, Zap, Bell,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/products'
@@ -27,6 +27,16 @@ const STATUS_CFG: Record<string, { icon: React.ElementType; color: string }> = {
 }
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
+
+const LOW_STOCK_THRESHOLD = 5
+
+function urgentPendingOrders(orders: VendorOrderSummary[]) {
+  return orders.filter((o) => {
+    if (o.order.status !== 'pending') return false
+    const ageH = (Date.now() - new Date(o.order.created_at).getTime()) / 3_600_000
+    return ageH >= 2
+  })
+}
 
 function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
   const monthlyMap: Record<string, number> = {}
@@ -128,12 +138,17 @@ export default function SellerDashboardPage() {
       .finally(() => setFetching(false))
   }, [vendor])
 
-  const analytics = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])
+  const analytics    = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])
   const grossRevenue = orders.reduce((s, o) => s + o.vendorTotal, 0)
   const netEarnings  = grossRevenue * (1 - (vendor?.commission_rate ?? 10) / 100)
   const maxMonthly   = Math.max(...analytics.monthly.map((m) => m.revenue), 1)
   const hour         = new Date().getHours()
   const greeting     = hour < 12 ? sd.goodMorning : hour < 18 ? sd.goodAfternoon : sd.goodEvening
+  const urgentOrders = useMemo(() => urgentPendingOrders(orders), [orders])
+  const lowStockProds = useMemo(
+    () => allProducts.filter((p) => p.stock >= 0 && p.stock <= LOW_STOCK_THRESHOLD),
+    [allProducts]
+  )
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -162,6 +177,50 @@ export default function SellerDashboardPage() {
             <Plus className="w-4 h-4" /> {sd.addProduct}
           </Link>
         </div>
+
+        {/* Urgency strip — orders waiting > 2h */}
+        {urgentOrders.length > 0 && (
+          <div className="mb-5 flex items-center justify-between bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Bell className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-red-800">
+                  {urgentOrders.length} commande{urgentOrders.length > 1 ? 's' : ''} non confirmée{urgentOrders.length > 1 ? 's' : ''} depuis +2h
+                </p>
+                <p className="text-xs text-red-600 mt-0.5">Les acheteurs attendent une réponse — confirmez ou annulez maintenant.</p>
+              </div>
+            </div>
+            <Link href="/seller/orders?status=pending"
+              className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors">
+              Confirmer maintenant →
+            </Link>
+          </div>
+        )}
+
+        {/* Low stock alerts */}
+        {!fetching && lowStockProds.length > 0 && (
+          <div className="mb-5 bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-amber-500" />
+                <p className="text-sm font-black text-amber-800">Stocks critiques ({lowStockProds.length} produit{lowStockProds.length > 1 ? 's' : ''})</p>
+              </div>
+              <Link href="/seller/products" className="text-xs font-bold text-amber-700 hover:underline">Gérer le stock →</Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {lowStockProds.slice(0, 4).map((p) => (
+                <div key={p.id} className="bg-white rounded-xl p-3 border border-amber-100">
+                  <p className="text-xs font-semibold text-gray-800 truncate">{p.name}</p>
+                  <p className={`text-sm font-black mt-1 ${p.stock === 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                    {p.stock === 0 ? 'Rupture' : `${p.stock} restant${p.stock > 1 ? 's' : ''}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* KPIs */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-6">

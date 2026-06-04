@@ -19,15 +19,20 @@ export interface SellerAnalytics {
   totalRevenue:     number
   totalOrders:      number
   pendingOrders:    number
+  confirmedOrders:  number
+  shippedOrders:    number
   deliveredOrders:  number
   returnedOrders:   number
+  cancelledOrders:  number
   avgOrderValue:    number
   returnRate:       number
+  deliveryRate:     number
   monthly:          { month: string; revenue: number; orders: number }[]
   byWilaya:         { wilaya: string; orders: number; revenue: number }[]
   byProvider:       { provider: string; count: number }[]
   topProducts:      { name: string; units: number; revenue: number }[]
   worstProducts:    { name: string; id: string; image?: string }[]
+  byDayOfWeek:      { day: string; orders: number; revenue: number }[]
 }
 
 // ── Platform-wide analytics (admin dashboard) ──────────────────
@@ -122,6 +127,9 @@ export async function getSellerAnalytics(
   const productMap: Record<string, { units: number; revenue: number }> = {}
   const wilayaMap:  Record<string, { orders: number; revenue: number }> = {}
   const providerMap: Record<string, number> = {}
+  const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+  const dowMap: Record<number, { orders: number; revenue: number }> = {}
+  for (let i = 0; i < 7; i++) dowMap[i] = { orders: 0, revenue: 0 }
 
   for (const row of rows) {
     const order = row.orders
@@ -147,14 +155,24 @@ export async function getSellerAnalytics(
     providerMap[prov] = (providerMap[prov] ?? 0) + 1
   }
 
-  const allOrders      = Array.from(orderMap.values())
-  const totalRevenue   = allOrders.reduce((s, o) => s + o.vendorTotal, 0)
-  const totalOrders    = allOrders.length
+  const allOrders       = Array.from(orderMap.values())
+  const totalRevenue    = allOrders.reduce((s, o) => s + o.vendorTotal, 0)
+  const totalOrders     = allOrders.length
   const deliveredOrders = allOrders.filter((o) => o.order?.delivery_outcome === 'delivered').length
   const returnedOrders  = allOrders.filter((o) => o.order?.delivery_outcome === 'returned').length
+  const cancelledOrders = allOrders.filter((o) => o.order?.status === 'cancelled').length
+  const confirmedOrders = allOrders.filter((o) => ['confirmed','shipped','delivered'].includes(o.order?.status ?? '')).length
+  const shippedOrders   = allOrders.filter((o) => ['shipped','delivered'].includes(o.order?.status ?? '')).length
   const pendingOrders   = allOrders.filter(
     (o) => !o.order?.delivery_outcome && o.order?.status !== 'cancelled'
   ).length
+
+  for (const { order, vendorTotal } of allOrders) {
+    if (!order) continue
+    const dow = new Date(order.created_at).getDay()
+    dowMap[dow].orders++
+    dowMap[dow].revenue += vendorTotal
+  }
 
   const months = daysBack <= 31 ? 1 : daysBack <= 93 ? 3 : 6
   const monthlyMap: Record<string, { revenue: number; orders: number }> = {}
@@ -182,10 +200,14 @@ export async function getSellerAnalytics(
     totalRevenue,
     totalOrders,
     pendingOrders,
+    confirmedOrders,
+    shippedOrders,
     deliveredOrders,
     returnedOrders,
+    cancelledOrders,
     avgOrderValue: totalOrders ? Math.round(totalRevenue / totalOrders) : 0,
     returnRate:    totalOrders ? Math.round((returnedOrders / totalOrders) * 100) : 0,
+    deliveryRate:  totalOrders ? Math.round((deliveredOrders / totalOrders) * 100) : 0,
     monthly,
     byWilaya: Object.entries(wilayaMap)
       .map(([wilaya, d]) => ({ wilaya, ...d }))
@@ -199,5 +221,9 @@ export async function getSellerAnalytics(
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10),
     worstProducts: [],
+    byDayOfWeek: Object.entries(dowMap).map(([dow, d]) => ({
+      day: DAY_NAMES[Number(dow)],
+      ...d,
+    })),
   }
 }
