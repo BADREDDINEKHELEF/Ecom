@@ -3,13 +3,14 @@ import type { NextConfig } from 'next'
 // ── Security Headers ────────────────────────────────────────────────────────
 // Applied to all routes. Admin routes get a stricter override below.
 
+const isDev = process.env.NODE_ENV === 'development'
+
 function buildCsp(extra: string[] = []): string {
   return [
     "default-src 'self'",
-    // 'strict-dynamic' + nonce is set at runtime in middleware for JS.
-    // 'unsafe-inline' is kept as a fallback for browsers that don't support
-    // nonces but dropped in admin routes (where we control the full page).
-    "script-src 'self' 'unsafe-inline'",
+    // React requires unsafe-eval in dev mode for call-stack reconstruction.
+    // Production builds never use eval() so this is dev-only.
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     [
