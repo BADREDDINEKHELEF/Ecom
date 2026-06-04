@@ -1,0 +1,339 @@
+import { createClient } from './client'
+import { createAdminClient } from './admin'
+import { incrementPromoUses } from './promo'
+
+export interface OrderItemRow {
+  id:            string
+  product_id:    string
+  product_name:  string
+  product_image: string | null
+  product_price: number
+  quantity:      number
+  subtotal:      number
+  vendor_id?:    string | null
+}
+
+export interface OrderRow {
+  id:                  string
+  full_name:           string
+  phone:               string
+  wilaya:              string
+  city:                string
+  address:             string
+  payment_method:      string
+  status:              string
+  subtotal:            number
+  shipping_cost:       number
+  total:               number
+  discount_amount?:    number
+  delivery_outcome?:   string | null
+  delivery_provider?:  string | null
+  yalidine_tracking?:  string | null
+  yalidine_label_url?: string | null
+  created_at:          string
+  order_items?:        OrderItemRow[]
+}
+
+export interface CreateOrderInput {
+  fullName:        string
+  phone:           string
+  wilaya:          string
+  city:            string
+  address:         string
+  paymentMethod:   string
+  shippingCost:    number
+  promoCodeId?:    string
+  discountAmount?: number
+  items: {
+    productId:     string
+    productName:   string
+    productImage:  string
+    quantity:      number
+    vendorId?:     string | null
+  }[]
+}
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/[\s-]/g, '')
+}
+
+/**
+ * Creates an order with server-side price and stock validation.
+ *
+ * Prices are NEVER taken from the client — they are fetched from the
+ * database and recalculated here. A malicious client that sends
+ * manipulated prices will have them silently overwritten.
+ *
+ * Stock is checked and decremented atomically via DB-level constraint.
+ */
+export async function createOrder(input: CreateOrderInput): Promise<string> {
+  const supabase = createAdminClient()
+
+  // ── 1. Fetch canonical prices + stock from DB ─────────────────────
+  const productIds = input.items.map((i) => i.productId)
+  const { data: products, error: priceErr } = await supabase
+    .from('products')
+    .select('id, price, stock, name')
+    .in('id', productIds)
+
+  if (priceErr) throw new Error('Could not validate products')
+
+  const priceMap = new Map(
+    (products ?? []).map((p) => [p.id, { price: p.price, stock: p.stock, name: p.name }])
+  )
+
+  // ── 2. Validate and compute server-side subtotals ─────────────────
+  let computedSubtotal = 0
+  const validatedItems = input.items.map((item) => {
+    const product = priceMap.get(item.productId)
+    if (!product) {
+      throw new Error(`Product not found: ${item.productId}`)
+    }
+    if (product.stock < item.quantity) {
+      throw new Error(`Insufficient stock for "${product.name}" (available: ${product.stock})`)
+    }
+    const subtotal = product.price * item.quantity
+    computedSubtotal += subtotal
+    return {
+      ...item,
+      productPrice: product.price,
+      subtotal,
+    }
+  })
+
+  // ── 3. Compute final total (server-side) ──────────────────────────
+  const discountAmount = input.discountAmount ?? 0
+  const total = computedSubtotal + input.shippingCost - discountAmount
+
+  // ── 4. Insert order ───────────────────────────────────────────────
+  const { data: order, error: orderErr } = await supabase
+    .from('orders')
+    .insert({
+      full_name:       input.fullName,
+      phone:           normalizePhone(input.phone),
+      wilaya:          input.wilaya,
+      city:            input.city,
+      address:         input.address,
+      payment_method:  input.paymentMethod,
+      subtotal:        computedSubtotal,
+      shipping_cost:   input.shippingCost,
+      total,
+      promo_code_id:   input.promoCodeId ?? null,
+      discount_amount: discountAmount,
+    })
+    .select('id')
+    .single()
+
+  if (orderErr) throw orderErr
+
+  // ── 5. Insert order items ─────────────────────────────────────────
+  const { error: itemsErr } = await supabase.from('order_items').insert(
+    validatedItems.map((item) => ({
+      order_id:      order.id,
+      product_id:    item.productId,
+      product_name:  item.productName,
+      product_image: item.productImage || null,
+      product_price: item.productPrice,
+      quantity:      item.quantity,
+      subtotal:      item.subtotal,
+      vendor_id:     item.vendorId ?? null,
+    }))
+  )
+  if (itemsErr) throw itemsErr
+
+  // ── 6. Atomically increment promo usage (with row-level lock) ─────
+  if (input.promoCodeId) {
+    await incrementPromoUses(input.promoCodeId)
+  }
+
+  return order.id
+}
+
+export async function getOrderById(id: string): Promise<OrderRow | null> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .eq('id', id)
+    .single()
+  return (data as OrderRow) ?? null
+}
+
+export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .eq('phone', normalizePhone(phone))
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as OrderRow[]
+}
+
+/**
+ * Paginated order list for admin dashboard.
+ * Fixed: range(from, from + pageSize - 1) is inclusive on both ends in
+ * Supabase, so we fetch one extra row to detect the next page.
+ */
+export async function getAllOrders(
+  page = 0,
+  pageSize = 50
+): Promise<{ orders: OrderRow[]; hasMore: boolean }> {
+  const supabase = createAdminClient()
+  const from = page * pageSize
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .order('created_at', { ascending: false })
+    .range(from, from + pageSize)  // fetches pageSize+1 rows
+  if (error) throw error
+  const all = (data ?? []) as OrderRow[]
+  return {
+    orders:  all.slice(0, pageSize),
+    hasMore: all.length > pageSize,
+  }
+}
+
+export async function updateOrderStatus(id: string, status: string): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('orders')
+    .update({ status })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function updateDeliveryOutcome(
+  id: string,
+  outcome: 'delivered' | 'failed' | 'returned'
+): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('orders')
+    .update({ delivery_outcome: outcome })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function updateShippingInfo(
+  id: string,
+  tracking: string,
+  provider: string,
+  labelUrl?: string
+): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      yalidine_tracking:  tracking,
+      delivery_provider:  provider,
+      ...(labelUrl ? { yalidine_label_url: labelUrl } : {}),
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function updateYalidineTracking(
+  id: string,
+  tracking: string,
+  labelUrl?: string
+): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      yalidine_tracking: tracking,
+      ...(labelUrl ? { yalidine_label_url: labelUrl } : {}),
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
+// ── Vendor orders ──────────────────────────────────────────────
+
+export interface VendorOrderSummary {
+  order:       OrderRow
+  items:       OrderItemRow[]
+  vendorTotal: number
+}
+
+export async function getVendorOrders(vendorId: string): Promise<VendorOrderSummary[]> {
+  const supabase = createAdminClient()
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('*, orders(*)')
+    .eq('vendor_id', vendorId)
+    .order('orders(created_at)', { ascending: false })
+
+  if (!items) return []
+
+  const grouped = new Map<string, { order: OrderRow; items: OrderItemRow[] }>()
+  for (const item of items) {
+    const order = (item as Record<string, unknown>).orders as OrderRow
+    if (!order) continue
+    if (!grouped.has(order.id)) grouped.set(order.id, { order, items: [] })
+    grouped.get(order.id)!.items.push(item as unknown as OrderItemRow)
+  }
+
+  return Array.from(grouped.values()).map(({ order, items }) => ({
+    order,
+    items,
+    vendorTotal: items.reduce((s, i) => s + i.subtotal, 0),
+  }))
+}
+
+export async function getVendorPendingOrders(vendorId: string): Promise<VendorOrderSummary[]> {
+  const supabase = createAdminClient()
+
+  // Use a subquery-safe approach: fetch items with joined order, then filter
+  // in JS on confirmed status (Supabase join filters can be unreliable for
+  // .in() on related table columns).
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('*, orders(*)')
+    .eq('vendor_id', vendorId)
+    .order('orders(created_at)', { ascending: false })
+
+  if (!items) return []
+
+  const grouped = new Map<string, { order: OrderRow; items: OrderItemRow[] }>()
+  for (const item of items) {
+    const order = (item as Record<string, unknown>).orders as OrderRow
+    if (!order) continue
+    // Filter to pending/confirmed only — reliable JS-side after join
+    if (!['pending', 'confirmed'].includes(order.status)) continue
+    if (!grouped.has(order.id)) grouped.set(order.id, { order, items: [] })
+    grouped.get(order.id)!.items.push(item as unknown as OrderItemRow)
+  }
+
+  return Array.from(grouped.values()).map(({ order, items }) => ({
+    order,
+    items,
+    vendorTotal: items.reduce((s, i) => s + i.subtotal, 0),
+  }))
+}
+
+// ── Public tracking (no login — phone-based lookup via secure RPC) ──
+
+export interface TrackingOrder {
+  id:               string
+  full_name:        string
+  wilaya:           string
+  city:             string
+  status:           string
+  total:            number
+  delivery_outcome: string | null
+  yalidine_tracking: string | null
+  delivery_provider: string | null
+  created_at:       string
+}
+
+export async function getOrdersForTracking(phone: string): Promise<TrackingOrder[]> {
+  const supabase = createAdminClient()
+  // Use the secure DB function which returns only non-PII tracking fields
+  const { data, error } = await supabase.rpc('get_orders_by_phone', {
+    customer_phone: normalizePhone(phone),
+  })
+  if (error) throw error
+  return (data ?? []) as TrackingOrder[]
+}

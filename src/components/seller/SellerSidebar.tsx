@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, ExternalLink } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store, ExternalLink, Truck, BarChart2 } from 'lucide-react'
 import { useT } from '@/lib/store/langStore'
 
 interface Props {
@@ -19,7 +19,9 @@ export default function SellerSidebar({ storeName, slug, onLogout }: Props) {
     { href: '/seller/dashboard', label: t.sellerDash.dashboard,      icon: LayoutDashboard },
     { href: '/seller/products',  label: t.sellerDash.myProducts,     icon: Package },
     { href: '/seller/orders',    label: t.sellerDash.myOrders,       icon: ShoppingBag },
-    { href: '/seller/settings',  label: t.sellerDash.storeSettings,  icon: Settings },
+    { href: '/seller/settings',   label: t.sellerDash.storeSettings,  icon: Settings },
+    { href: '/seller/deliveries', label: 'Deliveries',                icon: Truck },
+    { href: '/seller/analytics',  label: 'Analytics',                 icon: BarChart2 },
   ]
 
   return (

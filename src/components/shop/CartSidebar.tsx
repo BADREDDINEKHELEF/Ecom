@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
+import { X, Minus, Plus, ShoppingBag, Trash2, Shield } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
@@ -87,21 +87,24 @@ export default function CartSidebar() {
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => updateQuantity(product.id, quantity - 1)}
-                        className="p-1 border rounded-md hover:bg-gray-100 transition-colors"
+                        className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+                        aria-label="Decrease quantity"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
-                      <span className="text-sm font-semibold w-5 text-center">{quantity}</span>
+                      <span className="text-sm font-semibold w-6 text-center">{quantity}</span>
                       <button
                         onClick={() => updateQuantity(product.id, Math.min(product.stock, quantity + 1))}
                         disabled={quantity >= product.stock}
-                        className="p-1 border rounded-md hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                        aria-label="Increase quantity"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => removeItem(product.id)}
-                        className="ml-auto p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        className="ml-auto w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        aria-label="Remove item"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -117,6 +120,10 @@ export default function CartSidebar() {
                 <span className="text-gray-900 font-bold text-lg">{formatPrice(cartTotal)}</span>
               </div>
               <p className="text-xs text-gray-400">{t.cart.shippingHint}</p>
+              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+                <Shield className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-xs font-semibold text-green-800">{t.trust.cod} — {t.trust.codText}</span>
+              </div>
               <Link
                 href="/checkout"
                 onClick={closeCart}

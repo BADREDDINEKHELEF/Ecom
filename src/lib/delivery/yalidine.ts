@@ -2,11 +2,11 @@ import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://api.yalidine.app/v1'
 
-function headers() {
+function buildHeaders(apiId: string, apiToken: string) {
   return {
     'Content-Type': 'application/json',
-    'X-API-ID': process.env.YALIDINE_API_ID ?? '',
-    'X-API-TOKEN': process.env.YALIDINE_API_TOKEN ?? '',
+    'X-API-ID': apiId,
+    'X-API-TOKEN': apiToken,
   }
 }
 
@@ -20,11 +20,12 @@ export function yalidineConfigured(): boolean {
   return !!(process.env.YALIDINE_API_ID && process.env.YALIDINE_API_TOKEN)
 }
 
-export async function yalidineCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
-  if (!yalidineConfigured()) throw new Error('Yalidine API keys not configured')
-
+async function createShipmentWithHeaders(
+  input: ShipmentInput,
+  apiId: string,
+  apiToken: string
+): Promise<ShipmentResult> {
   const { firstname, familyname } = splitName(input.fullName)
-
   const body = {
     firstname,
     familyname,
@@ -42,18 +43,15 @@ export async function yalidineCreateShipment(input: ShipmentInput): Promise<Ship
     length: 30,
     weight: 1,
   }
-
   const res = await fetch(`${BASE_URL}/parcels/`, {
     method: 'POST',
-    headers: headers(),
+    headers: buildHeaders(apiId, apiToken),
     body: JSON.stringify(body),
   })
-
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`Yalidine ${res.status}: ${text}`)
   }
-
   const data = await res.json()
   return {
     tracking: String(data.tracking ?? data.id ?? data.parcel_id ?? ''),
@@ -61,11 +59,28 @@ export async function yalidineCreateShipment(input: ShipmentInput): Promise<Ship
   }
 }
 
+export async function yalidineCreateShipmentWithCreds(
+  input: ShipmentInput,
+  apiId: string,
+  apiToken: string
+): Promise<ShipmentResult> {
+  return createShipmentWithHeaders(input, apiId, apiToken)
+}
+
+export async function yalidineCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
+  if (!yalidineConfigured()) throw new Error('Yalidine API keys not configured')
+  return createShipmentWithHeaders(
+    input,
+    process.env.YALIDINE_API_ID!,
+    process.env.YALIDINE_API_TOKEN!
+  )
+}
+
 export async function yalidineGetRates(wilayaName: string) {
   if (!yalidineConfigured()) return null
   try {
     const res = await fetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
-      headers: headers(),
+      headers: buildHeaders(process.env.YALIDINE_API_ID!, process.env.YALIDINE_API_TOKEN!),
     })
     if (!res.ok) return null
     return await res.json()

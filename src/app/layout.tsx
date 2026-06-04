@@ -8,6 +8,9 @@ import Toaster from '@/components/ui/Toast'
 import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import RTLWrapper from '@/components/layout/RTLWrapper'
 import LocaleBanner from '@/components/ui/LocaleBanner'
+import MobileCartBar from '@/components/layout/MobileCartBar'
+import ExitIntentPopup from '@/components/ui/ExitIntentPopup'
+import SocialProofTicker from '@/components/ui/SocialProofTicker'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
@@ -34,6 +37,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <WhatsAppButton />
           <LocaleBanner />
           <main>{children}</main>
+          <MobileCartBar />
+          <ExitIntentPopup />
+          <SocialProofTicker />
           <Footer />
         </RTLWrapper>
       </body>

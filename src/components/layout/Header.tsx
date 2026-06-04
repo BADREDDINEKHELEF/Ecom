@@ -18,6 +18,7 @@ export default function Header() {
   const t = useT()
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
   const [nichesOpen, setNichesOpen] = useState(false)
@@ -110,6 +111,15 @@ export default function Header() {
               />
             </form>
 
+            {/* Mobile search toggle */}
+            <button
+              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+              className="sm:hidden p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
+              aria-label={t.nav.search}
+            >
+              <Search className="w-5 h-5" />
+            </button>
+
             {/* Wishlist */}
             <Link href="/wishlist" className="relative p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
               <Heart className="w-5 h-5" />
@@ -150,6 +160,23 @@ export default function Header() {
             </button>
           </div>
         </div>
+
+        {/* Mobile search bar */}
+        {mobileSearchOpen && (
+          <div className="sm:hidden border-t border-gray-100 py-2 px-4 animate-fade-in">
+            <form onSubmit={(e) => { handleSearch(e); setMobileSearchOpen(false) }} className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder={t.nav.search}
+                className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-gray-50"
+              />
+            </form>
+          </div>
+        )}
 
         {/* Mobile menu */}
         {menuOpen && (

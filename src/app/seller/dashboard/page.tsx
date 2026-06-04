@@ -8,7 +8,8 @@ import {
   Users, Award, AlertTriangle,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { getVendorProducts, getVendorOrders, VendorOrderSummary } from '@/lib/supabase/queries'
+import { getVendorProducts } from '@/lib/supabase/products'
+import { type VendorOrderSummary } from '@/lib/supabase/orders'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { formatPrice } from '@/lib/utils'
 import { useT } from '@/lib/store/langStore'
@@ -119,7 +120,10 @@ export default function SellerDashboardPage() {
 
   useEffect(() => {
     if (!vendor) return
-    Promise.all([getVendorProducts(vendor.id), getVendorOrders(vendor.id)])
+    Promise.all([
+      getVendorProducts(vendor.id),
+      fetch('/api/seller/orders').then((r) => r.json()).then((d) => d.orders as VendorOrderSummary[]),
+    ])
       .then(([prods, ords]) => { setAllProducts(prods); setOrders(ords) })
       .finally(() => setFetching(false))
   }, [vendor])

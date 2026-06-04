@@ -8,6 +8,22 @@ import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'login' | 'register'
 
+function friendlyAuthError(msg: string): string {
+  if (/invalid.*credentials|invalid.*password|wrong.*password/i.test(msg))
+    return 'E-mail ou mot de passe incorrect. Réessayez.'
+  if (/email.*already.*registered|user.*already.*exists/i.test(msg))
+    return 'Un compte avec cet e-mail existe déjà. Connectez-vous.'
+  if (/email.*not.*confirmed/i.test(msg))
+    return 'Confirmez votre e-mail avant de vous connecter.'
+  if (/too.*many.*requests|rate.*limit/i.test(msg))
+    return 'Trop de tentatives. Réessayez dans quelques minutes.'
+  if (/weak.*password/i.test(msg))
+    return 'Mot de passe trop faible. Utilisez au moins 6 caractères.'
+  if (/network|fetch/i.test(msg))
+    return 'Erreur de connexion. Vérifiez votre accès internet.'
+  return 'Une erreur est survenue. Veuillez réessayer.'
+}
+
 export default function AuthPage() {
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('login')
@@ -34,9 +50,9 @@ export default function AuthPage() {
         options: { data: { full_name: form.name } },
       })
       if (err) {
-        setError(err.message)
+        setError(friendlyAuthError(err.message))
       } else {
-        setSuccess('Account created! Check your email to confirm, then sign in.')
+        setSuccess('Compte créé ! Vérifiez votre e-mail pour confirmer, puis connectez-vous.')
         setMode('login')
         setForm((prev) => ({ ...prev, password: '' }))
       }
@@ -46,7 +62,7 @@ export default function AuthPage() {
         password: form.password,
       })
       if (err) {
-        setError(err.message)
+        setError(friendlyAuthError(err.message))
       } else {
         router.push('/')
         router.refresh()
@@ -57,13 +73,13 @@ export default function AuthPage() {
   }
 
   const handleForgotPassword = async () => {
-    if (!form.email) { setError('Enter your email first.'); return }
+    if (!form.email) { setError('Entrez votre adresse e-mail d\'abord.'); return }
     setLoading(true)
     const supabase = createClient()
     const { error: err } = await supabase.auth.resetPasswordForEmail(form.email)
     setLoading(false)
-    if (err) { setError(err.message) }
-    else { setSuccess('Password reset email sent. Check your inbox.') }
+    if (err) { setError(friendlyAuthError(err.message)) }
+    else { setSuccess('E-mail de réinitialisation envoyé. Vérifiez votre boîte de réception.') }
   }
 
   return (
@@ -86,10 +102,10 @@ export default function AuthPage() {
               </div>
             </div>
             <h1 className="text-2xl font-black text-gray-900">
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
+              {mode === 'login' ? 'Bon retour !' : 'Créer un compte'}
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              {mode === 'login' ? 'Sign in to your Casbah Store account' : 'Join Casbah Store today'}
+              {mode === 'login' ? 'Connectez-vous à votre compte' : 'Rejoignez-nous aujourd\'hui'}
             </p>
           </div>
 
@@ -176,20 +192,20 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors mt-2 flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {mode === 'login' ? 'Sign In' : 'Create Account'}
+              {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            {mode === 'login' ? 'Pas encore de compte ? ' : 'Déjà inscrit ? '}
             <button
               onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess('') }}
               className="text-indigo-600 font-bold hover:underline"
             >
-              {mode === 'login' ? 'Sign up' : 'Sign in'}
+              {mode === 'login' ? 'S\'inscrire' : 'Se connecter'}
             </button>
           </p>
         </div>

@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ tracking: finalTracking, labelUrl })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    console.error('[POST /api/delivery/shipment]', err instanceof Error ? err.message : err)
+    return NextResponse.json({ error: 'Failed to create shipment' }, { status: 500 })
   }
 }

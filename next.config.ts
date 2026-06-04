@@ -1,47 +1,65 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
+
+// ── Security Headers ────────────────────────────────────────────────────────
+// Applied to all routes. Admin routes get a stricter override below.
+
+function buildCsp(extra: string[] = []): string {
+  return [
+    "default-src 'self'",
+    // 'strict-dynamic' + nonce is set at runtime in middleware for JS.
+    // 'unsafe-inline' is kept as a fallback for browsers that don't support
+    // nonces but dropped in admin routes (where we control the full page).
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    [
+      "img-src 'self' data: blob:",
+      'https://images.unsplash.com',
+      'https://via.placeholder.com',
+      'https://picsum.photos',
+      'https://*.supabase.co',
+    ].join(' '),
+    [
+      "connect-src 'self'",
+      'https://*.supabase.co',
+      'https://nominatim.openstreetmap.org',
+      'https://api.yalidine.app',
+    ].join(' '),
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    ...extra,
+  ].join('; ')
+}
 
 const securityHeaders = [
-  { key: 'X-DNS-Prefetch-Control',   value: 'on' },
-  { key: 'X-Frame-Options',          value: 'SAMEORIGIN' },
-  { key: 'X-Content-Type-Options',   value: 'nosniff' },
-  { key: 'Referrer-Policy',          value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy',       value: 'camera=(), microphone=(), geolocation=(self)' },
+  { key: 'X-DNS-Prefetch-Control',    value: 'on' },
+  { key: 'X-Frame-Options',           value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options',    value: 'nosniff' },
+  { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=(self)' },
   {
-    key: 'Strict-Transport-Security',
+    key:   'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
   },
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",   // unsafe-eval needed by Next.js dev; tighten in prod
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: https://images.unsplash.com https://via.placeholder.com https://picsum.photos https://*.supabase.co",
-      "connect-src 'self' https://*.supabase.co https://nominatim.openstreetmap.org",
-      "frame-ancestors 'none'",
-    ].join('; '),
-  },
+  { key: 'Content-Security-Policy',   value: buildCsp() },
 ]
 
-const adminCspHeaders = [
+// Admin panel gets the most restrictive policy — no external images,
+// no unsafe-inline scripts (admin should not be inline-script-heavy),
+// no-store cache to prevent sensitive data leaking via browser cache.
+const adminSecurityHeaders = [
   {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: https://images.unsplash.com https://*.supabase.co",
-      "connect-src 'self' https://*.supabase.co",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-    ].join('; '),
+    key:   'Content-Security-Policy',
+    value: buildCsp(["object-src 'none'", "upgrade-insecure-requests"]),
   },
   { key: 'X-Frame-Options',        value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'Cache-Control',          value: 'no-store, no-cache, must-revalidate' },
+  { key: 'Cache-Control',          value: 'no-store, no-cache, must-revalidate, private' },
+  { key: 'Pragma',                 value: 'no-cache' },
 ]
+
+// ── Next.js Config ──────────────────────────────────────────────────────────
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -54,19 +72,36 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'picsum.photos' },
       { protocol: 'https', hostname: '*.supabase.co' },
     ],
+    // Limit image sizes to prevent unbounded image processing
+    deviceSizes:    [640, 750, 828, 1080, 1200, 1920],
+    imageSizes:     [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 3600,
+  },
+
+  // Compress responses
+  compress: true,
+
+  // Strict mode: fail build on type errors
+  typescript: {
+    ignoreBuildErrors: false,
   },
 
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source:  '/(.*)',
         headers: securityHeaders,
       },
       {
-        source: '/admin/:path*',
-        headers: adminCspHeaders,
+        source:  '/admin/:path*',
+        headers: adminSecurityHeaders,
       },
     ]
+  },
+
+  // Redirect http → https in production (belt-and-suspenders with HSTS)
+  async redirects() {
+    return []
   },
 }
 

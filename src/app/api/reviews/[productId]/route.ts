@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getReviews, addReview } from '@/lib/supabase/queries'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 interface Params { params: Promise<{ productId: string }> }
 
@@ -14,6 +16,15 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
+  const ip = getClientIp(req)
+  const rl = checkPublicRateLimit(ip, 'reviews_post')
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans une minute.' }, {
+      status: 429,
+      headers: { 'Retry-After': String(rl.retryAfterSeconds) },
+    })
+  }
+
   try {
     const { productId } = await params
     const body = await req.json()

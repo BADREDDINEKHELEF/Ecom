@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export type AuditAction =
   | 'admin_login_success'
@@ -24,7 +24,7 @@ export async function writeAuditLog({
   meta?: Record<string, unknown>
 }) {
   try {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     await supabase.from('admin_audit_log').insert({
       action,
       ip_address: ip,

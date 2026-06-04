@@ -22,6 +22,11 @@ export default function HomePage() {
 
   return (
     <>
+      {/* ── COD Trust Banner ─────────────────────────────────────────────── */}
+      <div className="bg-green-600 text-white text-center py-2.5 text-sm font-bold px-4">
+        🚚 {t.trust.cod} &nbsp;·&nbsp; {t.trust.codText}
+      </div>
+
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="bg-gray-950 text-white py-16 sm:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
@@ -73,6 +78,25 @@ export default function HomePage() {
           })}
         </div>
       </section>
+
+      {/* ── Social proof stats bar ───────────────────────────────────────── */}
+      <div className="bg-gray-950 border-t border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-center">
+            {[
+              { value: '1,200+', label: 'Commandes cette semaine', color: 'text-indigo-400' },
+              { value: '58',     label: 'Wilayas desservies',       color: 'text-green-400' },
+              { value: '15 000+', label: 'Clients satisfaits',      color: 'text-amber-400' },
+              { value: '94%',    label: 'Livraison à temps',        color: 'text-pink-400' },
+            ].map(({ value, label, color }) => (
+              <div key={label} className="flex flex-col items-center">
+                <span className={`text-2xl font-black ${color}`}>{value}</span>
+                <span className="text-xs text-gray-400 mt-0.5">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── Trust badges ─────────────────────────────────────────────────── */}
       <section className="bg-white border-b border-gray-100">

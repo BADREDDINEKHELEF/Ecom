@@ -3,12 +3,13 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X, Phone } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 import { getDeliveryInfo, ALL_WILAYAS } from '@/lib/data/wilayas'
-import { createOrder } from '@/lib/supabase/queries'
+// createOrder is now called via /api/orders (server-side, not client-side)
+import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
 
 // Strip accents + "wilaya de/d'" prefix so Nominatim state names match our list
 function normalizeW(s: string) {
@@ -62,6 +63,8 @@ export default function CheckoutPage() {
   const [locError, setLocError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
+  const { save: saveAbandoned, markRecovered } = useAbandonedCheckout()
 
   const [promoInput, setPromoInput] = useState('')
   const [promoApplying, setPromoApplying] = useState(false)
@@ -142,32 +145,57 @@ export default function CheckoutPage() {
     }
   }
 
+  const validatePhone = (val: string) => {
+    if (!val) { setPhoneError(''); return }
+    const clean = val.replace(/\s+/g, '')
+    if (!/^(05|06|07)[0-9]{8}$/.test(clean)) {
+      setPhoneError('Numéro invalide — commencez par 05, 06 ou 07 (10 chiffres)')
+    } else {
+      setPhoneError('')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (saving) return  // prevent double-submit
+    if (phoneError) return
     setSaving(true)
     setSaveError('')
     try {
-      await createOrder({
-        fullName: form.fullName,
-        phone: form.phone,
-        wilaya: form.wilaya,
-        city: form.city,
-        address: form.address,
-        paymentMethod: payment,
-        subtotal: cartTotal,
-        shippingCost: delivery.cost,
-        total: orderTotal,
-        promoCodeId: promoResult?.id,
-        discountAmount: discountAmount || undefined,
-        items: items.map(({ product, quantity }) => ({
-          productId: product.id,
-          productName: product.name,
-          productImage: product.images[0] || '',
-          productPrice: product.price,
-          quantity,
-          subtotal: product.price * quantity,
-        })),
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName:      form.fullName,
+          phone:         form.phone,
+          wilaya:        form.wilaya,
+          city:          form.city,
+          address:       form.address,
+          paymentMethod: payment,
+          shippingCost:  delivery.cost,
+          promoCodeId:   promoResult?.id ?? null,
+          discountAmount: discountAmount || 0,
+          items: items.map(({ product, quantity }) => ({
+            productId:    product.id,
+            productName:  product.name,
+            productImage: product.images[0] || '',
+            quantity,
+          })),
+        }),
       })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        if (res.status === 409) {
+          // Stock or product error — surface to user
+          setSaveError(errData.error ?? t.checkout.orderFailed)
+        } else {
+          setSaveError(t.checkout.orderFailed)
+        }
+        return
+      }
+
+      markRecovered()
       setSubmitted(true)
       clearCart()
     } catch {
@@ -177,7 +205,19 @@ export default function CheckoutPage() {
     }
   }
 
-  const f = (key: keyof typeof form, val: string) => setForm({ ...form, [key]: val })
+  const f = (key: keyof typeof form, val: string) => {
+    const next = { ...form, [key]: val }
+    setForm(next)
+    // Auto-save on every field change for abandoned checkout recovery
+    saveAbandoned({
+      name: next.fullName,
+      phone: next.phone,
+      wilaya: next.wilaya,
+      address: next.address,
+      cartSnapshot: items.map(({ product, quantity }) => ({ id: product.id, name: product.name, quantity, price: product.price })),
+      cartTotal,
+    })
+  }
 
   if (items.length === 0 && !submitted) {
     return (
@@ -196,7 +236,11 @@ export default function CheckoutPage() {
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-10 h-10 text-green-600" />
         </div>
-        <h1 className="text-2xl font-black text-gray-900 mb-2">{t.checkout.confirmed}</h1>
+        <h1 className="text-2xl font-black text-gray-900 mb-4">{t.checkout.confirmed}</h1>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3 mb-6 text-left">
+          <Phone className="w-6 h-6 text-amber-600 flex-shrink-0" />
+          <p className="text-sm font-semibold text-amber-800">{t.checkout.confirmCall}</p>
+        </div>
         <p className="text-gray-500 mb-8">
           {t.checkout.confirmedMsg.replace('{phone}', form.phone)}
         </p>
@@ -230,11 +274,17 @@ export default function CheckoutPage() {
         </p>
       </div>
 
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-5">
         <Link href="/cart" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </Link>
         <h1 className="text-2xl font-black text-gray-900">{t.checkout.title}</h1>
+      </div>
+
+      {/* Guest checkout notice */}
+      <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-6 text-sm text-indigo-800">
+        <Lock className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+        <span><strong>Commande invité</strong> — Aucun compte requis. Rapide &amp; sécurisé.</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -271,12 +321,22 @@ export default function CheckoutPage() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.phone}</label>
-                <input required type="tel" value={form.phone} onChange={(e) => f('phone', e.target.value)}
-                  placeholder="0555 00 00 00"
-                  pattern="(05|06|07)[0-9]{8}"
-                  title={t.checkout.phonePattern}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
+                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-indigo-400">
+                  <span className="px-3 py-3 bg-gray-50 text-gray-500 text-sm font-semibold border-r border-gray-200 select-none">🇩🇿 +213</span>
+                  <input required type="tel" value={form.phone}
+                    onChange={(e) => { f('phone', e.target.value); validatePhone(e.target.value) }}
+                    onBlur={(e) => validatePhone(e.target.value)}
+                    placeholder="0555 00 00 00"
+                    pattern="(05|06|07)[0-9]{8}"
+                    title={t.checkout.phonePattern}
+                    className={`flex-1 px-3 py-3 text-sm focus:outline-none ${phoneError ? 'text-red-600' : ''}`} />
+                </div>
               </div>
+              {phoneError && (
+                <div className="sm:col-span-2 -mt-2">
+                  <p className="text-xs text-red-500">{phoneError}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.city}</label>
                 <input required type="text" value={form.city} onChange={(e) => f('city', e.target.value)}
@@ -364,8 +424,8 @@ export default function CheckoutPage() {
           )}
           <button
             type="submit"
-            disabled={saving}
-            className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            disabled={saving || !!phoneError}
+            className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:pointer-events-none"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
             {saving ? '...' : `${t.checkout.placeOrder} — ${formatPrice(orderTotal)}`}

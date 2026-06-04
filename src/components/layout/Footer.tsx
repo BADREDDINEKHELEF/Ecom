@@ -12,11 +12,11 @@ export default function Footer() {
   const t = useT()
 
   const serviceLinks = [
-    t.footer.trackOrder,
-    t.footer.returnsRefunds,
-    t.footer.shippingInfo,
-    t.footer.faq,
-    t.footer.contactUs,
+    { label: t.footer.trackOrder,    href: '/orders' },
+    { label: t.footer.returnsRefunds, href: '/faq' },
+    { label: t.footer.shippingInfo,  href: '/faq' },
+    { label: t.footer.faq,           href: '/faq' },
+    { label: t.footer.contactUs,     href: '/contact' },
   ]
 
   return (
@@ -65,10 +65,10 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold mb-4">{t.footer.customerService}</h3>
             <ul className="space-y-2.5 text-sm">
-              {serviceLinks.map((item) => (
-                <li key={item}>
-                  <Link href="#" className="hover:text-white transition-colors">
-                    {item}
+              {serviceLinks.map(({ label, href }) => (
+                <li key={label}>
+                  <Link href={href} className="hover:text-white transition-colors">
+                    {label}
                   </Link>
                 </li>
               ))}

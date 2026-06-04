@@ -3,14 +3,7 @@ import { checkRateLimit, resetRateLimit } from '@/lib/auth/rateLimit'
 import { signAdminToken } from '@/lib/auth/jwt'
 import { verifyTotp } from '@/lib/auth/totp'
 import { writeAuditLog } from '@/lib/auth/auditLog'
-
-function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-real-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    '0.0.0.0'
-  )
-}
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
@@ -29,12 +22,21 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const { password, totpCode } = body as { password?: string; totpCode?: string }
 
-  // Layer 2 — Password check
+  // Layer 2 — Password check (timing-safe comparison prevents timing attacks)
   const adminSecret = process.env.ADMIN_SECRET
   if (!adminSecret) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
-  if (!password || password !== adminSecret) {
+  let passwordMatch = false
+  try {
+    const { timingSafeEqual } = await import('crypto')
+    const a = Buffer.from(password ?? '')
+    const b = Buffer.from(adminSecret)
+    passwordMatch = a.length === b.length && timingSafeEqual(a, b)
+  } catch {
+    passwordMatch = false
+  }
+  if (!password || !passwordMatch) {
     await writeAuditLog({ action: 'admin_login_failure', ip, userAgent: ua, result: 'failure', meta: { reason: 'wrong_password' } })
     return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
   }

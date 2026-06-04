@@ -6,7 +6,7 @@ import {
   MessageCircle, Truck, ExternalLink, X, Check,
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { getAllOrders, updateOrderStatus, OrderRow } from '@/lib/supabase/queries'
+import { type OrderRow } from '@/lib/supabase/orders'
 import { buildWhatsAppLink } from '@/lib/whatsapp/messages'
 import { DELIVERY_PROVIDERS, getProvider } from '@/lib/delivery/providers'
 
@@ -241,7 +241,9 @@ export default function AdminOrdersPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await getAllOrders(0)
+      const res = await fetch('/api/admin/orders?page=0')
+      if (!res.ok) throw new Error('Failed to load orders')
+      const result = await res.json() as { orders: OrderRow[]; hasMore: boolean }
       setOrders(result.orders)
       setHasMore(result.hasMore)
       setPage(0)
@@ -254,7 +256,9 @@ export default function AdminOrdersPage() {
     setLoadingMore(true)
     try {
       const nextPage = page + 1
-      const result = await getAllOrders(nextPage)
+      const res = await fetch(`/api/admin/orders?page=${nextPage}`)
+      if (!res.ok) throw new Error('Failed to load more orders')
+      const result = await res.json() as { orders: OrderRow[]; hasMore: boolean }
       setOrders((prev) => [...prev, ...result.orders])
       setHasMore(result.hasMore)
       setPage(nextPage)
@@ -281,7 +285,12 @@ export default function AdminOrdersPage() {
     if (next === 'shipped') { setShipOrder(orders.find((o) => o.id === orderId) ?? null); return }
     setAdvancing(orderId)
     try {
-      await updateOrderStatus(orderId, next)
+      const res = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: next }),
+      })
+      if (!res.ok) throw new Error('Failed to update status')
       setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: next } : o))
       if (selectedOrder?.id === orderId) setSelectedOrder((o) => o ? { ...o, status: next } : o)
     } finally {

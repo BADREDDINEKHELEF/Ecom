@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
-
-function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-real-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    '0.0.0.0'
-  )
-}
+import { getClientIp } from '@/lib/utils/ip'
 
 function isIpAllowed(ip: string): boolean {
   const allowlist = process.env.ADMIN_IP_ALLOWLIST
