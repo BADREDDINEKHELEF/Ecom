@@ -14,6 +14,8 @@ export default function DeliverySettingsPage() {
     default_provider:     'yalidine',
     yalidine_api_id:      '',
     yalidine_api_token:   '',
+    procolis_token:       '',
+    zr_token:             '',
     auto_create_shipment: false,
     notify_whatsapp:      true,
     notify_sms:           false,
@@ -34,6 +36,8 @@ export default function DeliverySettingsPage() {
           default_provider:     cfg.default_provider,
           yalidine_api_id:      cfg.yalidine_api_id ?? '',
           yalidine_api_token:   cfg.yalidine_api_token ?? '',
+          procolis_token:       cfg.procolis_token ?? '',
+          zr_token:             cfg.zr_token ?? '',
           auto_create_shipment: cfg.auto_create_shipment,
           notify_whatsapp:      cfg.notify_whatsapp,
           notify_sms:           cfg.notify_sms,
@@ -53,6 +57,8 @@ export default function DeliverySettingsPage() {
         default_provider:     form.default_provider,
         yalidine_api_id:      form.yalidine_api_id || null,
         yalidine_api_token:   form.yalidine_api_token || null,
+        procolis_token:       form.procolis_token || null,
+        zr_token:             form.zr_token || null,
         auto_create_shipment: form.auto_create_shipment,
         notify_whatsapp:      form.notify_whatsapp,
         notify_sms:           form.notify_sms,
@@ -209,6 +215,54 @@ export default function DeliverySettingsPage() {
                     </p>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            {/* Procolis API */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm">
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-amber-500" /> Intégration Procolis API
+                </h2>
+                <span className="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">Optionnel</span>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Créez vos expéditions Procolis automatiquement. Obtenez votre token API sur{' '}
+                <a href="https://procolis.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">procolis.com</a>.
+              </p>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API Procolis</label>
+                <input type="password" value={form.procolis_token}
+                  onChange={(e) => setForm({ ...form, procolis_token: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
+                </p>
+              </div>
+            </div>
+
+            {/* ZR Express API */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm">
+              <div className="flex items-start justify-between mb-1">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-blue-500" /> Intégration ZR Express API
+                </h2>
+                <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">Optionnel</span>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Créez vos expéditions ZR Express automatiquement. Obtenez votre token sur{' '}
+                <a href="https://zrexpress.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">zrexpress.dz</a>.
+              </p>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API ZR Express</label>
+                <input type="password" value={form.zr_token}
+                  onChange={(e) => setForm({ ...form, zr_token: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
+                </p>
               </div>
             </div>
 

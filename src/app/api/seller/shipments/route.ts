@@ -62,8 +62,12 @@ export async function POST(req: NextRequest) {
           wilaya: order.wilaya,
           total: order.total,
         },
-        config?.yalidine_api_id ?? undefined,
-        config?.yalidine_api_token ?? undefined
+        {
+          yalidine_api_id:    config?.yalidine_api_id  ?? undefined,
+          yalidine_api_token: config?.yalidine_api_token ?? undefined,
+          procolis_token:     config?.procolis_token   ?? undefined,
+          zr_token:           config?.zr_token         ?? undefined,
+        }
       )
       finalTracking = result.tracking
       labelUrl = result.labelUrl

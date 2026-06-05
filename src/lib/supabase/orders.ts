@@ -44,6 +44,7 @@ export interface CreateOrderInput {
   shippingCost:    number
   promoCodeId?:    string
   discountAmount?: number
+  status?:         string
   items: {
     productId:     string
     productName:   string
@@ -115,6 +116,7 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
       city:            input.city,
       address:         input.address,
       payment_method:  input.paymentMethod,
+      status:          input.status ?? 'pending',
       subtotal:        computedSubtotal,
       shipping_cost:   input.shippingCost,
       total,

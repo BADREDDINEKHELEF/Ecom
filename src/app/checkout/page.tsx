@@ -29,7 +29,7 @@ function matchWilaya(state: string): string {
   )
 }
 
-type PaymentMethod = 'cash' | 'card' | 'edahabia' | 'cib'
+type PaymentMethod = 'cash' | 'card' | 'edahabia' | 'cib' | 'baridimob'
 
 const PAYMENT_ICONS: Record<PaymentMethod, React.ReactNode> = {
   cash:      <Banknote className="w-5 h-5" />,
@@ -44,6 +44,12 @@ const PAYMENT_ICONS: Record<PaymentMethod, React.ReactNode> = {
     <svg viewBox="0 0 40 24" className="w-8 h-5">
       <rect width="40" height="24" rx="4" fill="#1e3a8a" />
       <text x="6" y="17" fontSize="11" fontWeight="bold" fill="white">CIB</text>
+    </svg>
+  ),
+  baridimob: (
+    <svg viewBox="0 0 40 24" className="w-8 h-5">
+      <rect width="40" height="24" rx="4" fill="#d97706" />
+      <text x="3" y="17" fontSize="9" fontWeight="bold" fill="white">Baridi</text>
     </svg>
   ),
 }
@@ -65,6 +71,8 @@ export default function CheckoutPage() {
   const [saveError, setSaveError] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const { save: saveAbandoned, markRecovered } = useAbandonedCheckout()
+
+  const [baridimobModal, setBaridimobModal] = useState<{ qrCodeData: string; deepLink: string; expiresAt: string } | null>(null)
 
   const [promoInput, setPromoInput] = useState('')
   const [promoApplying, setPromoApplying] = useState(false)
@@ -157,37 +165,60 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (saving) return  // prevent double-submit
+    if (saving) return
     if (phoneError) return
     setSaving(true)
     setSaveError('')
+
+    const orderPayload = {
+      fullName:      form.fullName,
+      phone:         form.phone,
+      wilaya:        form.wilaya,
+      city:          form.city,
+      address:       form.address,
+      paymentMethod: payment,
+      shippingCost:  delivery.cost,
+      promoCodeId:   promoResult?.id ?? null,
+      discountAmount: discountAmount || 0,
+      items: items.map(({ product, quantity }) => ({
+        productId:    product.id,
+        productName:  product.name,
+        productImage: product.images[0] || '',
+        quantity,
+      })),
+    }
+
     try {
-      const res = await fetch('/api/orders', {
+      // Cash on Delivery — existing fast path
+      if (payment === 'cash') {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload),
+        })
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          setSaveError(res.status === 409 ? (errData.error ?? t.checkout.orderFailed) : t.checkout.orderFailed)
+          return
+        }
+        markRecovered()
+        setSubmitted(true)
+        clearCart()
+        return
+      }
+
+      // Online payment — Satim (CIB/Edahabia/Card) or BaridiMob
+      const res = await fetch('/api/payment/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName:      form.fullName,
-          phone:         form.phone,
-          wilaya:        form.wilaya,
-          city:          form.city,
-          address:       form.address,
-          paymentMethod: payment,
-          shippingCost:  delivery.cost,
-          promoCodeId:   promoResult?.id ?? null,
-          discountAmount: discountAmount || 0,
-          items: items.map(({ product, quantity }) => ({
-            productId:    product.id,
-            productName:  product.name,
-            productImage: product.images[0] || '',
-            quantity,
-          })),
-        }),
+        body: JSON.stringify(orderPayload),
       })
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        if (res.status === 409) {
-          // Stock or product error — surface to user
+        if (res.status === 503) {
+          setSaveError('Le paiement en ligne n\'est pas encore disponible. Veuillez choisir le paiement à la livraison.')
+        } else if (res.status === 409) {
           setSaveError(errData.error ?? t.checkout.orderFailed)
         } else {
           setSaveError(t.checkout.orderFailed)
@@ -195,7 +226,22 @@ export default function CheckoutPage() {
         return
       }
 
+      const data = await res.json()
       markRecovered()
+
+      if (data.method === 'satim' && data.formUrl) {
+        clearCart()
+        window.location.href = data.formUrl
+        return
+      }
+
+      if (data.method === 'baridimob' && data.qrCodeData) {
+        clearCart()
+        setBaridimobModal({ qrCodeData: data.qrCodeData, deepLink: data.deepLink, expiresAt: data.expiresAt })
+        return
+      }
+
+      // Fallback
       setSubmitted(true)
       clearCart()
     } catch {
@@ -217,6 +263,33 @@ export default function CheckoutPage() {
       cartSnapshot: items.map(({ product, quantity }) => ({ id: product.id, name: product.name, quantity, price: product.price })),
       cartTotal,
     })
+  }
+
+  // BaridiMob modal
+  if (baridimobModal) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-5">
+          <CreditCard className="w-8 h-8 text-amber-600" />
+        </div>
+        <h1 className="text-xl font-black text-gray-900 mb-2">Payer avec BaridiMob</h1>
+        <p className="text-sm text-gray-500 mb-6">Ouvrez votre application BaridiMob et scannez le code ou cliquez sur le lien ci-dessous.</p>
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6">
+          <p className="text-xs font-mono text-amber-800 break-all select-all">{baridimobModal.qrCodeData}</p>
+        </div>
+        {baridimobModal.deepLink && (
+          <a
+            href={baridimobModal.deepLink}
+            className="inline-flex items-center justify-center gap-2 bg-amber-500 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-amber-600 transition-colors mb-4 w-full"
+          >
+            Ouvrir BaridiMob
+          </a>
+        )}
+        <p className="text-xs text-gray-400">
+          Expire le {new Date(baridimobModal.expiresAt).toLocaleString('fr-DZ')}
+        </p>
+      </div>
+    )
   }
 
   if (items.length === 0 && !submitted) {
@@ -383,10 +456,11 @@ export default function CheckoutPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               {([
-                { id: 'cash'     as PaymentMethod, label: t.checkout.cash,     desc: t.checkout.cashDesc,     recommended: true  },
-                { id: 'edahabia' as PaymentMethod, label: t.checkout.edahabia, desc: t.checkout.edahabiaDesc, recommended: false },
-                { id: 'cib'      as PaymentMethod, label: t.checkout.cib,      desc: t.checkout.cibDesc,      recommended: false },
-                { id: 'card'     as PaymentMethod, label: t.checkout.card,     desc: t.checkout.cardDesc,     recommended: false },
+                { id: 'cash'      as PaymentMethod, label: t.checkout.cash,      desc: t.checkout.cashDesc,      recommended: true  },
+                { id: 'edahabia'  as PaymentMethod, label: t.checkout.edahabia,  desc: t.checkout.edahabiaDesc,  recommended: false },
+                { id: 'cib'       as PaymentMethod, label: t.checkout.cib,       desc: t.checkout.cibDesc,       recommended: false },
+                { id: 'baridimob' as PaymentMethod, label: 'BaridiMob',          desc: 'Paiement mobile Algeria Post',  recommended: false },
+                { id: 'card'      as PaymentMethod, label: t.checkout.card,      desc: t.checkout.cardDesc,      recommended: false },
               ]).map(({ id, label, desc, recommended }) => (
                 <button
                   key={id}

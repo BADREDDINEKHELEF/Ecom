@@ -3,18 +3,22 @@ import { createAdminClient } from './admin'
 import { encryptField, decryptField, isEncrypted } from '@/lib/utils/crypto'
 
 export interface Vendor {
-  id:              string
-  user_id:         string
-  store_name:      string
-  store_slug:      string
-  logo_url:        string | null
-  description:     string | null
-  phone:           string | null
-  wilaya:          string | null
-  commission_rate: number
-  is_approved:     boolean
-  is_active:       boolean
-  created_at:      string
+  id:               string
+  user_id:          string
+  store_name:       string
+  store_slug:       string
+  logo_url:         string | null
+  banner_url?:       string | null
+  accent_color?:     string | null
+  seo_title?:        string | null
+  seo_description?:  string | null
+  description:      string | null
+  phone:            string | null
+  wilaya:           string | null
+  commission_rate:  number
+  is_approved:      boolean
+  is_active:        boolean
+  created_at:       string
 }
 
 export interface VendorDeliveryConfig {
@@ -23,6 +27,8 @@ export interface VendorDeliveryConfig {
   default_provider:     string
   yalidine_api_id:      string | null
   yalidine_api_token:   string | null
+  procolis_token?:       string | null
+  zr_token?:             string | null
   auto_create_shipment: boolean
   notify_whatsapp:      boolean
   notify_sms:           boolean
@@ -88,25 +94,24 @@ export async function getAllVendors(): Promise<Vendor[]> {
 function encryptConfigCredentials(
   config: Partial<Omit<VendorDeliveryConfig, 'id' | 'vendor_id'>>
 ): typeof config {
-  const encrypted = { ...config }
-  if (encrypted.yalidine_api_id && !isEncrypted(encrypted.yalidine_api_id)) {
-    encrypted.yalidine_api_id = encryptField(encrypted.yalidine_api_id)
-  }
-  if (encrypted.yalidine_api_token && !isEncrypted(encrypted.yalidine_api_token)) {
-    encrypted.yalidine_api_token = encryptField(encrypted.yalidine_api_token)
-  }
-  return encrypted
+  const e = { ...config }
+  const enc = (v?: string | null) => (v && !isEncrypted(v) ? encryptField(v) : v)
+  if (e.yalidine_api_id)   e.yalidine_api_id   = enc(e.yalidine_api_id)
+  if (e.yalidine_api_token) e.yalidine_api_token = enc(e.yalidine_api_token)
+  if (e.procolis_token)    e.procolis_token    = enc(e.procolis_token)
+  if (e.zr_token)          e.zr_token          = enc(e.zr_token)
+  return e
 }
 
 function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryConfig {
+  const dec = (v: string | null | undefined): string | null =>
+    v ? (isEncrypted(v) ? decryptField(v) : v) : null
   return {
     ...config,
-    yalidine_api_id: config.yalidine_api_id && isEncrypted(config.yalidine_api_id)
-      ? decryptField(config.yalidine_api_id)
-      : config.yalidine_api_id,
-    yalidine_api_token: config.yalidine_api_token && isEncrypted(config.yalidine_api_token)
-      ? decryptField(config.yalidine_api_token)
-      : config.yalidine_api_token,
+    yalidine_api_id:    dec(config.yalidine_api_id),
+    yalidine_api_token: dec(config.yalidine_api_token),
+    procolis_token:     dec(config.procolis_token),
+    zr_token:           dec(config.zr_token),
   }
 }
 

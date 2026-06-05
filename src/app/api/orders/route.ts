@@ -19,7 +19,7 @@ const CreateOrderSchema = z.object({
   wilaya:        z.string().min(1).max(100),
   city:          z.string().min(1).max(200),
   address:       z.string().min(5).max(500),
-  paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib']),
+  paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
   shippingCost:  z.number().min(0).max(10000),
   promoCodeId:   z.string().uuid().optional().nullable(),
   discountAmount: z.number().min(0).max(1_000_000).optional().default(0),

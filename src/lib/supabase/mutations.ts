@@ -27,14 +27,14 @@ export async function upsertProduct(
     updated_at:    new Date().toISOString(),
   })
   if (error) throw error
-  revalidateTag('products', {})
+  revalidateTag('products')
 }
 
 export async function deleteProduct(id: string): Promise<void> {
   const supabase = createAdminClient()
   const { error } = await supabase.from('products').delete().eq('id', id)
   if (error) throw error
-  revalidateTag('products', {})
+  revalidateTag('products')
 }
 
 // ── Settings mutations ─────────────────────────────────────────
@@ -57,5 +57,5 @@ export async function saveStoreSettings(s: StoreSettings): Promise<void> {
     updated_at:              new Date().toISOString(),
   })
   if (error) throw error
-  revalidateTag('store-settings', {})
+  revalidateTag('store-settings')
 }
