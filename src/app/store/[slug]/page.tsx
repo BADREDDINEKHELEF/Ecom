@@ -1,69 +1,70 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, BadgeCheck, Package, ShoppingBag, Star, ArrowLeft, Phone } from 'lucide-react'
+import { MapPin, BadgeCheck, Package, ShoppingBag, Star, ArrowLeft } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { getVendorBySlug } from '@/lib/supabase/vendors'
+import { createClient } from '@/lib/supabase/client'
+import { dbToProduct } from '@/lib/supabase/products'
+import { Product } from '@/types'
 
-interface StoreData {
-  vendor: {
-    id: string
-    store_name: string
-    store_slug: string
-    logo_url: string | null
-    banner_url: string | null
-    accent_color: string | null
-    description: string | null
-    wilaya: string | null
-    is_approved: boolean
-    seo_title: string | null
-    seo_description: string | null
-    member_since: string
-  }
-  products: Array<{
-    id: string
-    name: string
-    price: number
-    compare_price: number | null
-    images: string[]
-    stock: number
-    rating: number
-    review_count: number
-    category: string
-    is_new: boolean
-    niche_id: string
-  }>
-  totalOrders: number
+interface VendorRow {
+  id: string
+  store_name: string
+  store_slug: string
+  logo_url: string | null
+  banner_url?: string | null
+  accent_color?: string | null
+  description: string | null
+  wilaya: string | null
+  is_approved: boolean
+  seo_title?: string | null
+  seo_description?: string | null
+  created_at: string
 }
 
-async function getStoreData(slug: string): Promise<StoreData | null> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const res = await fetch(`${base}/api/store/${slug}`, { next: { revalidate: 60 } })
-  if (!res.ok) return null
-  return res.json()
+async function getStoreProducts(vendorId: string): Promise<{ products: Product[]; totalOrders: number }> {
+  const supabase = createClient()
+  const [{ data: products }, { count }] = await Promise.all([
+    supabase
+      .from('products')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('vendor_id', vendorId)
+      .eq('status', 'delivered'),
+  ])
+  return {
+    products: (products ?? []).map(dbToProduct),
+    totalOrders: count ?? 0,
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const data = await getStoreData(slug)
-  if (!data) return { title: 'Store not found' }
-  const { vendor } = data
+  const vendor = await getVendorBySlug(slug)
+  if (!vendor) return { title: 'Boutique introuvable' }
   return {
-    title: vendor.seo_title ?? `${vendor.store_name} — ShopDZ`,
+    title:       vendor.seo_title ?? `${vendor.store_name} — ShopDZ`,
     description: vendor.seo_description ?? vendor.description ?? `Boutique ${vendor.store_name} sur ShopDZ`,
     openGraph: {
-      title: vendor.store_name,
+      title:       vendor.store_name,
       description: vendor.description ?? '',
-      images: vendor.logo_url ? [vendor.logo_url] : [],
+      images:      vendor.logo_url ? [vendor.logo_url] : [],
     },
   }
 }
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const data = await getStoreData(slug)
-  if (!data) notFound()
+  const vendor = await getVendorBySlug(slug) as VendorRow | null
+  if (!vendor) notFound()
 
-  const { vendor, products, totalOrders } = data
+  const { products, totalOrders } = await getStoreProducts(vendor.id)
   const accent = vendor.accent_color ?? '#4f46e5'
 
   return (
@@ -77,7 +78,10 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           <Image src={vendor.banner_url} alt="Store banner" fill className="object-cover" sizes="100vw" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-        <Link href="/" className="absolute top-4 left-4 flex items-center gap-1.5 text-white/90 hover:text-white text-sm font-semibold bg-black/20 backdrop-blur px-3 py-1.5 rounded-full transition-colors">
+        <Link
+          href="/"
+          className="absolute top-4 left-4 flex items-center gap-1.5 text-white/90 hover:text-white text-sm font-semibold bg-black/20 backdrop-blur px-3 py-1.5 rounded-full transition-colors"
+        >
           <ArrowLeft className="w-3.5 h-3.5" /> ShopDZ
         </Link>
       </div>
@@ -123,8 +127,8 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                   <ShoppingBag className="w-3.5 h-3.5" /> {totalOrders} commande{totalOrders !== 1 ? 's' : ''} livrée{totalOrders !== 1 ? 's' : ''}
                 </span>
               )}
-              <span className="flex items-center gap-1">
-                Membre depuis {new Date(vendor.member_since).toLocaleDateString('fr-DZ', { year: 'numeric', month: 'long' })}
+              <span>
+                Membre depuis {new Date(vendor.created_at).toLocaleDateString('fr-DZ', { year: 'numeric', month: 'long' })}
               </span>
             </div>
           </div>
@@ -145,7 +149,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} nicheId={product.niche_id} accent={accent} />
+                <ProductCard key={product.id} product={product} accent={accent} />
               ))}
             </div>
           </>
@@ -155,23 +159,15 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
   )
 }
 
-function ProductCard({
-  product,
-  nicheId,
-  accent,
-}: {
-  product: StoreData['products'][0]
-  nicheId: string
-  accent: string
-}) {
-  const hasDiscount = product.compare_price && product.compare_price > product.price
+function ProductCard({ product, accent }: { product: Product; accent: string }) {
+  const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
-    ? Math.round(((product.compare_price! - product.price) / product.compare_price!) * 100)
+    ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
     : 0
 
   return (
     <Link
-      href={`/${nicheId}/${product.id}`}
+      href={`/${product.nicheId}/${product.id}`}
       className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100"
     >
       <div className="relative aspect-square bg-gray-100">
@@ -188,7 +184,7 @@ function ProductCard({
             <Package className="w-8 h-8 text-gray-300" />
           </div>
         )}
-        {product.is_new && (
+        {product.isNew && (
           <span className="absolute top-2 left-2 text-[10px] font-black text-white px-1.5 py-0.5 rounded-md" style={{ background: accent }}>
             NOUVEAU
           </span>
@@ -204,13 +200,13 @@ function ProductCard({
         {product.rating > 0 && (
           <div className="flex items-center gap-1 mb-1">
             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-            <span className="text-[10px] text-gray-500">{product.rating.toFixed(1)} ({product.review_count})</span>
+            <span className="text-[10px] text-gray-500">{product.rating.toFixed(1)} ({product.reviewCount})</span>
           </div>
         )}
         <div className="flex items-baseline gap-1.5">
           <span className="text-sm font-black text-gray-900">{formatPrice(product.price)}</span>
           {hasDiscount && (
-            <span className="text-[10px] text-gray-400 line-through">{formatPrice(product.compare_price!)}</span>
+            <span className="text-[10px] text-gray-400 line-through">{formatPrice(product.comparePrice!)}</span>
           )}
         </div>
         {product.stock <= 5 && product.stock > 0 && (
