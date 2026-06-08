@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { getAllOrders, updateOrderStatus } from '@/lib/supabase/orders'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
         .eq('status', 'pending')
       return NextResponse.json({ pending: count ?? 0 })
     } catch (err) {
-      console.error('[GET /api/admin/orders countOnly]', err)
+      logger.error('[GET /api/admin/orders countOnly]', { error: err instanceof Error ? err.message : String(err) })
       return NextResponse.json({ pending: 0 })
     }
   }
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const result = await getAllOrders(page)
     return NextResponse.json(result)
   } catch (err) {
-    console.error('[GET /api/admin/orders]', err)
+    logger.error('[GET /api/admin/orders]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
   }
 }
@@ -53,7 +54,7 @@ export async function PATCH(req: NextRequest) {
   const parsed = PatchSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+      { error: 'Validation failed', details: parsed.error.issues },
       { status: 400 }
     )
   }
@@ -62,7 +63,7 @@ export async function PATCH(req: NextRequest) {
     await updateOrderStatus(parsed.data.orderId, parsed.data.status)
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('[PATCH /api/admin/orders]', err)
+    logger.error('[PATCH /api/admin/orders]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
   }
 }

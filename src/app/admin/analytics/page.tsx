@@ -1,6 +1,7 @@
-import { TrendingUp, ShoppingBag, DollarSign, Truck, XCircle, RotateCcw, Clock, Package } from 'lucide-react'
+import Link from 'next/link'
+import { TrendingUp, ShoppingBag, DollarSign, Truck, XCircle, RotateCcw, Clock, Package, ArrowRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { getCodStats, getAnalyticsData } from '@/lib/supabase/queries'
+import { getCodStats, getAnalyticsData } from '@/lib/supabase/analytics'
 
 export const revalidate = 120
 
@@ -182,6 +183,20 @@ export default async function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      {/* COD deep-dive link */}
+      <Link
+        href="/admin/analytics/cod"
+        className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-2xl p-5 hover:bg-indigo-100 transition-colors group"
+      >
+        <div>
+          <p className="font-bold text-indigo-900">Analytiques COD détaillées →</p>
+          <p className="text-sm text-indigo-600 mt-0.5">
+            Taux de collecte par wilaya et transporteur · Export CSV
+          </p>
+        </div>
+        <ArrowRight className="w-5 h-5 text-indigo-500 group-hover:translate-x-1 transition-transform" />
+      </Link>
     </div>
   )
 }

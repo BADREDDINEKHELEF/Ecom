@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getOrdersForTracking } from '@/lib/supabase/orders'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
 
 const ALGERIAN_PHONE_RE = /^(213[5-7]|0[5-7])\d{8}$/
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
     const orders = await getOrdersForTracking(normalized)
     return NextResponse.json({ orders })
   } catch (err) {
-    console.error('[GET /api/track]', err)
+    logger.error('[GET /api/track]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Search failed' }, { status: 500 })
   }
 }

@@ -65,6 +65,9 @@ const adminSecurityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Silence the "multiple lockfiles" warning from workspace root detection
+  outputFileTracingRoot: process.cwd(),
+
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

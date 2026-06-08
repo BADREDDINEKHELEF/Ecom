@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { satimGetOrderStatus, satimConfirmOrder } from '@/lib/payment/satim'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   // An attacker could craft ?result=success&orderId=<anything> to mark orders as paid.
   // We require a valid mdOrder (Satim reference) and confirm it server-side.
   if (!satimId) {
-    console.warn('[payment/callback] No mdOrder param — possible tamper attempt, orderId:', orderId)
+    logger.warn('[payment/callback] No mdOrder param — possible tamper attempt', { orderId })
     await markOrderFailed(orderId)
     return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=no_reference`)
   }
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
     await markOrderFailed(orderId)
     return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=not_paid`)
   } catch (err) {
-    console.error('[payment/callback] Satim verification failed:', err)
+    logger.error('[payment/callback] Satim verification failed', { error: err instanceof Error ? err.message : String(err) })
     // Do NOT mark as paid when we cannot verify. Fail safe.
     return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=verification_error`)
   }

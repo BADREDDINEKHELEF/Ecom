@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserId } from '@/lib/supabase/vendors'
+import { logger } from '@/lib/logger'
+
+const CreatePromoSchema = z.object({
+  code:           z.string().min(2).max(50).regex(/^[A-Z0-9_-]+$/i, 'Code must be alphanumeric'),
+  discount_type:  z.enum(['percentage', 'fixed']),
+  discount_value: z.number().positive().max(100_000),
+  min_order:      z.number().min(0).optional().default(0),
+  max_uses:       z.number().int().positive().optional().nullable(),
+  expires_at:     z.iso.datetime().optional().nullable(),
+  free_shipping:  z.boolean().optional().default(false),
+  one_per_buyer:  z.boolean().optional().default(false),
+})
+
+const PatchPromoSchema = z.object({
+  id:        z.uuid(),
+  is_active: z.boolean(),
+})
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,7 +40,7 @@ export async function GET(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ codes: data ?? [] })
   } catch (err) {
-    console.error('[GET /api/seller/promo-codes]', err)
+    logger.error('[GET /api/seller/promo-codes]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -36,12 +54,15 @@ export async function POST(req: NextRequest) {
     const vendor = await getVendorByUserId(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const body = await req.json()
-    const { code, discount_type, discount_value, min_order, max_uses, expires_at, free_shipping, one_per_buyer } = body
-
-    if (!code || !discount_type || !discount_value) {
-      return NextResponse.json({ error: 'code, discount_type and discount_value are required' }, { status: 400 })
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
+    const parsed = CreatePromoSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+    }
+    const { code, discount_type, discount_value, min_order, max_uses, expires_at, free_shipping, one_per_buyer } = parsed.data
 
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -50,12 +71,12 @@ export async function POST(req: NextRequest) {
         vendor_id:      vendor.id,
         code:           code.toUpperCase(),
         discount_type,
-        discount_value: Number(discount_value),
-        min_order:      Number(min_order ?? 0),
+        discount_value,
+        min_order,
         max_uses:       max_uses ?? null,
         expires_at:     expires_at ?? null,
-        free_shipping:  free_shipping ?? false,
-        one_per_buyer:  one_per_buyer ?? false,
+        free_shipping,
+        one_per_buyer,
         is_active:      true,
         uses_count:     0,
       })
@@ -65,7 +86,7 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ code: data })
   } catch (err) {
-    console.error('[POST /api/seller/promo-codes]', err)
+    logger.error('[POST /api/seller/promo-codes]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -79,8 +100,15 @@ export async function PATCH(req: NextRequest) {
     const vendor = await getVendorByUserId(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const { id, is_active } = await req.json()
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    let patchBody: unknown
+    try { patchBody = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+    const patchParsed = PatchPromoSchema.safeParse(patchBody)
+    if (!patchParsed.success) {
+      return NextResponse.json({ error: 'Validation failed', details: patchParsed.error.issues }, { status: 400 })
+    }
+    const { id, is_active } = patchParsed.data
 
     const admin = createAdminClient()
 
@@ -105,7 +133,7 @@ export async function PATCH(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ code: data })
   } catch (err) {
-    console.error('[PATCH /api/seller/promo-codes]', err)
+    logger.error('[PATCH /api/seller/promo-codes]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserId } from '@/lib/supabase/vendors'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   try {
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ threads, unreadCounts })
   } catch (err) {
-    console.error('[GET /api/seller/messages]', err)
+    logger.error('[GET /api/seller/messages]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ message: data })
   } catch (err) {
-    console.error('[POST /api/seller/messages]', err)
+    logger.error('[POST /api/seller/messages]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

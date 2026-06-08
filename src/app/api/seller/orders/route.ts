@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { getVendorByUserId } from '@/lib/supabase/vendors'
 import { getVendorOrders, updateOrderStatus } from '@/lib/supabase/orders'
+import { logger } from '@/lib/logger'
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as const
 type OrderStatus = typeof ORDER_STATUSES[number]
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     const orders = await getVendorOrders(vendor.id)
     return NextResponse.json({ orders })
   } catch (err) {
-    console.error('[GET /api/seller/orders]', err)
+    logger.error('[GET /api/seller/orders]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -52,7 +53,7 @@ export async function PATCH(req: NextRequest) {
     }
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }, { status: 400 })
+      return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
     }
     const { orderId, status } = parsed.data
 
@@ -81,7 +82,7 @@ export async function PATCH(req: NextRequest) {
     await updateOrderStatus(orderId, status)
     return NextResponse.json({ ok: true, orderId, status })
   } catch (err) {
-    console.error('[PATCH /api/seller/orders]', err)
+    logger.error('[PATCH /api/seller/orders]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

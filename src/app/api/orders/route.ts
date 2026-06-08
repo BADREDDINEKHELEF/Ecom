@@ -4,6 +4,7 @@ import { createOrder } from '@/lib/supabase/orders'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
+import { logger } from '@/lib/logger'
 
 const OrderItemSchema = z.object({
   productId:    z.string().min(1),
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
   const parsed = CreateOrderSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+      { error: 'Validation failed', details: parsed.error.issues },
       { status: 400 }
     )
   }
@@ -73,12 +74,12 @@ export async function POST(req: NextRequest) {
       total,
       wilaya:    input.wilaya,
       itemCount: input.items.length,
-    }).catch((err) => console.error('[WhatsApp] notification failed:', err))
+    }).catch((err) => logger.error('[WhatsApp] notification failed', { error: err instanceof Error ? err.message : String(err) }))
 
     return NextResponse.json({ orderId }, { status: 201 })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Order creation failed'
-    console.error('[POST /api/orders]', message)
+    logger.error('[POST /api/orders]', { error: message })
 
     // Surface stock/product errors to the user as 409
     if (message.includes('stock') || message.includes('not found')) {

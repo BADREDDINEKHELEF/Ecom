@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X, Phone } from 'lucide-react'
+import PhoneInput from '@/components/checkout/PhoneInput'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
@@ -73,6 +74,17 @@ export default function CheckoutPage() {
   const { save: saveAbandoned, markRecovered } = useAbandonedCheckout()
 
   const [baridimobModal, setBaridimobModal] = useState<{ qrCodeData: string; deepLink: string; expiresAt: string } | null>(null)
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!baridimobModal?.qrCodeData) { setQrImageUrl(null); return }
+    let cancelled = false
+    import('qrcode').then((QRCode) =>
+      QRCode.toDataURL(baridimobModal.qrCodeData, { width: 280, margin: 2, color: { dark: '#1a1a1a', light: '#fffbeb' } })
+    ).then((url) => { if (!cancelled) setQrImageUrl(url) })
+      .catch(() => { if (!cancelled) setQrImageUrl(null) })
+    return () => { cancelled = true }
+  }, [baridimobModal?.qrCodeData])
 
   const [promoInput, setPromoInput] = useState('')
   const [promoApplying, setPromoApplying] = useState(false)
@@ -156,8 +168,8 @@ export default function CheckoutPage() {
   const validatePhone = (val: string) => {
     if (!val) { setPhoneError(''); return }
     const clean = val.replace(/\s+/g, '')
-    if (!/^(05|06|07)[0-9]{8}$/.test(clean)) {
-      setPhoneError('Numéro invalide — commencez par 05, 06 ou 07 (10 chiffres)')
+    if (!/^(213[5-7]|0[5-7])\d{8}$/.test(clean)) {
+      setPhoneError('Numéro invalide — commencez par 05, 06, 07 ou 213 (format international)')
     } else {
       setPhoneError('')
     }
@@ -274,8 +286,11 @@ export default function CheckoutPage() {
         </div>
         <h1 className="text-xl font-black text-gray-900 mb-2">Payer avec BaridiMob</h1>
         <p className="text-sm text-gray-500 mb-6">Ouvrez votre application BaridiMob et scannez le code ou cliquez sur le lien ci-dessous.</p>
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6">
-          <p className="text-xs font-mono text-amber-800 break-all select-all">{baridimobModal.qrCodeData}</p>
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6 flex items-center justify-center">
+          {qrImageUrl
+            ? <img src={qrImageUrl} alt="QR Code BaridiMob" width={280} height={280} className="rounded-xl" />
+            : <p className="text-xs font-mono text-amber-800 break-all select-all">{baridimobModal.qrCodeData}</p>
+          }
         </div>
         {baridimobModal.deepLink && (
           <a
@@ -393,23 +408,16 @@ export default function CheckoutPage() {
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.phone}</label>
-                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-indigo-400">
-                  <span className="px-3 py-3 bg-gray-50 text-gray-500 text-sm font-semibold border-r border-gray-200 select-none">🇩🇿 +213</span>
-                  <input required type="tel" value={form.phone}
-                    onChange={(e) => { f('phone', e.target.value); validatePhone(e.target.value) }}
-                    onBlur={(e) => validatePhone(e.target.value)}
-                    placeholder="0555 00 00 00"
-                    pattern="(05|06|07)[0-9]{8}"
-                    title={t.checkout.phonePattern}
-                    className={`flex-1 px-3 py-3 text-sm focus:outline-none ${phoneError ? 'text-red-600' : ''}`} />
-                </div>
+                <PhoneInput
+                  value={form.phone}
+                  onChange={(v) => { f('phone', v); validatePhone(v) }}
+                  onBlur={() => validatePhone(form.phone)}
+                  error={phoneError || undefined}
+                  label={t.checkout.phone}
+                  disabled={saving}
+                />
               </div>
-              {phoneError && (
-                <div className="sm:col-span-2 -mt-2">
-                  <p className="text-xs text-red-500">{phoneError}</p>
-                </div>
-              )}
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.city}</label>
                 <input required type="text" value={form.city} onChange={(e) => f('city', e.target.value)}

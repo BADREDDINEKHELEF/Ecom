@@ -5,6 +5,7 @@ import { baridimobInitiatePayment, baridimobConfigured } from '@/lib/payment/bar
 import { createOrder } from '@/lib/supabase/orders'
 import { getClientIp } from '@/lib/utils/ip'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
+import { logger } from '@/lib/logger'
 
 const OrderItemSchema = z.object({
   productId:    z.string().min(1),
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   const parsed = InitiateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }, { status: 400 })
+    return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
   }
 
   const { paymentMethod, promoCodeId, ...rest } = parsed.data
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ orderId, formUrl: satimResult.formUrl, satimOrderId: satimResult.satimOrderId, method: 'satim' }, { status: 201 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Payment initiation failed'
-    console.error('[POST /api/payment/initiate]', msg)
+    logger.error('[POST /api/payment/initiate]', { error: msg })
     if (msg.includes('stock') || msg.includes('not found')) {
       return NextResponse.json({ error: msg }, { status: 409 })
     }

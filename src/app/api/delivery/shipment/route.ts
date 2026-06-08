@@ -4,6 +4,7 @@ import { verifyAdminToken } from '@/lib/auth/jwt'
 import { updateShippingInfo, updateOrderStatus } from '@/lib/supabase/queries'
 import { yalidineCreateShipment } from '@/lib/delivery/yalidine'
 import { ShipmentInput } from '@/lib/delivery/types'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   // Require valid admin session
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ tracking: finalTracking, labelUrl })
   } catch (err) {
-    console.error('[POST /api/delivery/shipment]', err instanceof Error ? err.message : err)
+    logger.error('[POST /api/delivery/shipment]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Failed to create shipment' }, { status: 500 })
   }
 }

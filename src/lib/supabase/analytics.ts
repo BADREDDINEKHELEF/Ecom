@@ -88,6 +88,47 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   return { totalRevenue, totalOrders, monthly, topProducts }
 }
 
+// ── COD per-wilaya analytics (admin — migration_006) ───────────
+
+export interface CodWilayaRow {
+  wilaya:               string
+  total_cod_orders:     number
+  collected:            number
+  refused:              number
+  returned:             number
+  unreachable:          number
+  pending_cod_orders:   number
+  collection_rate_pct:  number | null
+  avg_attempts:         number | null
+  collected_amount_dzd: number
+  lost_amount_dzd:      number
+}
+
+export interface CodProviderRow {
+  delivery_provider:    string
+  total_cod_orders:     number
+  collected:            number
+  refused:              number
+  returned:             number
+  collection_rate_pct:  number | null
+  collected_amount_dzd: number
+  lost_amount_dzd:      number
+}
+
+export async function getCodWilayaStats(): Promise<CodWilayaRow[]> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.rpc('get_cod_wilaya_stats')
+  if (error) throw error
+  return (data ?? []) as CodWilayaRow[]
+}
+
+export async function getCodProviderStats(): Promise<CodProviderRow[]> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.rpc('get_cod_provider_stats')
+  if (error) throw error
+  return (data ?? []) as CodProviderRow[]
+}
+
 // ── Per-vendor analytics (seller dashboard) ────────────────────
 
 export async function getSellerAnalytics(
