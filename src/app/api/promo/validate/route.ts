@@ -5,7 +5,7 @@ import { getClientIp } from '@/lib/utils/ip'
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = checkPublicRateLimit(ip, 'promo_validate')
+  const rl = await checkPublicRateLimit(ip, 'promo_validate')
   if (!rl.allowed) {
     return NextResponse.json({ valid: false, message: 'too_many_requests' }, {
       status: 429,

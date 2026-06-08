@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const ip = getClientIp(req)
-  const rl = checkPublicRateLimit(ip, 'reviews_post')
+  const rl = await checkPublicRateLimit(ip, 'reviews_post')
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans une minute.' }, {
       status: 429,

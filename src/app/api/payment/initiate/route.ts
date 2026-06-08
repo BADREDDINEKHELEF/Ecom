@@ -17,7 +17,7 @@ const OrderItemSchema = z.object({
 const InitiateSchema = z.object({
   paymentMethod: z.enum(['edahabia', 'cib', 'card', 'baridimob']),
   fullName:      z.string().min(2).max(200),
-  phone:         z.string().regex(/^(213)?(05|06|07)\d{8}$/),
+  phone:         z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
   wilaya:        z.string().min(1).max(100),
   city:          z.string().min(1).max(200),
   address:       z.string().min(5).max(500),
@@ -33,7 +33,7 @@ function normalizePhone(p: string) {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = checkCheckoutRateLimit(ip)
+  const rl = await checkCheckoutRateLimit(ip)
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const phone = normalizePhone(rest.phone)
 
   try {
-    const orderId = await createOrder({
+    const { id: orderId, total } = await createOrder({
       ...rest,
       phone,
       paymentMethod,
@@ -60,11 +60,10 @@ export async function POST(req: NextRequest) {
       status: 'pending_payment',
     })
 
+    // Use the server-computed total (DZD) returned by createOrder — never trust client amounts.
+    // Satim expects centimes (DZD × 100).
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`
-    const orderAmountCentimes = Math.round(
-      (rest.items.reduce((sum, i) => sum + i.quantity, 0) * 100 + // placeholder — real total from DB
-       rest.shippingCost - (rest.discountAmount ?? 0)) * 100
-    )
+    const orderAmountCentimes = Math.round(total * 100)
 
     if (paymentMethod === 'baridimob') {
       if (!baridimobConfigured()) {
@@ -72,7 +71,7 @@ export async function POST(req: NextRequest) {
       }
       const bmResult = await baridimobInitiatePayment({
         orderNumber: orderId,
-        amountDZD:   orderAmountCentimes / 100,
+        amountDZD:   total,
         description: `Commande ShopDZ #${orderId.slice(0, 8)}`,
         callbackUrl: `${appUrl}/api/payment/callback`,
       })
@@ -88,8 +87,8 @@ export async function POST(req: NextRequest) {
       orderNumber:    orderId,
       amountCentimes: orderAmountCentimes,
       description:    `Commande ShopDZ #${orderId.slice(0, 8)}`,
-      returnUrl:      `${appUrl}/api/payment/callback?result=success`,
-      failUrl:        `${appUrl}/api/payment/callback?result=fail`,
+      returnUrl:      `${appUrl}/api/payment/callback?result=success&orderId=${orderId}`,
+      failUrl:        `${appUrl}/api/payment/callback?result=fail&orderId=${orderId}`,
       language:       'fr',
     })
 

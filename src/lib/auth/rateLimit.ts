@@ -1,26 +1,84 @@
 /**
- * Rate limiting module.
+ * Rate limiting — dual-mode: Upstash Redis (production) or in-memory (dev).
  *
- * Default: in-memory sliding window — works for development and single-instance
- * deployments. Resets on cold start (Vercel serverless), which means the window
- * is weakened on platforms that spin up many instances.
+ * HOW IT WORKS:
+ *   If UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set, the module
+ *   uses @upstash/ratelimit with a sliding-window algorithm backed by Redis.
+ *   This is shared across all serverless instances so cold-start resets are
+ *   not an issue.
  *
- * For production on Vercel / any serverless platform:
- * Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in your env vars
- * and install: npm i @upstash/ratelimit @upstash/redis
- * Then switch the adapter below to the Upstash implementation.
+ *   Without those env vars (local dev / single-process deployments) it falls
+ *   back to an in-memory sliding window. The in-memory store resets on cold
+ *   starts, so it is NOT safe for production on Vercel / multi-instance hosts.
  *
- * The interface is the same — only the backing store changes.
+ * SETUP (production):
+ *   1. Create a free Redis database at upstash.com
+ *   2. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in Vercel env vars
+ *   Done — no code changes needed.
  */
 
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis }     from '@upstash/redis'
+
 interface RateLimitResult {
-  allowed:            boolean
-  retryAfterSeconds:  number
+  allowed:           boolean
+  retryAfterSeconds: number
 }
 
-// ── In-Memory Implementation ────────────────────────────────────────────────
-// Safe for single-process Node.js (e.g. self-hosted, Railway, Render).
-// Not safe for stateless serverless (each cold start = fresh state).
+// ── Upstash Limiters (lazy-initialised) ────────────────────────────────────
+
+let upstashAvailable: boolean | null = null
+
+function isUpstashConfigured(): boolean {
+  if (upstashAvailable !== null) return upstashAvailable
+  upstashAvailable =
+    Boolean(process.env.UPSTASH_REDIS_REST_URL) &&
+    Boolean(process.env.UPSTASH_REDIS_REST_TOKEN)
+  return upstashAvailable
+}
+
+let _redis: Redis | null = null
+function getRedis(): Redis {
+  if (!_redis) {
+    _redis = new Redis({
+      url:   process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    })
+  }
+  return _redis
+}
+
+// One Ratelimit instance per namespace — created on first use
+const upstashLimiters = new Map<string, Ratelimit>()
+
+function getUpstashLimiter(namespace: string, maxRequests: number, windowSeconds: number): Ratelimit {
+  const key = `${namespace}:${maxRequests}:${windowSeconds}`
+  if (!upstashLimiters.has(key)) {
+    upstashLimiters.set(key, new Ratelimit({
+      redis:     getRedis(),
+      limiter:   Ratelimit.slidingWindow(maxRequests, `${windowSeconds} s`),
+      prefix:    `rl:${namespace}`,
+      analytics: false,
+    }))
+  }
+  return upstashLimiters.get(key)!
+}
+
+async function checkUpstash(
+  namespace: string,
+  key: string,
+  maxRequests: number,
+  windowSeconds: number
+): Promise<RateLimitResult> {
+  const limiter = getUpstashLimiter(namespace, maxRequests, windowSeconds)
+  const result  = await limiter.limit(key)
+  return {
+    allowed:           result.success,
+    retryAfterSeconds: result.success ? 0 : Math.ceil((result.reset - Date.now()) / 1000),
+  }
+}
+
+// ── In-Memory Fallback ──────────────────────────────────────────────────────
 
 interface WindowEntry {
   count:       number
@@ -62,47 +120,56 @@ function resetInMemory(namespace: string, key: string): void {
   getStore(namespace).delete(key)
 }
 
-// ── Cleanup: prevent unbounded memory growth ────────────────────────────────
-// Evict entries older than their window every 10 minutes.
+// Evict stale in-memory entries every 10 minutes (prevents unbounded growth)
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now()
     for (const [, store] of stores) {
       for (const [key, entry] of store) {
-        // Keep a generous 30-minute buffer before eviction
-        if (now - entry.windowStart > 30 * 60 * 1000) {
-          store.delete(key)
-        }
+        if (now - entry.windowStart > 30 * 60 * 1000) store.delete(key)
       }
     }
   }, 10 * 60 * 1000)
 }
 
+// ── Unified check helper ────────────────────────────────────────────────────
+
+async function check(
+  namespace: string,
+  key: string,
+  maxRequests: number,
+  windowSeconds: number
+): Promise<RateLimitResult> {
+  if (isUpstashConfigured()) {
+    return checkUpstash(namespace, key, maxRequests, windowSeconds)
+  }
+  return checkInMemory(namespace, key, maxRequests, windowSeconds * 1000)
+}
+
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /** Admin login: 5 attempts / 15 min per IP */
-export function checkRateLimit(ip: string): RateLimitResult {
-  return checkInMemory('admin_login', ip, 5, 15 * 60 * 1000)
+export async function checkRateLimit(ip: string): Promise<RateLimitResult> {
+  return check('admin_login', ip, 5, 15 * 60)
 }
 
 export function resetRateLimit(ip: string): void {
   resetInMemory('admin_login', ip)
+  // Upstash: no explicit reset needed — window expires naturally.
+  // On login success the 5-attempt budget effectively doesn't matter.
 }
 
 /** Public endpoints: 30 requests / 1 min per IP */
-export function checkPublicRateLimit(ip: string, namespace: string): RateLimitResult {
-  return checkInMemory(namespace, ip, 30, 60 * 1000)
+export async function checkPublicRateLimit(ip: string, namespace: string): Promise<RateLimitResult> {
+  return check(namespace, ip, 30, 60)
 }
 
 /** Checkout: 10 orders / 10 min per IP (prevents order flooding) */
-export function checkCheckoutRateLimit(ip: string): RateLimitResult {
-  return checkInMemory('checkout', ip, 10, 10 * 60 * 1000)
+export async function checkCheckoutRateLimit(ip: string): Promise<RateLimitResult> {
+  return check('checkout', ip, 10, 10 * 60)
 }
 
-/**
- * Geocode requests: 5 per minute per IP.
- * Nominatim usage policy requires reasonable rate limiting.
- */
-export function checkGeocodeRateLimit(ip: string): RateLimitResult {
-  return checkInMemory('geocode', ip, 5, 60 * 1000)
+/** Geocode: 5 requests / 1 min per IP (Nominatim fair-use policy) */
+export async function checkGeocodeRateLimit(ip: string): Promise<RateLimitResult> {
+  return check('geocode', ip, 5, 60)
 }

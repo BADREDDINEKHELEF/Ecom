@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const ua = req.headers.get('user-agent') ?? 'unknown'
 
   // Layer 1 — Rate limiting (5 attempts / 15 min / IP)
-  const rateCheck = checkRateLimit(ip)
+  const rateCheck = await checkRateLimit(ip)
   if (!rateCheck.allowed) {
     await writeAuditLog({ action: 'admin_login_failure', ip, userAgent: ua, result: 'failure', meta: { reason: 'rate_limited' } })
     return NextResponse.json(

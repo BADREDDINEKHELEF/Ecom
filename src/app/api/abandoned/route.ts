@@ -5,7 +5,7 @@ import { getClientIp } from '@/lib/utils/ip'
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = checkPublicRateLimit(ip, 'abandoned')
+  const rl = await checkPublicRateLimit(ip, 'abandoned')
   if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
 
   try {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = checkPublicRateLimit(ip, 'abandoned')
+  const rl = await checkPublicRateLimit(ip, 'abandoned')
   if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
 
   try {

@@ -15,7 +15,7 @@ const OrderItemSchema = z.object({
 
 const CreateOrderSchema = z.object({
   fullName:      z.string().min(2).max(200),
-  phone:         z.string().regex(/^(213)?(05|06|07)\d{8}$/, 'Invalid Algerian phone number'),
+  phone:         z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
   wilaya:        z.string().min(1).max(100),
   city:          z.string().min(1).max(200),
   address:       z.string().min(5).max(500),
@@ -32,7 +32,7 @@ function normalizePhone(phone: string): string {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = checkCheckoutRateLimit(ip)
+  const rl = await checkCheckoutRateLimit(ip)
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Trop de commandes. Veuillez patienter quelques minutes.' },
@@ -63,15 +63,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const orderId = await createOrder(input)
+    const { id: orderId, total } = await createOrder(input)
 
     // Fire WhatsApp notification — non-blocking, never fails the order
-    const totalForNotification = input.shippingCost // The real total is computed server-side in createOrder
     notifyOrderConfirmed({
       phone:     input.phone,
       fullName:  input.fullName,
       orderId,
-      total:     totalForNotification,
+      total,
       wilaya:    input.wilaya,
       itemCount: input.items.length,
     }).catch((err) => console.error('[WhatsApp] notification failed:', err))

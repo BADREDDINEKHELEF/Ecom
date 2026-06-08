@@ -5,7 +5,7 @@ import { checkGeocodeRateLimit } from '@/lib/auth/rateLimit'
 export async function GET(req: NextRequest) {
   // Rate limit geocoding — Nominatim usage policy requires <= 1 req/sec per user
   const ip = getClientIp(req)
-  const rl = checkGeocodeRateLimit(ip)
+  const rl = await checkGeocodeRateLimit(ip)
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Rate limit exceeded' }, {
       status: 429,

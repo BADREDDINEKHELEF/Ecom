@@ -3,7 +3,7 @@ import { getOrdersForTracking } from '@/lib/supabase/orders'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
-const ALGERIAN_PHONE_RE = /^(213)?(05|06|07)\d{8}$/
+const ALGERIAN_PHONE_RE = /^(213[5-7]|0[5-7])\d{8}$/
 
 function normalizePhone(phone: string): string {
   return phone.replace(/[\s\-().+]/g, '')
@@ -11,7 +11,7 @@ function normalizePhone(phone: string): string {
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = checkPublicRateLimit(ip, 'order_track')
+  const rl = await checkPublicRateLimit(ip, 'order_track')
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Trop de tentatives. Réessayez plus tard.' }, {
       status: 429,

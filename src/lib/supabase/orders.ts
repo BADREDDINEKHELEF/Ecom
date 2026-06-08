@@ -1,4 +1,3 @@
-import { createClient } from './client'
 import { createAdminClient } from './admin'
 import { incrementPromoUses } from './promo'
 
@@ -58,6 +57,11 @@ function normalizePhone(phone: string): string {
   return phone.replace(/[\s-]/g, '')
 }
 
+export interface CreateOrderResult {
+  id:    string
+  total: number
+}
+
 /**
  * Creates an order with server-side price and stock validation.
  *
@@ -65,22 +69,24 @@ function normalizePhone(phone: string): string {
  * database and recalculated here. A malicious client that sends
  * manipulated prices will have them silently overwritten.
  *
- * Stock is checked and decremented atomically via DB-level constraint.
+ * Stock is checked and decremented atomically: each product update
+ * uses WHERE stock >= quantity so concurrent requests cannot over-sell.
+ * The DB trigger in migration_005 provides an additional row-level guard.
  */
-export async function createOrder(input: CreateOrderInput): Promise<string> {
+export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
   const supabase = createAdminClient()
 
   // ── 1. Fetch canonical prices + stock from DB ─────────────────────
   const productIds = input.items.map((i) => i.productId)
   const { data: products, error: priceErr } = await supabase
     .from('products')
-    .select('id, price, stock, name')
+    .select('id, price, stock, name, is_active')
     .in('id', productIds)
 
   if (priceErr) throw new Error('Could not validate products')
 
   const priceMap = new Map(
-    (products ?? []).map((p) => [p.id, { price: p.price, stock: p.stock, name: p.name }])
+    (products ?? []).map((p) => [p.id, { price: p.price, stock: p.stock, name: p.name, isActive: p.is_active }])
   )
 
   // ── 2. Validate and compute server-side subtotals ─────────────────
@@ -89,6 +95,9 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
     const product = priceMap.get(item.productId)
     if (!product) {
       throw new Error(`Product not found: ${item.productId}`)
+    }
+    if (product.isActive === false) {
+      throw new Error(`Product "${product.name}" is no longer available`)
     }
     if (product.stock < item.quantity) {
       throw new Error(`Insufficient stock for "${product.name}" (available: ${product.stock})`)
@@ -106,7 +115,23 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
   const discountAmount = input.discountAmount ?? 0
   const total = computedSubtotal + input.shippingCost - discountAmount
 
-  // ── 4. Insert order ───────────────────────────────────────────────
+  // ── 4. Decrement stock atomically via DB RPC ─────────────────────
+  // decrement_product_stock uses SELECT … FOR UPDATE (row-level lock)
+  // so concurrent orders for the same product cannot both succeed when
+  // only one unit remains. Defined in migration_005_stock_decrement.sql.
+  for (const item of validatedItems) {
+    const { data: decremented, error: stockErr } = await supabase
+      .rpc('decrement_product_stock', {
+        p_product_id: item.productId,
+        p_quantity:   item.quantity,
+      })
+    if (stockErr) throw new Error(`Stock reservation failed: ${stockErr.message}`)
+    if (!decremented) {
+      throw new Error(`Insufficient stock for "${item.productName}"`)
+    }
+  }
+
+  // ── 5. Insert order ───────────────────────────────────────────────
   const { data: order, error: orderErr } = await supabase
     .from('orders')
     .insert({
@@ -128,7 +153,7 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
 
   if (orderErr) throw orderErr
 
-  // ── 5. Insert order items ─────────────────────────────────────────
+  // ── 6. Insert order items ─────────────────────────────────────────
   const { error: itemsErr } = await supabase.from('order_items').insert(
     validatedItems.map((item) => ({
       order_id:      order.id,
@@ -143,12 +168,12 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
   )
   if (itemsErr) throw itemsErr
 
-  // ── 6. Atomically increment promo usage (with row-level lock) ─────
+  // ── 7. Atomically increment promo usage (with row-level lock) ─────
   if (input.promoCodeId) {
     await incrementPromoUses(input.promoCodeId)
   }
 
-  return order.id
+  return { id: order.id, total }
 }
 
 export async function getOrderById(id: string): Promise<OrderRow | null> {
@@ -287,25 +312,45 @@ export async function getVendorOrders(vendorId: string): Promise<VendorOrderSumm
 export async function getVendorPendingOrders(vendorId: string): Promise<VendorOrderSummary[]> {
   const supabase = createAdminClient()
 
-  // Use a subquery-safe approach: fetch items with joined order, then filter
-  // in JS on confirmed status (Supabase join filters can be unreliable for
-  // .in() on related table columns).
-  const { data: items } = await supabase
-    .from('order_items')
-    .select('*, orders(*)')
-    .eq('vendor_id', vendorId)
-    .order('orders(created_at)', { ascending: false })
+  // DB-side filter via RPC (migration_005) — avoids fetching all vendor orders into JS.
+  const { data: rows, error } = await supabase
+    .rpc('get_vendor_pending_orders', { p_vendor_id: vendorId })
 
-  if (!items) return []
+  if (error) throw error
+  if (!rows || rows.length === 0) return []
 
+  // Re-group flat RPC rows into VendorOrderSummary shape
   const grouped = new Map<string, { order: OrderRow; items: OrderItemRow[] }>()
-  for (const item of items) {
-    const order = (item as Record<string, unknown>).orders as OrderRow
-    if (!order) continue
-    // Filter to pending/confirmed only — reliable JS-side after join
-    if (!['pending', 'confirmed'].includes(order.status)) continue
-    if (!grouped.has(order.id)) grouped.set(order.id, { order, items: [] })
-    grouped.get(order.id)!.items.push(item as unknown as OrderItemRow)
+  for (const row of rows as Record<string, unknown>[]) {
+    const orderId = row.order_id as string
+    if (!grouped.has(orderId)) {
+      grouped.set(orderId, {
+        order: {
+          id:             orderId,
+          full_name:      row.full_name as string,
+          phone:          row.phone as string,
+          wilaya:         row.wilaya as string,
+          city:           row.city as string,
+          address:        '',
+          payment_method: '',
+          status:         row.order_status as string,
+          subtotal:       0,
+          shipping_cost:  0,
+          total:          row.order_total as number,
+          created_at:     row.order_created as string,
+        },
+        items: [],
+      })
+    }
+    grouped.get(orderId)!.items.push({
+      id:            row.item_id as string,
+      product_id:    row.product_id as string,
+      product_name:  row.product_name as string,
+      product_image: row.product_image as string | null,
+      product_price: row.product_price as number,
+      quantity:      row.quantity as number,
+      subtotal:      row.subtotal as number,
+    })
   }
 
   return Array.from(grouped.values()).map(({ order, items }) => ({

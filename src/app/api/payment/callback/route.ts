@@ -19,36 +19,43 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}`)
   }
 
-  // Verify payment status with Satim before trusting the redirect
-  if (satimId) {
-    try {
-      const status = await satimGetOrderStatus(satimId)
-      if (status.orderStatus === 2) {
-        await satimConfirmOrder(satimId)
-        await markOrderPaid(orderId)
-        return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
-      }
-    } catch (err) {
-      console.error('[payment/callback] Satim status check failed:', err)
+  // Server-side verification is mandatory — never trust client-supplied result param alone.
+  // An attacker could craft ?result=success&orderId=<anything> to mark orders as paid.
+  // We require a valid mdOrder (Satim reference) and confirm it server-side.
+  if (!satimId) {
+    console.warn('[payment/callback] No mdOrder param — possible tamper attempt, orderId:', orderId)
+    await markOrderFailed(orderId)
+    return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=no_reference`)
+  }
+
+  try {
+    const status = await satimGetOrderStatus(satimId)
+    if (status.orderStatus === 2) {
+      await satimConfirmOrder(satimId)
+      await markOrderPaid(orderId, satimId)
+      return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
     }
+    // Satim returned a non-success status — payment not completed
+    await markOrderFailed(orderId)
+    return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=not_paid`)
+  } catch (err) {
+    console.error('[payment/callback] Satim verification failed:', err)
+    // Do NOT mark as paid when we cannot verify. Fail safe.
+    return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=verification_error`)
   }
-
-  // Fallback: if Satim says success but we couldn't verify, still mark success
-  if (result === 'success') {
-    await markOrderPaid(orderId)
-    return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
-  }
-
-  await markOrderFailed(orderId)
-  return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}`)
 }
 
-async function markOrderPaid(orderId: string) {
+async function markOrderPaid(orderId: string, satimOrderId?: string) {
   const supabase = createAdminClient()
   await supabase
     .from('orders')
-    .update({ status: 'confirmed', payment_status: 'paid' })
+    .update({
+      status: 'confirmed',
+      payment_status: 'paid',
+      ...(satimOrderId ? { satim_order_id: satimOrderId } : {}),
+    })
     .eq('id', orderId)
+    .eq('status', 'pending_payment') // Only mark paid if still awaiting payment (idempotency guard)
 }
 
 async function markOrderFailed(orderId: string) {
