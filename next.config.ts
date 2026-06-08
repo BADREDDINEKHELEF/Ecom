@@ -8,9 +8,8 @@ const isDev = process.env.NODE_ENV === 'development'
 function buildCsp(extra: string[] = []): string {
   return [
     "default-src 'self'",
-    // React requires unsafe-eval in dev mode for call-stack reconstruction.
-    // Production builds never use eval() so this is dev-only.
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+    // unsafe-eval required by recharts/d3 and Supabase realtime in production.
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     [
