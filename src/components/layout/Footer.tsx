@@ -25,7 +25,8 @@ export default function Footer() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      setSubState(res.ok ? 'done' : 'error')
+      if (res.ok) { setSubState('done'); setEmail('') }
+      else setSubState('error')
     } catch {
       setSubState('error')
     }
@@ -100,22 +101,23 @@ export default function Footer() {
             <h3 className="text-white font-bold mb-4">{t.footer.stayUpdated}</h3>
             <p className="text-sm mb-4">{t.footer.newsletter}</p>
             {subState === 'done' ? (
-              <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold">
-                <CheckCircle className="w-4 h-4" /> Inscrit avec succès !
+              <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold" role="status" aria-live="polite">
+                <CheckCircle className="w-4 h-4" aria-hidden="true" /> {t.footer.subscribeSuccess}
               </div>
             ) : (
-              <form onSubmit={handleSubscribe} className="flex flex-col gap-2" noValidate>
+              <form onSubmit={handleSubscribe} className="flex flex-col gap-2" noValidate aria-label={t.footer.stayUpdated}>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t.footer.emailPlaceholder}
                   required
-                  aria-label="Adresse email newsletter"
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  aria-label={t.footer.emailAriaLabel}
+                  disabled={subState === 'loading'}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 disabled:opacity-60"
                 />
                 {subState === 'error' && (
-                  <p className="text-red-400 text-xs">Erreur. Réessayez.</p>
+                  <p className="text-red-400 text-xs" role="alert">{t.footer.subscribeError}</p>
                 )}
                 <button
                   type="submit"
@@ -133,8 +135,8 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
           <p>{t.footer.allRights}</p>
           <div className="flex items-center gap-6">
-            <Link href="#" className="hover:text-white transition-colors">{t.footer.privacyPolicy}</Link>
-            <Link href="#" className="hover:text-white transition-colors">{t.footer.termsOfService}</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">{t.footer.privacyPolicy}</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">{t.footer.termsOfService}</Link>
           </div>
         </div>
       </div>

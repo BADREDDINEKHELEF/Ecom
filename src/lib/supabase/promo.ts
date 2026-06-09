@@ -24,7 +24,7 @@ export async function validatePromoCode(
   const supabase = createClient()
   const { data, error } = await supabase
     .from('promo_codes')
-    .select('*')
+    .select('id,code,discount_type,discount_value,min_order,max_uses,uses_count,expires_at,is_active,created_at')
     .eq('code', code.toUpperCase().trim())
     .eq('is_active', true)
     .single()
@@ -71,8 +71,9 @@ export async function getAllPromoCodes(): Promise<PromoCode[]> {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('promo_codes')
-    .select('*')
+    .select('id,code,discount_type,discount_value,min_order,max_uses,uses_count,expires_at,is_active,created_at')
     .order('created_at', { ascending: false })
+    .limit(500)
   if (error) throw error
   return (data ?? []) as PromoCode[]
 }

@@ -297,29 +297,46 @@ export interface VendorOrderSummary {
   vendorTotal: number
 }
 
-export async function getVendorOrders(vendorId: string): Promise<VendorOrderSummary[]> {
+export async function getVendorOrders(
+  vendorId: string,
+  page = 0,
+  pageSize = 50
+): Promise<{ summaries: VendorOrderSummary[]; hasMore: boolean }> {
   const supabase = createAdminClient()
+  const from = page * pageSize
+
+  // Fetch paginated order_items with only the order columns we actually render
   const { data: items } = await supabase
     .from('order_items')
-    .select('*, orders(*)')
+    .select(
+      'id,order_id,product_id,product_name,product_image,product_price,quantity,subtotal,' +
+      'orders(id,full_name,phone,wilaya,city,status,total,payment_method,created_at)'
+    )
     .eq('vendor_id', vendorId)
-    .order('orders(created_at)', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(from, from + pageSize)   // fetch pageSize+1 to detect next page
 
-  if (!items) return []
+  if (!items) return { summaries: [], hasMore: false }
+
+  const hasMore = items.length > pageSize
+  const page_items = items.slice(0, pageSize)
 
   const grouped = new Map<string, { order: OrderRow; items: OrderItemRow[] }>()
-  for (const item of items) {
-    const order = (item as Record<string, unknown>).orders as OrderRow
+  for (const item of page_items) {
+    const order = (item as unknown as Record<string, unknown>).orders as OrderRow
     if (!order) continue
     if (!grouped.has(order.id)) grouped.set(order.id, { order, items: [] })
     grouped.get(order.id)!.items.push(item as unknown as OrderItemRow)
   }
 
-  return Array.from(grouped.values()).map(({ order, items }) => ({
-    order,
-    items,
-    vendorTotal: items.reduce((s, i) => s + i.subtotal, 0),
-  }))
+  return {
+    summaries: Array.from(grouped.values()).map(({ order, items }) => ({
+      order,
+      items,
+      vendorTotal: items.reduce((s, i) => s + i.subtotal, 0),
+    })),
+    hasMore,
+  }
 }
 
 export async function getVendorPendingOrders(vendorId: string): Promise<VendorOrderSummary[]> {

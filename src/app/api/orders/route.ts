@@ -50,10 +50,9 @@ export async function POST(req: NextRequest) {
 
   const parsed = CreateOrderSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Validation failed', details: parsed.error.issues },
-      { status: 400 }
-    )
+    // Never expose Zod internals to clients in production
+    const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+    return NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 })
   }
 
   const { promoCodeId: rawPromoCodeId, ...rest } = parsed.data
@@ -81,9 +80,15 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : 'Order creation failed'
     logger.error('[POST /api/orders]', { error: message })
 
-    // Surface stock/product errors to the user as 409
-    if (message.includes('stock') || message.includes('not found')) {
-      return NextResponse.json({ error: message }, { status: 409 })
+    // Map internal errors to safe client-facing messages (no internal detail leakage)
+    if (message.includes('stock') || message.includes('Insufficient')) {
+      return NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 })
+    }
+    if (message.includes('not found') || message.includes('not available') || message.includes('no longer')) {
+      return NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 })
+    }
+    if (message.includes('validate products') || message.includes('Product not found')) {
+      return NextResponse.json({ error: 'Could not validate your cart. Please refresh and try again.' }, { status: 409 })
     }
 
     return NextResponse.json({ error: 'Une erreur est survenue. Réessayez.' }, { status: 500 })

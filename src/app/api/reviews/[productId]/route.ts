@@ -5,7 +5,11 @@ import { getClientIp } from '@/lib/utils/ip'
 
 interface Params { params: Promise<{ productId: string }> }
 
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
+  const ip = getClientIp(req)
+  const rl = await checkPublicRateLimit(ip, 'reviews_get')
+  if (!rl.allowed) return NextResponse.json([], { status: 429 })
+
   try {
     const { productId } = await params
     const reviews = await getReviews(productId)

@@ -30,8 +30,10 @@ export async function GET(req: NextRequest) {
     const vendor = await getVendorByUserId(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const orders = await getVendorOrders(vendor.id)
-    return NextResponse.json({ orders })
+    const url = new URL(req.url)
+    const page = Math.max(0, parseInt(url.searchParams.get('page') ?? '0') || 0)
+    const { summaries, hasMore } = await getVendorOrders(vendor.id, page)
+    return NextResponse.json({ orders: summaries, hasMore, page })
   } catch (err) {
     logger.error('[GET /api/seller/orders]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

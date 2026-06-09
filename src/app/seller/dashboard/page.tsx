@@ -375,7 +375,7 @@ export default function SellerDashboardPage() {
             {fetching ? (
               <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
             ) : analytics.worstSellers.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">🎉 All your products have sold at least once!</p>
+              <p className="text-sm text-gray-500 text-center py-8">{sd.allProductsSold}</p>
             ) : (
               <>
                 <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mb-4">{sd.noSalesProducts}</p>

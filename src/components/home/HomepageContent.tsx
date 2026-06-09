@@ -106,21 +106,27 @@ export default function HomepageContent({ featured, nicheProducts }: Props) {
       </section>
 
       {/* ── Featured Products ─────────────────────────────────────────────── */}
-      {featured.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <p className="text-indigo-600 font-semibold text-sm mb-1">{t.home.trendingBadge}</p>
-              <h2 className="text-2xl sm:text-3xl font-black text-gray-900">{t.home.trendingTitle}</h2>
-            </div>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <p className="text-indigo-600 font-semibold text-sm mb-1">{t.home.trendingBadge}</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900">{t.home.trendingTitle}</h2>
           </div>
+        </div>
+        {featured.length === 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" aria-busy="true">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-[3/4]" aria-hidden="true" />
+            ))}
+          </div>
+        ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {featured.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* ── Niche Spotlights ─────────────────────────────────────────────── */}
       {niches.map((niche) => {

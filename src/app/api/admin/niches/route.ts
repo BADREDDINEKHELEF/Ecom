@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { upsertNiche, deleteNiche } from '@/lib/supabase/niches'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyAdminToken } from '@/lib/auth/jwt'
 import { logger } from '@/lib/logger'
 
-function isAdminAuthed(req: NextRequest): boolean {
-  const token = req.cookies.get('admin_token')?.value
-  return token === process.env.ADMIN_SECRET
+async function isAdminAuthed(req: NextRequest): Promise<boolean> {
+  const token = req.cookies.get('casbah_admin_token')?.value
+  if (!token) return false
+  const payload = await verifyAdminToken(token)
+  return payload !== null
 }
 
 const NicheSchema = z.object({
@@ -22,7 +25,7 @@ const NicheSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
-  if (!isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase.from('niches').select('*').order('created_at', { ascending: true })
@@ -35,7 +38,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
   const parsed = NicheSchema.safeParse(body)
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
   try {

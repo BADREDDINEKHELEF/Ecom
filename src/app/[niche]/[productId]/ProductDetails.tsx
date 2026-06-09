@@ -250,7 +250,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
             </span>
             <Users className="w-3.5 h-3.5" />
-            <span><strong className="text-gray-800">{viewingNow}</strong> people viewing this right now</span>
+            <span>{(t.product.peopleViewing ?? '{n} people viewing this right now').replace('{n}', String(viewingNow))}</span>
           </div>
 
           {/* Stock */}

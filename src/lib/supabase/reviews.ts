@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createClient } from './client'
 import { createAdminClient } from './admin'
 
@@ -12,7 +13,7 @@ export interface Review {
   created_at:  string
 }
 
-export async function getReviews(productId: string): Promise<Review[]> {
+async function _getReviews(productId: string): Promise<Review[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('reviews')
@@ -23,14 +24,22 @@ export async function getReviews(productId: string): Promise<Review[]> {
   return (data ?? []) as Review[]
 }
 
+export const getReviews = unstable_cache(
+  _getReviews,
+  ['reviews'],
+  { revalidate: 60, tags: ['reviews'] }
+)
+
 export async function addReview(
   review: Omit<Review, 'id' | 'is_verified' | 'created_at'>
 ): Promise<void> {
+  const { revalidateTag } = await import('next/cache')
   const supabase = createClient()
   const { error } = await supabase.from('reviews').insert(review)
   if (error) throw error
-  // Rating recalculation is now handled by the DB trigger (migration_003).
-  // No application-level recalculation needed — eliminates the race condition.
+  // Rating recalculation is handled by DB trigger (migration_003).
+  // Invalidate cache so next request reflects the new review.
+  revalidateTag('reviews')
 }
 
 export async function deleteReview(id: string): Promise<void> {

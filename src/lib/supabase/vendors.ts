@@ -36,11 +36,13 @@ export interface VendorDeliveryConfig {
 
 // ── Vendor CRUD ────────────────────────────────────────────────
 
+const VENDOR_COLS = 'id,user_id,store_name,store_slug,logo_url,banner_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,created_at'
+
 export async function getVendorByUserId(userId: string): Promise<Vendor | null> {
   const supabase = createClient()
   const { data } = await supabase
     .from('vendors')
-    .select('*')
+    .select(VENDOR_COLS)
     .eq('user_id', userId)
     .single()
   return (data as Vendor) ?? null
@@ -50,7 +52,7 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
   const supabase = createClient()
   const { data } = await supabase
     .from('vendors')
-    .select('*')
+    .select(VENDOR_COLS)
     .eq('store_slug', slug)
     .eq('is_active', true)
     .single()
@@ -79,14 +81,17 @@ export async function updateVendor(
   if (error) throw error
 }
 
-export async function getAllVendors(): Promise<Vendor[]> {
+export async function getAllVendors(page = 0, pageSize = 100): Promise<{ vendors: Vendor[]; hasMore: boolean }> {
   const supabase = createAdminClient()
+  const from = page * pageSize
   const { data, error } = await supabase
     .from('vendors')
-    .select('*')
+    .select(VENDOR_COLS)
     .order('created_at', { ascending: false })
+    .range(from, from + pageSize)
   if (error) throw error
-  return (data ?? []) as Vendor[]
+  const all = (data ?? []) as Vendor[]
+  return { vendors: all.slice(0, pageSize), hasMore: all.length > pageSize }
 }
 
 // ── Vendor Delivery Config (with encrypted credentials) ────────

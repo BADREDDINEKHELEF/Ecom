@@ -132,7 +132,7 @@ export default function SellerProductsPage() {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100 mb-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-gray-900">{editing ? sp.editTitle : sp.newTitle}</h2>
-              <button onClick={closeForm}><X className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>
+              <button onClick={closeForm} aria-label={sp.cancelBtn} type="button"><X className="w-5 h-5 text-gray-400 hover:text-gray-600" aria-hidden="true" /></button>
             </div>
             <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
@@ -268,7 +268,7 @@ export default function SellerProductsPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     {[sp.colProduct, sp.colCategory, sp.colPrice, sp.colStock, sp.colStatus, ''].map((h) => (
-                      <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3.5">{h}</th>
+                      <th key={h} scope="col" className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3.5">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -303,11 +303,11 @@ export default function SellerProductsPage() {
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex gap-2">
-                          <button onClick={() => openEdit(p)} className="text-gray-400 hover:text-indigo-600 transition-colors">
-                            <Edit2 className="w-4 h-4" />
+                          <button onClick={() => openEdit(p)} aria-label={`${sp.colProduct}: ${p.name} — ${sp.cancelBtn}`} className="text-gray-400 hover:text-indigo-600 transition-colors">
+                            <Edit2 className="w-4 h-4" aria-hidden="true" />
                           </button>
-                          <button onClick={() => handleDelete(p.id)} className="text-gray-400 hover:text-red-500 transition-colors">
-                            <Trash2 className="w-4 h-4" />
+                          <button onClick={() => handleDelete(p.id)} aria-label={sp.deleteConfirm} className="text-gray-400 hover:text-red-500 transition-colors">
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </div>
                       </td>

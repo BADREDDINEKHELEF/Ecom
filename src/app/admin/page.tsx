@@ -202,11 +202,11 @@ export default async function AdminDashboard() {
             <p className="text-sm text-gray-400 text-center py-8">No orders yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" aria-label="Recent orders">
                 <thead>
                   <tr className="border-b border-gray-100">
                     {['Order', 'Customer', 'Wilaya', 'Total', 'Status', 'Date'].map((h) => (
-                      <th key={h} className="text-left text-xs font-semibold text-gray-500 pb-3 pr-4">
+                      <th key={h} scope="col" className="text-left text-xs font-semibold text-gray-500 pb-3 pr-4">
                         {h}
                       </th>
                     ))}

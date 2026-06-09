@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getVendorBySlug } from '@/lib/supabase/vendors'
-import { createClient } from '@/lib/supabase/client'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const ip = getClientIp(req)
+  const rl = await checkPublicRateLimit(ip, 'store_details')
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
   const { slug } = await params
 
   const vendor = await getVendorBySlug(slug)
@@ -13,19 +19,19 @@ export async function GET(
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
 
-  const supabase = createClient()
+  const supabase = createAdminClient()
 
   // Products + aggregate stats
   const [{ data: products }, { count: totalOrders }] = await Promise.all([
     supabase
       .from('products')
-      .select('*')
+      .select('id,name,description,price,compare_price,images,stock,rating,review_count,tags,category,niche_id,is_new,is_featured,vendor_id,created_at')
       .eq('vendor_id', vendor.id)
       .eq('is_active', true)
       .order('created_at', { ascending: false }),
     supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('vendor_id', vendor.id)
       .eq('status', 'delivered'),
   ])
