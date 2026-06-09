@@ -54,7 +54,19 @@ export interface CreateOrderInput {
 }
 
 function normalizePhone(phone: string): string {
-  return phone.replace(/[\s-]/g, '')
+  return phone.replace(/[\s\-().+]/g, '')
+}
+
+/** Returns both 0XXX and 213XXX variants so a lookup never misses due to prefix format */
+function phoneVariants(phone: string): string[] {
+  const clean = normalizePhone(phone)
+  const variants = new Set([clean])
+  if (clean.startsWith('0') && clean.length === 10) {
+    variants.add('213' + clean.slice(1))
+  } else if (clean.startsWith('213') && clean.length === 12) {
+    variants.add('0' + clean.slice(3))
+  }
+  return Array.from(variants)
 }
 
 export interface CreateOrderResult {
@@ -188,10 +200,11 @@ export async function getOrderById(id: string): Promise<OrderRow | null> {
 
 export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
   const supabase = createAdminClient()
+  const variants = phoneVariants(phone)
   const { data, error } = await supabase
     .from('orders')
     .select('*, order_items(*)')
-    .eq('phone', normalizePhone(phone))
+    .in('phone', variants)
     .order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as OrderRow[]
