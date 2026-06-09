@@ -92,13 +92,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const productIds = input.items.map((i) => i.productId)
   const { data: products, error: priceErr } = await supabase
     .from('products')
-    .select('id, price, stock, name, is_active')
+    .select('id, price, stock, name, is_active, vendor_id')
     .in('id', productIds)
 
   if (priceErr) throw new Error('Could not validate products')
 
   const priceMap = new Map(
-    (products ?? []).map((p) => [p.id, { price: p.price, stock: p.stock, name: p.name, isActive: p.is_active }])
+    (products ?? []).map((p) => [p.id, { price: p.price, stock: p.stock, name: p.name, isActive: p.is_active, vendorId: p.vendor_id as string | null }])
   )
 
   // ── 2. Validate and compute server-side subtotals ─────────────────
@@ -175,7 +175,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       product_price: item.productPrice,
       quantity:      item.quantity,
       subtotal:      item.subtotal,
-      vendor_id:     item.vendorId ?? null,
+      vendor_id:     item.vendorId ?? priceMap.get(item.productId)?.vendorId ?? null,
     }))
   )
   if (itemsErr) throw itemsErr
