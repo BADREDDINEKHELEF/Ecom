@@ -6,11 +6,13 @@ const secret = () => {
   return new TextEncoder().encode(s)
 }
 
+// 8-hour session — long enough for a full workday without TOTP re-entry,
+// but short enough to limit exposure if the cookie is ever stolen.
 export async function signAdminToken(): Promise<string> {
   return new SignJWT({ role: 'admin' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('1h')
+    .setExpirationTime('8h')
     .sign(secret())
 }
 

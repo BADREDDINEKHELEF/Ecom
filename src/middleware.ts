@@ -19,6 +19,7 @@ const PUBLIC_ADMIN_ROUTES = new Set([
   '/api/admin/login',
   '/api/admin/logout',
   '/api/admin/totp',
+  '/api/admin/refresh',  // refresh is self-validating — no external auth check needed
   '/admin/login',
 ])
 

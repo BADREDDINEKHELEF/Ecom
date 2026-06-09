@@ -1,4 +1,8 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
+import withBundleAnalyzer from '@next/bundle-analyzer'
+
+const analyzeBundles = withBundleAnalyzer({ enabled: process.env.ANALYZE === 'true' })
 
 // ── Security Headers ────────────────────────────────────────────────────────
 // Applied to all routes. Admin routes get a stricter override below.
@@ -24,6 +28,7 @@ function buildCsp(extra: string[] = []): string {
       'https://*.supabase.co',
       'https://nominatim.openstreetmap.org',
       'https://api.yalidine.app',
+      'https://*.sentry.io',      // Sentry error reporting
     ].join(' '),
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -108,4 +113,22 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+// Sentry is opt-in: if SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN is not set the
+// withSentryConfig wrapper is a no-op (all Sentry features are disabled).
+// To enable: add SENTRY_DSN and SENTRY_AUTH_TOKEN to your Vercel env vars.
+export default withSentryConfig(analyzeBundles(nextConfig), {
+  org:     process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Suppress the "Sentry CLI not configured" warning when DSN is not set
+  silent: !process.env.SENTRY_DSN,
+
+  // Upload source maps to Sentry for readable stack traces in production
+  widenClientFileUpload: true,
+
+  // Disable the Sentry telemetry that phones home about SDK usage
+  telemetry: false,
+
+  // Automatically tree-shake Sentry logger statements in production
+  disableLogger: true,
+})

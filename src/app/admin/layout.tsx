@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import AdminNav from '@/components/admin/AdminNav'
 import Logo from '@/components/ui/Logo'
+import AdminSessionRefresh from '@/components/admin/AdminSessionRefresh'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -34,6 +35,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex-1 ml-60 min-h-screen">
         {children}
       </div>
+
+      {/* Silent session refresh — keeps JWT alive for a full workday */}
+      <AdminSessionRefresh />
     </div>
   )
 }
