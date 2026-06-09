@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { getOrdersByPhone, OrderRow } from '@/lib/supabase/queries'
+import { OrderRow } from '@/lib/supabase/queries'
 import { useT, useLang } from '@/lib/store/langStore'
 
 function formatDate(iso: string, lang: string) {
@@ -34,8 +34,10 @@ export default function OrdersPage() {
     setLoading(true)
     setError('')
     try {
-      const result = await getOrdersByPhone(phone)
-      setOrders(result)
+      const res = await fetch(`/api/orders/track?phone=${encodeURIComponent(phone.trim())}`)
+      if (!res.ok) throw new Error('fetch failed')
+      const json = await res.json()
+      setOrders(json.orders)
     } catch {
       setError(t.orders.loadError)
     } finally {
