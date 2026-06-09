@@ -6,8 +6,8 @@
  * Usage: import and call in src/instrumentation.ts (Next.js 15 hook).
  */
 
+// Core vars — app cannot function at all without these
 const REQUIRED_ENV = {
-  // ── Supabase ──────────────────────────────────────────────────────────
   NEXT_PUBLIC_SUPABASE_URL: {
     minLength: 10,
     description: 'Supabase project URL — from Project Settings > API',
@@ -20,27 +20,27 @@ const REQUIRED_ENV = {
   },
   SUPABASE_SERVICE_ROLE_KEY: {
     minLength: 20,
-    description: 'Supabase service role key — NEVER expose to the client. Used only in server-side admin operations.',
+    description: 'Supabase service role key — from Supabase Project Settings > API',
     isPublic: false,
   },
+} as const
 
-  // ── JWT / Admin ───────────────────────────────────────────────────────
+// Feature vars — missing values disable specific features but don't crash the app
+const FEATURE_ENV = {
   ADMIN_JWT_SECRET: {
     minLength: 32,
-    description: 'JWT signing secret for admin tokens — generate with: openssl rand -base64 32',
-    isPublic: false,
+    description: 'JWT signing secret for admin tokens — openssl rand -base64 32',
+    feature: 'Admin panel login',
   },
   ADMIN_SECRET: {
     minLength: 12,
-    description: 'Admin panel password — use a strong random value',
-    isPublic: false,
+    description: 'Admin panel password',
+    feature: 'Admin panel login',
   },
-
-  // ── Encryption ────────────────────────────────────────────────────────
   FIELD_ENCRYPTION_KEY: {
     minLength: 64,
-    description: '64-char hex key for AES-256-GCM field encryption — generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"',
-    isPublic: false,
+    description: '64-char hex key — node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"',
+    feature: 'Vendor delivery API token encryption',
   },
 } as const
 
@@ -73,60 +73,63 @@ export function validateEnv(): { valid: boolean; errors: string[]; warnings: str
   const errors:   string[] = []
   const warnings: string[] = []
 
+  // Core vars — must be present for the app to work at all
   for (const [key, config] of Object.entries(REQUIRED_ENV)) {
     const val = process.env[key]
-
     if (!val) {
-      errors.push(`❌ Missing required env var: ${key}\n   → ${config.description}`)
+      errors.push(`❌ Missing: ${key} — ${config.description}`)
       continue
     }
-
     if (val.length < config.minLength) {
-      errors.push(`❌ ${key} is too short (${val.length} chars, min ${config.minLength})\n   → ${config.description}`)
+      errors.push(`❌ ${key} too short (${val.length} chars, need ${config.minLength})`)
     }
-
     if (PLACEHOLDERS.some((p) => val.toLowerCase().includes(p))) {
-      errors.push(`❌ ${key} still contains a placeholder value — replace with a real value`)
-    }
-
-    if (!config.isPublic && (key.startsWith('NEXT_PUBLIC_') === false)) {
-      // Good — server-only var, not exposed to client
+      errors.push(`❌ ${key} still has a placeholder value`)
     }
   }
 
-  // Warn about optional but recommended vars
+  // Feature vars — log warnings when absent so the developer knows what's disabled
+  for (const [key, config] of Object.entries(FEATURE_ENV)) {
+    const val = process.env[key]
+    if (!val || val.length < config.minLength) {
+      warnings.push(`⚠️  ${key} not set — ${config.feature} will be unavailable`)
+    } else if (PLACEHOLDERS.some((p) => val.toLowerCase().includes(p))) {
+      warnings.push(`⚠️  ${key} looks like a placeholder — ${config.feature} may not work`)
+    }
+  }
+
   if (!process.env.UPSTASH_REDIS_REST_URL) {
-    warnings.push('⚠️  UPSTASH_REDIS_REST_URL not set — rate limiting will use in-memory fallback (not safe on multi-instance deploys)')
+    warnings.push('⚠️  UPSTASH_REDIS_REST_URL not set — rate limiting uses in-memory fallback')
   }
   if (!process.env.WHATSAPP_PHONE_NUMBER_ID) {
-    warnings.push('⚠️  WHATSAPP_PHONE_NUMBER_ID not set — order WhatsApp notifications will be skipped')
+    warnings.push('⚠️  WHATSAPP_PHONE_NUMBER_ID not set — WhatsApp order notifications disabled')
   }
   if (!process.env.SATIM_API_URL) {
-    warnings.push('⚠️  SATIM_API_URL not set — online card payments (CIB/Edahabia) will be unavailable')
+    warnings.push('⚠️  SATIM_API_URL not set — online card payments (CIB/Edahabia) disabled')
   }
 
   return { valid: errors.length === 0, errors, warnings }
 }
 
 /**
- * Throws on startup if required env vars are missing.
- * Call from instrumentation.ts for fail-fast server startup.
+ * Logs env-var problems at startup. Never crashes the app — missing feature vars
+ * disable specific features but should not bring down the server.
  */
 export function assertEnv(): void {
   const { valid, errors, warnings } = validateEnv()
 
   if (warnings.length > 0 && process.env.NODE_ENV !== 'test') {
-    console.warn('\n🟡 ShopDZ — Optional env vars not set:')
-    warnings.forEach((w) => console.warn(w))
+    console.warn('\n🟡 ShopDZ — Some features are disabled (env vars not set):')
+    warnings.forEach((w) => console.warn('  ' + w))
+    console.warn('')
   }
 
   if (!valid) {
-    console.error('\n🚨 ShopDZ STARTUP FAILED — Missing required environment variables:\n')
-    errors.forEach((e) => console.error(e))
-    console.error('\nSee .env.local.example for setup instructions.\n')
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1)
-    }
+    console.error('\n🚨 ShopDZ — Critical env vars missing (app may not work correctly):')
+    errors.forEach((e) => console.error('  ' + e))
+    console.error('  → Add these in Vercel Dashboard > Settings > Environment Variables\n')
+    // Never process.exit() — let the app start and fail gracefully per-request
+    // so a single missing var doesn't take down the whole deployment.
   }
 }
 

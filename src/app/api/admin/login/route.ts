@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
   // Layer 2 — Password check (timing-safe comparison prevents timing attacks)
   const adminSecret = process.env.ADMIN_SECRET
   if (!adminSecret) {
-    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+    console.error('[Admin Login] ADMIN_SECRET env var is not set — add it in Vercel Environment Variables')
+    return NextResponse.json({ error: 'Admin panel not configured. Set ADMIN_SECRET in Vercel.' }, { status: 503 })
   }
   let passwordMatch = false
   try {
