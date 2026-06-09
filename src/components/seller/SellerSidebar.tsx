@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store,
   ExternalLink, Truck, BarChart2, MessageSquare, CreditCard,
-  Tag, BookOpen, ChevronDown,
+  Tag, BookOpen, ChevronDown, Zap, Crown, Layers,
 } from 'lucide-react'
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import { useState } from 'react'
 
 interface Props {
@@ -16,11 +16,13 @@ interface Props {
   onLogout: () => void
   pendingOrders?: number
   unreadMessages?: number
+  subscriptionStatus?: string | null
 }
 
-export default function SellerSidebar({ storeName, slug, onLogout, pendingOrders = 0, unreadMessages = 0 }: Props) {
+export default function SellerSidebar({ storeName, slug, onLogout, pendingOrders = 0, unreadMessages = 0, subscriptionStatus }: Props) {
   const pathname = usePathname()
   const t = useT()
+  const isRTL = useRTL()
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith('/seller/settings')
   )
@@ -51,7 +53,7 @@ export default function SellerSidebar({ storeName, slug, onLogout, pendingOrders
   }
 
   return (
-    <aside className="w-60 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-20 overflow-y-auto">
+    <aside className={`w-60 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-20 overflow-y-auto ${isRTL ? 'right-0' : 'left-0'}`}>
       {/* Store header */}
       <div className="p-5 border-b border-gray-800">
         <div className="flex items-center gap-2.5 mb-0.5">
@@ -60,7 +62,19 @@ export default function SellerSidebar({ storeName, slug, onLogout, pendingOrders
           </div>
           <span className="font-bold text-white text-sm truncate">{storeName}</span>
         </div>
-        <span className="text-xs text-gray-500 ml-10">{t.sellerDash.sellerDashboard}</span>
+        <div className="flex items-center gap-2 ml-10">
+          <span className="text-xs text-gray-500">{t.sellerDash.sellerDashboard}</span>
+          {subscriptionStatus && (
+            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+              subscriptionStatus === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
+              subscriptionStatus === 'trial'  ? 'bg-blue-500/20 text-blue-400' :
+              subscriptionStatus === 'grace_period' ? 'bg-amber-500/20 text-amber-400' :
+              'bg-red-500/20 text-red-400'
+            }`}>
+              {subscriptionStatus === 'active' ? 'PRO' : subscriptionStatus === 'trial' ? 'TRIAL' : 'EXPIRED'}
+            </span>
+          )}
+        </div>
       </div>
 
       <nav className="flex-1 p-3 flex flex-col">
@@ -70,7 +84,8 @@ export default function SellerSidebar({ storeName, slug, onLogout, pendingOrders
           <div className="pt-2 pb-1">
             <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Catalogue</p>
           </div>
-          <LinkItem href="/seller/products"  label={t.sellerDash.myProducts}  icon={Package} />
+          <LinkItem href="/seller/stores"    label="Mes Boutiques"             icon={Layers} />
+          <LinkItem href="/seller/products"  label={t.sellerDash.myProducts}   icon={Package} />
           <LinkItem href="/seller/promotions" label="Promotions"               icon={Tag} />
 
           <div className="pt-2 pb-1">
@@ -80,6 +95,12 @@ export default function SellerSidebar({ storeName, slug, onLogout, pendingOrders
           <LinkItem href="/seller/deliveries" label="Livraisons"               icon={Truck} />
           <LinkItem href="/seller/messages"  label="Messages"                  icon={MessageSquare} badge={unreadMessages} />
           <LinkItem href="/seller/payouts"   label="Revenus & Paiements"       icon={CreditCard} />
+
+          <div className="pt-2 pb-1">
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Croissance</p>
+          </div>
+          <LinkItem href="/seller/sponsored"    label="Produits Sponsorisés"  icon={Zap} />
+          <LinkItem href="/seller/subscription" label="Mon Abonnement"        icon={Crown} />
 
           <div className="pt-2 pb-1">
             <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Analyse</p>

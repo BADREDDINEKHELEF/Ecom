@@ -12,7 +12,7 @@ import { getVendorProducts } from '@/lib/supabase/products'
 import { type VendorOrderSummary } from '@/lib/supabase/orders'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { formatPrice } from '@/lib/utils'
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { Product } from '@/types'
 
@@ -123,6 +123,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
 export default function SellerDashboardPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const t = useT()
+  const isRTL = useRTL()
   const sd = t.sellerDash
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<VendorOrderSummary[]>([])
@@ -158,9 +159,9 @@ export default function SellerDashboardPage() {
   if (!vendor) return null
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className="flex-1 ml-60 p-8">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

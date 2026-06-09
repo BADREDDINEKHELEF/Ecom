@@ -8,6 +8,7 @@ import {
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { Product } from '@/types'
 
@@ -57,6 +58,7 @@ function formatDatetimeLocal(iso: string | null) {
 
 export default function SellerPromotionsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [tab, setTab]           = useState<PromoTab>('codes')
   const [products, setProducts] = useState<Product[]>([])
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([])
@@ -188,9 +190,9 @@ export default function SellerPromotionsPage() {
     : 0
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className="flex-1 ml-60 p-8">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

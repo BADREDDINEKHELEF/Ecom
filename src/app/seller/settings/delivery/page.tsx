@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { Loader2, Check, Eye, EyeOff, Truck, Bell, Zap, Info } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
 export default function DeliverySettingsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
 
   const [form, setForm] = useState({
     default_provider:     'yalidine',
@@ -109,9 +111,9 @@ export default function DeliverySettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className="flex-1 ml-60 p-8 max-w-3xl">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8 max-w-3xl`}>
         <div className="mb-8">
           <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
             <Truck className="w-6 h-6 text-emerald-600" /> Paramètres de livraison

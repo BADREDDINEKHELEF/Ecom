@@ -7,6 +7,7 @@ import { niches } from '@/lib/data/niches'
 import ProductCard from '@/components/shop/ProductCard'
 import { useT } from '@/lib/store/langStore'
 import SellerSignupSection from '@/components/home/SellerSignupSection'
+import SponsoredSection from '@/components/home/SponsoredSection'
 import { Product } from '@/types'
 
 const nicheAccentStyles: Record<string, { btn: string; badge: string }> = {
@@ -104,6 +105,9 @@ export default function HomepageContent({ featured, nicheProducts }: Props) {
           ))}
         </div>
       </section>
+
+      {/* ── Sponsored Products ───────────────────────────────────────────── */}
+      <SponsoredSection />
 
       {/* ── Featured Products ─────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">

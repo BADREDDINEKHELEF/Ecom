@@ -2,10 +2,26 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Loader2, Check, ExternalLink } from 'lucide-react'
+import { Loader2, Check, ExternalLink, Instagram, Facebook } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
+
+const THEME_PRESETS = [
+  { id: 'default',  label: 'Défaut',    bg: '#4f46e5', text: 'white' },
+  { id: 'minimal',  label: 'Minimal',   bg: '#111827', text: 'white' },
+  { id: 'bold',     label: 'Audacieux', bg: '#dc2626', text: 'white' },
+  { id: 'elegant',  label: 'Élégant',   bg: '#78716c', text: 'white' },
+  { id: 'earthy',   label: 'Nature',    bg: '#16a34a', text: 'white' },
+]
+
+const BUSINESS_TYPES = [
+  { id: 'individual',    label: 'Particulier' },
+  { id: 'small_business', label: 'Petite entreprise' },
+  { id: 'wholesaler',    label: 'Grossiste' },
+  { id: 'brand',         label: 'Marque' },
+]
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
@@ -13,27 +29,38 @@ function slugify(s: string) {
 
 export default function SellerSettingsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     store_name: '', store_slug: '', phone: '', wilaya: '', description: '',
-    logo_url: '', banner_url: '', accent_color: '#4f46e5', seo_title: '', seo_description: '',
+    logo_url: '', banner_url: '', cover_url: '', accent_color: '#4f46e5',
+    seo_title: '', seo_description: '',
+    social_instagram: '', social_facebook: '', social_whatsapp: '', social_tiktok: '',
+    theme_preset: 'default', business_type: 'individual',
   })
   const [initialized, setInitialized] = useState(false)
 
   if (!initialized && vendor) {
     setForm({
-      store_name:      vendor.store_name,
-      store_slug:      vendor.store_slug,
-      phone:           vendor.phone || '',
-      wilaya:          vendor.wilaya || '',
-      description:     vendor.description || '',
-      logo_url:        vendor.logo_url || '',
-      banner_url:      vendor.banner_url || '',
-      accent_color:    vendor.accent_color || '#4f46e5',
-      seo_title:       vendor.seo_title || '',
-      seo_description: vendor.seo_description || '',
+      store_name:       vendor.store_name,
+      store_slug:       vendor.store_slug,
+      phone:            vendor.phone || '',
+      wilaya:           vendor.wilaya || '',
+      description:      vendor.description || '',
+      logo_url:         vendor.logo_url || '',
+      banner_url:       vendor.banner_url || '',
+      cover_url:        vendor.cover_url || '',
+      accent_color:     vendor.accent_color || '#4f46e5',
+      seo_title:        vendor.seo_title || '',
+      seo_description:  vendor.seo_description || '',
+      social_instagram: vendor.social_instagram || '',
+      social_facebook:  vendor.social_facebook || '',
+      social_whatsapp:  vendor.social_whatsapp || '',
+      social_tiktok:    vendor.social_tiktok || '',
+      theme_preset:     vendor.theme_preset || 'default',
+      business_type:    vendor.business_type || 'individual',
     })
     setInitialized(true)
   }
@@ -48,16 +75,23 @@ export default function SellerSettingsPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          store_name:      form.store_name,
-          store_slug:      slugify(form.store_slug),
-          phone:           form.phone || null,
-          wilaya:          form.wilaya || null,
-          description:     form.description || null,
-          logo_url:        form.logo_url || null,
-          banner_url:      form.banner_url || null,
-          accent_color:    form.accent_color || null,
-          seo_title:       form.seo_title || null,
-          seo_description: form.seo_description || null,
+          store_name:       form.store_name,
+          store_slug:       slugify(form.store_slug),
+          phone:            form.phone || null,
+          wilaya:           form.wilaya || null,
+          description:      form.description || null,
+          logo_url:         form.logo_url || null,
+          banner_url:       form.banner_url || null,
+          cover_url:        form.cover_url || null,
+          accent_color:     form.accent_color || null,
+          seo_title:        form.seo_title || null,
+          seo_description:  form.seo_description || null,
+          social_instagram: form.social_instagram || null,
+          social_facebook:  form.social_facebook || null,
+          social_whatsapp:  form.social_whatsapp || null,
+          social_tiktok:    form.social_tiktok || null,
+          theme_preset:     form.theme_preset || null,
+          business_type:    form.business_type || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Save failed')
@@ -75,9 +109,9 @@ export default function SellerSettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className="flex-1 ml-60 p-8 max-w-3xl">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8 max-w-3xl`}>
         <div className="mb-8 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-black text-gray-900">Store Settings</h1>
@@ -151,10 +185,18 @@ export default function SellerSettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bannière URL <span className="text-gray-400 font-normal">(image large, 1200×300px recommandé)</span></label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bannière URL <span className="text-gray-400 font-normal">(1200×300px recommandé)</span></label>
               <input type="url" value={form.banner_url}
                 onChange={(e) => setForm({ ...form, banner_url: e.target.value })}
                 placeholder="https://example.com/banner.jpg"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Image de couverture URL <span className="text-gray-400 font-normal">(hero large, 1600×400px)</span></label>
+              <input type="url" value={form.cover_url}
+                onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
+                placeholder="https://example.com/cover.jpg"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
             </div>
 
@@ -165,6 +207,78 @@ export default function SellerSettingsPage() {
                 rows={3} maxLength={300}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 resize-none" />
               <p className="text-xs text-gray-400 mt-1">{form.description.length}/300</p>
+            </div>
+
+            {/* Theme preset */}
+            <div className="border-t border-gray-100 pt-5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Thème de la boutique</p>
+              <div className="grid grid-cols-5 gap-2 mb-4">
+                {THEME_PRESETS.map((t) => (
+                  <button key={t.id} type="button"
+                    onClick={() => setForm({ ...form, theme_preset: t.id })}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all border-2 ${
+                      form.theme_preset === t.id ? 'border-emerald-500 scale-105' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: t.bg, color: t.text }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Type de commerce</p>
+                <div className="flex flex-wrap gap-2">
+                  {BUSINESS_TYPES.map((bt) => (
+                    <button key={bt.id} type="button"
+                      onClick={() => setForm({ ...form, business_type: bt.id })}
+                      className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors border-2 ${
+                        form.business_type === bt.id
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}>
+                      {bt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Social links */}
+            <div className="border-t border-gray-100 pt-5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Réseaux sociaux</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Instagram className="w-3.5 h-3.5 text-pink-500" /> Instagram
+                  </label>
+                  <input type="text" value={form.social_instagram}
+                    onChange={(e) => setForm({ ...form, social_instagram: e.target.value })}
+                    placeholder="@ma_boutique"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook
+                  </label>
+                  <input type="text" value={form.social_facebook}
+                    onChange={(e) => setForm({ ...form, social_facebook: e.target.value })}
+                    placeholder="facebook.com/maboutique"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">WhatsApp</label>
+                  <input type="tel" value={form.social_whatsapp}
+                    onChange={(e) => setForm({ ...form, social_whatsapp: e.target.value })}
+                    placeholder="05xx xxx xxx"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">TikTok</label>
+                  <input type="text" value={form.social_tiktok}
+                    onChange={(e) => setForm({ ...form, social_tiktok: e.target.value })}
+                    placeholder="@maboutique"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
+                </div>
+              </div>
             </div>
 
             <div className="border-t border-gray-100 pt-5">

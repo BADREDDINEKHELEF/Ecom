@@ -6,6 +6,7 @@ import {
   CheckCheck, Clock,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
 interface Message {
@@ -59,6 +60,7 @@ function avatarColor(phone: string) {
 
 export default function SellerMessagesPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [threads, setThreads]       = useState<Thread[]>([])
   const [unread, setUnread]         = useState<Record<string, number>>({})
   const [activePhone, setActivePhone] = useState<string | null>(null)
@@ -147,10 +149,10 @@ export default function SellerMessagesPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} unreadMessages={totalUnread} />
 
-      <main className="flex-1 ml-60 flex h-screen overflow-hidden">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} flex h-screen overflow-hidden`}>
         {/* ── Thread list ────────────────────────────────────── */}
         <div className="w-72 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
           <div className="p-4 border-b border-gray-100">

@@ -8,6 +8,7 @@ import {
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorOrders } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { VendorOrderSummary } from '@/lib/supabase/queries'
 
@@ -43,6 +44,7 @@ interface WeeklyPeriod {
 
 export default function SellerPayoutsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [orders, setOrders]           = useState<VendorOrderSummary[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null)
@@ -137,9 +139,9 @@ export default function SellerPayoutsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className="flex-1 ml-60 p-8">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

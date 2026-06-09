@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { VendorOrderSummary } from '@/lib/supabase/queries'
 
@@ -66,6 +66,7 @@ function timeAgo(iso: string) {
 export default function SellerOrdersPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const t = useT()
+  const isRTL = useRTL()
   const sd = t.sellerDash
 
   const [orders, setOrders]             = useState<VendorOrderSummary[]>([])
@@ -184,9 +185,9 @@ export default function SellerOrdersPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className="flex-1 ml-60 p-8">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

@@ -5,16 +5,23 @@ import { getVendorByUserId, updateVendor } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
 
 const PatchSchema = z.object({
-  store_name:      z.string().min(1).max(100).optional(),
-  store_slug:      z.string().min(1).max(100).regex(/^[a-z0-9-]+$/).optional(),
-  phone:           z.string().max(30).nullable().optional(),
-  wilaya:          z.string().max(100).nullable().optional(),
-  description:     z.string().max(2000).nullable().optional(),
-  logo_url:        z.string().url().nullable().optional(),
-  banner_url:      z.string().url().nullable().optional(),
-  accent_color:    z.string().max(20).nullable().optional(),
-  seo_title:       z.string().max(200).nullable().optional(),
-  seo_description: z.string().max(500).nullable().optional(),
+  store_name:       z.string().min(1).max(100).optional(),
+  store_slug:       z.string().min(1).max(100).regex(/^[a-z0-9-]+$/).optional(),
+  phone:            z.string().max(30).nullable().optional(),
+  wilaya:           z.string().max(100).nullable().optional(),
+  description:      z.string().max(2000).nullable().optional(),
+  logo_url:         z.string().url().nullable().optional(),
+  banner_url:       z.string().url().nullable().optional(),
+  cover_url:        z.string().url().nullable().optional(),
+  accent_color:     z.string().max(20).nullable().optional(),
+  seo_title:        z.string().max(200).nullable().optional(),
+  seo_description:  z.string().max(500).nullable().optional(),
+  social_instagram: z.string().max(100).nullable().optional(),
+  social_facebook:  z.string().max(200).nullable().optional(),
+  social_whatsapp:  z.string().max(30).nullable().optional(),
+  social_tiktok:    z.string().max(100).nullable().optional(),
+  theme_preset:     z.enum(['default','minimal','bold','elegant','earthy']).nullable().optional(),
+  business_type:    z.enum(['individual','small_business','wholesaler','brand']).nullable().optional(),
 })
 
 export async function PATCH(req: NextRequest) {

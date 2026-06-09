@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { SellerAnalytics } from '@/lib/supabase/analytics'
 
@@ -276,6 +277,7 @@ function generateInsights(data: SellerAnalytics): { type: 'good'|'warn'|'info'|'
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SellerAnalyticsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [days, setDays]     = useState(30)
   const [tab, setTab]       = useState<AnalyticsTab>('overview')
   const [data, setData]     = useState<SellerAnalytics | null>(null)
@@ -335,10 +337,10 @@ export default function SellerAnalyticsPage() {
   const insights = data ? generateInsights(data) : []
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="ltr">
+    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
 
-      <main className="flex-1 ml-60 p-8">
+      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
