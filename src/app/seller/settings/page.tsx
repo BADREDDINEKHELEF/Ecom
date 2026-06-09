@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Loader2, Check, ExternalLink } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { updateVendor } from '@/lib/supabase/queries'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
@@ -45,18 +44,23 @@ export default function SellerSettingsPage() {
     setSaving(true)
     setError('')
     try {
-      await updateVendor(vendor.id, {
-        store_name:      form.store_name,
-        store_slug:      slugify(form.store_slug),
-        phone:           form.phone || null,
-        wilaya:          form.wilaya || null,
-        description:     form.description || null,
-        logo_url:        form.logo_url || null,
-        banner_url:      form.banner_url || null,
-        accent_color:    form.accent_color || null,
-        seo_title:       form.seo_title || null,
-        seo_description: form.seo_description || null,
+      const res = await fetch('/api/seller/vendor', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_name:      form.store_name,
+          store_slug:      slugify(form.store_slug),
+          phone:           form.phone || null,
+          wilaya:          form.wilaya || null,
+          description:     form.description || null,
+          logo_url:        form.logo_url || null,
+          banner_url:      form.banner_url || null,
+          accent_color:    form.accent_color || null,
+          seo_title:       form.seo_title || null,
+          seo_description: form.seo_description || null,
+        }),
       })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Save failed')
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {

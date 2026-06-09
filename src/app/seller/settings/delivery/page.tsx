@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Loader2, Check, Eye, EyeOff, Truck, Bell, Zap, Info } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { getVendorDeliveryConfig, saveVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
@@ -30,21 +29,24 @@ export default function DeliverySettingsPage() {
 
   useEffect(() => {
     if (!vendor) return
-    getVendorDeliveryConfig(vendor.id).then((cfg) => {
-      if (cfg) {
-        setForm({
-          default_provider:     cfg.default_provider,
-          yalidine_api_id:      cfg.yalidine_api_id ?? '',
-          yalidine_api_token:   cfg.yalidine_api_token ?? '',
-          procolis_token:       cfg.procolis_token ?? '',
-          zr_token:             cfg.zr_token ?? '',
-          auto_create_shipment: cfg.auto_create_shipment,
-          notify_whatsapp:      cfg.notify_whatsapp,
-          notify_sms:           cfg.notify_sms,
-        })
-      }
-      setLoadingConfig(false)
-    })
+    fetch('/api/seller/delivery-config')
+      .then((r) => r.json())
+      .then(({ config: cfg }) => {
+        if (cfg) {
+          setForm({
+            default_provider:     cfg.default_provider,
+            yalidine_api_id:      cfg.yalidine_api_id ?? '',
+            yalidine_api_token:   cfg.yalidine_api_token ?? '',
+            procolis_token:       cfg.procolis_token ?? '',
+            zr_token:             cfg.zr_token ?? '',
+            auto_create_shipment: cfg.auto_create_shipment,
+            notify_whatsapp:      cfg.notify_whatsapp,
+            notify_sms:           cfg.notify_sms,
+          })
+        }
+        setLoadingConfig(false)
+      })
+      .catch(() => setLoadingConfig(false))
   }, [vendor])
 
   const handleSave = async (e: React.FormEvent) => {
@@ -53,16 +55,21 @@ export default function DeliverySettingsPage() {
     setSaving(true)
     setError('')
     try {
-      await saveVendorDeliveryConfig(vendor.id, {
-        default_provider:     form.default_provider,
-        yalidine_api_id:      form.yalidine_api_id || null,
-        yalidine_api_token:   form.yalidine_api_token || null,
-        procolis_token:       form.procolis_token || null,
-        zr_token:             form.zr_token || null,
-        auto_create_shipment: form.auto_create_shipment,
-        notify_whatsapp:      form.notify_whatsapp,
-        notify_sms:           form.notify_sms,
+      const res = await fetch('/api/seller/delivery-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          default_provider:     form.default_provider,
+          yalidine_api_id:      form.yalidine_api_id || null,
+          yalidine_api_token:   form.yalidine_api_token || null,
+          procolis_token:       form.procolis_token || null,
+          zr_token:             form.zr_token || null,
+          auto_create_shipment: form.auto_create_shipment,
+          notify_whatsapp:      form.notify_whatsapp,
+          notify_sms:           form.notify_sms,
+        }),
       })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Sauvegarde échouée')
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {

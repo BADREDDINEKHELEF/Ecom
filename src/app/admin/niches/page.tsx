@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit2, Trash2, Loader2, RefreshCw, Layers, AlertCircle } from 'lucide-react'
 import { Niche } from '@/types'
-import { getNichesFromDB, upsertNiche, deleteNiche } from '@/lib/supabase/queries'
 import { niches as staticNiches } from '@/lib/data/niches'
 
 // Tailwind-safe preset classes (purge-safe: all used elsewhere in the project)
@@ -78,10 +77,11 @@ export default function AdminNichesPage() {
     setLoading(true)
     setDbError(false)
     try {
-      const data = await getNichesFromDB()
+      const res = await fetch('/api/admin/niches')
+      if (!res.ok) throw new Error('fetch failed')
+      const { niches: data } = await res.json()
       setNicheList(data.length > 0 ? data : staticNiches)
     } catch {
-      // Fall back to static niches if DB table doesn't exist yet
       setNicheList(staticNiches)
       setDbError(true)
     } finally {
@@ -120,7 +120,8 @@ export default function AdminNichesPage() {
     if (!confirm(`Delete niche "${id}"? Products in this niche will lose their niche reference.`)) return
     setDeleting(id)
     try {
-      await deleteNiche(id)
+      const res = await fetch(`/api/admin/niches?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('delete failed')
       setNicheList((prev) => prev.filter((n) => n.id !== id))
     } catch {
       alert('Failed to delete niche. Make sure the niches table exists in Supabase.')
@@ -147,7 +148,12 @@ export default function AdminNichesPage() {
     }
 
     try {
-      await upsertNiche(niche)
+      const res = await fetch('/api/admin/niches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(niche),
+      })
+      if (!res.ok) throw new Error('save failed')
       if (editing) {
         setNicheList((prev) => prev.map((n) => (n.id === editing.id ? niche : n)))
       } else {

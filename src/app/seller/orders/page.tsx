@@ -7,7 +7,6 @@ import {
   RefreshCw, Filter,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { getVendorOrders } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
 import { useT } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
@@ -82,9 +81,16 @@ export default function SellerOrdersPage() {
   const load = useCallback(async () => {
     if (!vendor) return
     setLoadingOrders(true)
-    const data = await getVendorOrders(vendor.id)
-    setOrders(data)
-    setLoadingOrders(false)
+    try {
+      const res = await fetch('/api/seller/orders')
+      if (!res.ok) throw new Error('Failed to load orders')
+      const json = await res.json()
+      setOrders(json.orders ?? [])
+    } catch {
+      setOrders([])
+    } finally {
+      setLoadingOrders(false)
+    }
   }, [vendor])
 
   useEffect(() => { load() }, [load])
