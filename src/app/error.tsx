@@ -4,12 +4,13 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useT } from '@/lib/store/langStore'
+import { logger } from '@/lib/logger'
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const t = useT()
 
   useEffect(() => {
-    console.error('App error:', error)
+    logger.error('App error', { error: error.message, digest: error.digest })
   }, [error])
 
   return (

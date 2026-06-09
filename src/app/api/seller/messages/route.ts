@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserId } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
+
+const PostSchema = z.object({
+  buyerPhone: z.string().min(5).max(30),
+  content:    z.string().min(1).max(2000).trim(),
+  orderId:    z.string().uuid().optional().nullable(),
+  buyerName:  z.string().max(100).optional(),
+})
 
 export async function GET(req: NextRequest) {
   try {
@@ -76,8 +84,13 @@ export async function POST(req: NextRequest) {
     const vendor = await getVendorByUserId(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const { buyerPhone, buyerName, content, orderId } = await req.json()
-    if (!buyerPhone || !content) return NextResponse.json({ error: 'buyerPhone and content required' }, { status: 400 })
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+    const parsed = PostSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+    const { buyerPhone, buyerName, content, orderId } = parsed.data
 
     const admin = createAdminClient()
     const { data, error } = await admin

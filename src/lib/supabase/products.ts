@@ -27,7 +27,7 @@ export const getProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('*')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
       .order('created_at', { ascending: false })
     if (nicheId)  query = query.eq('niche_id', nicheId)
     if (category) query = query.eq('category', category)
@@ -44,7 +44,7 @@ export const getFeaturedProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('*')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
       .eq('is_featured', true)
       .gt('stock', 0)
       .order('created_at', { ascending: false })
@@ -63,7 +63,7 @@ export const getProductById = unstable_cache(
     const supabase = createClient()
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
       .eq('id', id)
       .single()
     if (error || !data) return null
@@ -78,7 +78,7 @@ export async function getVendorProducts(vendorId: string): Promise<Product[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
     .eq('vendor_id', vendorId)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -89,7 +89,7 @@ export async function getVendorPublicProducts(vendorId: string): Promise<Product
   const supabase = createClient()
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
     .eq('vendor_id', vendorId)
     .gt('stock', 0)
     .order('created_at', { ascending: false })

@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ShoppingCart, Heart, Flame } from 'lucide-react'
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
@@ -17,7 +17,7 @@ interface ProductCardProps {
   product: Product
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem)
   const { toggle, has } = useWishlistStore()
   const addToast = useToastStore((s) => s.add)
@@ -81,6 +81,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           <button
             onClick={handleWishlist}
+            aria-label={wishlisted ? t.product.removedWishlist : t.product.savedWishlist}
             className={`absolute top-2.5 right-2.5 p-2 rounded-full transition-all ${
               wishlisted
                 ? 'bg-red-50 opacity-100'
@@ -127,6 +128,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleAddToCart}
             disabled={product.stock === 0}
+            aria-label={t.product.addedMsg ? `${t.product.addedMsg} ${product.name}` : `Add ${product.name} to cart`}
             className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all disabled:bg-gray-200 disabled:cursor-not-allowed"
           >
             <ShoppingCart className="w-4 h-4" />
@@ -148,3 +150,5 @@ export default function ProductCard({ product }: ProductCardProps) {
     </div>
   )
 }
+
+export default memo(ProductCard)

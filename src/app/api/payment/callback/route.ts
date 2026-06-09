@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
 async function markOrderPaid(orderId: string, satimOrderId?: string) {
   const supabase = createAdminClient()
-  await supabase
+  const { error } = await supabase
     .from('orders')
     .update({
       status: 'confirmed',
@@ -57,12 +57,14 @@ async function markOrderPaid(orderId: string, satimOrderId?: string) {
     })
     .eq('id', orderId)
     .eq('status', 'pending_payment') // Only mark paid if still awaiting payment (idempotency guard)
+  if (error) logger.error('[payment/callback] markOrderPaid failed', { orderId, error: error.message })
 }
 
 async function markOrderFailed(orderId: string) {
   const supabase = createAdminClient()
-  await supabase
+  const { error } = await supabase
     .from('orders')
     .update({ status: 'cancelled', payment_status: 'failed' })
     .eq('id', orderId)
+  if (error) logger.error('[payment/callback] markOrderFailed failed', { orderId, error: error.message })
 }

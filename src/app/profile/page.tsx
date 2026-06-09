@@ -1,110 +1,118 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Package, Heart, MapPin, Lock, ChevronRight, LogOut, Edit3 } from 'lucide-react'
-
-const MOCK_USER = {
-  name: 'Mohammed Amiri',
-  email: 'mohammed@example.com',
-  phone: '0555 001 234',
-  wilaya: 'Alger',
-  joinDate: 'December 2024',
-  ordersCount: 5,
-  wishlistCount: 8,
-}
+import { User, Package, Heart, Lock, ChevronRight, LogOut, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const QUICK_LINKS = [
-  { href: '/orders', icon: Package, label: 'My Orders', desc: `${MOCK_USER.ordersCount} orders placed`, color: 'text-indigo-600 bg-indigo-50' },
-  { href: '/wishlist', icon: Heart, label: 'Wishlist', desc: `${MOCK_USER.wishlistCount} saved items`, color: 'text-red-500 bg-red-50' },
-  { href: '#', icon: MapPin, label: 'Saved Addresses', desc: '1 address saved', color: 'text-emerald-600 bg-emerald-50' },
-  { href: '#', icon: Lock, label: 'Security', desc: 'Password & 2FA', color: 'text-amber-600 bg-amber-50' },
+  { href: '/orders',   icon: Package, label: 'Mes commandes',     desc: 'Suivi et historique',   color: 'text-indigo-600 bg-indigo-50' },
+  { href: '/wishlist', icon: Heart,   label: 'Liste de souhaits', desc: 'Articles sauvegardés',  color: 'text-red-500 bg-red-50' },
+  { href: '/auth',     icon: Lock,    label: 'Sécurité',          desc: 'Mot de passe & accès',  color: 'text-amber-600 bg-amber-50' },
 ]
 
 export default function ProfilePage() {
+  const router = useRouter()
+  const [user, setUser]       = useState<SupabaseUser | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.replace('/auth')
+      } else {
+        setUser(data.user)
+      }
+      setLoading(false)
+    })
+  }, [router])
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    )
+  }
+
+  if (!user) return null
+
+  const displayName = (user.user_metadata?.full_name as string | undefined) ?? user.email ?? 'Utilisateur'
+  const initial     = displayName[0].toUpperCase()
+  const joinDate    = new Date(user.created_at).toLocaleDateString('fr-DZ', { month: 'long', year: 'numeric' })
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-      {/* Profile Card */}
+      {/* Profile card */}
       <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 text-white mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-2xl font-black">
-            {MOCK_USER.name[0]}
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-2xl font-black select-none">
+            {initial}
           </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-black">{MOCK_USER.name}</h1>
-            <p className="text-indigo-200 text-sm">{MOCK_USER.email}</p>
-            <p className="text-indigo-300 text-xs mt-0.5">Member since {MOCK_USER.joinDate}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-black truncate">{displayName}</h1>
+            <p className="text-indigo-200 text-sm truncate">{user.email}</p>
+            <p className="text-indigo-300 text-xs mt-0.5">Membre depuis {joinDate}</p>
           </div>
-          <button className="p-2 bg-white/20 rounded-xl hover:bg-white/30 transition-colors">
-            <Edit3 className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
-      {/* Personal Info */}
+      {/* Personal info */}
       <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
         <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-indigo-600" /> Personal Information
+          <User className="w-4 h-4 text-indigo-600" /> Informations personnelles
         </h2>
-        <div className="space-y-3">
+        <div className="space-y-0">
           {[
-            { label: 'Full Name', value: MOCK_USER.name },
-            { label: 'Email', value: MOCK_USER.email },
-            { label: 'Phone', value: MOCK_USER.phone },
-            { label: 'Wilaya', value: MOCK_USER.wilaya },
+            { label: 'Nom complet', value: displayName },
+            { label: 'Email',       value: user.email ?? '—' },
           ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
+            <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
               <span className="text-sm text-gray-500">{label}</span>
-              <span className="text-sm font-semibold text-gray-900">{value}</span>
+              <span className="text-sm font-semibold text-gray-900 truncate ml-4 max-w-[60%] text-right">{value}</span>
             </div>
           ))}
         </div>
-        <button className="mt-4 w-full text-center text-sm text-indigo-600 font-semibold py-2.5 border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-colors">
-          Edit Profile
-        </button>
       </div>
 
-      {/* Quick Links */}
+      {/* Quick links */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
-        <h2 className="font-bold text-gray-900 px-5 pt-5 pb-3">Account</h2>
+        <h2 className="font-bold text-gray-900 px-5 pt-5 pb-3">Mon compte</h2>
         {QUICK_LINKS.map(({ href, icon: Icon, label, desc, color }, i) => (
           <Link
-            key={href + i}
+            key={i}
             href={href}
             className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors border-t border-gray-50 first:border-0"
           >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
               <Icon className="w-5 h-5" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-gray-900 text-sm">{label}</p>
               <p className="text-xs text-gray-500">{desc}</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
           </Link>
         ))}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {[
-          { label: 'Orders', value: MOCK_USER.ordersCount },
-          { label: 'Wishlist', value: MOCK_USER.wishlistCount },
-          { label: 'Reviews', value: 3 },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-white rounded-2xl shadow-sm p-4 text-center">
-            <p className="text-2xl font-black text-gray-900">{value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Sign Out */}
-      <Link
-        href="/auth"
+      {/* Sign out */}
+      <button
+        onClick={handleSignOut}
         className="flex items-center justify-center gap-2 w-full py-3.5 bg-white border border-red-200 text-red-500 font-bold rounded-2xl hover:bg-red-50 transition-colors shadow-sm"
       >
-        <LogOut className="w-4 h-4" /> Sign Out
-      </Link>
+        <LogOut className="w-4 h-4" /> Se déconnecter
+      </button>
     </div>
   )
 }
