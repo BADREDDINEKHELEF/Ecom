@@ -8,6 +8,7 @@ import {
   ArrowRight, AlertCircle, Info, Lightbulb, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -637,6 +638,7 @@ function LessonContent({ lesson }: { lesson: Lesson }) {
 
 export default function SellerAcademyPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [openModule, setOpenModule]   = useState<string>('payments')
   const [openLesson, setOpenLesson]   = useState<string | null>('pay1')
@@ -671,7 +673,7 @@ export default function SellerAcademyPage() {
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
-      <main className="flex-1 lg:ml-64 p-4 sm:p-8 min-w-0">
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
 
         {/* Hero */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-8 mb-6 text-white relative overflow-hidden">

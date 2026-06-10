@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Zap, Plus, Eye, MousePointerClick, ShoppingCart, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import { getVendorProducts } from '@/lib/supabase/products'
 import type { Product } from '@/types'
@@ -47,6 +48,7 @@ const DURATIONS = [
 
 export default function SellerSponsoredPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sponsored, setSponsored] = useState<SponsoredProduct[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -124,7 +126,7 @@ export default function SellerSponsoredPage() {
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
-      <main className="flex-1 lg:ml-64 p-4 sm:p-8 min-w-0">
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         <div className="max-w-4xl">
 
           {/* Header */}

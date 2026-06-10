@@ -73,6 +73,7 @@ export default function SellerSidebar({
       )}
 
       <aside
+        dir={isRTL ? 'rtl' : 'ltr'}
         className={[
           'w-64 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-40 overflow-y-auto transition-transform duration-300 ease-in-out',
           isRTL ? 'right-0' : 'left-0',
@@ -97,7 +98,7 @@ export default function SellerSidebar({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex items-center gap-2 ml-10">
+          <div className="flex items-center gap-2 ms-10">
             <span className="text-xs text-gray-500">{t.sellerDash.sellerDashboard}</span>
             {subscriptionStatus && (
               <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
@@ -154,11 +155,11 @@ export default function SellerSidebar({
               }`}
             >
               <Settings className={`w-4 h-4 flex-shrink-0 ${isActive('/seller/settings') ? 'text-emerald-400' : 'text-gray-500'}`} />
-              <span className="flex-1 text-left">{t.sellerDash.storeSettings}</span>
+              <span className="flex-1 text-start">{t.sellerDash.storeSettings}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
             </button>
             {settingsOpen && (
-              <div className="ml-7 space-y-0.5">
+              <div className="ms-7 space-y-0.5">
                 <Link
                   href="/seller/settings"
                   onClick={onMobileClose}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle2, Crown, Zap, Star, AlertCircle, Clock, CreditCard, Upload, RefreshCw, ChevronDown, ChevronUp, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { SubscriptionPlan, VendorSubscription } from '@/lib/supabase/vendors'
 
@@ -45,6 +46,7 @@ const PAYMENT_METHODS = [
 
 export default function SellerSubscriptionPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const isRTL = useRTL()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [subscription, setSubscription] = useState<VendorSubscription | null>(null)
@@ -126,7 +128,7 @@ export default function SellerSubscriptionPage() {
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
-      <main className="flex-1 lg:ml-64 p-4 sm:p-8 min-w-0">
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         <div className="max-w-4xl">
 
           {/* Header */}
