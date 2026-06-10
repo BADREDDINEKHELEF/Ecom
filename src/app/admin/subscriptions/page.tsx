@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw, Search, ChevronDown } from 'lucide-react'
 
 interface Subscription {
@@ -155,8 +155,8 @@ export default function AdminSubscriptionsPage() {
                 const Icon = cfg?.icon ?? Clock
                 const isExpanded = expandedId === sub.id
                 return (
-                  <>
-                    <tr key={sub.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <Fragment key={sub.id}>
+                    <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-4">
                         <p className="font-semibold text-gray-900 text-sm">{sub.store_name}</p>
                         <p className="text-xs text-gray-400">/{sub.store_slug}</p>
@@ -215,7 +215,7 @@ export default function AdminSubscriptionsPage() {
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr key={`${sub.id}-expanded`} className="bg-gray-50 border-b border-gray-100">
+                      <tr className="bg-gray-50 border-b border-gray-100">
                         <td colSpan={7} className="px-5 py-4">
                           <div className="grid sm:grid-cols-2 gap-6">
                             <div>
@@ -259,7 +259,7 @@ export default function AdminSubscriptionsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>

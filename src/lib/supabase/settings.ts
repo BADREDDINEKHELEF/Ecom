@@ -13,6 +13,9 @@ export interface StoreSettings {
   zone4Cost:             number
   cashOnDelivery:        boolean
   cardPayment:           boolean
+  paymentCcp:            string
+  paymentBaridimob:      string
+  paymentNote:           string
 }
 
 const SETTINGS_DEFAULTS: StoreSettings = {
@@ -27,6 +30,9 @@ const SETTINGS_DEFAULTS: StoreSettings = {
   zone4Cost:             850,
   cashOnDelivery:        true,
   cardPayment:           false,
+  paymentCcp:            '',
+  paymentBaridimob:      '',
+  paymentNote:           '',
 }
 
 function dbToSettings(data: Record<string, unknown>): StoreSettings {
@@ -42,6 +48,9 @@ function dbToSettings(data: Record<string, unknown>): StoreSettings {
     zone4Cost:             Number(data.zone4_cost),
     cashOnDelivery:        Boolean(data.cash_on_delivery),
     cardPayment:           Boolean(data.card_payment),
+    paymentCcp:            String(data.payment_ccp ?? ''),
+    paymentBaridimob:      String(data.payment_baridimob ?? ''),
+    paymentNote:           String(data.payment_note ?? ''),
   }
 }
 

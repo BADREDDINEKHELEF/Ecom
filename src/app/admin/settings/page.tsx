@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, Store, Truck, CreditCard, Loader2, CheckCircle, ExternalLink, Zap, Circle } from 'lucide-react'
+import { Save, Store, Truck, CreditCard, Loader2, CheckCircle, ExternalLink, Zap, Circle, Banknote } from 'lucide-react'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { getStoreSettings, saveStoreSettings, StoreSettings } from '@/lib/supabase/queries'
 
@@ -17,6 +17,9 @@ const DEFAULTS: StoreSettings = {
   zone4Cost: 850,
   cashOnDelivery: true,
   cardPayment: false,
+  paymentCcp: '',
+  paymentBaridimob: '',
+  paymentNote: '',
 }
 
 export default function AdminSettingsPage() {
@@ -173,6 +176,28 @@ export default function AdminSettingsPage() {
         <Section icon={CreditCard} title="Payment Methods">
           <Toggle value={form.cashOnDelivery} onChange={(v) => set('cashOnDelivery', v)} label="Cash on Delivery (COD)" />
           <Toggle value={form.cardPayment} onChange={(v) => set('cardPayment', v)} label="Credit / Debit Card" />
+        </Section>
+
+        {/* Payment Accounts */}
+        <Section icon={Banknote} title="Payment Accounts">
+          <p className="text-xs text-gray-500 -mt-2 mb-1">
+            These details are shown to sellers on the subscription page so they know where to send payment.
+          </p>
+          <Field label="CCP Number" hint="CCP / Algérie Poste account number shown to sellers">
+            <Input value={form.paymentCcp} onChange={(v) => set('paymentCcp', v)} placeholder="Ex: 00012345678 CC" />
+          </Field>
+          <Field label="BaridiMob Number" hint="BaridiMob / RIP number for mobile payments">
+            <Input value={form.paymentBaridimob} onChange={(v) => set('paymentBaridimob', v)} placeholder="Ex: 00799999000123456789" />
+          </Field>
+          <Field label="Payment Instructions" hint="Optional note shown to sellers (e.g. account name, extra details)">
+            <textarea
+              value={form.paymentNote}
+              onChange={(e) => set('paymentNote', e.target.value)}
+              placeholder="Ex: Au nom de ShopDZ SARL — inclure votre ID boutique en référence"
+              rows={3}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 transition-colors resize-none"
+            />
+          </Field>
         </Section>
 
         {error && (

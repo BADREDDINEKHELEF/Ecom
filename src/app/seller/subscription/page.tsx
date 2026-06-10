@@ -49,6 +49,7 @@ export default function SellerSubscriptionPage() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [subscription, setSubscription] = useState<VendorSubscription | null>(null)
   const [fetching, setFetching] = useState(true)
+  const [paymentDetails, setPaymentDetails] = useState<{ ccp: string; baridimob: string; note: string } | null>(null)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState('baridi_mob')
   const [paymentRef, setPaymentRef] = useState('')
@@ -65,6 +66,7 @@ export default function SellerSubscriptionPage() {
       .then((d) => {
         setPlans(d.plans ?? [])
         setSubscription(d.subscription ?? null)
+        setPaymentDetails(d.paymentDetails ?? null)
       })
       .finally(() => setFetching(false))
   }, [vendor])
@@ -246,9 +248,25 @@ export default function SellerSubscriptionPage() {
                       <strong>{plans.find((p) => p.id === selectedPlan)?.price_dzd.toLocaleString()} DZD</strong>{' '}
                       via BaridiMob ou virement CCP à notre compte. Entrez ensuite la référence de transaction ci-dessous.
                     </p>
-                    <p className="text-xs text-amber-600 mt-2">
-                      Numéro CCP : <strong>00012345678 CC</strong> (exemple — remplacez par le vrai numéro dans les paramètres)
-                    </p>
+                    {paymentDetails && (
+                      <div className="mt-3 space-y-1.5">
+                        {paymentDetails.ccp && (
+                          <p className="text-xs text-amber-800">
+                            <span className="font-bold">CCP :</span>{' '}
+                            <span className="font-mono bg-amber-100 px-1.5 py-0.5 rounded">{paymentDetails.ccp}</span>
+                          </p>
+                        )}
+                        {paymentDetails.baridimob && (
+                          <p className="text-xs text-amber-800">
+                            <span className="font-bold">BaridiMob :</span>{' '}
+                            <span className="font-mono bg-amber-100 px-1.5 py-0.5 rounded">{paymentDetails.baridimob}</span>
+                          </p>
+                        )}
+                        {paymentDetails.note && (
+                          <p className="text-xs text-amber-700 mt-2">{paymentDetails.note}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Payment method */}

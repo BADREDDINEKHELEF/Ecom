@@ -6,6 +6,7 @@ import {
   getVendorSubscription,
   createVendorSubscription,
 } from '@/lib/supabase/vendors'
+import { getStoreSettings } from '@/lib/supabase/settings'
 
 // GET /api/seller/subscription — current subscription + available plans
 export async function GET(req: NextRequest) {
@@ -17,12 +18,19 @@ export async function GET(req: NextRequest) {
     const vendor = await getVendorByUserId(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const [plans, subscription] = await Promise.all([
+    const [plans, subscription, settings] = await Promise.all([
       getSubscriptionPlans(),
       getVendorSubscription(vendor.id),
+      getStoreSettings(),
     ])
 
-    return NextResponse.json({ subscription, plans, vendor })
+    const paymentDetails = {
+      ccp:       settings.paymentCcp,
+      baridimob: settings.paymentBaridimob,
+      note:      settings.paymentNote,
+    }
+
+    return NextResponse.json({ subscription, plans, vendor, paymentDetails })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
