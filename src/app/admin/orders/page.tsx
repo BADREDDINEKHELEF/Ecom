@@ -682,7 +682,7 @@ export default function AdminOrdersPage() {
                   className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {advancing === selectedOrder.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Mark {STATUS_CONFIG[STATUS_CONFIG[selectedOrder.status as OrderStatus]!.next!].label}
+                  Mark {STATUS_CONFIG[STATUS_CONFIG[selectedOrder.status as OrderStatus]?.next as OrderStatus]?.label ?? ''}
                 </button>
               )}
               <button

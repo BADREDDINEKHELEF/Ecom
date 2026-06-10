@@ -46,26 +46,38 @@ export default function AdminPromotionsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const params = filter !== 'all' ? `?status=${filter}` : ''
-    const res = await fetch(`/api/admin/promotions${params}`)
-    const data = await res.json()
-    setPromos(data.promotions ?? [])
-    setLoading(false)
+    try {
+      const params = filter !== 'all' ? `?status=${filter}` : ''
+      const res = await fetch(`/api/admin/promotions${params}`)
+      if (!res.ok) throw new Error('fetch failed')
+      const data = await res.json()
+      setPromos(data.promotions ?? [])
+    } catch {
+      // keep previous state on error
+    } finally {
+      setLoading(false)
+    }
   }, [filter])
 
   useEffect(() => { load() }, [load])
 
   const update = async (id: string, status: string, admin_note?: string) => {
     setUpdating(id)
-    await fetch('/api/admin/promotions', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status, admin_note }),
-    })
-    setPromos((prev) => prev.map((p) =>
-      p.id === id ? { ...p, status: status as Promotion['status'] } : p
-    ))
-    setUpdating(null)
+    try {
+      const res = await fetch('/api/admin/promotions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status, admin_note }),
+      })
+      if (!res.ok) throw new Error('update failed')
+      setPromos((prev) => prev.map((p) =>
+        p.id === id ? { ...p, status: status as Promotion['status'] } : p
+      ))
+    } catch {
+      // UI stays unchanged on failure
+    } finally {
+      setUpdating(null)
+    }
   }
 
   const filtered = promos.filter((p) => {
@@ -139,7 +151,7 @@ export default function AdminPromotionsPage() {
             return (
               <div key={promo.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
                 {promo.product_image ? (
-                  <Image src={promo.product_image} alt="" width={60} height={60} className="w-15 h-15 rounded-xl object-cover flex-shrink-0" />
+                  <Image src={promo.product_image} alt="" width={60} height={60} className="w-[60px] h-[60px] rounded-xl object-cover flex-shrink-0" />
                 ) : (
                   <div className="w-14 h-14 rounded-xl bg-gray-100 flex-shrink-0" />
                 )}

@@ -80,13 +80,19 @@ export default function AbandonedCheckoutsPage() {
 
   const updateStatus = async (id: string, status: 'recovered' | 'ignored') => {
     setUpdating(id)
-    const supabase = createClient()
-    await supabase.from('abandoned_checkouts').update({
-      status,
-      ...(status === 'recovered' ? { recovered_at: new Date().toISOString() } : {}),
-    }).eq('id', id)
-    setRows((prev) => prev.filter((r) => r.id !== id))
-    setUpdating(null)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('abandoned_checkouts').update({
+        status,
+        ...(status === 'recovered' ? { recovered_at: new Date().toISOString() } : {}),
+      }).eq('id', id)
+      if (error) throw error
+      setRows((prev) => prev.filter((r) => r.id !== id))
+    } catch {
+      // keep row in list if update failed
+    } finally {
+      setUpdating(null)
+    }
   }
 
   // Stats

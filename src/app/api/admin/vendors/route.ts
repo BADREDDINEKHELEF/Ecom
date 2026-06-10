@@ -23,22 +23,22 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PATCH /api/admin/vendors — approve or decline a vendor store
-// Body: { id: string, action: 'approve' | 'decline', admin_note?: string }
+// PATCH /api/admin/vendors
+// Body: { id, action: 'approve' | 'decline' | 'suspend' | 'reactivate', admin_note? }
 export async function PATCH(req: NextRequest) {
   if (!(await isAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const body = await req.json().catch(() => ({})) as {
       id?:         string
-      action?:     'approve' | 'decline'
+      action?:     'approve' | 'decline' | 'suspend' | 'reactivate'
       admin_note?: string
     }
 
     if (!body.id)     return NextResponse.json({ error: 'id is required' },     { status: 400 })
     if (!body.action) return NextResponse.json({ error: 'action is required' }, { status: 400 })
-    if (!['approve', 'decline'].includes(body.action)) {
-      return NextResponse.json({ error: 'action must be approve or decline' }, { status: 400 })
+    if (!['approve', 'decline', 'suspend', 'reactivate'].includes(body.action)) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
     const admin = createAdminClient()
@@ -46,7 +46,11 @@ export async function PATCH(req: NextRequest) {
     const updates: Record<string, unknown> =
       body.action === 'approve'
         ? { is_approved: true,  is_active: true,  admin_note: null }
-        : { is_approved: false, is_active: false, admin_note: body.admin_note ?? null }
+        : body.action === 'decline'
+        ? { is_approved: false, is_active: false, admin_note: body.admin_note ?? null }
+        : body.action === 'suspend'
+        ? { is_active: false }          // keeps is_approved intact
+        : { is_active: true }           // reactivate: keeps is_approved intact
 
     const { error } = await admin.from('vendors').update(updates).eq('id', body.id)
     if (error) throw error

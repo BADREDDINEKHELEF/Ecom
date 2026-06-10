@@ -41,59 +41,72 @@ export default function AdminVendorsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/admin/vendors')
-    if (res.ok) {
-      const d = await res.json()
-      setVendors(Array.isArray(d.vendors) ? d.vendors : [])
+    try {
+      const res = await fetch('/api/admin/vendors')
+      if (res.ok) {
+        const d = await res.json()
+        setVendors(Array.isArray(d.vendors) ? d.vendors : [])
+      }
+    } catch {
+      // keep current list on network failure
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
 
   const handleApprove = async (id: string) => {
     setWorking(id)
-    const res = await fetch('/api/admin/vendors', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action: 'approve' }),
-    })
-    if (res.ok) {
-      setVendors((prev) => prev.map((v) =>
-        v.id === id ? { ...v, is_approved: true, is_active: true, admin_note: null } : v
-      ))
+    try {
+      const res = await fetch('/api/admin/vendors', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'approve' }),
+      })
+      if (res.ok) {
+        setVendors((prev) => prev.map((v) =>
+          v.id === id ? { ...v, is_approved: true, is_active: true, admin_note: null } : v
+        ))
+      }
+    } finally {
+      setWorking(null)
     }
-    setWorking(null)
   }
 
   const handleDecline = async (id: string) => {
     if (!declineNote.trim()) return
     setWorking(id)
-    const res = await fetch('/api/admin/vendors', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action: 'decline', admin_note: declineNote.trim() }),
-    })
-    if (res.ok) {
-      setVendors((prev) => prev.map((v) =>
-        v.id === id ? { ...v, is_approved: false, is_active: false, admin_note: declineNote.trim() } : v
-      ))
+    try {
+      const res = await fetch('/api/admin/vendors', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'decline', admin_note: declineNote.trim() }),
+      })
+      if (res.ok) {
+        setVendors((prev) => prev.map((v) =>
+          v.id === id ? { ...v, is_approved: false, is_active: false, admin_note: declineNote.trim() } : v
+        ))
+        setDeclineId(null)
+        setDeclineNote('')
+      }
+    } finally {
+      setWorking(null)
     }
-    setWorking(null)
-    setDeclineId(null)
-    setDeclineNote('')
   }
 
   const handleToggleActive = async (v: Vendor) => {
     setWorking(v.id)
+    const action = v.is_active ? 'suspend' : 'reactivate'
     const res = await fetch('/api/admin/vendors', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: v.id, action: v.is_active ? 'decline' : 'approve', admin_note: v.admin_note }),
+      body: JSON.stringify({ id: v.id, action }),
     })
     if (res.ok) {
+      // Only toggle is_active — is_approved stays unchanged
       setVendors((prev) => prev.map((x) =>
-        x.id === v.id ? { ...x, is_active: !x.is_active, is_approved: !x.is_active } : x
+        x.id === v.id ? { ...x, is_active: !x.is_active } : x
       ))
     }
     setWorking(null)
