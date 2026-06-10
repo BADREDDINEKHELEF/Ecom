@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   MessageSquare, Send, Loader2, Search, Package,
-  CheckCheck, Clock,
+  CheckCheck, Clock, Menu, ArrowLeft,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useRTL } from '@/lib/store/langStore'
@@ -61,6 +61,7 @@ function avatarColor(phone: string) {
 export default function SellerMessagesPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [threads, setThreads]       = useState<Thread[]>([])
   const [unread, setUnread]         = useState<Record<string, number>>({})
   const [activePhone, setActivePhone] = useState<string | null>(null)
@@ -149,12 +150,18 @@ export default function SellerMessagesPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} unreadMessages={totalUnread} />
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} unreadMessages={totalUnread}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
 
-      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} flex h-screen overflow-hidden`}>
+      {/* Messages layout — on mobile: threads panel OR chat panel, not both */}
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} flex h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden`}>
         {/* ── Thread list ────────────────────────────────────── */}
-        <div className="w-72 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+        <div className={`${activePhone ? 'hidden md:flex' : 'flex'} w-full md:w-72 bg-white border-r border-gray-100 flex-col flex-shrink-0`}>
           <div className="p-4 border-b border-gray-100">
             <h1 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-3">
               <MessageSquare className="w-5 h-5 text-emerald-600" />
@@ -222,9 +229,13 @@ export default function SellerMessagesPage() {
 
         {/* ── Conversation ──────────────────────────────────── */}
         {activePhone && activeThread ? (
-          <div className="flex-1 flex flex-col bg-gray-50 min-w-0">
+          <div className="flex-1 flex flex-col bg-gray-50 min-w-0 w-full md:w-auto">
             {/* Chat header */}
-            <div className="flex items-center gap-3 px-6 py-4 bg-white border-b border-gray-100">
+            <div className="flex items-center gap-3 px-4 py-4 bg-white border-b border-gray-100">
+              {/* Back to threads — mobile only */}
+              <button onClick={() => setActivePhone(null)} className="md:hidden p-1.5 -ml-1 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors" aria-label="Back">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${avatarColor(activePhone)}`}>
                 {initials(activeThread.buyer_name)}
               </div>

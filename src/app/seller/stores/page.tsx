@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Store, Plus, ExternalLink, CheckCircle2, XCircle, Clock,
-  Settings, AlertCircle, RefreshCw, Crown, Zap, ChevronRight,
+  Settings, AlertCircle, RefreshCw, Crown, Zap, ChevronRight, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import SellerSidebar from '@/components/seller/SellerSidebar'
@@ -33,6 +33,7 @@ const SUB_STATUS: Record<string, { label: string; color: string }> = {
 
 export default function SellerStoresPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [stores, setStores] = useState<StoreItem[]>([])
   const [fetching, setFetching] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -102,11 +103,15 @@ export default function SellerStoresPage() {
   if (!vendor) return null
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
+      <div className="lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm">
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
-        subscriptionStatus={vendor.subscription_status} />
-
-      <main className="flex-1 ml-60 p-8">
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className="flex-1 lg:ml-64 p-4 sm:p-8 min-w-0">
         <div className="max-w-3xl">
 
           {/* Header */}

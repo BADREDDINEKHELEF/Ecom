@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Zap, Plus, Eye, MousePointerClick, ShoppingCart, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { Zap, Plus, Eye, MousePointerClick, ShoppingCart, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import { getVendorProducts } from '@/lib/supabase/products'
@@ -47,6 +47,7 @@ const DURATIONS = [
 
 export default function SellerSponsoredPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sponsored, setSponsored] = useState<SponsoredProduct[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [fetching, setFetching] = useState(true)
@@ -115,10 +116,15 @@ export default function SellerSponsoredPage() {
   if (!vendor) return null
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-
-      <main className="flex-1 ml-60 p-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm">
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className="flex-1 lg:ml-64 p-4 sm:p-8 min-w-0">
         <div className="max-w-4xl">
 
           {/* Header */}

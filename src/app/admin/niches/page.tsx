@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit2, Trash2, Loader2, RefreshCw, Layers, AlertCircle } from 'lucide-react'
@@ -50,7 +50,7 @@ const EMPTY_FORM: FormState = {
   id: '',
   name: '',
   description: '',
-  emoji: '🛒',
+  emoji: 'ðŸ›’',
   gradient: GRADIENT_PRESETS[0].value,
   accentBg: ACCENT_PRESETS[0].bg,
   accentText: ACCENT_PRESETS[0].text,
@@ -139,7 +139,7 @@ export default function AdminNichesPage() {
       id: form.id.trim(),
       name: form.name.trim(),
       description: form.description.trim(),
-      emoji: form.emoji.trim() || '🛒',
+      emoji: form.emoji.trim() || 'ðŸ›’',
       gradient: form.gradient,
       accentColor: form.accentBg,
       textAccent: form.accentText,
@@ -173,7 +173,7 @@ export default function AdminNichesPage() {
   const selectedAccent = ACCENT_PRESETS.find((a) => a.bg === form.accentBg) ?? ACCENT_PRESETS[0]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Niches</h1>
@@ -211,7 +211,7 @@ export default function AdminNichesPage() {
       {/* Niche grid */}
       {loading ? (
         <div className="py-20 flex items-center justify-center text-gray-400">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading niches…
+          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading nichesâ€¦
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -290,7 +290,7 @@ export default function AdminNichesPage() {
 
             {/* Live preview */}
             <div className={`bg-gradient-to-r ${form.gradient} rounded-xl h-16 flex items-center px-4 gap-3 mb-5`}>
-              <span className="text-2xl">{form.emoji || '🛒'}</span>
+              <span className="text-2xl">{form.emoji || 'ðŸ›’'}</span>
               <div>
                 <p className="font-black text-white text-sm">{form.name || 'Niche Name'}</p>
                 <p className="text-white/50 text-xs">{form.id || 'niche-id'}</p>
@@ -349,7 +349,7 @@ export default function AdminNichesPage() {
                     type="text"
                     value={form.emoji}
                     onChange={(e) => f('emoji', e.target.value)}
-                    placeholder="🛒"
+                    placeholder="ðŸ›’"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
                   />
                 </div>
@@ -359,7 +359,7 @@ export default function AdminNichesPage() {
                     type="text"
                     value={form.banner}
                     onChange={(e) => f('banner', e.target.value)}
-                    placeholder="https://images.unsplash.com/…"
+                    placeholder="https://images.unsplash.com/â€¦"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
                   />
                 </div>
@@ -462,7 +462,7 @@ create table if not exists niches (
   id           text primary key,
   name         text not null,
   description  text default '',
-  emoji        text default '🛒',
+  emoji        text default 'ðŸ›’',
   gradient     text default 'from-slate-900 via-slate-800 to-zinc-800',
   accent_color text default 'bg-indigo-500',
   text_accent  text default 'text-indigo-400',
@@ -475,20 +475,21 @@ create table if not exists niches (
 -- Seed with the default 4 niches
 insert into niches (id, name, description, emoji, gradient, accent_color, text_accent, banner, categories)
 values
-  ('cars',    'Auto & Cars',    'Everything your vehicle needs — parts, accessories & care',
-   '🚗', 'from-slate-900 via-slate-800 to-zinc-800', 'bg-orange-500', 'text-orange-400',
+  ('cars',    'Auto & Cars',    'Everything your vehicle needs â€” parts, accessories & care',
+   'ðŸš—', 'from-slate-900 via-slate-800 to-zinc-800', 'bg-orange-500', 'text-orange-400',
    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1400&q=80',
    array['Accessories','Spare Parts','Car Care','Electronics','Tires & Wheels']),
   ('animals', 'Pets & Animals', 'Spoil your furry, feathered & finned companions',
-   '🐾', 'from-emerald-950 via-emerald-900 to-teal-900', 'bg-amber-400', 'text-amber-400',
+   'ðŸ¾', 'from-emerald-950 via-emerald-900 to-teal-900', 'bg-amber-400', 'text-amber-400',
    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=1400&q=80',
    array['Dog Supplies','Cat Supplies','Bird Supplies','Fish & Aquarium','Pet Food']),
   ('kids',    'Kids & Baby',    'Safe, fun & educational products for little ones',
-   '🧸', 'from-purple-950 via-violet-900 to-purple-800', 'bg-pink-400', 'text-pink-400',
+   'ðŸ§¸', 'from-purple-950 via-violet-900 to-purple-800', 'bg-pink-400', 'text-pink-400',
    'https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=1400&q=80',
    array['Toys & Games','Baby Clothing','Educational','Baby Care','Nursery']),
   ('deco',    'Home Decor',     'Transform your home with trending furniture & accessories',
-   '🛋️', 'from-stone-900 via-amber-950 to-stone-800', 'bg-amber-600', 'text-amber-500',
+   'ðŸ›‹ï¸', 'from-stone-900 via-amber-950 to-stone-800', 'bg-amber-600', 'text-amber-500',
    'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1400&q=80',
-   array['Meubles','Décoration Murale','Éclairage','Textiles','Rangement'])
+   array['Meubles','DÃ©coration Murale','Ã‰clairage','Textiles','Rangement'])
 on conflict (id) do nothing;`
+

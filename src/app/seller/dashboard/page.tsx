@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock,
   Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
-  Users, Award, AlertTriangle, Zap, Bell,
+  Users, Award, AlertTriangle, Zap, Bell, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/products'
@@ -125,6 +125,7 @@ export default function SellerDashboardPage() {
   const t = useT()
   const isRTL = useRTL()
   const sd = t.sellerDash
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<VendorOrderSummary[]>([])
   const [fetching, setFetching] = useState(true)
@@ -159,30 +160,40 @@ export default function SellerDashboardPage() {
   if (!vendor) return null
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Mobile top bar */}
+      <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu">
+          <Menu className="w-5 h-5" />
+        </button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-black text-gray-900">{greeting}, {vendor.store_name.split(' ')[0]} 👋</h1>
-            <p className="text-gray-500 text-sm mt-1">
+        <div className="flex items-center justify-between mb-8 gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 truncate">{greeting}, {vendor.store_name.split(' ')[0]} 👋</h1>
+            <p className="text-gray-500 text-sm mt-1 truncate">
               {t.sellerDash.viewMyStore}:{' '}
               <a href={`/shop/${vendor.store_slug}`} target="_blank" rel="noopener noreferrer"
                 className="text-emerald-600 hover:underline font-medium">/shop/{vendor.store_slug}</a>
             </p>
           </div>
           <Link href="/seller/products?new=1"
-            className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm">
-            <Plus className="w-4 h-4" /> {sd.addProduct}
+            className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm flex-shrink-0">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{sd.addProduct}</span>
           </Link>
         </div>
 
         {/* Urgency strip — orders waiting > 2h */}
         {urgentOrders.length > 0 && (
-          <div className="mb-5 flex items-center justify-between bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
-            <div className="flex items-center gap-3">
+          <div className="mb-5 flex flex-col sm:flex-row sm:items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+            <div className="flex items-center gap-3 flex-1">
               <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Bell className="w-5 h-5 text-white" />
               </div>
@@ -194,7 +205,7 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             <Link href="/seller/orders?status=pending"
-              className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors">
+              className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors self-start sm:self-auto">
               Confirmer maintenant →
             </Link>
           </div>
@@ -224,20 +235,20 @@ export default function SellerDashboardPage() {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5 mb-6">
           {[
             { label: sd.netEarnings, value: formatPrice(Math.round(netEarnings)), icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', sub: sd.afterCommission.replace('{n}', String(vendor.commission_rate)) },
             { label: sd.totalOrders, value: orders.length.toLocaleString(), icon: ShoppingBag, color: 'text-blue-600 bg-blue-50', sub: sd.allTime },
             { label: sd.pending, value: analytics.pending.toLocaleString(), icon: Clock, color: analytics.pending > 0 ? 'text-amber-600 bg-amber-50' : 'text-gray-400 bg-gray-50', sub: sd.needAttention },
             { label: sd.products, value: allProducts.length.toLocaleString(), icon: Package, color: 'text-violet-600 bg-violet-50', sub: sd.listedInStore },
           ].map(({ label, value, icon: Icon, color, sub }) => (
-            <div key={label} className="bg-white rounded-2xl p-5 shadow-sm">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
-                <Icon className="w-5 h-5" />
+            <div key={label} className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-2 sm:mb-3 ${color}`}>
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <p className="text-2xl font-black text-gray-900">{value}</p>
-              <p className="text-sm font-semibold text-gray-700 mt-0.5">{label}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+              <p className="text-lg sm:text-2xl font-black text-gray-900 truncate">{value}</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700 mt-0.5 truncate">{label}</p>
+              <p className="text-xs text-gray-400 mt-0.5 hidden sm:block truncate">{sub}</p>
             </div>
           ))}
         </div>
@@ -468,20 +479,24 @@ export default function SellerDashboardPage() {
               <TrendingUp className="w-5 h-5 text-emerald-600" />
               <h2 className="font-bold text-gray-900">{sd.earningsBreakdown}</h2>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-lg font-black text-gray-900">{formatPrice(grossRevenue)}</p>
-                <p className="text-xs text-gray-500 mt-1">{sd.grossSalesLabel}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+              <div className="bg-gray-50 rounded-xl p-4 flex sm:block items-center justify-between gap-4">
+                <p className="text-xs text-gray-500 sm:mb-1">{sd.grossSalesLabel}</p>
+                <p className="text-base sm:text-lg font-black text-gray-900 sm:mt-1">{formatPrice(grossRevenue)}</p>
               </div>
-              <div className="bg-red-50 rounded-xl p-4">
-                <p className="text-lg font-black text-red-600">{vendor.commission_rate}%</p>
-                <p className="text-xs text-gray-500 mt-1">{sd.platformFee}</p>
-                <p className="text-xs text-red-400 mt-0.5">{formatPrice(Math.round(grossRevenue * vendor.commission_rate / 100))}</p>
+              <div className="bg-red-50 rounded-xl p-4 flex sm:block items-center justify-between gap-4">
+                <p className="text-xs text-gray-500 sm:mb-1">{sd.platformFee}</p>
+                <div className="flex items-center gap-2 sm:block">
+                  <p className="text-base sm:text-lg font-black text-red-600">{vendor.commission_rate}%</p>
+                  <p className="text-xs text-red-400">{formatPrice(Math.round(grossRevenue * vendor.commission_rate / 100))}</p>
+                </div>
               </div>
-              <div className="bg-emerald-50 rounded-xl p-4">
-                <p className="text-lg font-black text-emerald-700">{formatPrice(Math.round(netEarnings))}</p>
-                <p className="text-xs text-gray-500 mt-1">{sd.youEarn}</p>
-                <p className="text-xs text-emerald-500 mt-0.5">{sd.ofSales.replace('{n}', String(100 - vendor.commission_rate))}</p>
+              <div className="bg-emerald-50 rounded-xl p-4 flex sm:block items-center justify-between gap-4">
+                <p className="text-xs text-gray-500 sm:mb-1">{sd.youEarn}</p>
+                <div className="flex items-center gap-2 sm:block">
+                  <p className="text-base sm:text-lg font-black text-emerald-700">{formatPrice(Math.round(netEarnings))}</p>
+                  <p className="text-xs text-emerald-500">{sd.ofSales.replace('{n}', String(100 - vendor.commission_rate))}</p>
+                </div>
               </div>
             </div>
           </div>

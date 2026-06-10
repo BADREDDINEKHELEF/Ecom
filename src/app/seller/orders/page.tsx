@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   ShoppingBag, Search, Loader2, CheckCircle2, XCircle, Truck,
   Clock, AlertCircle, ChevronDown, Download, Phone, Package,
-  RefreshCw, Filter,
+  RefreshCw, Filter, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
@@ -68,6 +68,7 @@ export default function SellerOrdersPage() {
   const t = useT()
   const isRTL = useRTL()
   const sd = t.sellerDash
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const [orders, setOrders]             = useState<VendorOrderSummary[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
@@ -185,26 +186,34 @@ export default function SellerOrdersPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
+        <div className="flex items-center justify-between mb-6 gap-3">
+          <div className="min-w-0">
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <ShoppingBag className="w-6 h-6 text-emerald-600" /> Commandes
+              <ShoppingBag className="w-6 h-6 text-emerald-600 flex-shrink-0" /> Commandes
             </h1>
             <p className="text-gray-500 text-sm mt-1">{orders.length} commandes au total</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <button onClick={exportCSV}
               className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
-              <Download className="w-4 h-4" /> Exporter CSV
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Exporter CSV</span>
             </button>
             <button onClick={load}
               className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
-              <RefreshCw className="w-4 h-4" /> Actualiser
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline">Actualiser</span>
             </button>
           </div>
         </div>
@@ -225,26 +234,28 @@ export default function SellerOrdersPage() {
           </div>
         )}
 
-        {/* Status tab filters */}
-        <div className="flex gap-1 mb-4 bg-gray-100 rounded-xl p-1 w-fit overflow-x-auto">
-          {STATUS_TABS.map(({ key, label }) => {
-            const count = key ? orders.filter((o) => o.order.status === key).length : orders.length
-            return (
-              <button key={key} onClick={() => setStatusTab(key)}
-                className={`px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-                  statusTab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}>
-                {label}
-                {count > 0 && (
-                  <span className={`ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                    key === 'pending' && count > 0
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>{count}</span>
-                )}
-              </button>
-            )
-          })}
+        {/* Status tab filters — scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-4 scrollbar-hide">
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-max sm:w-fit">
+            {STATUS_TABS.map(({ key, label }) => {
+              const count = key ? orders.filter((o) => o.order.status === key).length : orders.length
+              return (
+                <button key={key} onClick={() => setStatusTab(key)}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+                    statusTab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}>
+                  {label}
+                  {count > 0 && (
+                    <span className={`ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                      key === 'pending' && count > 0
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Search + bulk actions bar */}
@@ -286,19 +297,8 @@ export default function SellerOrdersPage() {
             </div>
           ) : (
             <>
-              {/* Table header */}
-              <div className="flex items-center gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100">
-                <input type="checkbox" checked={allSelected}
-                  onChange={(e) => setSelected(e.target.checked ? new Set(filtered.map((o) => o.order.id)) : new Set())}
-                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide flex-1">Client</span>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 hidden md:block">Wilaya</span>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-32 hidden lg:block">Statut</span>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 text-right">Montant</span>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-36">Actions</span>
-              </div>
-
-              <div className="divide-y divide-gray-50">
+              {/* ── Mobile cards (sm:hidden) ───────────────────────────────── */}
+              <div className="sm:hidden divide-y divide-gray-100">
                 {filtered.map(({ order, items, vendorTotal }) => {
                   const urgency = urgencyLevel(order.created_at, order.status)
                   const cfg = STATUS_CFG[order.status] ?? STATUS_CFG.pending
@@ -309,132 +309,107 @@ export default function SellerOrdersPage() {
                   const maskedPhone = order.phone.slice(0, 4) + '•••' + order.phone.slice(-3)
 
                   return (
-                    <div key={order.id}
-                      className={`transition-colors ${
+                    <div key={order.id + '-m'}
+                      className={`p-4 transition-colors ${
                         urgency === 'urgent' ? 'border-l-4 border-l-red-500 bg-red-50/30'
-                        : urgency === 'warn'   ? 'border-l-4 border-l-amber-400 bg-amber-50/20'
+                        : urgency === 'warn'  ? 'border-l-4 border-l-amber-400 bg-amber-50/20'
                         : ''
                       }`}>
-                      {/* Row */}
-                      <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50">
-                        {/* Checkbox */}
+                      {/* Top row */}
+                      <div className="flex items-start gap-3">
                         <input type="checkbox" checked={selected.has(order.id)} onChange={() => toggleSelect(order.id)}
-                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 flex-shrink-0" />
-
-                        {/* Client + expand toggle */}
-                        <button
-                          onClick={() => setExpanded(isExpanded ? null : order.id)}
-                          className="flex-1 min-w-0 text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900 text-sm">{order.full_name}</span>
+                          className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-gray-900 text-sm truncate">{order.full_name}</span>
+                            <span className="font-black text-gray-900 text-sm flex-shrink-0">{formatPrice(vendorTotal)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${cfg.badge}`}>
+                              <StatusIcon className="w-3 h-3" />{cfg.label}
+                            </span>
+                            <span className="text-xs text-gray-400">#{order.id.slice(0, 8)} · {order.wilaya}</span>
                             {urgency !== 'none' && (
                               <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
                                 urgency === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                              }`}>
-                                {timeAgo(order.created_at)}
-                              </span>
+                              }`}>{timeAgo(order.created_at)}</span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            #{order.id.slice(0, 8)} · {
-                              isRevealed || order.status !== 'pending'
-                                ? order.phone
-                                : maskedPhone
-                            }
+                          <p className="text-xs text-gray-400 mt-1">
+                            {isRevealed || order.status !== 'pending' ? order.phone : maskedPhone}
                             {order.status === 'pending' && !isRevealed && (
-                              <button onClick={(e) => { e.stopPropagation(); setRevealedPhone((prev) => new Set([...prev, order.id])) }}
-                                className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold flex items-center gap-0.5 inline-flex">
-                                <Phone className="w-3 h-3" /> Afficher
+                              <button onClick={() => setRevealedPhone((prev) => new Set([...prev, order.id]))}
+                                className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold">
+                                <Phone className="w-3 h-3 inline" /> Afficher
                               </button>
                             )}
                           </p>
-                        </button>
-
-                        {/* Wilaya */}
-                        <span className="text-sm text-gray-600 w-28 hidden md:block truncate">{order.wilaya}</span>
-
-                        {/* Status badge */}
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border w-32 hidden lg:flex ${cfg.badge}`}>
-                          <StatusIcon className="w-3.5 h-3.5" />{cfg.label}
-                        </span>
-
-                        {/* Amount */}
-                        <span className="font-black text-gray-900 w-28 text-right text-sm flex-shrink-0">
-                          {formatPrice(vendorTotal)}
-                        </span>
-
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-1.5 w-36 flex-shrink-0">
-                          {actions.map((act) => {
-                            const ActIcon = act.icon
-                            const isLoading = actionLoading === order.id + act.status
-                            return (
-                              <button key={act.status}
-                                onClick={() => handleAction(order.id, act.status)}
-                                disabled={!!actionLoading}
-                                title={act.label}
-                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-60 ${act.cls}`}>
-                                {isLoading
-                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  : <ActIcon className="w-3.5 h-3.5" />}
-                                <span className="hidden xl:inline">{act.label}</span>
-                              </button>
-                            )
-                          })}
-                          <button onClick={() => setExpanded(isExpanded ? null : order.id)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-                            <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                          </button>
                         </div>
                       </div>
 
-                      {/* Expanded detail */}
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 mt-3 ml-7 flex-wrap">
+                        {actions.map((act) => {
+                          const ActIcon = act.icon
+                          const isLoading = actionLoading === order.id + act.status
+                          return (
+                            <button key={act.status}
+                              onClick={() => handleAction(order.id, act.status)}
+                              disabled={!!actionLoading}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-60 ${act.cls}`}>
+                              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ActIcon className="w-3.5 h-3.5" />}
+                              {act.label}
+                            </button>
+                          )
+                        })}
+                        <button onClick={() => setExpanded(isExpanded ? null : order.id)}
+                          className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 py-1.5 px-2 rounded-lg hover:bg-gray-100">
+                          <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          {isExpanded ? 'Moins' : 'Détails'}
+                        </button>
+                      </div>
+
+                      {/* Expanded detail — mobile */}
                       {isExpanded && (
-                        <div className="px-16 pb-4 bg-gray-50/80 border-t border-gray-100">
-                          <div className="grid md:grid-cols-2 gap-4 pt-3">
-                            {/* Items */}
-                            <div>
-                              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Articles</p>
-                              <div className="space-y-2">
-                                {items.map((item) => (
-                                  <div key={item.id} className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2">
-                                      {item.product_image
-                                        ? <img src={item.product_image} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                                        : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
-                                      }
-                                      <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
-                                    </div>
-                                    <span className="font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
+                        <div className="mt-3 ml-7 pt-3 border-t border-gray-100 space-y-3">
+                          <div>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Articles</p>
+                            <div className="space-y-2">
+                              {items.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between text-sm">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {item.product_image
+                                      ? <img src={item.product_image} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                                      : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
+                                    }
+                                    <span className="text-gray-700 truncate">{item.product_name} × {item.quantity}</span>
                                   </div>
-                                ))}
-                              </div>
+                                  <span className="font-semibold text-gray-900 flex-shrink-0 ml-2">{formatPrice(item.subtotal)}</span>
+                                </div>
+                              ))}
                             </div>
-                            {/* Summary */}
-                            <div>
-                              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Résumé</p>
-                              <div className="space-y-1.5 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-500">Adresse</span>
-                                  <span className="text-gray-900 font-medium text-right max-w-[180px]">{order.address}, {order.city}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-500">Paiement</span>
-                                  <span className="text-gray-900 font-medium capitalize">{order.payment_method}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-500">Votre total</span>
-                                  <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
-                                </div>
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-gray-400">Après commission ({vendor.commission_rate}%)</span>
-                                  <span className="text-gray-700 font-semibold">{formatPrice(Math.round(vendorTotal * (1 - vendor.commission_rate / 100)))}</span>
-                                </div>
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-gray-400">Date commande</span>
-                                  <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                                </div>
-                              </div>
+                          </div>
+                          <div className="space-y-1.5 text-sm">
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Résumé</p>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Adresse</span>
+                              <span className="text-gray-900 font-medium text-right max-w-[180px]">{order.address}, {order.city}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Paiement</span>
+                              <span className="text-gray-900 font-medium capitalize">{order.payment_method}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Votre total</span>
+                              <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">Après commission ({vendor.commission_rate}%)</span>
+                              <span className="text-gray-700 font-semibold">{formatPrice(Math.round(vendorTotal * (1 - vendor.commission_rate / 100)))}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">Date</span>
+                              <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                           </div>
                         </div>
@@ -442,6 +417,152 @@ export default function SellerOrdersPage() {
                     </div>
                   )
                 })}
+              </div>
+
+              {/* ── Desktop table (hidden sm:block) ───────────────────────── */}
+              <div className="hidden sm:block">
+                {/* Table header */}
+                <div className="flex items-center gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100">
+                  <input type="checkbox" checked={allSelected}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(filtered.map((o) => o.order.id)) : new Set())}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide flex-1">Client</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 hidden md:block">Wilaya</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-32 hidden lg:block">Statut</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 text-right">Montant</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-36">Actions</span>
+                </div>
+
+                <div className="divide-y divide-gray-50">
+                  {filtered.map(({ order, items, vendorTotal }) => {
+                    const urgency = urgencyLevel(order.created_at, order.status)
+                    const cfg = STATUS_CFG[order.status] ?? STATUS_CFG.pending
+                    const StatusIcon = cfg.icon
+                    const actions = NEXT_ACTIONS[order.status] ?? []
+                    const isExpanded = expanded === order.id
+                    const isRevealed = revealedPhone.has(order.id)
+                    const maskedPhone = order.phone.slice(0, 4) + '•••' + order.phone.slice(-3)
+
+                    return (
+                      <div key={order.id}
+                        className={`transition-colors ${
+                          urgency === 'urgent' ? 'border-l-4 border-l-red-500 bg-red-50/30'
+                          : urgency === 'warn'   ? 'border-l-4 border-l-amber-400 bg-amber-50/20'
+                          : ''
+                        }`}>
+                        {/* Row */}
+                        <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50">
+                          <input type="checkbox" checked={selected.has(order.id)} onChange={() => toggleSelect(order.id)}
+                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 flex-shrink-0" />
+
+                          <button onClick={() => setExpanded(isExpanded ? null : order.id)}
+                            className="flex-1 min-w-0 text-left">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900 text-sm">{order.full_name}</span>
+                              {urgency !== 'none' && (
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                                  urgency === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                }`}>{timeAgo(order.created_at)}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              #{order.id.slice(0, 8)} · {
+                                isRevealed || order.status !== 'pending' ? order.phone : maskedPhone
+                              }
+                              {order.status === 'pending' && !isRevealed && (
+                                <button onClick={(e) => { e.stopPropagation(); setRevealedPhone((prev) => new Set([...prev, order.id])) }}
+                                  className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold inline-flex items-center gap-0.5">
+                                  <Phone className="w-3 h-3" /> Afficher
+                                </button>
+                              )}
+                            </p>
+                          </button>
+
+                          <span className="text-sm text-gray-600 w-28 hidden md:block truncate">{order.wilaya}</span>
+
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border w-32 hidden lg:flex ${cfg.badge}`}>
+                            <StatusIcon className="w-3.5 h-3.5" />{cfg.label}
+                          </span>
+
+                          <span className="font-black text-gray-900 w-28 text-right text-sm flex-shrink-0">
+                            {formatPrice(vendorTotal)}
+                          </span>
+
+                          <div className="flex items-center gap-1.5 w-36 flex-shrink-0">
+                            {actions.map((act) => {
+                              const ActIcon = act.icon
+                              const isLoading = actionLoading === order.id + act.status
+                              return (
+                                <button key={act.status}
+                                  onClick={() => handleAction(order.id, act.status)}
+                                  disabled={!!actionLoading}
+                                  title={act.label}
+                                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-60 ${act.cls}`}>
+                                  {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ActIcon className="w-3.5 h-3.5" />}
+                                  <span className="hidden xl:inline">{act.label}</span>
+                                </button>
+                              )
+                            })}
+                            <button onClick={() => setExpanded(isExpanded ? null : order.id)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+                              <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expanded detail */}
+                        {isExpanded && (
+                          <div className="px-4 sm:px-16 pb-4 bg-gray-50/80 border-t border-gray-100">
+                            <div className="grid md:grid-cols-2 gap-4 pt-3">
+                              <div>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Articles</p>
+                                <div className="space-y-2">
+                                  {items.map((item) => (
+                                    <div key={item.id} className="flex items-center justify-between text-sm">
+                                      <div className="flex items-center gap-2">
+                                        {item.product_image
+                                          ? <img src={item.product_image} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                                          : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
+                                        }
+                                        <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
+                                      </div>
+                                      <span className="font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Résumé</p>
+                                <div className="space-y-1.5 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Adresse</span>
+                                    <span className="text-gray-900 font-medium text-right max-w-[180px]">{order.address}, {order.city}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Paiement</span>
+                                    <span className="text-gray-900 font-medium capitalize">{order.payment_method}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Votre total</span>
+                                    <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-gray-400">Après commission ({vendor.commission_rate}%)</span>
+                                    <span className="text-gray-700 font-semibold">{formatPrice(Math.round(vendorTotal * (1 - vendor.commission_rate / 100)))}</span>
+                                  </div>
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-gray-400">Date commande</span>
+                                    <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </>
           )}

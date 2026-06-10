@@ -9,7 +9,7 @@ import {
   TrendingUp, DollarSign, ShoppingBag, RotateCcw,
   Truck, Download, RefreshCw, AlertTriangle, BarChart2,
   Lightbulb, ArrowRight, CheckCircle, XCircle, Package,
-  ChevronRight, Star, MapPin, Clock,
+  ChevronRight, Star, MapPin, Clock, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
@@ -47,14 +47,14 @@ function StatCard({ icon: Icon, label, value, sub, color = 'indigo' }: {
     blue:   'bg-blue-50 text-blue-600',
   }
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm flex items-start gap-4">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bg[color]}`}>
-        <Icon className="w-6 h-6" />
+    <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm flex items-start gap-3 sm:gap-4 min-w-0">
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bg[color]}`}>
+        <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
       </div>
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-black text-gray-900 mt-0.5">{value}</p>
-        {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+      <div className="min-w-0">
+        <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wide truncate">{label}</p>
+        <p className="text-lg sm:text-2xl font-black text-gray-900 mt-0.5 truncate">{value}</p>
+        {sub && <p className="text-xs text-gray-500 mt-0.5 truncate">{sub}</p>}
       </div>
     </div>
   )
@@ -278,6 +278,7 @@ function generateInsights(data: SellerAnalytics): { type: 'good'|'warn'|'info'|'
 export default function SellerAnalyticsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [days, setDays]     = useState(30)
   const [tab, setTab]       = useState<AnalyticsTab>('overview')
   const [data, setData]     = useState<SellerAnalytics | null>(null)
@@ -337,23 +338,28 @@ export default function SellerAnalyticsPage() {
   const insights = data ? generateInsights(data) : []
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-
-      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
               <BarChart2 className="w-6 h-6 text-indigo-600" /> Analytics
             </h1>
             <p className="text-gray-500 text-sm mt-1">Performance de votre boutique</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
               {DAYS_OPTIONS.map(({ label, days: d }) => (
                 <button key={d} onClick={() => setDays(d)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${days === d ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  className={`px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-colors ${days === d ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                   {label}
                 </button>
               ))}
@@ -362,21 +368,22 @@ export default function SellerAnalyticsPage() {
               <RefreshCw className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} />
             </button>
             <button onClick={exportCSV} className="flex items-center gap-1.5 border border-gray-200 bg-white px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
-              <Download className="w-4 h-4" /> Export CSV
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit">
+        <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
           {([
             ['overview', BarChart2,  'Vue d\'ensemble'],
             ['funnel',   TrendingUp, 'Entonnoir'],
             ['insights', Lightbulb,  'Insights'],
           ] as const).map(([key, Icon, label]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              <Icon className="w-4 h-4" /> {label}
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {label}
               {key === 'insights' && insights.some((i) => i.type === 'warn') && (
                 <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
               )}

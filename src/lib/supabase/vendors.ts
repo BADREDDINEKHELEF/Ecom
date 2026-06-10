@@ -85,25 +85,42 @@ export interface VendorDeliveryConfig {
 
 const VENDOR_COLS = 'id,user_id,owner_id,store_name,store_slug,logo_url,banner_url,cover_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,social_instagram,social_facebook,social_whatsapp,social_tiktok,theme_preset,business_type,subscription_status,subscription_plan_id,subscription_expires_at,created_at'
 
+// Base columns that exist before migration_013; used as fallback if new columns aren't deployed yet
+const VENDOR_BASE_COLS = 'id,user_id,store_name,store_slug,logo_url,banner_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,created_at'
+
 export async function getVendorByUserId(userId: string): Promise<Vendor | null> {
   const supabase = createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('vendors')
     .select(VENDOR_COLS)
     .eq('user_id', userId)
     .single()
-  return (data as Vendor) ?? null
+  if (!error) return (data as Vendor) ?? null
+  // Migration not applied yet — fall back to base columns so auth still works
+  const { data: fallback } = await supabase
+    .from('vendors')
+    .select(VENDOR_BASE_COLS)
+    .eq('user_id', userId)
+    .single()
+  return (fallback as Vendor) ?? null
 }
 
 export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
   const supabase = createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('vendors')
     .select(VENDOR_COLS)
     .eq('store_slug', slug)
     .eq('is_active', true)
     .single()
-  return (data as Vendor) ?? null
+  if (!error) return (data as Vendor) ?? null
+  const { data: fallback } = await supabase
+    .from('vendors')
+    .select(VENDOR_BASE_COLS)
+    .eq('store_slug', slug)
+    .eq('is_active', true)
+    .single()
+  return (fallback as Vendor) ?? null
 }
 
 export async function createVendor(

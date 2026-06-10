@@ -5,7 +5,7 @@ import Image from 'next/image'
 import {
   Truck, Plus, Search, Filter, Download, RefreshCw, ExternalLink,
   X, Check, Loader2, Package, AlertTriangle, ChevronDown, Clock,
-  CheckCircle2, XCircle, RotateCcw, Eye
+  CheckCircle2, XCircle, RotateCcw, Eye, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useT, useRTL } from '@/lib/store/langStore'
@@ -34,6 +34,7 @@ export default function SellerDeliveriesPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const t = useT()
   const isRTL = useRTL()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('shipments')
 
   // Shipments list
@@ -204,10 +205,15 @@ export default function SellerDeliveriesPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-
-      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>

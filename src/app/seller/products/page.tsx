@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
@@ -26,6 +26,7 @@ export default function SellerProductsPage() {
   const t = useT()
   const isRTL = useRTL()
   const sp = t.sellerProducts
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [loadingProds, setLoadingProds] = useState(true)
   const [search, setSearch] = useState('')
@@ -114,9 +115,15 @@ export default function SellerProductsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8`}>
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black text-gray-900">{sp.title}</h1>
@@ -248,7 +255,7 @@ export default function SellerProductsPage() {
             className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white" />
         </div>
 
-        {/* Products Table */}
+        {/* Products list */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {loadingProds ? (
             <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
@@ -264,59 +271,96 @@ export default function SellerProductsPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {[sp.colProduct, sp.colCategory, sp.colPrice, sp.colStock, sp.colStatus, ''].map((h) => (
-                      <th key={h} scope="col" className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3.5">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filtered.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          {p.images[0] ? (
-                            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                              <Image src={p.images[0]} alt={p.name} fill className="object-cover" sizes="40px" />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0" />
-                          )}
-                          <span className="font-semibold text-gray-900 truncate max-w-[200px]">{p.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-gray-600">{p.category}</td>
-                      <td className="px-5 py-3.5 font-bold text-gray-900">{formatPrice(p.price)}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`font-medium ${p.stock === 0 ? 'text-red-500' : p.stock < 5 ? 'text-amber-500' : 'text-green-600'}`}>
-                          {p.stock}
+            <>
+              {/* Mobile cards */}
+              <div className="sm:hidden divide-y divide-gray-100">
+                {filtered.map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 p-4">
+                    {p.images[0] ? (
+                      <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                        <Image src={p.images[0]} alt={p.name} fill className="object-cover" sizes="56px" />
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                        <Package className="w-6 h-6 text-gray-300" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate text-sm">{p.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{p.category}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-bold text-gray-900 text-sm">{formatPrice(p.price)}</span>
+                        <span className={`text-xs font-medium ${p.stock === 0 ? 'text-red-500' : p.stock < 5 ? 'text-amber-500' : 'text-green-600'}`}>
+                          · {sp.colStock}: {p.stock}
                         </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex gap-1">
-                          {p.isNew && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{sp.badgeNew}</span>}
-                          {p.isFeatured && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">{sp.badgeFeatured}</span>}
-                          {p.stock === 0 && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600">{sp.outOfStock}</span>}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex gap-2">
-                          <button onClick={() => openEdit(p)} aria-label={`${sp.colProduct}: ${p.name} — ${sp.cancelBtn}`} className="text-gray-400 hover:text-indigo-600 transition-colors">
-                            <Edit2 className="w-4 h-4" aria-hidden="true" />
-                          </button>
-                          <button onClick={() => handleDelete(p.id)} aria-label={sp.deleteConfirm} className="text-gray-400 hover:text-red-500 transition-colors">
-                            <Trash2 className="w-4 h-4" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </td>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => openEdit(p)} className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {[sp.colProduct, sp.colCategory, sp.colPrice, sp.colStock, sp.colStatus, ''].map((h) => (
+                        <th key={h} scope="col" className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3.5">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filtered.map((p) => (
+                      <tr key={p.id} className="hover:bg-gray-50">
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            {p.images[0] ? (
+                              <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                <Image src={p.images[0]} alt={p.name} fill className="object-cover" sizes="40px" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0" />
+                            )}
+                            <span className="font-semibold text-gray-900 truncate max-w-[200px]">{p.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-gray-600">{p.category}</td>
+                        <td className="px-5 py-3.5 font-bold text-gray-900">{formatPrice(p.price)}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`font-medium ${p.stock === 0 ? 'text-red-500' : p.stock < 5 ? 'text-amber-500' : 'text-green-600'}`}>
+                            {p.stock}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex gap-1 flex-wrap">
+                            {p.isNew && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{sp.badgeNew}</span>}
+                            {p.isFeatured && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">{sp.badgeFeatured}</span>}
+                            {p.stock === 0 && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600">{sp.outOfStock}</span>}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex gap-2">
+                            <button onClick={() => openEdit(p)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDelete(p.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </main>

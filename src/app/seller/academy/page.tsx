@@ -5,7 +5,7 @@ import {
   GraduationCap, Play, CheckCircle, Clock, ChevronRight, ChevronDown,
   Star, Zap, Package, Tag, BarChart2, MessageSquare, Truck,
   TrendingUp, BookOpen, Award, CreditCard, Smartphone, Banknote,
-  ArrowRight, AlertCircle, Info, Lightbulb,
+  ArrowRight, AlertCircle, Info, Lightbulb, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import SellerSidebar from '@/components/seller/SellerSidebar'
@@ -637,6 +637,7 @@ function LessonContent({ lesson }: { lesson: Lesson }) {
 
 export default function SellerAcademyPage() {
   const { vendor, loading, signOut } = useSellerAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [openModule, setOpenModule]   = useState<string>('payments')
   const [openLesson, setOpenLesson]   = useState<string | null>('pay1')
   const [doneSet, setDoneSet]         = useState<Set<string>>(new Set())
@@ -662,10 +663,15 @@ export default function SellerAcademyPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-
-      <main className="flex-1 ml-60 p-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm">
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className="flex-1 lg:ml-64 p-4 sm:p-8 min-w-0">
 
         {/* Hero */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-8 mb-6 text-white relative overflow-hidden">

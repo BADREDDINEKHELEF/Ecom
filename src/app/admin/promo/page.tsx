@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Tag, Plus, Trash2, ToggleLeft, ToggleRight, Loader2, X, Check } from 'lucide-react'
@@ -76,7 +76,7 @@ export default function PromoPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Promo Codes</h1>
@@ -178,7 +178,7 @@ export default function PromoPage() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin" /> Loading…
+            <Loader2 className="w-5 h-5 animate-spin" /> Loadingâ€¦
           </div>
         ) : promos.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
@@ -211,7 +211,7 @@ export default function PromoPage() {
                           : `-${formatPrice(promo.discount_value)}`}
                       </td>
                       <td className="px-5 py-4 text-gray-600">
-                        {promo.min_order > 0 ? formatPrice(promo.min_order) : '—'}
+                        {promo.min_order > 0 ? formatPrice(promo.min_order) : 'â€”'}
                       </td>
                       <td className="px-5 py-4 text-gray-600">
                         <span className={isFull ? 'text-red-500 font-bold' : ''}>
@@ -221,7 +221,7 @@ export default function PromoPage() {
                       <td className="px-5 py-4 text-gray-600">
                         {promo.expires_at
                           ? <span className={isExpired ? 'text-red-500' : ''}>{new Date(promo.expires_at).toLocaleDateString()}</span>
-                          : '—'}
+                          : 'â€”'}
                       </td>
                       <td className="px-5 py-4">
                         {isExpired || isFull ? (
@@ -266,3 +266,4 @@ export default function PromoPage() {
     </div>
   )
 }
+

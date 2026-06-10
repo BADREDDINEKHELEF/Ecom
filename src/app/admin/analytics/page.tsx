@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { TrendingUp, ShoppingBag, DollarSign, Truck, XCircle, RotateCcw, Clock, Package, ArrowRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getCodStats, getAnalyticsData } from '@/lib/supabase/analytics'
@@ -45,7 +45,7 @@ export default async function AnalyticsPage() {
     },
     {
       label: 'Avg. Order Value',
-      value: analytics.totalOrders > 0 ? formatPrice(Math.round(analytics.totalRevenue / analytics.totalOrders)) : '—',
+      value: analytics.totalOrders > 0 ? formatPrice(Math.round(analytics.totalRevenue / analytics.totalOrders)) : 'â€”',
       icon: TrendingUp,
       color: 'text-amber-600 bg-amber-50',
       sub: 'Last 6 months',
@@ -53,10 +53,10 @@ export default async function AnalyticsPage() {
   ]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900">Analytics</h1>
-        <p className="text-gray-500 text-sm mt-1">Last 6 months — live data from your orders</p>
+        <p className="text-gray-500 text-sm mt-1">Last 6 months â€” live data from your orders</p>
       </div>
 
       {/* KPIs */}
@@ -78,7 +78,7 @@ export default async function AnalyticsPage() {
         <h2 className="font-bold text-gray-900 mb-6">Monthly Revenue</h2>
         {analytics.monthly.every((m) => m.revenue === 0) ? (
           <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-            No orders yet — revenue will appear here once you start selling.
+            No orders yet â€” revenue will appear here once you start selling.
           </div>
         ) : (
           <div className="flex items-end gap-3 h-48">
@@ -190,9 +190,9 @@ export default async function AnalyticsPage() {
         className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-2xl p-5 hover:bg-indigo-100 transition-colors group"
       >
         <div>
-          <p className="font-bold text-indigo-900">Analytiques COD détaillées →</p>
+          <p className="font-bold text-indigo-900">Analytiques COD dÃ©taillÃ©es â†’</p>
           <p className="text-sm text-indigo-600 mt-0.5">
-            Taux de collecte par wilaya et transporteur · Export CSV
+            Taux de collecte par wilaya et transporteur Â· Export CSV
           </p>
         </div>
         <ArrowRight className="w-5 h-5 text-indigo-500 group-hover:translate-x-1 transition-transform" />
@@ -200,3 +200,4 @@ export default async function AnalyticsPage() {
     </div>
   )
 }
+

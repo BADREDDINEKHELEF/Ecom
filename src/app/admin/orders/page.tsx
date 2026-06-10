@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -29,7 +29,7 @@ function itemsString(order: OrderRow): string {
   return order.order_items.map((i) => `${i.product_name} x${i.quantity}`).join(', ')
 }
 
-// ─── Ship Modal ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Ship Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ShipModalProps {
   order: OrderRow
@@ -109,7 +109,7 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="font-black text-gray-900">Ship Order</h2>
-            <p className="text-sm text-gray-500 font-mono">{order.id.slice(0, 8).toUpperCase()} — {order.full_name}</p>
+            <p className="text-sm text-gray-500 font-mono">{order.id.slice(0, 8).toUpperCase()} â€” {order.full_name}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="w-4 h-4" />
@@ -165,7 +165,7 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
                 type="text"
                 value={tracking}
                 onChange={(e) => setTracking(e.target.value)}
-                placeholder="Enter tracking number…"
+                placeholder="Enter tracking numberâ€¦"
                 className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
               />
               {selectedProvider?.dashboardUrl && (
@@ -224,7 +224,7 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
   )
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
@@ -331,12 +331,12 @@ export default function AdminOrdersPage() {
   }), {} as Record<string, number>)
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Orders</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {filtered.length} orders · {formatPrice(totalRevenue)} revenue
+            {filtered.length} orders Â· {formatPrice(totalRevenue)} revenue
           </p>
         </div>
         <button
@@ -374,7 +374,7 @@ export default function AdminOrdersPage() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by ID, name, phone, or wilaya…"
+            placeholder="Search by ID, name, phone, or wilayaâ€¦"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
@@ -386,7 +386,7 @@ export default function AdminOrdersPage() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 flex items-center justify-center text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading orders…
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading ordersâ€¦
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -423,7 +423,7 @@ export default function AdminOrdersPage() {
                       <td className="px-4 py-3.5 font-bold text-gray-900">{formatPrice(order.total)}</td>
                       <td className="px-4 py-3.5">
                         <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${order.payment_method === 'cash' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'}`}>
-                          {order.payment_method === 'cash' ? '💵 Cash' : `💳 ${order.payment_method}`}
+                          {order.payment_method === 'cash' ? 'ðŸ’µ Cash' : `ðŸ’³ ${order.payment_method}`}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
@@ -462,7 +462,7 @@ export default function AdminOrdersPage() {
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="text-xs text-gray-300">â€”</span>
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-gray-500 text-xs whitespace-nowrap">{formatDate(order.created_at)}</td>
@@ -513,7 +513,7 @@ export default function AdminOrdersPage() {
               disabled={loadingMore}
               className="text-sm text-indigo-600 font-semibold hover:underline disabled:opacity-50"
             >
-              {loadingMore ? 'Loading…' : 'Load more orders'}
+              {loadingMore ? 'Loadingâ€¦' : 'Load more orders'}
             </button>
           </div>
         )}
@@ -534,7 +534,7 @@ export default function AdminOrdersPage() {
                 { label: 'Customer', value: selectedOrder.full_name },
                 { label: 'Phone',    value: selectedOrder.phone },
                 { label: 'Address',  value: `${selectedOrder.address}, ${selectedOrder.city}, ${selectedOrder.wilaya}` },
-                { label: 'Payment',  value: selectedOrder.payment_method === 'cash' ? '💵 Cash on Delivery' : `💳 ${selectedOrder.payment_method}` },
+                { label: 'Payment',  value: selectedOrder.payment_method === 'cash' ? 'ðŸ’µ Cash on Delivery' : `ðŸ’³ ${selectedOrder.payment_method}` },
                 { label: 'Subtotal', value: formatPrice(selectedOrder.subtotal) },
                 { label: 'Shipping', value: formatPrice(selectedOrder.shipping_cost) },
                 { label: 'Total',    value: formatPrice(selectedOrder.total) },
@@ -566,7 +566,7 @@ export default function AdminOrdersPage() {
                 <div className="space-y-1.5">
                   {selectedOrder.order_items.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
-                      <span className="text-gray-700">{item.product_name} ×{item.quantity}</span>
+                      <span className="text-gray-700">{item.product_name} Ã—{item.quantity}</span>
                       <span className="font-semibold">{formatPrice(item.subtotal)}</span>
                     </div>
                   ))}
@@ -623,3 +623,4 @@ export default function AdminOrdersPage() {
     </div>
   )
 }
+

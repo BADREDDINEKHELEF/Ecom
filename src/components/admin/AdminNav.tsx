@@ -20,7 +20,7 @@ const NAV = [
   { href: '/admin/settings',       label: 'Settings',      icon: Settings },
 ]
 
-export default function AdminNav() {
+export default function AdminNav({ onNavClick }: { onNavClick?: () => void } = {}) {
   const pathname  = usePathname()
   const router    = useRouter()
   const [pending, setPending] = useState(0)
@@ -52,7 +52,7 @@ export default function AdminNav() {
         {NAV.map(({ href, label, icon: Icon, exact, badge }) => {
           const isActive = exact ? pathname === href : pathname.startsWith(href)
           return (
-            <Link key={href} href={href}
+            <Link key={href} href={href} onClick={onNavClick}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               }`}

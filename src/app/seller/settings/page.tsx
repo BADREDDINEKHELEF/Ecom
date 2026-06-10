@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Loader2, Check, ExternalLink, Instagram, Facebook } from 'lucide-react'
+import { Loader2, Check, ExternalLink, Instagram, Facebook, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useRTL } from '@/lib/store/langStore'
@@ -30,6 +30,7 @@ function slugify(s: string) {
 export default function SellerSettingsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -109,9 +110,15 @@ export default function SellerSettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} />
-      <main className={`flex-1 ${isRTL ? 'mr-60' : 'ml-60'} p-8 max-w-3xl`}>
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
+      </div>
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+        subscriptionStatus={vendor.subscription_status}
+        isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         <div className="mb-8 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-black text-gray-900">Store Settings</h1>

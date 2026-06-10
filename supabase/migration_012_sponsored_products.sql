@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS sponsored_products (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   vendor_id     UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
-  product_id    UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  product_id    TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
 
   -- Where this promotion appears
   placement     TEXT NOT NULL DEFAULT 'homepage'

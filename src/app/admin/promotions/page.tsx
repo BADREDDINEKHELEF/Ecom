@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
@@ -82,7 +82,7 @@ export default function AdminPromotionsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900">Promotions</h1>
         <p className="text-gray-500 text-sm mt-1">Approve and manage sponsored product placements</p>
@@ -107,7 +107,7 @@ export default function AdminPromotionsPage() {
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input type="text" placeholder="Search store or product…" value={search}
+          <input type="text" placeholder="Search store or productâ€¦" value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64" />
         </div>
@@ -155,11 +155,11 @@ export default function AdminPromotionsPage() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    {promo.store_name} · {promo.amount_dzd.toLocaleString()} DZD
-                    {promo.payment_reference && <> · Ref: <code className="text-xs bg-gray-100 px-1 rounded">{promo.payment_reference}</code></>}
+                    {promo.store_name} Â· {promo.amount_dzd.toLocaleString()} DZD
+                    {promo.payment_reference && <> Â· Ref: <code className="text-xs bg-gray-100 px-1 rounded">{promo.payment_reference}</code></>}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {new Date(promo.starts_at).toLocaleDateString()} → {new Date(promo.ends_at).toLocaleDateString()}
+                    {new Date(promo.starts_at).toLocaleDateString()} â†’ {new Date(promo.ends_at).toLocaleDateString()}
                   </p>
                   {promo.admin_note && <p className="text-xs text-amber-600 mt-1 italic">{promo.admin_note}</p>}
                 </div>
@@ -222,3 +222,4 @@ export default function AdminPromotionsPage() {
     </div>
   )
 }
+
