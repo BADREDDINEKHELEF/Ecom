@@ -24,7 +24,7 @@ export function dbToProduct(row: Record<string, unknown>): Product {
 
 export const getProducts = unstable_cache(
   async (nicheId?: string, category?: string): Promise<Product[]> => {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     let query = supabase
       .from('products')
       .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
@@ -41,7 +41,7 @@ export const getProducts = unstable_cache(
 
 export const getFeaturedProducts = unstable_cache(
   async (nicheId?: string, limit = 8): Promise<Product[]> => {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     let query = supabase
       .from('products')
       .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
@@ -60,7 +60,7 @@ export const getFeaturedProducts = unstable_cache(
 
 export const getProductById = unstable_cache(
   async (id: string): Promise<Product | null> => {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('products')
       .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
