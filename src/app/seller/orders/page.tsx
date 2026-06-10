@@ -336,12 +336,19 @@ export default function SellerOrdersPage() {
                             )}
                           </div>
                           <p className="text-xs text-gray-400 mt-1">
-                            {isRevealed || order.status !== 'pending' ? order.phone : maskedPhone}
-                            {order.status === 'pending' && !isRevealed && (
-                              <button onClick={() => setRevealedPhone((prev) => new Set([...prev, order.id]))}
-                                className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold">
-                                <Phone className="w-3 h-3 inline" /> Afficher
-                              </button>
+                            {isRevealed || order.status !== 'pending' ? (
+                              <a href={`tel:${order.phone}`}
+                                className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
+                                <Phone className="w-3 h-3" />{order.phone}
+                              </a>
+                            ) : (
+                              <>
+                                {maskedPhone}
+                                <button onClick={() => setRevealedPhone((prev) => new Set([...prev, order.id]))}
+                                  className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold">
+                                  <Phone className="w-3 h-3 inline" /> Afficher
+                                </button>
+                              </>
                             )}
                           </p>
                         </div>
@@ -466,14 +473,21 @@ export default function SellerOrdersPage() {
                               )}
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              #{order.id.slice(0, 8)} · {
-                                isRevealed || order.status !== 'pending' ? order.phone : maskedPhone
-                              }
-                              {order.status === 'pending' && !isRevealed && (
-                                <button onClick={(e) => { e.stopPropagation(); setRevealedPhone((prev) => new Set([...prev, order.id])) }}
-                                  className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold inline-flex items-center gap-0.5">
-                                  <Phone className="w-3 h-3" /> Afficher
-                                </button>
+                              #{order.id.slice(0, 8)} ·{' '}
+                              {isRevealed || order.status !== 'pending' ? (
+                                <a href={`tel:${order.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
+                                  <Phone className="w-3 h-3" />{order.phone}
+                                </a>
+                              ) : (
+                                <>
+                                  {maskedPhone}
+                                  <button onClick={(e) => { e.stopPropagation(); setRevealedPhone((prev) => new Set([...prev, order.id])) }}
+                                    className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold inline-flex items-center gap-0.5">
+                                    <Phone className="w-3 h-3" /> Afficher
+                                  </button>
+                                </>
                               )}
                             </p>
                           </button>
