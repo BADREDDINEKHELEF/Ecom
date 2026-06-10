@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ShoppingCart, Search, Menu, X, ChevronDown, Heart, Tag, User } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import { niches } from '@/lib/data/niches'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import Logo from '@/components/ui/Logo'
@@ -16,6 +16,7 @@ export default function Header() {
   const wishlistCount = useWishlistStore((s) => s.items.length)
   const cartCount = itemCount()
   const t = useT()
+  const isRTL = useRTL()
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
@@ -56,7 +57,7 @@ export default function Header() {
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${nichesOpen ? 'rotate-180' : ''}`} />
               </button>
               {nichesOpen && (
-                <div className="absolute top-full left-0 mt-1 w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-2 animate-fade-in">
+                <div className={`absolute top-full ${isRTL ? 'right-0' : 'left-0'} mt-1 w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-2 animate-fade-in`}>
                   {niches.map((niche) => (
                     <Link
                       key={niche.id}
@@ -100,14 +101,14 @@ export default function Header() {
 
             {/* Search */}
             <form onSubmit={handleSearch} className="hidden sm:flex items-center relative">
-              <Search className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} w-4 h-4 text-gray-400 pointer-events-none`} />
               <input
                 ref={searchRef}
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 placeholder={t.nav.search}
-                className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg w-36 focus:w-52 transition-all duration-200 focus:outline-none focus:border-indigo-400 bg-gray-50 focus:bg-white"
+                className={`${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2 text-sm border border-gray-200 rounded-lg w-36 focus:w-52 transition-all duration-200 focus:outline-none focus:border-indigo-400 bg-gray-50 focus:bg-white`}
               />
             </form>
 
@@ -124,7 +125,7 @@ export default function Header() {
             <Link href="/wishlist" className="relative p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
               <Heart className="w-5 h-5" />
               {mounted && wishlistCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                <span className={`absolute -top-0.5 ${isRTL ? '-left-0.5' : '-right-0.5'} min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1`}>
                   {wishlistCount}
                 </span>
               )}
@@ -138,7 +139,7 @@ export default function Header() {
             >
               <ShoppingCart className="w-5 h-5" />
               {mounted && cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                <span className={`absolute -top-0.5 ${isRTL ? '-left-0.5' : '-right-0.5'} min-w-[18px] h-[18px] bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center px-1`}>
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
@@ -167,14 +168,14 @@ export default function Header() {
         {mobileSearchOpen && (
           <div className="sm:hidden border-t border-gray-100 py-2 px-4 animate-fade-in">
             <form onSubmit={(e) => { handleSearch(e); setMobileSearchOpen(false) }} className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
               <input
                 autoFocus
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 placeholder={t.nav.search}
-                className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-gray-50"
+                className={`w-full ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-gray-50`}
               />
             </form>
           </div>
@@ -208,13 +209,13 @@ export default function Header() {
             {/* Mobile search */}
             <form onSubmit={(e) => { handleSearch(e); setMenuOpen(false) }} className="px-4 pt-2 pb-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
                 <input
                   type="text"
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   placeholder={t.nav.search}
-                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
+                  className={`w-full ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400`}
                 />
               </div>
             </form>

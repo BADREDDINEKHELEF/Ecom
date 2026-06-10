@@ -5,12 +5,13 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { X, Minus, Plus, ShoppingBag, Trash2, Shield } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 
 export default function CartSidebar() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, total, itemCount } = useCartStore()
   const t = useT()
+  const isRTL = useRTL()
   const count = itemCount()
   const cartTotal = total()
   const [mounted, setMounted] = useState(false)
@@ -29,8 +30,10 @@ export default function CartSidebar() {
       )}
 
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
+          isRTL ? 'left-0' : 'right-0'
+        } ${
+          isOpen ? 'translate-x-0' : (isRTL ? '-translate-x-full' : 'translate-x-full')
         }`}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b">
@@ -103,7 +106,7 @@ export default function CartSidebar() {
                       </button>
                       <button
                         onClick={() => removeItem(product.id)}
-                        className="ml-auto w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="ms-auto w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         aria-label="Remove item"
                       >
                         <Trash2 className="w-4 h-4" />

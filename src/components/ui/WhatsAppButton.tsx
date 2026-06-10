@@ -1,6 +1,6 @@
 'use client'
 
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '213555000000'
 
@@ -12,6 +12,7 @@ interface WhatsAppButtonProps {
 
 export default function WhatsAppButton({ message, variant = 'float', className }: WhatsAppButtonProps) {
   const t = useT()
+  const isRTL = useRTL()
   const encoded = encodeURIComponent(message ?? `مرحباً، أريد الاستفسار عن منتج في Casbah Store`)
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`
 
@@ -37,7 +38,7 @@ export default function WhatsAppButton({ message, variant = 'float', className }
       target="_blank"
       rel="noopener noreferrer"
       title="Chatter sur WhatsApp"
-      className="fixed bottom-24 sm:bottom-8 right-5 z-50 group"
+      className={`fixed bottom-24 sm:bottom-8 ${isRTL ? 'left-5' : 'right-5'} z-50 group`}
     >
       {/* pulse ring */}
       <span className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-40 group-hover:opacity-0" />
@@ -47,7 +48,7 @@ export default function WhatsAppButton({ message, variant = 'float', className }
         </svg>
       </span>
       {/* tooltip label */}
-      <span className="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+      <span className={`absolute ${isRTL ? 'left-16' : 'right-16'} top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`}>
         Commander via WhatsApp
       </span>
     </a>

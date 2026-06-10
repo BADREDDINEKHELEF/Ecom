@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { X, MapPin, ChevronDown } from 'lucide-react'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { COUNTRY_LOCALE } from '@/lib/locale/currencies'
-import { useLangStore, useT } from '@/lib/store/langStore'
+import { useLangStore, useT, useRTL } from '@/lib/store/langStore'
 import type { Lang } from '@/lib/i18n/translations'
 
 const CURRENCY_LABELS: Record<string, string> = {
@@ -25,6 +25,7 @@ export default function LocaleBanner() {
   const { locale, showBanner, dismissBanner, changeLocale } = useGeolocation()
   const { setLang } = useLangStore()
   const t = useT()
+  const isRTL = useRTL()
   const [showRegions, setShowRegions] = useState(false)
 
   if (!showBanner || !locale) return null
@@ -44,7 +45,7 @@ export default function LocaleBanner() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 animate-fade-in">
+    <div className={`fixed bottom-4 left-4 right-4 sm:w-96 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 animate-fade-in ${isRTL ? 'sm:right-auto sm:left-4' : 'sm:left-auto sm:right-4'}`}>
       <div className="flex items-start gap-3">
         <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
           <MapPin className="w-4 h-4 text-indigo-600" />

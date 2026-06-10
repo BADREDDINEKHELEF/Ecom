@@ -8,7 +8,7 @@ import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
 import { useToastStore } from '@/lib/store/toastStore'
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import { formatPrice, discount } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import StarRating from '@/components/ui/StarRating'
@@ -22,6 +22,7 @@ function ProductCard({ product }: ProductCardProps) {
   const { toggle, has } = useWishlistStore()
   const addToast = useToastStore((s) => s.add)
   const t = useT()
+  const isRTL = useRTL()
   const wishlisted = has(product.id)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
@@ -74,7 +75,7 @@ function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
+          <div className={`absolute top-2.5 ${isRTL ? 'right-2.5' : 'left-2.5'} flex flex-col gap-1.5`}>
             {product.isNew && <Badge variant="new">{t.common.new}</Badge>}
             {hasDiscount && <Badge variant="sale">-{discountPct}%</Badge>}
           </div>
@@ -82,7 +83,7 @@ function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleWishlist}
             aria-label={wishlisted ? t.product.removedWishlist : t.product.savedWishlist}
-            className={`absolute top-2.5 right-2.5 p-2 rounded-full transition-all ${
+            className={`absolute top-2.5 ${isRTL ? 'left-2.5' : 'right-2.5'} p-2 rounded-full transition-all ${
               wishlisted
                 ? 'bg-red-50 opacity-100'
                 : 'bg-white/90 opacity-0 group-hover:opacity-100 hover:bg-white'
@@ -120,7 +121,7 @@ function ProductCard({ product }: ProductCardProps) {
           <div>
             <span className="text-gray-900 font-bold text-base">{formatPrice(product.price)}</span>
             {hasDiscount && (
-              <span className="text-gray-500 line-through text-xs ml-1.5">
+              <span className="text-gray-500 line-through text-xs ms-1.5">
                 {formatPrice(product.comparePrice!)}
               </span>
             )}

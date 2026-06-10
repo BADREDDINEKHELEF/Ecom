@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Shield, Truck, RefreshCw, Star } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Shield, Truck, RefreshCw, Star } from 'lucide-react'
 import { niches } from '@/lib/data/niches'
 import ProductCard from '@/components/shop/ProductCard'
-import { useT } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSignupSection from '@/components/home/SellerSignupSection'
 import SponsoredSection from '@/components/home/SponsoredSection'
 import { Product } from '@/types'
@@ -24,6 +24,8 @@ interface Props {
 
 export default function HomepageContent({ featured, nicheProducts }: Props) {
   const t = useT()
+  const isRTL = useRTL()
+  const Arrow = isRTL ? ArrowLeft : ArrowRight
 
   return (
     <>
@@ -65,7 +67,7 @@ export default function HomepageContent({ featured, nicheProducts }: Props) {
                     sizes="(max-width: 640px) 100vw, 25vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <span className="absolute bottom-3 left-3 text-5xl">{niche.emoji}</span>
+                  <span className={`absolute bottom-3 ${isRTL ? 'right-3' : 'left-3'} text-5xl`}>{niche.emoji}</span>
                 </div>
 
                 <div>
@@ -75,7 +77,7 @@ export default function HomepageContent({ featured, nicheProducts }: Props) {
                   <h2 className="text-xl font-black text-white mb-1">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</h2>
                   <p className="text-sm text-gray-300 leading-relaxed mb-4">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.description ?? niche.description}</p>
                   <span className={`inline-flex items-center gap-2 ${styles.btn} text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors`}>
-                    {t.home.shopNow} <ArrowRight className="w-4 h-4" />
+                    {t.home.shopNow} <Arrow className="w-4 h-4" />
                   </span>
                 </div>
               </Link>
@@ -151,7 +153,7 @@ export default function HomepageContent({ featured, nicheProducts }: Props) {
                 href={`/${niche.id}`}
                 className={`hidden sm:inline-flex items-center gap-1.5 ${styles.btn} text-white text-sm font-bold px-5 py-2 rounded-xl transition-colors`}
               >
-                {t.common.viewAll} <ArrowRight className="w-4 h-4" />
+                {t.common.viewAll} <Arrow className="w-4 h-4" />
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -164,7 +166,7 @@ export default function HomepageContent({ featured, nicheProducts }: Props) {
                 href={`/${niche.id}`}
                 className="inline-flex items-center gap-1.5 text-indigo-600 font-semibold text-sm hover:underline"
               >
-                {t.common.viewAll} {t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name} <ArrowRight className="w-4 h-4" />
+                {t.common.viewAll} {t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name} <Arrow className="w-4 h-4" />
               </Link>
             </div>
           </section>
