@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Store, CheckCircle, XCircle, ExternalLink, Loader2, Users, ToggleLeft, ToggleRight } from 'lucide-react'
@@ -88,7 +88,7 @@ export default function AdminVendorsPage() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin" /> Loadingâ€¦
+            <Loader2 className="w-5 h-5 animate-spin" /> Loading…
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
@@ -125,7 +125,7 @@ export default function AdminVendorsPage() {
                         {v.store_slug} <ExternalLink className="w-3 h-3" />
                       </a>
                     </td>
-                    <td className="px-5 py-4 text-gray-600">{v.wilaya || 'â€”'}</td>
+                    <td className="px-5 py-4 text-gray-600">{v.wilaya || '—'}</td>
                     <td className="px-5 py-4 font-bold text-gray-900">{v.commission_rate}%</td>
                     <td className="px-5 py-4">
                       <div className="flex gap-1 flex-wrap">
@@ -170,4 +170,3 @@ export default function AdminVendorsPage() {
     </div>
   )
 }
-

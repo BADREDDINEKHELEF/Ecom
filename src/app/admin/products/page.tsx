@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
@@ -165,7 +165,7 @@ export default function AdminProductsPage() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search productsâ€¦"
+            placeholder="Search products…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
@@ -194,7 +194,7 @@ export default function AdminProductsPage() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 flex items-center justify-center text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading productsâ€¦
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading products…
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -347,7 +347,7 @@ export default function AdminProductsPage() {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
                 <textarea value={form.description} onChange={(e) => f('description', e.target.value)} rows={2}
-                  placeholder="Product descriptionâ€¦"
+                  placeholder="Product description…"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 resize-none" />
               </div>
 
@@ -391,4 +391,3 @@ export default function AdminProductsPage() {
     </div>
   )
 }
-

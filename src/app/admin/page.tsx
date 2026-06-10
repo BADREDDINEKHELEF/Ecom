@@ -1,4 +1,4 @@
-﻿import { Package, ShoppingBag, Users, TrendingUp, DollarSign, Award, ArrowUp, ArrowDown } from 'lucide-react'
+import { Package, ShoppingBag, Users, TrendingUp, DollarSign, Award, ArrowUp, ArrowDown } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getAnalyticsData } from '@/lib/supabase/analytics'
 import { getAllOrders } from '@/lib/supabase/orders'
@@ -77,7 +77,7 @@ async function getDashboardData() {
 }
 
 function MoMBadge({ pct }: { pct: number | null }) {
-  if (pct === null) return <span className="text-xs text-gray-400">â€”</span>
+  if (pct === null) return <span className="text-xs text-gray-400">—</span>
   const up = pct >= 0
   return (
     <span className={`flex items-center gap-0.5 text-xs font-bold ${up ? 'text-green-600' : 'text-red-500'}`}>
@@ -141,7 +141,7 @@ export default async function AdminDashboard() {
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900">Dashboard</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Live data â€” updated every request.
+          Live data — updated every request.
         </p>
       </div>
 
@@ -288,4 +288,3 @@ export default async function AdminDashboard() {
     </div>
   )
 }
-

@@ -1,13 +1,13 @@
-﻿import { Users, MapPin, ShoppingBag } from 'lucide-react'
+import { Users, MapPin, ShoppingBag } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 
 const CUSTOMERS = [
   { id: 1, name: 'Mohammed Amiri', email: 'mohammed@example.com', wilaya: 'Alger', orders: 8, spent: 76400, joined: '2024-08-12' },
   { id: 2, name: 'Samira Kaci', email: 'samira@example.com', wilaya: 'Oran', orders: 5, spent: 52100, joined: '2024-09-03' },
   { id: 3, name: 'Youcef Belkadi', email: 'youcef@example.com', wilaya: 'Constantine', orders: 12, spent: 114800, joined: '2024-07-20' },
-  { id: 4, name: 'Fatima Zahra', email: 'fatima@example.com', wilaya: 'SÃ©tif', orders: 3, spent: 28900, joined: '2024-11-01' },
+  { id: 4, name: 'Fatima Zahra', email: 'fatima@example.com', wilaya: 'Sétif', orders: 3, spent: 28900, joined: '2024-11-01' },
   { id: 5, name: 'Karim Madjid', email: 'karim@example.com', wilaya: 'Annaba', orders: 7, spent: 63500, joined: '2024-10-15' },
-  { id: 6, name: 'Amina Boudour', email: 'amina@example.com', wilaya: 'BÃ©jaÃ¯a', orders: 4, spent: 41200, joined: '2024-09-28' },
+  { id: 6, name: 'Amina Boudour', email: 'amina@example.com', wilaya: 'Béjaïa', orders: 4, spent: 41200, joined: '2024-09-28' },
   { id: 7, name: 'Djamel Haddad', email: 'djamel@example.com', wilaya: 'Blida', orders: 2, spent: 18900, joined: '2024-12-01' },
   { id: 8, name: 'Nadia Ferhat', email: 'nadia@example.com', wilaya: 'Tizi Ouzou', orders: 9, spent: 89300, joined: '2024-08-05' },
 ]
@@ -81,4 +81,3 @@ export default function CustomersPage() {
     </div>
   )
 }
-

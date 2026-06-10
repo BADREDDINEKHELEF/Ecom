@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw, Search, ChevronDown } from 'lucide-react'
@@ -111,7 +111,7 @@ export default function AdminSubscriptionsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search storeâ€¦"
+            placeholder="Search store…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-56"
@@ -136,7 +136,7 @@ export default function AdminSubscriptionsPage() {
         {loading ? (
           <div className="p-12 text-center text-gray-400">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3" />
-            Loading subscriptionsâ€¦
+            Loading subscriptions…
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center text-gray-400">No subscriptions found.</div>
@@ -180,7 +180,7 @@ export default function AdminSubscriptionsPage() {
                         {sub.payment_reference ? (
                           <p className="text-xs font-mono text-gray-700 bg-gray-100 px-2 py-0.5 rounded">{sub.payment_reference}</p>
                         ) : (
-                          <span className="text-xs text-gray-400">â€”</span>
+                          <span className="text-xs text-gray-400">—</span>
                         )}
                       </td>
                       <td className="px-5 py-4">
@@ -234,7 +234,7 @@ export default function AdminSubscriptionsPage() {
                                     value={noteText}
                                     onChange={(e) => setNoteText(e.target.value)}
                                     className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    placeholder="Noteâ€¦"
+                                    placeholder="Note…"
                                   />
                                   <button onClick={() => updateStatus(sub.id, sub.status, noteText)}
                                     className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors">
@@ -269,4 +269,3 @@ export default function AdminSubscriptionsPage() {
     </div>
   )
 }
-
