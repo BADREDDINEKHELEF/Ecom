@@ -19,7 +19,7 @@ async function getDashboardData() {
   const [analytics, ordersResult, niches, totalOrders, uniqueCustomers, productsData] =
     await Promise.all([
       getAnalyticsData().catch(() => null),
-      getAllOrders(0, 5).catch(() => ({ orders: [], hasMore: false })),
+      getAllOrders(0, 5, 'admin').catch(() => ({ orders: [], hasMore: false })),
       getNichesFromDB().catch(() => []),
       supabase
         .from('orders')

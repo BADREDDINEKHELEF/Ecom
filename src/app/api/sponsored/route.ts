@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await admin
       .from('sponsored_products')
-      .select('product_id, placement, impressions, clicks, products(id, name, price, images, vendor_id), vendors(store_name, store_slug)')
+      .select('product_id, placement, impressions, clicks, products(id, name, price, images, niche_id, vendor_id), vendors(store_name, store_slug)')
       .eq('status', 'active')
       .or(`placement.eq.${placement},placement.eq.all`)
       .lte('starts_at', now)
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    type ProductRow = { id: string; name: string; price: number; images: string[]; vendor_id: string }
+    type ProductRow = { id: string; name: string; price: number; images: string[]; niche_id: string; vendor_id: string }
     type VendorRow = { store_name: string; store_slug: string }
 
     const products = (data ?? []).map((row) => {
@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         name: p?.name ?? '',
         price: p?.price ?? 0,
         image: p?.images?.[0] ?? null,
+        niche_id: p?.niche_id ?? '',
         store_name: v?.store_name ?? '',
         store_slug: v?.store_slug ?? '',
         sponsored_id: row.product_id,

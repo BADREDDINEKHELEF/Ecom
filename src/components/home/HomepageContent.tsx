@@ -88,7 +88,7 @@ export default function HomepageContent({ featured, nicheProducts }: Props) {
 
       {/* ── Trust badges ─────────────────────────────────────────────────── */}
       <section className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {[
             { icon: <Truck className="w-6 h-6 text-indigo-600" />, title: t.trust.delivery, text: t.trust.deliveryText },
             { icon: <Shield className="w-6 h-6 text-indigo-600" />, title: t.trust.secure, text: t.trust.secureText },

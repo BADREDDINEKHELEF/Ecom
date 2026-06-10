@@ -65,12 +65,15 @@ export default function SellerSponsoredPage() {
   useEffect(() => {
     if (!vendor) return
     Promise.all([
-      fetch('/api/seller/sponsored').then((r) => r.json()).then((d) => d.sponsored ?? []),
+      fetch('/api/seller/sponsored')
+        .then((r) => { if (!r.ok) throw new Error('fetch failed'); return r.json() })
+        .then((d) => (Array.isArray(d.sponsored) ? d.sponsored : [])),
       getVendorProducts(vendor.id),
     ]).then(([sp, prods]) => {
       setSponsored(sp)
       setProducts(prods)
-    }).finally(() => setFetching(false))
+    }).catch(() => { /* keep empty state on error */ })
+    .finally(() => setFetching(false))
   }, [vendor])
 
   const selectedPlacement = PLACEMENTS.find((p) => p.id === placement)

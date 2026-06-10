@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Search, Eye, ChevronDown, Loader2, RefreshCw,
-  MessageCircle, Truck, ExternalLink, X, Check,
+  MessageCircle, Truck, ExternalLink, X, Check, Store, ShoppingBag, LayoutGrid,
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { type OrderRow } from '@/lib/supabase/orders'
@@ -104,8 +104,8 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4 py-6" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="font-black text-gray-900">Ship Order</h2>
@@ -226,6 +226,14 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
+type OrderSource = 'all' | 'admin' | 'vendor'
+
+const SOURCE_CONFIG: Record<OrderSource, { label: string; icon: React.ReactNode; description: string }> = {
+  all:    { label: 'Toutes',      icon: <LayoutGrid className="w-4 h-4" />, description: 'Toutes les commandes' },
+  admin:  { label: 'Ma Boutique', icon: <Store className="w-4 h-4" />,      description: 'Vos produits uniquement' },
+  vendor: { label: 'Vendeurs',    icon: <ShoppingBag className="w-4 h-4" />, description: 'Produits des vendeurs' },
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -234,14 +242,21 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
+  const [source, setSource] = useState<OrderSource>('admin')
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null)
   const [advancing, setAdvancing] = useState<string | null>(null)
   const [shipOrder, setShipOrder] = useState<OrderRow | null>(null)
 
-  const load = useCallback(async () => {
+  const buildUrl = useCallback((pg: number, src: OrderSource) => {
+    const params = new URLSearchParams({ page: String(pg) })
+    if (src !== 'all') params.set('source', src)
+    return `/api/admin/orders?${params}`
+  }, [])
+
+  const load = useCallback(async (src: OrderSource = 'all') => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/orders?page=0')
+      const res = await fetch(buildUrl(0, src))
       if (!res.ok) throw new Error('Failed to load orders')
       const result = await res.json() as { orders: OrderRow[]; hasMore: boolean }
       setOrders(result.orders)
@@ -250,13 +265,13 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [buildUrl])
 
   const loadMore = async () => {
     setLoadingMore(true)
     try {
       const nextPage = page + 1
-      const res = await fetch(`/api/admin/orders?page=${nextPage}`)
+      const res = await fetch(buildUrl(nextPage, source))
       if (!res.ok) throw new Error('Failed to load more orders')
       const result = await res.json() as { orders: OrderRow[]; hasMore: boolean }
       setOrders((prev) => [...prev, ...result.orders])
@@ -267,7 +282,14 @@ export default function AdminOrdersPage() {
     }
   }
 
-  useEffect(() => { load() }, [load])
+  const handleSourceChange = (src: OrderSource) => {
+    setSource(src)
+    setSearch('')
+    setFilterStatus('')
+    load(src)
+  }
+
+  useEffect(() => { load('admin') }, [load])
 
   const filtered = orders.filter((o) => {
     const matchSearch =
@@ -332,21 +354,43 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Orders</h1>
+          <h1 className="text-2xl font-black text-gray-900">Commandes</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {filtered.length} orders · {formatPrice(totalRevenue)} revenue
+            {filtered.length} commandes · {formatPrice(totalRevenue)} chiffre d&apos;affaires
           </p>
         </div>
         <button
-          onClick={load}
+          onClick={() => load(source)}
           disabled={loading}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          Actualiser
         </button>
+      </div>
+
+      {/* Source Tabs */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {(Object.entries(SOURCE_CONFIG) as [OrderSource, typeof SOURCE_CONFIG[OrderSource]][]).map(([src, cfg]) => (
+          <button
+            key={src}
+            onClick={() => handleSourceChange(src)}
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              source === src
+                ? src === 'admin'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : src === 'vendor'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'bg-gray-900 text-white shadow-md'
+                : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
+            }`}
+          >
+            {cfg.icon}
+            {cfg.label}
+          </button>
+        ))}
       </div>
 
       {/* Status Pills */}
@@ -355,7 +399,7 @@ export default function AdminOrdersPage() {
           onClick={() => setFilterStatus('')}
           className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${!filterStatus ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 shadow-sm hover:bg-gray-50'}`}
         >
-          All ({orders.length})
+          Tout ({orders.length})
         </button>
         {(Object.entries(STATUS_CONFIG) as [OrderStatus, typeof STATUS_CONFIG[OrderStatus]][]).map(([status, { label }]) => (
           <button
@@ -382,129 +426,169 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Orders List */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 flex items-center justify-center text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading orders…
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Chargement…
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  {['Order ID', 'Customer', 'Wilaya', 'Items', 'Total', 'Payment', 'Status', 'Tracking', 'Date', ''].map((h) => (
-                    <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-4 py-4">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map((order) => {
-                  const status = (order.status as OrderStatus) in STATUS_CONFIG ? order.status as OrderStatus : 'pending'
-                  const statusCfg = STATUS_CONFIG[status]
-                  const itemCount = order.order_items?.length ?? 0
-                  const isAdvancing = advancing === order.id
-                  const provider = order.delivery_provider ? getProvider(order.delivery_provider) : undefined
-                  const trackingUrl = provider?.trackingUrl && order.yalidine_tracking
-                    ? `${provider.trackingUrl}${order.yalidine_tracking}`
-                    : undefined
+          <>
+            {/* ── Mobile cards (< sm) ── */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {filtered.map((order) => {
+                const status = (order.status as OrderStatus) in STATUS_CONFIG ? order.status as OrderStatus : 'pending'
+                const statusCfg = STATUS_CONFIG[status]
+                const isAdvancing = advancing === order.id
+                return (
+                  <div key={order.id} className="p-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0">
+                        <p className="font-mono font-bold text-indigo-600 text-xs">{order.id.slice(0, 8).toUpperCase()}</p>
+                        <p className="font-semibold text-gray-900 text-sm truncate">{order.full_name}</p>
+                        <p className="text-xs text-gray-400">{order.phone} · {order.wilaya}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusCfg.style}`}>{statusCfg.label}</span>
+                        <span className="font-bold text-gray-900 text-sm">{formatPrice(order.total)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400">{formatDate(order.created_at)}</span>
+                      <div className="flex items-center gap-1">
+                        {statusCfg.next && statusCfg.next !== 'shipped' && (
+                          <button onClick={() => advanceStatus(order.id, status)} disabled={isAdvancing}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50">
+                            {isAdvancing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4 -rotate-90" />}
+                          </button>
+                        )}
+                        <button onClick={() => openWA(order)}
+                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                          <MessageCircle className="w-4 h-4" />
+                        </button>
+                        {(status === 'confirmed' || status === 'pending') && (
+                          <button onClick={() => setShipOrder(order)}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                            <Truck className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button onClick={() => setSelectedOrder(order)}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
 
-                  return (
-                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3.5 font-mono font-bold text-indigo-600 text-xs">
-                        {order.id.slice(0, 8).toUpperCase()}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <p className="font-semibold text-gray-900">{order.full_name}</p>
-                        <p className="text-xs text-gray-400">{order.phone}</p>
-                      </td>
-                      <td className="px-4 py-3.5 text-gray-700">{order.wilaya}</td>
-                      <td className="px-4 py-3.5 text-gray-700 font-medium">{itemCount}</td>
-                      <td className="px-4 py-3.5 font-bold text-gray-900">{formatPrice(order.total)}</td>
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${order.payment_method === 'cash' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'}`}>
-                          {order.payment_method === 'cash' ? '💵 Cash' : `💳 ${order.payment_method}`}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusCfg.style}`}>
-                            {statusCfg.label}
+            {/* ── Desktop table (≥ sm) ── */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    {['Order ID', 'Customer', 'Wilaya', 'Items', 'Total', 'Payment', 'Status', 'Tracking', 'Date', ''].map((h) => (
+                      <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-4 py-4">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((order) => {
+                    const status = (order.status as OrderStatus) in STATUS_CONFIG ? order.status as OrderStatus : 'pending'
+                    const statusCfg = STATUS_CONFIG[status]
+                    const itemCount = order.order_items?.length ?? 0
+                    const isAdvancing = advancing === order.id
+                    const provider = order.delivery_provider ? getProvider(order.delivery_provider) : undefined
+                    const trackingUrl = provider?.trackingUrl && order.yalidine_tracking
+                      ? `${provider.trackingUrl}${order.yalidine_tracking}`
+                      : undefined
+
+                    return (
+                      <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3.5 font-mono font-bold text-indigo-600 text-xs">
+                          {order.id.slice(0, 8).toUpperCase()}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <p className="font-semibold text-gray-900">{order.full_name}</p>
+                          <p className="text-xs text-gray-400">{order.phone}</p>
+                        </td>
+                        <td className="px-4 py-3.5 text-gray-700">{order.wilaya}</td>
+                        <td className="px-4 py-3.5 text-gray-700 font-medium">{itemCount}</td>
+                        <td className="px-4 py-3.5 font-bold text-gray-900">{formatPrice(order.total)}</td>
+                        <td className="px-4 py-3.5">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${order.payment_method === 'cash' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'}`}>
+                            {order.payment_method === 'cash' ? '💵 Cash' : `💳 ${order.payment_method}`}
                           </span>
-                          {statusCfg.next && statusCfg.next !== 'shipped' && (
-                            <button
-                              onClick={() => advanceStatus(order.id, status)}
-                              disabled={isAdvancing}
-                              title={`Mark as ${STATUS_CONFIG[statusCfg.next!].label}`}
-                              className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                            >
-                              {isAdvancing
-                                ? <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />
-                                : <ChevronDown className="w-3.5 h-3.5 text-gray-400 -rotate-90" />}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        {order.yalidine_tracking ? (
+                        </td>
+                        <td className="px-4 py-3.5">
                           <div className="flex items-center gap-1.5">
-                            {provider && (
-                              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: provider.color }} />
-                            )}
-                            {trackingUrl ? (
-                              <a href={trackingUrl} target="_blank" rel="noopener noreferrer"
-                                className="font-mono text-xs text-indigo-600 hover:underline flex items-center gap-1">
-                                {order.yalidine_tracking}
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="font-mono text-xs text-gray-600">{order.yalidine_tracking}</span>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusCfg.style}`}>
+                              {statusCfg.label}
+                            </span>
+                            {statusCfg.next && statusCfg.next !== 'shipped' && (
+                              <button
+                                onClick={() => advanceStatus(order.id, status)}
+                                disabled={isAdvancing}
+                                title={`Mark as ${STATUS_CONFIG[statusCfg.next!].label}`}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                              >
+                                {isAdvancing
+                                  ? <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />
+                                  : <ChevronDown className="w-3.5 h-3.5 text-gray-400 -rotate-90" />}
+                              </button>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-gray-500 text-xs whitespace-nowrap">{formatDate(order.created_at)}</td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1">
-                          {/* WhatsApp */}
-                          <button
-                            onClick={() => openWA(order)}
-                            title="Send WhatsApp notification"
-                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </button>
-                          {/* Ship */}
-                          {(status === 'confirmed' || status === 'pending') && (
-                            <button
-                              onClick={() => setShipOrder(order)}
-                              title="Create shipment"
-                              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                            >
-                              <Truck className="w-4 h-4" />
-                            </button>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          {order.yalidine_tracking ? (
+                            <div className="flex items-center gap-1.5">
+                              {provider && (
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: provider.color }} />
+                              )}
+                              {trackingUrl ? (
+                                <a href={trackingUrl} target="_blank" rel="noopener noreferrer"
+                                  className="font-mono text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                                  {order.yalidine_tracking}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                <span className="font-mono text-xs text-gray-600">{order.yalidine_tracking}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
                           )}
-                          {/* Detail */}
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            title="View details"
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-gray-500 text-xs whitespace-nowrap">{formatDate(order.created_at)}</td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => openWA(order)} title="WhatsApp"
+                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                              <MessageCircle className="w-4 h-4" />
+                            </button>
+                            {(status === 'confirmed' || status === 'pending') && (
+                              <button onClick={() => setShipOrder(order)} title="Expédier"
+                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                <Truck className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button onClick={() => setSelectedOrder(order)} title="Détails"
+                              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
         {!loading && filtered.length === 0 && (
-          <div className="py-16 text-center text-gray-500">No orders found</div>
+          <div className="py-16 text-center text-gray-500">Aucune commande trouvée</div>
         )}
         {!loading && hasMore && !search && !filterStatus && (
           <div className="px-6 py-4 border-t border-gray-100 text-center">
@@ -513,7 +597,7 @@ export default function AdminOrdersPage() {
               disabled={loadingMore}
               className="text-sm text-indigo-600 font-semibold hover:underline disabled:opacity-50"
             >
-              {loadingMore ? 'Loading…' : 'Load more orders'}
+              {loadingMore ? 'Chargement…' : 'Charger plus'}
             </button>
           </div>
         )}
@@ -521,8 +605,8 @@ export default function AdminOrdersPage() {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4" onClick={() => setSelectedOrder(null)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4 py-6" onClick={() => setSelectedOrder(null)}>
+          <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-black text-gray-900 font-mono">{selectedOrder.id.slice(0, 8).toUpperCase()}</h2>
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_CONFIG[selectedOrder.status as OrderStatus]?.style ?? 'bg-gray-100 text-gray-600'}`}>

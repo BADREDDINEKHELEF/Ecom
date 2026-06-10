@@ -31,6 +31,7 @@ export interface Vendor {
   subscription_status?:     'trial' | 'active' | 'grace_period' | 'expired' | 'none' | null
   subscription_plan_id?:    string | null
   subscription_expires_at?: string | null
+  admin_note?:              string | null
   created_at:               string
 }
 
@@ -83,7 +84,7 @@ export interface VendorDeliveryConfig {
 
 // ── Vendor CRUD ────────────────────────────────────────────────
 
-const VENDOR_COLS = 'id,user_id,owner_id,store_name,store_slug,logo_url,banner_url,cover_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,social_instagram,social_facebook,social_whatsapp,social_tiktok,theme_preset,business_type,subscription_status,subscription_plan_id,subscription_expires_at,created_at'
+const VENDOR_COLS = 'id,user_id,owner_id,store_name,store_slug,logo_url,banner_url,cover_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,social_instagram,social_facebook,social_whatsapp,social_tiktok,theme_preset,business_type,subscription_status,subscription_plan_id,subscription_expires_at,admin_note,created_at'
 
 // Base columns that exist before migration_013; used as fallback if new columns aren't deployed yet
 const VENDOR_BASE_COLS = 'id,user_id,store_name,store_slug,logo_url,banner_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,created_at'

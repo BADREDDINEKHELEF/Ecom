@@ -125,7 +125,7 @@ export default function AdminSubscriptionsPage() {
             placeholder="Search store…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-56"
+            className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-56"
           />
         </div>
         {(['all', 'trial', 'active', 'grace_period', 'expired', 'cancelled'] as const).map((s) => (
@@ -150,7 +150,7 @@ export default function AdminSubscriptionsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
         {loading ? (
           <div className="p-12 text-center text-gray-400">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3" />

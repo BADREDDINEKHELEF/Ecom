@@ -152,7 +152,7 @@ export default function SellerSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone</label>
                 <input type="tel" value={form.phone}
@@ -170,7 +170,7 @@ export default function SellerSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Logo URL</label>
                 <input type="url" value={form.logo_url}
@@ -219,7 +219,7 @@ export default function SellerSettingsPage() {
             {/* Theme preset */}
             <div className="border-t border-gray-100 pt-5">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Thème de la boutique</p>
-              <div className="grid grid-cols-5 gap-2 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-4">
                 {THEME_PRESETS.map((t) => (
                   <button key={t.id} type="button"
                     onClick={() => setForm({ ...form, theme_preset: t.id })}
@@ -257,18 +257,18 @@ export default function SellerSettingsPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <Instagram className="w-3.5 h-3.5 text-pink-500" /> Instagram
                   </label>
-                  <input type="text" value={form.social_instagram}
+                  <input type="url" value={form.social_instagram}
                     onChange={(e) => setForm({ ...form, social_instagram: e.target.value })}
-                    placeholder="@ma_boutique"
+                    placeholder="https://instagram.com/maboutique"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook
                   </label>
-                  <input type="text" value={form.social_facebook}
+                  <input type="url" value={form.social_facebook}
                     onChange={(e) => setForm({ ...form, social_facebook: e.target.value })}
-                    placeholder="facebook.com/maboutique"
+                    placeholder="https://facebook.com/maboutique"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
                 </div>
                 <div>
@@ -280,9 +280,9 @@ export default function SellerSettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">TikTok</label>
-                  <input type="text" value={form.social_tiktok}
+                  <input type="url" value={form.social_tiktok}
                     onChange={(e) => setForm({ ...form, social_tiktok: e.target.value })}
-                    placeholder="@maboutique"
+                    placeholder="https://tiktok.com/@maboutique"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
                 </div>
               </div>

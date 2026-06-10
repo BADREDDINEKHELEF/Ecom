@@ -47,8 +47,8 @@ export default function ProfilePage() {
 
   if (!user) return null
 
-  const displayName = (user.user_metadata?.full_name as string | undefined) ?? user.email ?? 'Utilisateur'
-  const initial     = displayName[0].toUpperCase()
+  const displayName = ((user.user_metadata?.full_name as string | undefined) || user.email || 'Utilisateur')
+  const initial     = (displayName[0] ?? 'U').toUpperCase()
   const joinDate    = new Date(user.created_at).toLocaleDateString('fr-DZ', { month: 'long', year: 'numeric' })
 
   return (

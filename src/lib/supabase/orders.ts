@@ -212,20 +212,46 @@ export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
 
 /**
  * Paginated order list for admin dashboard.
- * Fixed: range(from, from + pageSize - 1) is inclusive on both ends in
- * Supabase, so we fetch one extra row to detect the next page.
+ * source='admin'  → orders containing at least one item with vendor_id IS NULL (platform products)
+ * source='vendor' → orders containing at least one item with vendor_id IS NOT NULL (marketplace)
+ * undefined       → all orders
  */
 export async function getAllOrders(
   page = 0,
-  pageSize = 50
+  pageSize = 50,
+  source?: 'admin' | 'vendor'
 ): Promise<{ orders: OrderRow[]; hasMore: boolean }> {
   const supabase = createAdminClient()
+
+  // When filtering by source we first collect matching order IDs from order_items
+  let orderIds: string[] | undefined
+  if (source === 'admin') {
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('order_id')
+      .is('vendor_id', null)
+    orderIds = [...new Set((items ?? []).map((i: { order_id: string }) => i.order_id))]
+  } else if (source === 'vendor') {
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('order_id')
+      .not('vendor_id', 'is', null)
+    orderIds = [...new Set((items ?? []).map((i: { order_id: string }) => i.order_id))]
+  }
+
   const from = page * pageSize
-  const { data, error } = await supabase
+  let q = supabase
     .from('orders')
     .select('*, order_items(*)')
     .order('created_at', { ascending: false })
-    .range(from, from + pageSize)  // fetches pageSize+1 rows
+    .range(from, from + pageSize)  // fetches pageSize+1 rows to detect next page
+
+  if (orderIds !== undefined) {
+    if (orderIds.length === 0) return { orders: [], hasMore: false }
+    q = q.in('id', orderIds)
+  }
+
+  const { data, error } = await q
   if (error) throw error
   const all = (data ?? []) as OrderRow[]
   return {

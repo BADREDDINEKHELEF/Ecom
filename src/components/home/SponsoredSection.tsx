@@ -12,6 +12,7 @@ interface SponsoredProduct {
   name: string
   price: number
   image: string | null
+  niche_id: string
   store_name: string
   store_slug: string
 }
@@ -23,8 +24,9 @@ export default function SponsoredSection() {
 
   useEffect(() => {
     fetch('/api/sponsored?placement=homepage&limit=4')
-      .then((r) => r.json())
-      .then((d) => setProducts(d.products ?? []))
+      .then((r) => { if (!r.ok) throw new Error('fetch failed'); return r.json() })
+      .then((d) => setProducts(Array.isArray(d.products) ? d.products : []))
+      .catch(() => setProducts([]))
       .finally(() => setLoading(false))
   }, [])
 
@@ -55,7 +57,7 @@ export default function SponsoredSection() {
           {products.map((p) => (
             <Link
               key={p.id}
-              href={`/product/${p.id}`}
+              href={`/${p.niche_id}/${p.id}`}
               className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100 relative"
             >
               {/* Sponsored badge */}

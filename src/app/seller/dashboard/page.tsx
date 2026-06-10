@@ -134,9 +134,12 @@ export default function SellerDashboardPage() {
     if (!vendor) return
     Promise.all([
       getVendorProducts(vendor.id),
-      fetch('/api/seller/orders').then((r) => r.json()).then((d) => d.orders as VendorOrderSummary[]),
+      fetch('/api/seller/orders')
+        .then((r) => { if (!r.ok) throw new Error('orders fetch failed'); return r.json() })
+        .then((d) => (Array.isArray(d.orders) ? d.orders : []) as VendorOrderSummary[]),
     ])
       .then(([prods, ords]) => { setAllProducts(prods); setOrders(ords) })
+      .catch(() => { /* keep empty state, show dashboard with zeros */ })
       .finally(() => setFetching(false))
   }, [vendor])
 
@@ -148,7 +151,7 @@ export default function SellerDashboardPage() {
   const greeting     = hour < 12 ? sd.goodMorning : hour < 18 ? sd.goodAfternoon : sd.goodEvening
   const urgentOrders = useMemo(() => urgentPendingOrders(orders), [orders])
   const lowStockProds = useMemo(
-    () => allProducts.filter((p) => p.stock >= 0 && p.stock <= LOW_STOCK_THRESHOLD),
+    () => allProducts.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK_THRESHOLD),
     [allProducts]
   )
 
@@ -172,6 +175,42 @@ export default function SellerDashboardPage() {
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
+
+        {/* Store approval banners */}
+        {!vendor.is_approved && vendor.is_active && (
+          <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4">
+            <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-black text-amber-800 text-sm">Boutique en attente d&apos;approbation</p>
+              <p className="text-amber-700 text-xs mt-0.5">
+                Votre boutique est en cours de vérification par notre équipe. Vous serez notifié sous 24h.
+                Pour accélérer l&apos;approbation, assurez-vous d&apos;avoir soumis votre paiement d&apos;abonnement.
+              </p>
+              <Link href="/seller/subscription" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-amber-700 underline hover:text-amber-900">
+                Voir mon abonnement →
+              </Link>
+            </div>
+          </div>
+        )}
+        {!vendor.is_approved && !vendor.is_active && (
+          <div className="mb-6 flex items-start gap-3 bg-red-50 border border-red-300 rounded-2xl px-5 py-4">
+            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-black text-red-800 text-sm">Boutique refusée</p>
+              {vendor.admin_note && (
+                <p className="text-red-700 text-xs mt-0.5 bg-red-100 rounded-lg px-3 py-2 mt-1">
+                  <span className="font-bold">Motif :</span> {vendor.admin_note}
+                </p>
+              )}
+              <p className="text-red-600 text-xs mt-2">
+                Réglez le problème indiqué, puis contactez le support pour une nouvelle révision.
+              </p>
+              <Link href="/seller/subscription" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-red-700 underline hover:text-red-900">
+                Gérer mon abonnement →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8 gap-3">
