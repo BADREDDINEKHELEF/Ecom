@@ -236,6 +236,18 @@ export async function getVendorSubscription(
   return (data as VendorSubscription) ?? null
 }
 
+export async function getSubscriptionById(
+  id: string
+): Promise<VendorSubscription | null> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('vendor_subscriptions')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  return (data as VendorSubscription) ?? null
+}
+
 export async function createVendorSubscription(
   sub: Omit<VendorSubscription, 'id' | 'created_at' | 'updated_at'>
 ): Promise<VendorSubscription> {
@@ -257,7 +269,7 @@ export async function createVendorSubscription(
 
 export async function updateVendorSubscription(
   id: string,
-  updates: Partial<Pick<VendorSubscription, 'status' | 'payment_reference' | 'payment_method' | 'payment_proof_url' | 'admin_note' | 'expires_at' | 'grace_period_ends_at'>>
+  updates: Partial<Pick<VendorSubscription, 'status' | 'payment_reference' | 'payment_method' | 'payment_proof_url' | 'admin_note' | 'started_at' | 'expires_at' | 'grace_period_ends_at'>>
 ): Promise<void> {
   const supabase = createAdminClient()
   const { data: sub, error: fetchErr } = await supabase

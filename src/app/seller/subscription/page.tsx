@@ -114,9 +114,8 @@ export default function SellerSubscriptionPage() {
   )
   if (!vendor) return null
 
-  const currentStatus = subscription?.status ?? 'trial'
-  const statusCfg = STATUS_CFG[currentStatus] ?? STATUS_CFG.trial
-  const StatusIcon = statusCfg.icon
+  const statusCfg = subscription ? (STATUS_CFG[subscription.status] ?? STATUS_CFG.trial) : null
+  const StatusIcon = statusCfg?.icon ?? Clock
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -149,10 +148,12 @@ export default function SellerSubscriptionPage() {
                         : subscription.plan_id
                       : 'Aucun plan'}
                     </span>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${statusCfg.color}`}>
-                      <StatusIcon className="w-3.5 h-3.5" />
-                      {statusCfg.label}
-                    </span>
+                    {statusCfg && (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${statusCfg.color}`}>
+                        <StatusIcon className="w-3.5 h-3.5" />
+                        {statusCfg.label}
+                      </span>
+                    )}
                   </div>
                   {subscription && (
                     <p className="text-xs text-gray-400 mt-1">
@@ -164,7 +165,16 @@ export default function SellerSubscriptionPage() {
                   )}
                 </div>
                 <button
-                  onClick={() => setShowForm(!showForm)}
+                  onClick={() => {
+                    if (!showForm) {
+                      setSuccess(false)
+                      setError('')
+                      setSelectedPlan(null)
+                      setPaymentRef('')
+                      setPaymentMethod('baridi_mob')
+                    }
+                    setShowForm(!showForm)
+                  }}
                   className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl transition-colors text-sm">
                   <CreditCard className="w-4 h-4" />
                   {subscription ? 'Renouveler / Changer de plan' : 'Souscrire maintenant'}

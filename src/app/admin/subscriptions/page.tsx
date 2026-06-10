@@ -40,6 +40,7 @@ export default function AdminSubscriptionsPage() {
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [updating, setUpdating] = useState<string | null>(null)
+  const [updateError, setUpdateError] = useState<string | null>(null)
   const [noteEditing, setNoteEditing] = useState<string | null>(null)
   const [noteText, setNoteText] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -57,16 +58,27 @@ export default function AdminSubscriptionsPage() {
 
   const updateStatus = async (id: string, status: string, admin_note?: string) => {
     setUpdating(id)
-    await fetch('/api/admin/subscriptions', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status, admin_note }),
-    })
-    setSubs((prev) => prev.map((s) =>
-      s.id === id ? { ...s, status: status as Subscription['status'], admin_note: admin_note ?? s.admin_note } : s
-    ))
-    setUpdating(null)
-    setNoteEditing(null)
+    setUpdateError(null)
+    try {
+      const res = await fetch('/api/admin/subscriptions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status, admin_note }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setUpdateError(d.error ?? 'Update failed. Try again.')
+      } else {
+        setSubs((prev) => prev.map((s) =>
+          s.id === id ? { ...s, status: status as Subscription['status'], admin_note: admin_note ?? s.admin_note } : s
+        ))
+        setNoteEditing(null)
+      }
+    } catch {
+      setUpdateError('Network error. Try again.')
+    } finally {
+      setUpdating(null)
+    }
   }
 
   const filtered = subs.filter((s) => {
@@ -79,7 +91,6 @@ export default function AdminSubscriptionsPage() {
     total: subs.length,
     active: subs.filter((s) => s.status === 'active').length,
     trial: subs.filter((s) => s.status === 'trial').length,
-    pending: subs.filter((s) => s.status === 'trial').length,
     revenue: subs.filter((s) => s.status === 'active').reduce((sum, s) => sum + s.amount_dzd, 0),
   }
 
@@ -130,6 +141,13 @@ export default function AdminSubscriptionsPage() {
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </div>
+
+      {updateError && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          {updateError}
+          <button onClick={() => setUpdateError(null)} className="text-red-400 hover:text-red-700 ml-4 flex-shrink-0">✕</button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

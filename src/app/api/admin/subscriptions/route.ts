@@ -3,6 +3,8 @@ import { verifyAdminToken } from '@/lib/auth/jwt'
 import {
   getAllVendorSubscriptions,
   updateVendorSubscription,
+  getSubscriptionPlans,
+  getSubscriptionById,
 } from '@/lib/supabase/vendors'
 
 async function isAdmin(req: NextRequest) {
@@ -45,11 +47,32 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
-    await updateVendorSubscription(body.id, {
-      ...(body.status    && { status: body.status as 'trial' | 'active' | 'grace_period' | 'expired' | 'cancelled' }),
-      ...(body.admin_note !== undefined && { admin_note: body.admin_note }),
-      ...(body.expires_at && { expires_at: body.expires_at }),
-    })
+    const updates: Parameters<typeof updateVendorSubscription>[1] = {
+      ...(body.status !== undefined       && { status: body.status as 'trial' | 'active' | 'grace_period' | 'expired' | 'cancelled' }),
+      ...(body.admin_note !== undefined   && { admin_note: body.admin_note }),
+      ...(body.expires_at                 && { expires_at: body.expires_at }),
+    }
+
+    // When approving (trial → active), reset billing window from now
+    if (body.status === 'active') {
+      const [sub, plans] = await Promise.all([
+        getSubscriptionById(body.id),
+        getSubscriptionPlans(),
+      ])
+      const plan = sub ? plans.find((p) => p.id === sub.plan_id) : null
+      if (plan) {
+        const now = new Date()
+        const expires = new Date(now)
+        expires.setDate(expires.getDate() + plan.billing_period_days)
+        const grace = new Date(expires)
+        grace.setDate(grace.getDate() + 7)
+        updates.started_at = now.toISOString()
+        updates.expires_at = expires.toISOString()
+        updates.grace_period_ends_at = grace.toISOString()
+      }
+    }
+
+    await updateVendorSubscription(body.id, updates)
 
     return NextResponse.json({ ok: true })
   } catch {
