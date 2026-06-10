@@ -80,6 +80,7 @@ export const translations = {
       lowStock: 'Only {n} left in stock', category: 'Category', tags: 'Tags',
       allProducts: 'All Products', categories: 'Categories', sort: 'Sort',
       noProducts: 'No products found', clearFilters: 'Clear filters', products: 'products',
+      pageNotFound: 'This page does not exist or has been moved.',
     },
     niches: {
       cars:    { name: 'Auto & Cars',           description: 'Everything your vehicle needs — parts, accessories & care',       categoryLabels: ['Accessories','Spare Parts','Car Care','Electronics','Tires & Wheels'] },
@@ -486,6 +487,7 @@ export const translations = {
       lowStock: 'Plus que {n} en stock', category: 'Catégorie', tags: 'Tags',
       allProducts: 'Tous les produits', categories: 'Catégories', sort: 'Trier',
       noProducts: 'Aucun produit trouvé', clearFilters: 'Effacer les filtres', products: 'produits',
+      pageNotFound: 'Cette page n\'existe pas ou a été déplacée.',
     },
     niches: {
       cars:    { name: 'Auto & Voitures',        description: 'Tout ce dont votre véhicule a besoin — pièces, accessoires & entretien', categoryLabels: ['Accessoires','Pièces détachées','Entretien auto','Électronique','Pneus & Jantes'] },
@@ -892,6 +894,7 @@ export const translations = {
       lowStock: 'متبقي {n} فقط', category: 'الفئة', tags: 'الوسوم',
       allProducts: 'جميع المنتجات', categories: 'الفئات', sort: 'ترتيب',
       noProducts: 'لا توجد منتجات', clearFilters: 'مسح الفلاتر', products: 'منتجات',
+      pageNotFound: 'هذه الصفحة غير موجودة أو تم نقلها.',
     },
     niches: {
       cars:    { name: 'السيارات والإكسسوارات',   description: 'كل ما تحتاجه سيارتك — قطع غيار وإكسسوارات وعناية',           categoryLabels: ['إكسسوارات','قطع الغيار','العناية بالسيارة','إلكترونيات','الإطارات والجنوط'] },
