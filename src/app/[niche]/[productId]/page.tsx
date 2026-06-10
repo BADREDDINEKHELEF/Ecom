@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import { notFound } from 'next/navigation'
-import { products, getProductById, getRelatedProducts } from '@/lib/data/products'
+import { getProductById, getProducts } from '@/lib/supabase/products'
 import { getNiche, isValidNiche } from '@/lib/data/niches'
 import ProductDetails from './ProductDetails'
+
+export const dynamic = 'force-dynamic'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://shopdz.dz'
 
@@ -11,13 +13,9 @@ interface PageProps {
   params: Promise<{ niche: string; productId: string }>
 }
 
-export function generateStaticParams() {
-  return products.map((p) => ({ niche: p.nicheId, productId: p.id }))
-}
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { niche: nicheId, productId } = await params
-  const product = getProductById(productId)
+  const product = await getProductById(productId)
   if (!product || product.nicheId !== nicheId) return {}
   const niche = getNiche(nicheId)
   const desc = product.description || `${product.name} — ${niche?.name ?? ''} — Livraison dans toute l'Algérie.`
@@ -46,11 +44,13 @@ export default async function ProductPage({ params }: PageProps) {
 
   if (!isValidNiche(nicheId)) notFound()
 
-  const product = getProductById(productId)
+  const product = await getProductById(productId)
   if (!product || product.nicheId !== nicheId) notFound()
 
   const niche = getNiche(nicheId)!
-  const related = getRelatedProducts(product)
+
+  const allNicheProducts = await getProducts(nicheId).catch(() => [])
+  const related = allNicheProducts.filter((p) => p.id !== productId).slice(0, 4)
 
   const jsonLd = {
     '@context': 'https://schema.org',

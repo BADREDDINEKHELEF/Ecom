@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Loader2, Check, ExternalLink, Instagram, Facebook, Menu } from 'lucide-react'
+import { Loader2, Check, ExternalLink, Copy, Instagram, Facebook, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useRTL } from '@/lib/store/langStore'
@@ -34,6 +34,7 @@ export default function SellerSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [linkCopied, setLinkCopied] = useState(false)
   const [form, setForm] = useState({
     store_name: '', store_slug: '', phone: '', wilaya: '', description: '',
     logo_url: '', banner_url: '', cover_url: '', accent_color: '#4f46e5',
@@ -124,13 +125,30 @@ export default function SellerSettingsPage() {
             <h1 className="text-2xl font-black text-gray-900">Store Settings</h1>
             <p className="text-gray-500 text-sm mt-1">Manage your store profile and details</p>
           </div>
-          <Link
-            href={`/store/${vendor.store_slug}`}
-            target="_blank"
-            className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" /> Voir ma boutique
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const url = `${window.location.origin}/store/${vendor.store_slug}`
+                navigator.clipboard.writeText(url).then(() => {
+                  setLinkCopied(true)
+                  setTimeout(() => setLinkCopied(false), 2000)
+                })
+              }}
+              className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-800 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl transition-colors"
+              title="Copier le lien"
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              {linkCopied ? 'Copié !' : 'Copier le lien'}
+            </button>
+            <Link
+              href={`/store/${vendor.store_slug}`}
+              target="_blank"
+              className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Voir ma boutique
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-sm">

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock,
   Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
-  Users, Award, AlertTriangle, Zap, Bell, Menu,
+  Users, Award, AlertTriangle, Zap, Bell, Menu, Copy, Check, ExternalLink,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/products'
@@ -129,6 +129,7 @@ export default function SellerDashboardPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<VendorOrderSummary[]>([])
   const [fetching, setFetching] = useState(true)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => {
     if (!vendor) return
@@ -213,20 +214,48 @@ export default function SellerDashboardPage() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 gap-3">
+        <div className="flex items-center justify-between mb-5 gap-3">
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 truncate">{greeting}, {vendor.store_name.split(' ')[0]} 👋</h1>
-            <p className="text-gray-500 text-sm mt-1 truncate">
-              {t.sellerDash.viewMyStore}:{' '}
-              <a href={`/shop/${vendor.store_slug}`} target="_blank" rel="noopener noreferrer"
-                className="text-emerald-600 hover:underline font-medium">/shop/{vendor.store_slug}</a>
-            </p>
           </div>
           <Link href="/seller/products?new=1"
             className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm flex-shrink-0">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{sd.addProduct}</span>
           </Link>
+        </div>
+
+        {/* Shop link card */}
+        <div className="mb-6 bg-emerald-950 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Lien de votre boutique</p>
+            <p className="text-white text-sm font-medium truncate">
+              {typeof window !== 'undefined' ? window.location.origin : 'https://shopdz.dz'}/store/{vendor.store_slug}
+            </p>
+          </div>
+          <a
+            href={`/store/${vendor.store_slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+            title="Ouvrir"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              const url = `${window.location.origin}/store/${vendor.store_slug}`
+              navigator.clipboard.writeText(url).then(() => {
+                setLinkCopied(true)
+                setTimeout(() => setLinkCopied(false), 2000)
+              })
+            }}
+            className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+            title="Copier le lien"
+          >
+            {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Urgency strip — orders waiting > 2h */}
