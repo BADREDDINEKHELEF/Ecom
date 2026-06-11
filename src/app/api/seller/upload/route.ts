@@ -54,6 +54,18 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
 
     const admin = createAdminClient()
+
+    // Ensure bucket exists — creates it on first deploy without needing a manual migration
+    const { data: buckets } = await admin.storage.listBuckets()
+    const bucketExists = buckets?.some((b) => b.id === 'product-images')
+    if (!bucketExists) {
+      await admin.storage.createBucket('product-images', {
+        public:          true,
+        fileSizeLimit:   10485760,
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      })
+    }
+
     const { error: uploadErr } = await admin.storage
       .from('product-images')
       .upload(path, bytes, { contentType: file.type, upsert: false })
@@ -69,7 +81,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: publicUrl }, { status: 201 })
   } catch (err) {
-    logger.error('[POST /api/seller/upload]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error('[POST /api/seller/upload]', { error: msg })
+    // Return the real message in production so mis-configured env vars surface immediately
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
