@@ -129,6 +129,10 @@ export default withSentryConfig(analyzeBundles(nextConfig), {
   // Disable the Sentry telemetry that phones home about SDK usage
   telemetry: false,
 
-  // Automatically tree-shake Sentry logger statements in production
-  disableLogger: true,
+  // Tree-shake Sentry logger statements in production bundles
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 })
