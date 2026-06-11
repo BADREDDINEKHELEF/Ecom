@@ -24,11 +24,14 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
       const fd = new FormData()
       fd.append('file', new File([compressed], file.name, { type: 'image/webp' }))
       const res = await fetch('/api/seller/upload', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `Erreur ${res.status}`)
+      }
       const { url } = await res.json() as { url: string }
       onChange(url)
-    } catch {
-      setError('Échec de l\'upload')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Échec de l\'upload')
     } finally {
       setUploading(false)
     }

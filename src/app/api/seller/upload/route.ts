@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getVendorByUserId } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
@@ -9,13 +8,19 @@ const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth
+    // Auth — verify session via route client (reads cookies from request)
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const vendor = await getVendorByUserId(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Vendor lookup via admin client — avoids relying on browser-client RLS in a server context
+    const admin = createAdminClient()
+    const { data: vendorRow } = await admin
+      .from('vendors')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+    if (!vendorRow) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Parse multipart
     let formData: FormData
@@ -50,10 +55,8 @@ export async function POST(req: NextRequest) {
                 : file.type === 'image/png'  ? 'png'
                 : file.type === 'image/gif'  ? 'gif'
                 : 'jpg'
-    const path  = `vendors/${vendor.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const path  = `vendors/${vendorRow.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     const bytes = await file.arrayBuffer()
-
-    const admin = createAdminClient()
 
     // Ensure bucket exists — creates it on first deploy without needing a manual migration
     const { data: buckets } = await admin.storage.listBuckets()
