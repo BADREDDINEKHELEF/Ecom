@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LayoutDashboard, Package, ShoppingBag, Users, Settings, TrendingUp, LogOut, Tag, Store, Layers, ShoppingCart, CreditCard, Zap } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, Settings, TrendingUp, LogOut, Tag, Store, Layers, ShoppingCart, CreditCard, Zap, RotateCcw } from 'lucide-react'
 
 const NAV = [
   { href: '/admin',                label: 'Dashboard',     icon: LayoutDashboard, exact: true },
   { href: '/admin/niches',         label: 'Niches',        icon: Layers },
   { href: '/admin/products',       label: 'Products',      icon: Package },
   { href: '/admin/orders',         label: 'Orders',        icon: ShoppingBag,  badge: true },
+  { href: '/admin/returns',        label: 'Retours',       icon: RotateCcw },
   { href: '/admin/abandoned',      label: 'Abandoned',     icon: ShoppingCart },
   { href: '/admin/customers',      label: 'Customers',     icon: Users },
   { href: '/admin/vendors',        label: 'Vendors',       icon: Store },

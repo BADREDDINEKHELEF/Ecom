@@ -16,6 +16,9 @@ export interface StoreSettings {
   paymentCcp:            string
   paymentBaridimob:      string
   paymentNote:           string
+  announcementText:      string
+  announcementActive:    boolean
+  announcementColor:     string
 }
 
 const SETTINGS_DEFAULTS: StoreSettings = {
@@ -33,6 +36,9 @@ const SETTINGS_DEFAULTS: StoreSettings = {
   paymentCcp:            '',
   paymentBaridimob:      '',
   paymentNote:           '',
+  announcementText:      '',
+  announcementActive:    false,
+  announcementColor:     'amber',
 }
 
 function dbToSettings(data: Record<string, unknown>): StoreSettings {
@@ -51,6 +57,9 @@ function dbToSettings(data: Record<string, unknown>): StoreSettings {
     paymentCcp:            String(data.payment_ccp ?? ''),
     paymentBaridimob:      String(data.payment_baridimob ?? ''),
     paymentNote:           String(data.payment_note ?? ''),
+    announcementText:      String(data.announcement_text ?? ''),
+    announcementActive:    Boolean(data.announcement_active),
+    announcementColor:     String(data.announcement_color ?? 'amber'),
   }
 }
 

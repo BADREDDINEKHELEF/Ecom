@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone, X } from 'lucide-react'
+import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone, X, RotateCcw } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { OrderRow } from '@/lib/supabase/queries'
 import { useT, useLang } from '@/lib/store/langStore'
@@ -19,8 +19,38 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState('')
-  const [cancelling, setCancelling] = useState<string | null>(null)
-  const [cancelError, setCancelError] = useState('')
+  const [cancelling, setCancelling]         = useState<string | null>(null)
+  const [cancelError, setCancelError]       = useState('')
+  const [returningId, setReturningId]       = useState<string | null>(null)
+  const [returnReason, setReturnReason]     = useState('')
+  const [returnSubmitting, setReturnSubmitting] = useState(false)
+  const [returnSuccess, setReturnSuccess]   = useState<string | null>(null)
+  const [returnError, setReturnError]       = useState('')
+
+  const handleReturn = async (orderId: string) => {
+    if (!returnReason.trim() || returnReason.trim().length < 5) {
+      setReturnError('Veuillez décrire la raison du retour (min 5 caractères)')
+      return
+    }
+    setReturnSubmitting(true)
+    setReturnError('')
+    try {
+      const res = await fetch(`/api/orders/${orderId}/return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: returnReason, phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setReturnError(data.error ?? 'Erreur'); return }
+      setReturnSuccess(orderId)
+      setReturningId(null)
+      setReturnReason('')
+    } catch {
+      setReturnError('Une erreur est survenue')
+    } finally {
+      setReturnSubmitting(false)
+    }
+  }
 
   const STATUS_STYLES: Record<string, { label: string; style: string }> = {
     pending:   { label: t.orders.status.pending,   style: 'bg-amber-100 text-amber-700' },
@@ -174,6 +204,52 @@ export default function OrdersPage() {
                           : <X className="w-4 h-4" />}
                         Annuler la commande
                       </button>
+                    </div>
+                  )}
+
+                  {order.status === 'delivered' && returnSuccess !== order.id && (
+                    <div className="mt-4">
+                      {returningId === order.id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={returnReason}
+                            onChange={(e) => setReturnReason(e.target.value)}
+                            rows={3}
+                            placeholder="Décrivez la raison du retour (produit défectueux, mauvaise taille…)"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 resize-none"
+                          />
+                          {returnError && <p className="text-red-500 text-xs">{returnError}</p>}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleReturn(order.id)}
+                              disabled={returnSubmitting}
+                              className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                            >
+                              {returnSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                              Soumettre
+                            </button>
+                            <button
+                              onClick={() => { setReturningId(null); setReturnReason(''); setReturnError('') }}
+                              className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5"
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setReturningId(order.id); setReturnError('') }}
+                          className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-semibold transition-colors"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          Demander un retour
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {returnSuccess === order.id && (
+                    <div className="mt-4 bg-green-50 text-green-700 rounded-xl px-4 py-2 text-sm font-medium">
+                      Demande de retour soumise. Notre équipe vous contactera sous 48h.
                     </div>
                   )}
                 </div>

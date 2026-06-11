@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, Store, Truck, CreditCard, Loader2, CheckCircle, ExternalLink, Zap, Circle, Banknote } from 'lucide-react'
+import { Save, Store, Truck, CreditCard, Loader2, CheckCircle, ExternalLink, Zap, Circle, Banknote, Megaphone } from 'lucide-react'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { getStoreSettings, saveStoreSettings, StoreSettings } from '@/lib/supabase/queries'
+
+const ANNOUNCEMENT_COLORS = ['amber', 'green', 'red', 'blue', 'indigo'] as const
 
 const DEFAULTS: StoreSettings = {
   storeName: 'Casbah Store',
@@ -20,6 +22,9 @@ const DEFAULTS: StoreSettings = {
   paymentCcp: '',
   paymentBaridimob: '',
   paymentNote: '',
+  announcementText: '',
+  announcementActive: false,
+  announcementColor: 'amber',
 }
 
 export default function AdminSettingsPage() {
@@ -197,6 +202,44 @@ export default function AdminSettingsPage() {
               rows={3}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 transition-colors resize-none"
             />
+          </Field>
+        </Section>
+
+        {/* Announcement Banner */}
+        <Section icon={Megaphone} title="Bandeau d'annonce">
+          <Toggle
+            value={form.announcementActive}
+            onChange={(v) => set('announcementActive', v)}
+            label="Afficher le bandeau en haut du site"
+          />
+          <Field label="Texte de l'annonce" hint="Max 500 caractères">
+            <Input
+              value={form.announcementText}
+              onChange={(v) => set('announcementText', v)}
+              placeholder="Ex: Livraison gratuite ce weekend ! 🎉"
+            />
+          </Field>
+          <Field label="Couleur">
+            <div className="flex gap-2">
+              {ANNOUNCEMENT_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => set('announcementColor', color)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize border-2 transition-colors ${
+                    form.announcementColor === color ? 'border-indigo-500' : 'border-transparent'
+                  } ${
+                    color === 'amber'  ? 'bg-amber-400 text-amber-950' :
+                    color === 'green'  ? 'bg-emerald-500 text-white' :
+                    color === 'red'    ? 'bg-red-500 text-white' :
+                    color === 'blue'   ? 'bg-blue-500 text-white' :
+                    'bg-indigo-600 text-white'
+                  }`}
+                >
+                  {color}
+                </button>
+              ))}
+            </div>
           </Field>
         </Section>
 

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { TrendingUp, ShoppingBag, DollarSign, Truck, XCircle, RotateCcw, Clock, Package, ArrowRight } from 'lucide-react'
+import { TrendingUp, ShoppingBag, DollarSign, Truck, XCircle, RotateCcw, Clock, Package, ArrowRight, Download } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getCodStats, getAnalyticsData } from '@/lib/supabase/analytics'
 
@@ -54,9 +54,18 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900">Analytics</h1>
-        <p className="text-gray-500 text-sm mt-1">Last 6 months — live data from your orders</p>
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">Analytics</h1>
+          <p className="text-gray-500 text-sm mt-1">Last 6 months — live data from your orders</p>
+        </div>
+        <a
+          href="/api/admin/analytics/export"
+          className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors flex-shrink-0"
+        >
+          <Download className="w-4 h-4" />
+          Exporter CSV
+        </a>
       </div>
 
       {/* KPIs */}

@@ -12,6 +12,36 @@ import { DELIVERY_PROVIDERS, getProvider } from '@/lib/delivery/providers'
 
 type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
 
+function codFraudScore(order: OrderRow): { level: 'low' | 'medium' | 'high'; score: number } {
+  let score = 0
+  // High value COD increases risk
+  if (order.total > 20000) score += 2
+  else if (order.total > 10000) score += 1
+  // Round number amounts are suspicious (potential fake orders)
+  if (order.total % 1000 === 0 && order.total > 0) score += 1
+  // Night-time orders (23:00 - 05:00 local)
+  const hour = new Date(order.created_at).getHours()
+  if (hour >= 23 || hour < 5) score += 1
+  // Very new phone number format (just 10 zeros type patterns) — basic check
+  if (/^0{5}/.test(order.phone)) score += 2
+
+  const level = score >= 4 ? 'high' : score >= 2 ? 'medium' : 'low'
+  return { level, score }
+}
+
+function FraudBadge({ order }: { order: OrderRow }) {
+  if (order.payment_method !== 'cash') return null
+  const { level } = codFraudScore(order)
+  if (level === 'low') return null
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black ${
+      level === 'high' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+    }`}>
+      {level === 'high' ? '⚠ Risqué' : '⚡ Suspect'}
+    </span>
+  )
+}
+
 const STATUS_CONFIG: Record<OrderStatus, { label: string; style: string; next?: OrderStatus }> = {
   pending:   { label: 'Pending',   style: 'bg-amber-100 text-amber-700',   next: 'confirmed' },
   confirmed: { label: 'Confirmed', style: 'bg-blue-100 text-blue-700',     next: 'shipped' },
@@ -515,7 +545,10 @@ export default function AdminOrdersPage() {
                         </td>
                         <td className="px-4 py-3.5 text-gray-700">{order.wilaya}</td>
                         <td className="px-4 py-3.5 text-gray-700 font-medium">{itemCount}</td>
-                        <td className="px-4 py-3.5 font-bold text-gray-900">{formatPrice(order.total)}</td>
+                        <td className="px-4 py-3.5">
+                          <p className="font-bold text-gray-900">{formatPrice(order.total)}</p>
+                          <FraudBadge order={order} />
+                        </td>
                         <td className="px-4 py-3.5">
                           <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${order.payment_method === 'cash' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'}`}>
                             {order.payment_method === 'cash' ? '💵 Cash' : `💳 ${order.payment_method}`}

@@ -3,6 +3,7 @@ import { Inter, Cairo } from 'next/font/google'
 import './globals.css'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import AnnouncementBanner from '@/components/ui/AnnouncementBanner'
 import CartSidebar from '@/components/shop/CartSidebar'
 import Toaster from '@/components/ui/Toast'
 import WhatsAppButton from '@/components/ui/WhatsAppButton'
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" dir="ltr" className={`${inter.variable} ${cairo.variable}`}>
       <body>
         <RTLWrapper>
+          <AnnouncementBanner />
           <Header />
           <CartSidebar />
           <Toaster />

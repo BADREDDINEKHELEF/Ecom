@@ -57,6 +57,9 @@ export async function saveStoreSettings(s: StoreSettings): Promise<void> {
     payment_ccp:             s.paymentCcp,
     payment_baridimob:       s.paymentBaridimob,
     payment_note:            s.paymentNote,
+    announcement_text:       s.announcementText,
+    announcement_active:     s.announcementActive,
+    announcement_color:      s.announcementColor,
     updated_at:              new Date().toISOString(),
   })
   if (error) throw error
