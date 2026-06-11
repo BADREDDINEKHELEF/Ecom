@@ -30,6 +30,26 @@ export async function upsertProduct(
   revalidateTag('products')
 }
 
+export async function updateProductExtras(
+  id: string,
+  extras: {
+    vendor_id:          string
+    condition?:         string | null
+    meta_title?:        string | null
+    meta_description?:  string | null
+    is_pre_order?:      boolean
+    pre_order_date?:    string | null
+    min_order_quantity?: number
+    is_bundle?:         boolean
+    variants?:          unknown
+  }
+): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('products').update(extras).eq('id', id)
+  if (error) throw error
+  revalidateTag('products')
+}
+
 export async function deleteProduct(id: string): Promise<void> {
   const supabase = createAdminClient()
   const { error } = await supabase.from('products').delete().eq('id', id)

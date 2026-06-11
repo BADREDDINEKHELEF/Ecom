@@ -9,6 +9,7 @@ import CsvImportModal from '@/components/seller/CsvImportModal'
 import ImageUploader from '@/components/seller/ImageUploader'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
+import { updateProductExtras } from '@/lib/supabase/mutations'
 import { formatPrice } from '@/lib/utils'
 import { niches } from '@/lib/data/niches'
 import { useT, useRTL } from '@/lib/store/langStore'
@@ -100,9 +101,7 @@ export default function SellerProductsPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(({ vendor_id: vendor.id } as any)),
       })
-      const { createClient } = await import('@/lib/supabase/client')
-      const sb = createClient()
-      await sb.from('products').update({
+      await updateProductExtras(productId, {
         vendor_id:          vendor.id,
         condition:          form.condition,
         meta_title:         form.metaTitle || null,
@@ -111,8 +110,8 @@ export default function SellerProductsPage() {
         pre_order_date:     form.preOrderDate || null,
         min_order_quantity: form.minOrderQuantity || 1,
         is_bundle:          form.isBundle,
-        ...(form.hasVariants ? { variants: variants.length > 0 ? variants : null } : { variants: null }),
-      }).eq('id', productId)
+        variants:           form.hasVariants ? (variants.length > 0 ? variants : null) : null,
+      })
       await load()
       closeForm()
     } catch (err: unknown) {
