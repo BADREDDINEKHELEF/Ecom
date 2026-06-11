@@ -1,8 +1,8 @@
-import { Package, ShoppingBag, Users, TrendingUp, DollarSign, Award, ArrowUp, ArrowDown } from 'lucide-react'
+import { ShoppingBag, Users, DollarSign, Award, ArrowUp, ArrowDown, Store, CheckCircle2, XCircle, Crown } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getAnalyticsData } from '@/lib/supabase/analytics'
 import { getAllOrders } from '@/lib/supabase/orders'
-import { getNichesFromDB } from '@/lib/supabase/niches'
+import { getAllVendors } from '@/lib/supabase/vendors'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -16,11 +16,11 @@ const STATUS_STYLES: Record<string, string> = {
 async function getDashboardData() {
   const supabase = createAdminClient()
 
-  const [analytics, ordersResult, niches, totalOrders, uniqueCustomers, productsData] =
+  const [analytics, ordersResult, vendorsResult, totalOrders, uniqueCustomers] =
     await Promise.all([
       getAnalyticsData().catch(() => null),
       getAllOrders(0, 5, 'admin').catch(() => ({ orders: [], hasMore: false })),
-      getNichesFromDB().catch(() => []),
+      getAllVendors(0, 20).catch(() => ({ vendors: [], hasMore: false })),
       supabase
         .from('orders')
         .select('id', { count: 'exact', head: true })
@@ -29,10 +29,6 @@ async function getDashboardData() {
         .from('orders')
         .select('phone')
         .then(({ data }) => new Set((data ?? []).map((r) => r.phone)).size),
-      supabase
-        .from('products')
-        .select('id, niche_id, stock')
-        .then(({ data }) => data ?? []),
     ])
 
   const monthly = analytics?.monthly ?? []
@@ -50,29 +46,15 @@ async function getDashboardData() {
       ? Number(((currentMonthOrders - prevMonthOrders) / prevMonthOrders) * 100)
       : null
 
-  type NicheStats = { total: number; lowStock: number }
-  const productsByNiche = (productsData as { id: string; niche_id: string; stock: number }[]).reduce(
-    (acc, p) => {
-      const key = p.niche_id
-      if (!acc[key]) acc[key] = { total: 0, lowStock: 0 }
-      acc[key].total++
-      if (p.stock < 10) acc[key].lowStock++
-      return acc
-    },
-    {} as Record<string, NicheStats>
-  )
-
   return {
     totalRevenue:    analytics?.totalRevenue ?? 0,
     revenueMoM,
     ordersMoM,
     totalOrders,
-    totalProducts:   productsData.length,
     uniqueCustomers,
     recentOrders:    ordersResult.orders,
     topProducts:     analytics?.topProducts ?? [],
-    niches,
-    productsByNiche,
+    vendors:         vendorsResult.vendors,
   }
 }
 
@@ -93,12 +75,10 @@ export default async function AdminDashboard() {
     revenueMoM,
     ordersMoM,
     totalOrders,
-    totalProducts,
     uniqueCustomers,
     recentOrders,
     topProducts,
-    niches,
-    productsByNiche,
+    vendors,
   } = await getDashboardData()
 
   const stats = [
@@ -111,7 +91,7 @@ export default async function AdminDashboard() {
       iconColor: 'text-indigo-600',
     },
     {
-      label:     'Total Orders',
+      label:     'Commandes (boutique)',
       value:     totalOrders.toLocaleString('fr-DZ'),
       badge:     <MoMBadge pct={ordersMoM} />,
       icon:      ShoppingBag,
@@ -119,15 +99,15 @@ export default async function AdminDashboard() {
       iconColor: 'text-emerald-600',
     },
     {
-      label:     'Total Products',
-      value:     totalProducts.toLocaleString('fr-DZ'),
+      label:     'Vendeurs inscrits',
+      value:     vendors.length.toLocaleString('fr-DZ'),
       badge:     null,
-      icon:      Package,
+      icon:      Store,
       bg:        'bg-violet-50',
       iconColor: 'text-violet-600',
     },
     {
-      label:     'Unique Customers',
+      label:     'Clients uniques',
       value:     uniqueCustomers.toLocaleString('fr-DZ'),
       badge:     null,
       icon:      Users,
@@ -244,44 +224,70 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Inventory Overview */}
-      <div className="mt-6 bg-white rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
+      {/* Vendor List */}
+      <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-indigo-600" />
-            <h2 className="font-bold text-gray-900">Inventory Overview</h2>
+            <Store className="w-5 h-5 text-indigo-600" />
+            <h2 className="font-bold text-gray-900">Vendeurs marketplace</h2>
           </div>
-          <a href="/admin/products" className="text-sm text-indigo-600 font-semibold hover:underline">
-            Manage products
+          <a href="/admin/vendors" className="text-sm text-indigo-600 font-semibold hover:underline">
+            Voir tout
           </a>
         </div>
-        {niches.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">No niches configured.</p>
+        {vendors.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">Aucun vendeur inscrit.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {niches.map((niche) => {
-              const stats = productsByNiche[niche.id] ?? { total: 0, lowStock: 0 }
-              return (
-                <div key={niche.id} className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">{niche.emoji}</span>
-                    <span className="font-bold text-gray-900">{niche.name}</span>
-                  </div>
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Total products</span>
-                      <span className="font-bold text-gray-900">{stats.total}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Low stock (&lt;10)</span>
-                      <span className={`font-bold ${stats.lowStock > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                        {stats.lowStock}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" aria-label="Vendor list">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Boutique', 'Wilaya', 'Abonnement', 'Statut', 'Inscrit le'].map((h) => (
+                    <th key={h} scope="col" className="text-left text-xs font-semibold text-gray-500 px-6 py-3">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {vendors.map((v) => {
+                  const subCfg: Record<string, { label: string; cls: string }> = {
+                    trial:        { label: 'Trial',         cls: 'bg-blue-100 text-blue-700' },
+                    active:       { label: 'Actif',         cls: 'bg-emerald-100 text-emerald-700' },
+                    grace_period: { label: 'Grâce',         cls: 'bg-amber-100 text-amber-700' },
+                    expired:      { label: 'Expiré',        cls: 'bg-red-100 text-red-700' },
+                  }
+                  const sub = subCfg[v.subscription_status ?? ''] ?? { label: 'Aucun', cls: 'bg-gray-100 text-gray-500' }
+                  return (
+                    <tr key={v.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900">{v.store_name}</span>
+                          <a href={`/store/${v.store_slug}`} target="_blank" rel="noopener noreferrer"
+                            className="text-gray-400 hover:text-indigo-600 transition-colors">
+                            <Crown className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                        <span className="text-xs text-gray-400">/{v.store_slug}</span>
+                      </td>
+                      <td className="px-6 py-3 text-gray-600 text-xs">{v.wilaya ?? '—'}</td>
+                      <td className="px-6 py-3">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${sub.cls}`}>{sub.label}</span>
+                      </td>
+                      <td className="px-6 py-3">
+                        {v.is_approved
+                          ? <span className="flex items-center gap-1 text-emerald-600 text-xs font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Approuvé</span>
+                          : <span className="flex items-center gap-1 text-red-500 text-xs font-semibold"><XCircle className="w-3.5 h-3.5" /> En attente</span>
+                        }
+                      </td>
+                      <td className="px-6 py-3 text-gray-500 text-xs">
+                        {new Date(v.created_at).toLocaleDateString('fr-DZ')}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
