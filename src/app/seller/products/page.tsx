@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, Upload } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, Upload, ImagePlus, Tag, FileText, ChevronDown, Sparkles } from 'lucide-react'
 import CsvImportModal from '@/components/seller/CsvImportModal'
 import ImageUploader from '@/components/seller/ImageUploader'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
@@ -44,6 +44,7 @@ export default function SellerProductsPage() {
   const [saving, setSaving]     = useState(false)
   const [formError, setFormError] = useState('')
   const [variants, setVariants] = useState<ProductVariant[]>([])
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const load = useCallback(async () => {
     if (!vendor) return
@@ -165,63 +166,37 @@ export default function SellerProductsPage() {
 
         {/* Product Form */}
         {showForm && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100 mb-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-gray-900">{editing ? sp.editTitle : sp.newTitle}</h2>
-              <button onClick={closeForm} aria-label={sp.cancelBtn} type="button"><X className="w-5 h-5 text-gray-400 hover:text-gray-600" aria-hidden="true" /></button>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+            {/* Form header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="font-black text-gray-900 text-base leading-tight">{editing ? sp.editTitle : sp.newTitle}</h2>
+                  <p className="text-xs text-gray-400">Complétez en moins d&apos;une minute</p>
+                </div>
+              </div>
+              <button onClick={closeForm} aria-label={sp.cancelBtn} type="button"
+                className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
             </div>
-            <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.nameLabel}</label>
-                <input required type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder={sp.nameLabel}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.nicheLabel}</label>
-                <select value={form.nicheId} onChange={(e) => setForm({ ...form, nicheId: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
-                  {niches.map((n) => <option key={n.id} value={n.id}>{n.emoji} {n.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.categoryLabel}</label>
-                <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  placeholder={sp.categoryPH}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.priceLabel}</label>
-                <input required type="number" min="1" value={form.price || ''} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.comparePriceLabel}</label>
-                <input type="number" min="0" value={form.comparePrice || ''} onChange={(e) => setForm({ ...form, comparePrice: Number(e.target.value) })}
-                  placeholder={sp.comparePricePH}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.stockLabel}</label>
-                <input type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.tagsLabel}</label>
-                <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                  placeholder={sp.tagsPH}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.descriptionLabel}</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={3} placeholder={sp.descriptionPH}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 resize-none" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
-                  {sp.imagesLabel}
-                </label>
+
+            <form onSubmit={handleSave} className="divide-y divide-gray-50">
+
+              {/* ── Section 1: Photos ── */}
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <ImagePlus className="w-3.5 h-3.5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm leading-tight">Photos du produit</p>
+                    <p className="text-xs text-gray-400">La 1ère photo est la photo principale · max 8</p>
+                  </div>
+                </div>
                 <ImageUploader
                   key={editing?.id ?? 'new'}
                   value={form.images}
@@ -229,109 +204,234 @@ export default function SellerProductsPage() {
                   maxImages={8}
                 />
               </div>
-              {/* Variants toggle */}
-              <div className="sm:col-span-2">
-                <label className="flex items-center gap-3 cursor-pointer bg-gray-50 border border-gray-200 rounded-xl p-4 hover:bg-gray-100 transition-colors">
-                  <input type="checkbox" checked={form.hasVariants}
-                    onChange={(e) => setForm({ ...form, hasVariants: e.target.checked })}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-indigo-600" />
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">Ce produit a des variantes</p>
-                      <p className="text-xs text-gray-500">Taille × Couleur × Pointure… avec stock et prix individuels</p>
-                    </div>
+
+              {/* ── Section 2: Essential info ── */}
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Tag className="w-3.5 h-3.5 text-emerald-600" />
                   </div>
-                </label>
-                {form.hasVariants && (
-                  <div className="mt-3 bg-white border border-gray-200 rounded-xl p-4">
-                    <VariantBuilder
-                      basePrice={form.price}
-                      variants={variants}
-                      onChange={setVariants}
+                  <p className="font-bold text-gray-900 text-sm">Informations essentielles</p>
+                </div>
+
+                {/* Title — underline style, big and clear */}
+                <div>
+                  <input
+                    required
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="Nom du produit…"
+                    className="w-full border-0 border-b-2 border-gray-100 focus:border-emerald-400 px-0 py-2 text-xl font-bold text-gray-900 placeholder:text-gray-300 focus:outline-none bg-transparent transition-colors"
+                  />
+                </div>
+
+                {/* Price / Compare / Stock in one row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Prix (DA) *</label>
+                    <input
+                      required type="number" min="1" value={form.price || ''}
+                      onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                      placeholder="0"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base font-bold focus:outline-none focus:border-emerald-400 transition-colors"
                     />
                   </div>
-                )}
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ancien prix</label>
+                    <input
+                      type="number" min="0" value={form.comparePrice || ''}
+                      onChange={(e) => setForm({ ...form, comparePrice: Number(e.target.value) })}
+                      placeholder="—"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Stock</label>
+                    <input
+                      type="number" min="0" value={form.stock}
+                      onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Niche + Category */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{sp.nicheLabel}</label>
+                    <select
+                      value={form.nicheId}
+                      onChange={(e) => setForm({ ...form, nicheId: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400 transition-colors"
+                    >
+                      {niches.map((n) => <option key={n.id} value={n.id}>{n.emoji} {n.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{sp.categoryLabel}</label>
+                    <input
+                      type="text" value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      placeholder={sp.categoryPH}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400 transition-colors"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Condition + MOQ */}
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">État</label>
-                <select value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value as 'new' | 'used' | 'refurbished' })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
-                  <option value="new">Neuf</option>
-                  <option value="used">Occasion</option>
-                  <option value="refurbished">Reconditionné</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Qté min. (MOQ)</label>
-                <input type="number" min="1" value={form.minOrderQuantity}
-                  onChange={(e) => setForm({ ...form, minOrderQuantity: Number(e.target.value) })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+              {/* ── Section 3: Description ── */}
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-3.5 h-3.5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm leading-tight">
+                      Description <span className="font-normal text-gray-400">(optionnel)</span>
+                    </p>
+                    <p className="text-xs text-gray-400">Astuce : utilisez une ligne par caractéristique</p>
+                  </div>
+                </div>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={3}
+                  placeholder={sp.descriptionPH}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 resize-none transition-colors"
+                />
               </div>
 
-              {/* Pre-order */}
-              <div className="sm:col-span-2 flex flex-wrap gap-4 items-start">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.isPreOrder}
-                    onChange={(e) => setForm({ ...form, isPreOrder: e.target.checked })}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                  <span className="text-sm font-medium text-gray-700">Pré-commande</span>
-                </label>
-                {form.isPreOrder && (
-                  <div className="flex-1 min-w-[180px]">
-                    <label className="block text-xs font-bold text-gray-500 mb-1">Date de disponibilité</label>
-                    <input type="date" value={form.preOrderDate}
-                      onChange={(e) => setForm({ ...form, preOrderDate: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-400" />
+              {/* ── More options (accordion) ── */}
+              <div className="px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors w-full"
+                >
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
+                  <span>Plus d&apos;options</span>
+                  {!showAdvanced && (
+                    <span className="text-xs font-normal text-gray-400 ml-1">variantes · état · SEO · tags…</span>
+                  )}
+                </button>
+
+                {showAdvanced && (
+                  <div className="mt-5 space-y-5">
+
+                    {/* Flags row */}
+                    <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+                      {[
+                        { key: 'isNew',      label: sp.markNew },
+                        { key: 'isFeatured', label: sp.markFeatured },
+                        { key: 'isPreOrder', label: 'Pré-commande' },
+                        { key: 'isBundle',   label: 'Pack / bundle' },
+                      ].map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={form[key as keyof typeof form] as boolean}
+                            onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
+                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="text-sm font-medium text-gray-700">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* Pre-order date */}
+                    {form.isPreOrder && (
+                      <div className="max-w-xs">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Date de disponibilité</label>
+                        <input type="date" value={form.preOrderDate}
+                          onChange={(e) => setForm({ ...form, preOrderDate: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+                      </div>
+                    )}
+
+                    {/* Condition + MOQ */}
+                    <div className="grid grid-cols-2 gap-3 max-w-sm">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">État</label>
+                        <select value={form.condition}
+                          onChange={(e) => setForm({ ...form, condition: e.target.value as 'new' | 'used' | 'refurbished' })}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
+                          <option value="new">Neuf</option>
+                          <option value="used">Occasion</option>
+                          <option value="refurbished">Reconditionné</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Qté min. (MOQ)</label>
+                        <input type="number" min="1" value={form.minOrderQuantity}
+                          onChange={(e) => setForm({ ...form, minOrderQuantity: Number(e.target.value) })}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{sp.tagsLabel}</label>
+                      <input type="text" value={form.tags}
+                        onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                        placeholder={sp.tagsPH}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+                    </div>
+
+                    {/* Variants */}
+                    <label className="flex items-center gap-3 cursor-pointer bg-gray-50 border border-gray-200 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                      <input type="checkbox" checked={form.hasVariants}
+                        onChange={(e) => setForm({ ...form, hasVariants: e.target.checked })}
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-indigo-600" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">Ce produit a des variantes</p>
+                          <p className="text-xs text-gray-500">Taille × Couleur × Pointure… avec stock et prix individuels</p>
+                        </div>
+                      </div>
+                    </label>
+                    {form.hasVariants && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-4">
+                        <VariantBuilder basePrice={form.price} variants={variants} onChange={setVariants} />
+                      </div>
+                    )}
+
+                    {/* SEO */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Titre SEO</label>
+                        <input type="text" maxLength={120} value={form.metaTitle}
+                          onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
+                          placeholder="Titre affiché dans Google"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Description SEO</label>
+                        <input type="text" maxLength={200} value={form.metaDescription}
+                          onChange={(e) => setForm({ ...form, metaDescription: e.target.value })}
+                          placeholder="Courte description Google"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+                      </div>
+                    </div>
                   </div>
                 )}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.isBundle}
-                    onChange={(e) => setForm({ ...form, isBundle: e.target.checked })}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                  <span className="text-sm font-medium text-gray-700">Pack / bundle</span>
-                </label>
               </div>
 
-              {/* SEO fields */}
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Titre SEO</label>
-                <input type="text" maxLength={120} value={form.metaTitle}
-                  onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
-                  placeholder="Titre affiché dans Google"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Description SEO</label>
-                <input type="text" maxLength={200} value={form.metaDescription}
-                  onChange={(e) => setForm({ ...form, metaDescription: e.target.value })}
-                  placeholder="Courte description pour les moteurs de recherche"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.isNew} onChange={(e) => setForm({ ...form, isNew: e.target.checked })}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                  <span className="text-sm font-medium text-gray-700">{sp.markNew}</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                  <span className="text-sm font-medium text-gray-700">{sp.markFeatured}</span>
-                </label>
-              </div>
-              {formError && <p className="sm:col-span-2 text-sm text-red-500">{formError}</p>}
-              <div className="sm:col-span-2 flex gap-3">
-                <button type="submit" disabled={saving}
-                  className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  {editing ? sp.saveBtn : sp.addBtn}
-                </button>
-                <button type="button" onClick={closeForm}
-                  className="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50">{sp.cancelBtn}</button>
+              {/* ── Submit bar ── */}
+              <div className="px-6 py-4 bg-gray-50 flex items-center gap-3">
+                {formError && <p className="flex-1 text-sm text-red-500">{formError}</p>}
+                <div className="flex gap-3 ml-auto">
+                  <button type="button" onClick={closeForm}
+                    className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-white transition-colors text-gray-600">
+                    {sp.cancelBtn}
+                  </button>
+                  <button type="submit" disabled={saving}
+                    className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 active:scale-95 disabled:opacity-60 transition-all text-sm shadow-sm shadow-emerald-200">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    {editing ? sp.saveBtn : '🚀 ' + sp.addBtn}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
