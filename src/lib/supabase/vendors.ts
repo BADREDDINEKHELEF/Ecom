@@ -147,7 +147,7 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
 export async function createVendor(
   vendor: Omit<Vendor, 'id' | 'commission_rate' | 'is_approved' | 'is_active' | 'created_at'>
 ): Promise<Vendor> {
-  const supabase = createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('vendors')
     .insert(vendor)

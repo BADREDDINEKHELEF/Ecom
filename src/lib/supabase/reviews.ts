@@ -34,11 +34,9 @@ export async function addReview(
   review: Omit<Review, 'id' | 'is_verified' | 'created_at'>
 ): Promise<void> {
   const { revalidateTag } = await import('next/cache')
-  const supabase = createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase.from('reviews').insert(review)
   if (error) throw error
-  // Rating recalculation is handled by DB trigger (migration_003).
-  // Invalidate cache so next request reflects the new review.
   revalidateTag('reviews')
 }
 
