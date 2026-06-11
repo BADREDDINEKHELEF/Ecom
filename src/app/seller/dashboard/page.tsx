@@ -6,6 +6,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock,
   Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
   Users, Award, AlertTriangle, Zap, Bell, Menu, Copy, Check, ExternalLink,
+  Settings, CreditCard, MapPin, Phone, Image, Tag,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/products'
@@ -567,6 +568,133 @@ export default function SellerDashboardPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Store Settings Summary */}
+        <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-gray-500" />
+              <h2 className="font-bold text-gray-900">Paramètres de la boutique</h2>
+            </div>
+            <Link href="/seller/settings"
+              className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+              Modifier <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="divide-y divide-gray-50">
+
+            {/* Profile row */}
+            <div className="px-6 py-4 flex items-center gap-4">
+              {vendor.logo_url ? (
+                <img src={vendor.logo_url} alt={vendor.store_name}
+                  className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-gray-100" />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-emerald-600 font-black text-lg">{vendor.store_name[0]}</span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-900 truncate">{vendor.store_name}</p>
+                <p className="text-sm text-gray-400 truncate">/store/{vendor.store_slug}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                vendor.is_approved
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : vendor.is_active
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-red-100 text-red-600'
+              }`}>
+                {vendor.is_approved ? 'Approuvée' : vendor.is_active ? 'En attente' : 'Refusée'}
+              </span>
+            </div>
+
+            {/* Quick info grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 divide-x divide-gray-50">
+              {[
+                {
+                  icon: CreditCard,
+                  label: 'Commission',
+                  value: `${vendor.commission_rate}%`,
+                  color: 'text-blue-600',
+                },
+                {
+                  icon: MapPin,
+                  label: 'Wilaya',
+                  value: vendor.wilaya || <span className="text-gray-300 italic text-xs">Non définie</span>,
+                  color: 'text-indigo-600',
+                },
+                {
+                  icon: Phone,
+                  label: 'Téléphone',
+                  value: vendor.phone || <span className="text-gray-300 italic text-xs">Non défini</span>,
+                  color: 'text-emerald-600',
+                },
+                {
+                  icon: Tag,
+                  label: 'Abonnement',
+                  value: vendor.subscription_status === 'active' ? 'Actif'
+                    : vendor.subscription_status === 'trial' ? 'Essai'
+                    : vendor.subscription_status === 'grace_period' ? 'Grâce'
+                    : 'Inactif',
+                  color: vendor.subscription_status === 'active' ? 'text-emerald-600' : 'text-amber-600',
+                },
+              ].map(({ icon: Icon, label, value, color }) => (
+                <div key={label} className="px-4 sm:px-6 py-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon className={`w-3.5 h-3.5 ${color}`} />
+                    <span className="text-xs text-gray-400 font-medium">{label}</span>
+                  </div>
+                  <p className="text-sm font-bold text-gray-800 truncate">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Profile completion checklist */}
+            {(() => {
+              const missing = [
+                !vendor.logo_url       && { href: '/seller/settings', label: 'Ajouter un logo',       icon: Image },
+                !vendor.description    && { href: '/seller/settings', label: 'Écrire une description', icon: Settings },
+                !vendor.wilaya         && { href: '/seller/settings', label: 'Choisir une wilaya',     icon: MapPin },
+                !vendor.phone          && { href: '/seller/settings', label: 'Ajouter un téléphone',   icon: Phone },
+                !vendor.banner_url     && { href: '/seller/settings', label: 'Ajouter une bannière',   icon: Image },
+              ].filter(Boolean) as { href: string; label: string; icon: React.ElementType }[]
+
+              if (missing.length === 0) return null
+              return (
+                <div className="px-6 py-4">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                    Complétez votre profil ({missing.length} restant{missing.length > 1 ? 's' : ''})
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {missing.map(({ href, label, icon: Icon }) => (
+                      <Link key={label} href={href}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200 hover:border-emerald-200 px-3 py-1.5 rounded-lg transition-colors">
+                        <Icon className="w-3 h-3" />{label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Quick links */}
+            <div className="px-6 py-4 flex flex-wrap gap-2">
+              {[
+                { href: '/seller/settings',          label: 'Profil & Boutique' },
+                { href: '/seller/settings/delivery', label: 'Livraison & API' },
+                { href: '/seller/subscription',      label: 'Abonnement' },
+                { href: '/seller/payouts',           label: 'Paiements' },
+              ].map(({ href, label }) => (
+                <Link key={href} href={href}
+                  className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-emerald-600 bg-gray-50 hover:bg-emerald-50 border border-gray-100 hover:border-emerald-200 px-3 py-1.5 rounded-lg transition-colors">
+                  {label} <ArrowRight className="w-3 h-3" />
+                </Link>
+              ))}
+            </div>
+
           </div>
         </div>
 
