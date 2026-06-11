@@ -24,6 +24,7 @@ const CreateOrderSchema = z.object({
   shippingCost:  z.number().min(0).max(10000),
   promoCodeId:   z.string().uuid().optional().nullable(),
   discountAmount: z.number().min(0).max(1_000_000).optional().default(0),
+  notes:         z.string().max(500).optional().nullable(),
   items:         z.array(OrderItemSchema).min(1).max(50),
 })
 
@@ -55,11 +56,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 })
   }
 
-  const { promoCodeId: rawPromoCodeId, ...rest } = parsed.data
+  const { promoCodeId: rawPromoCodeId, notes: rawNotes, ...rest } = parsed.data
   const input = {
     ...rest,
     phone: normalizePhone(parsed.data.phone),
     promoCodeId: rawPromoCodeId ?? undefined,
+    notes: rawNotes ?? null,
   }
 
   try {

@@ -15,6 +15,7 @@ import ProductCard from '@/components/shop/ProductCard'
 import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import WilayaDeliveryEstimate from '@/components/ui/WilayaDeliveryEstimate'
 import RecentlyViewed, { trackRecentlyViewed } from '@/components/ui/RecentlyViewed'
+import StockAlertButton from '@/components/ui/StockAlertButton'
 import type { Review } from '@/lib/supabase/queries'
 
 interface Props {
@@ -254,17 +255,22 @@ export default function ProductDetails({ product, niche, related }: Props) {
           </div>
 
           {/* Stock */}
-          <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-green-600" />
-            {product.stock > 0 ? (
-              <span className="text-sm text-green-600 font-medium">
-                {product.stock < 10
-                  ? t.common.lowStock.replace('{n}', String(product.stock))
-                  : t.common.inStock}
-              </span>
-            ) : (
-              <span className="text-sm text-red-500 font-medium">{t.product.outOfStock}</span>
-            )}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Package className={`w-4 h-4 ${product.stock > 0 ? 'text-green-600' : 'text-red-400'}`} />
+              {product.stock > 0 ? (
+                <span className="text-sm text-green-600 font-medium">
+                  {product.stock <= 5
+                    ? `⚡ Seulement ${product.stock} en stock — dépêchez-vous !`
+                    : product.stock <= 15
+                    ? `Seulement ${product.stock} en stock`
+                    : t.common.inStock}
+                </span>
+              ) : (
+                <span className="text-sm text-red-500 font-medium">{t.product.outOfStock}</span>
+              )}
+            </div>
+            {product.stock === 0 && <StockAlertButton productId={product.id} />}
           </div>
 
           {/* Quantity + Add to Cart */}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone } from 'lucide-react'
+import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone, X } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { OrderRow } from '@/lib/supabase/queries'
 import { useT, useLang } from '@/lib/store/langStore'
@@ -15,10 +15,12 @@ function formatDate(iso: string, lang: string) {
 export default function OrdersPage() {
   const t = useT()
   const lang = useLang()
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone]   = useState('')
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]   = useState('')
+  const [cancelling, setCancelling] = useState<string | null>(null)
+  const [cancelError, setCancelError] = useState('')
 
   const STATUS_STYLES: Record<string, { label: string; style: string }> = {
     pending:   { label: t.orders.status.pending,   style: 'bg-amber-100 text-amber-700' },
@@ -26,6 +28,26 @@ export default function OrdersPage() {
     shipped:   { label: t.orders.status.shipped,   style: 'bg-indigo-100 text-indigo-700' },
     delivered: { label: t.orders.status.delivered, style: 'bg-green-100 text-green-700' },
     cancelled: { label: t.orders.status.cancelled, style: 'bg-red-100 text-red-700' },
+  }
+
+  const handleCancel = async (orderId: string) => {
+    if (!confirm('Annuler cette commande ?')) return
+    setCancelling(orderId)
+    setCancelError('')
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setCancelError(data.error ?? 'Erreur'); return }
+      setOrders((prev) => prev?.map((o) => o.id === orderId ? { ...o, status: 'cancelled' } : o) ?? null)
+    } catch {
+      setCancelError('Une erreur est survenue')
+    } finally {
+      setCancelling(null)
+    }
   }
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -78,6 +100,7 @@ export default function OrdersPage() {
           </button>
         </form>
         {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+        {cancelError && <p className="text-red-500 text-sm mt-3">{cancelError}</p>}
       </div>
 
       {/* Results */}
@@ -136,6 +159,21 @@ export default function OrdersPage() {
                     <div className="mt-4 bg-indigo-50 rounded-xl px-4 py-3 text-sm text-indigo-700 font-medium flex items-center gap-2">
                       <Package className="w-4 h-4" />
                       {t.orders.onItsWay}
+                    </div>
+                  )}
+
+                  {order.status === 'pending' && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => handleCancel(order.id)}
+                        disabled={cancelling === order.id}
+                        className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-semibold disabled:opacity-50 transition-colors"
+                      >
+                        {cancelling === order.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <X className="w-4 h-4" />}
+                        Annuler la commande
+                      </button>
                     </div>
                   )}
                 </div>

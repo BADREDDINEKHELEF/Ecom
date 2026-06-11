@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Package, Heart, Lock, ChevronRight, LogOut, Loader2 } from 'lucide-react'
+import { User, Package, Heart, Lock, MapPin, ChevronRight, LogOut, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const QUICK_LINKS = [
-  { href: '/orders',   icon: Package, label: 'Mes commandes',     desc: 'Suivi et historique',   color: 'text-indigo-600 bg-indigo-50' },
-  { href: '/wishlist', icon: Heart,   label: 'Liste de souhaits', desc: 'Articles sauvegardés',  color: 'text-red-500 bg-red-50' },
-  { href: '/auth',     icon: Lock,    label: 'Sécurité',          desc: 'Mot de passe & accès',  color: 'text-amber-600 bg-amber-50' },
+  { href: '/orders',            icon: Package, label: 'Mes commandes',     desc: 'Suivi et historique',    color: 'text-indigo-600 bg-indigo-50' },
+  { href: '/profile/addresses', icon: MapPin,  label: 'Mes adresses',      desc: 'Adresses de livraison',  color: 'text-emerald-600 bg-emerald-50' },
+  { href: '/wishlist',          icon: Heart,   label: 'Liste de souhaits', desc: 'Articles sauvegardés',   color: 'text-red-500 bg-red-50' },
+  { href: '/auth',              icon: Lock,    label: 'Sécurité',          desc: 'Mot de passe & accès',   color: 'text-amber-600 bg-amber-50' },
 ]
 
 export default function ProfilePage() {

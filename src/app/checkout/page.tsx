@@ -64,7 +64,7 @@ export default function CheckoutPage() {
   const [payment, setPayment] = useState<PaymentMethod>('cash')
   const [submitted, setSubmitted] = useState(false)
   const [form, setForm] = useState({
-    fullName: '', phone: '', address: '', city: '', wilaya: '',
+    fullName: '', phone: '', address: '', city: '', wilaya: '', notes: '',
   })
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
@@ -192,6 +192,7 @@ export default function CheckoutPage() {
       shippingCost:  delivery.cost,
       promoCodeId:   promoResult?.id ?? null,
       discountAmount: discountAmount || 0,
+      notes:         form.notes.trim() || null,
       items: items.map(({ product, quantity }) => ({
         productId:    product.id,
         productName:  product.name,
@@ -452,6 +453,19 @@ export default function CheckoutPage() {
                 <input required type="text" value={form.address} onChange={(e) => f('address', e.target.value)}
                   placeholder="123 Rue Didouche Mourad"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Instructions de livraison <span className="text-gray-400 font-normal">(optionnel)</span>
+                </label>
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => f('notes', e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  placeholder="Ex: Sonner 2 fois, code portail 1234, laisser à la réception…"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 resize-none"
+                />
               </div>
             </div>
           </div>

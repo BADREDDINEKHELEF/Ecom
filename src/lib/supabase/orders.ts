@@ -43,6 +43,7 @@ export interface CreateOrderInput {
   shippingCost:    number
   promoCodeId?:    string
   discountAmount?: number
+  notes?:          string | null
   status?:         string
   items: {
     productId:     string
@@ -159,6 +160,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       total,
       promo_code_id:   input.promoCodeId ?? null,
       discount_amount: discountAmount,
+      notes:           input.notes ?? null,
     })
     .select('id')
     .single()
