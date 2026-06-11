@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect, useMemo } from 'react'
-import { ArrowRight, Minus, Plus, ShoppingCart, Star, Package, Shield, CheckCircle, Users, Loader2 } from 'lucide-react'
+import { ArrowRight, Minus, Plus, ShoppingCart, Star, Package, Shield, CheckCircle, Users, Loader2, Clock } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT } from '@/lib/store/langStore'
 import { formatPrice, discount } from '@/lib/utils'
@@ -17,6 +17,9 @@ import WilayaDeliveryEstimate from '@/components/ui/WilayaDeliveryEstimate'
 import RecentlyViewed, { trackRecentlyViewed } from '@/components/ui/RecentlyViewed'
 import StockAlertButton from '@/components/ui/StockAlertButton'
 import ProductQA from '@/components/shop/ProductQA'
+import CrossSellCarousel from '@/components/shop/CrossSellCarousel'
+import ImageLightbox from '@/components/ui/ImageLightbox'
+import ProductShareButtons from '@/components/ui/ProductShareButtons'
 import type { Review } from '@/lib/supabase/queries'
 
 interface Props {
@@ -31,6 +34,13 @@ export default function ProductDetails({ product, niche, related }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [added, setAdded] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+
+  const openLightbox = (i: number) => { setLightboxIndex(i); setLightboxOpen(true) }
+  const closeLightbox = () => setLightboxOpen(false)
+  const prevImage = () => setLightboxIndex((i) => (i - 1 + product.images.length) % product.images.length)
+  const nextImage = () => setLightboxIndex((i) => (i + 1) % product.images.length)
 
   const [zoomed, setZoomed] = useState(false)
   const [zoomOrigin, setZoomOrigin] = useState('center center')
@@ -98,6 +108,12 @@ export default function ProductDetails({ product, niche, related }: Props) {
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount ? discount(product.price, product.comparePrice!) : 0
+  const moq = product.minOrderQuantity ?? 1
+
+  // Initialize quantity to MOQ minimum
+  useEffect(() => {
+    if (moq > 1) setQuantity(moq)
+  }, [moq])
   const nicheId = niche.id
 
   const whatsappMessage = `مرحباً، أريد طلب: ${product.name} (x${quantity}) — ${formatPrice(product.price * quantity)}`
@@ -149,6 +165,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
         <div className="space-y-3">
           <div
             className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 cursor-zoom-in select-none hidden md:block"
+            onClick={() => openLightbox(selectedImage)}
             onMouseEnter={() => setZoomed(true)}
             onMouseLeave={() => setZoomed(false)}
             onMouseMove={(e) => {
@@ -178,8 +195,8 @@ export default function ProductDetails({ product, niche, related }: Props) {
               </div>
             )}
           </div>
-          {/* Mobile image — no zoom */}
-          <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 md:hidden">
+          {/* Mobile image — tap to open lightbox */}
+          <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 md:hidden" onClick={() => openLightbox(selectedImage)}>
             <Image
               src={product.images[selectedImage]}
               alt={product.name}
@@ -274,13 +291,36 @@ export default function ProductDetails({ product, niche, related }: Props) {
             {product.stock === 0 && <StockAlertButton productId={product.id} />}
           </div>
 
+          {/* MOQ badge */}
+          {moq > 1 && (
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
+              <Package className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <p className="text-sm text-blue-800 font-semibold">Quantité minimale : {moq} unités</p>
+            </div>
+          )}
+
+          {/* Pre-order CTA */}
+          {product.isPreOrder && (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-amber-800">Pré-commande</p>
+                {product.preOrderDate && (
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    Disponible à partir du {new Date(product.preOrderDate).toLocaleDateString('fr-DZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Quantity + Add to Cart */}
           {product.stock > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
                   <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    onClick={() => setQuantity(Math.max(moq, quantity - 1))}
                     className="px-4 py-3 hover:bg-gray-100 transition-colors"
                   >
                     <Minus className="w-4 h-4" />
@@ -353,8 +393,25 @@ export default function ProductDetails({ product, niche, related }: Props) {
               ))}
             </div>
           )}
+
+          {/* Share */}
+          <div className="pt-2">
+            <p className="text-xs text-gray-500 mb-2 font-semibold">Partager ce produit</p>
+            <ProductShareButtons title={product.name} />
+          </div>
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightboxOpen && (
+        <ImageLightbox
+          images={product.images}
+          index={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={prevImage}
+          onNext={nextImage}
+        />
+      )}
 
       {/* Reviews */}
       <section className="mb-16">
@@ -485,6 +542,9 @@ export default function ProductDetails({ product, niche, related }: Props) {
 
       {/* Product Q&A */}
       <ProductQA productId={product.id} />
+
+      {/* Cross-sell carousel (live, top-rated in same niche) */}
+      <CrossSellCarousel nicheId={product.nicheId} excludeId={product.id} />
 
       {/* Related Products */}
       {related.length > 0 && (

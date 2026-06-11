@@ -2,203 +2,220 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, ArrowLeft, Shield, Truck, RefreshCw, Star } from 'lucide-react'
+import {
+  Store, TrendingUp, Shield, Truck, DollarSign,
+  Users, BarChart3, ArrowRight, CheckCircle,
+} from 'lucide-react'
 import { niches } from '@/lib/data/niches'
-import ProductCard from '@/components/shop/ProductCard'
-import { useT, useRTL } from '@/lib/store/langStore'
+import { useT } from '@/lib/store/langStore'
 import SellerSignupSection from '@/components/home/SellerSignupSection'
-import SponsoredSection from '@/components/home/SponsoredSection'
-import { Product } from '@/types'
 
-const nicheAccentStyles: Record<string, { btn: string; badge: string }> = {
-  cars:    { btn: 'bg-orange-500 hover:bg-orange-400',               badge: 'bg-orange-500/20 text-orange-300' },
-  animals: { btn: 'bg-amber-400 hover:bg-amber-300 text-gray-900',   badge: 'bg-amber-400/20 text-amber-300' },
-  kids:    { btn: 'bg-pink-400 hover:bg-pink-300',                   badge: 'bg-pink-400/20 text-pink-300' },
-  deco:    { btn: 'bg-amber-600 hover:bg-amber-500',                 badge: 'bg-amber-600/20 text-amber-400' },
+const nicheAccent: Record<string, { btn: string }> = {
+  cars:    { btn: 'bg-orange-500 hover:bg-orange-400' },
+  animals: { btn: 'bg-amber-400 hover:bg-amber-300 text-gray-900' },
+  kids:    { btn: 'bg-pink-500 hover:bg-pink-400' },
+  deco:    { btn: 'bg-amber-700 hover:bg-amber-600' },
 }
 
-interface Props {
-  featured:        Product[]
-  nicheProducts:   Record<string, Product[]>
-}
+const STEPS = [
+  { n: '1', title: 'Créez votre compte', desc: 'Inscrivez-vous gratuitement en moins de 2 minutes.' },
+  { n: '2', title: 'Choisissez votre niche', desc: 'Spécialisez-vous dans une catégorie : autos, animaux, enfants ou décoration.' },
+  { n: '3', title: 'Ajoutez vos produits', desc: 'Photos, descriptions, prix et stock depuis votre tableau de bord.' },
+  { n: '4', title: 'Commencez à vendre', desc: 'Recevez des commandes et suivez vos livraisons en temps réel.' },
+]
 
-export default function HomepageContent({ featured, nicheProducts }: Props) {
+const REQUIREMENTS = [
+  'Un téléphone algérien (0550 / 0770…)',
+  'Des produits à vendre (stock physique ou dropshipping)',
+  'Une photo de profil ou logo de boutique',
+  'Un numéro de compte bancaire ou CCP pour recevoir vos paiements',
+]
+
+export default function HomepageContent() {
   const t = useT()
-  const isRTL = useRTL()
-  const Arrow = isRTL ? ArrowLeft : ArrowRight
+
+  const FEATURES = [
+    { icon: Store,      title: t.becomeSeller.feature1Title, desc: t.becomeSeller.feature1Desc },
+    { icon: Truck,      title: t.becomeSeller.feature2Title, desc: t.becomeSeller.feature2Desc },
+    { icon: BarChart3,  title: t.becomeSeller.feature3Title, desc: t.becomeSeller.feature3Desc },
+    { icon: Shield,     title: t.becomeSeller.feature4Title, desc: t.becomeSeller.feature4Desc },
+    { icon: DollarSign, title: t.becomeSeller.feature5Title, desc: t.becomeSeller.feature5Desc },
+    { icon: Users,      title: t.becomeSeller.feature6Title, desc: t.becomeSeller.feature6Desc },
+  ]
+
+  const STATS = [
+    { value: '200+',  label: t.becomeSeller.statSellers },
+    { value: '58',    label: t.becomeSeller.statWilayas },
+    { value: '10%',   label: t.becomeSeller.statCommission },
+    { value: '0 DA',  label: t.becomeSeller.statMonthlyFee },
+  ]
 
   return (
     <>
-      {/* ── COD Trust Banner ─────────────────────────────────────────────── */}
-      <div className="bg-green-600 text-white text-center py-2.5 text-sm font-bold px-4">
-        🚚 {t.trust.cod} &nbsp;·&nbsp; {t.trust.codText}
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-900 text-white py-24 px-4 text-center">
+        <div className="max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur px-4 py-2 rounded-full text-sm font-semibold mb-6">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            {t.becomeSeller.tagline}
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-5">
+            {t.becomeSeller.heroTitle}<br />
+            <span className="text-emerald-400">{t.becomeSeller.heroTitleAccent}</span>
+          </h1>
+          <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
+            {t.becomeSeller.heroSub}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/seller/register"
+              className="inline-flex items-center justify-center gap-2 bg-white text-emerald-900 font-black px-8 py-4 rounded-2xl hover:bg-emerald-50 transition-colors text-base"
+            >
+              <Store className="w-5 h-5" /> {t.becomeSeller.startSelling}
+            </Link>
+            <Link
+              href="/seller/login"
+              className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur text-white font-bold px-8 py-4 rounded-2xl hover:bg-white/20 transition-colors text-base border border-white/20"
+            >
+              {t.becomeSeller.signInDashboard}
+            </Link>
+          </div>
+        </div>
       </div>
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="bg-gray-950 text-white py-16 sm:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-indigo-600/20 text-indigo-300 text-sm font-semibold px-4 py-1.5 rounded-full mb-6">
-            <Star className="w-4 h-4 fill-current" />
-            {t.home.badge}
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-5 leading-tight">
-            {t.home.title}<br />
-            <span className="text-indigo-400">{t.home.accent}</span>
-          </h1>
-          <p className="text-gray-400 text-lg max-w-xl mx-auto">{t.home.sub}</p>
-        </div>
-
-        {/* Niche Cards */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {niches.map((niche) => {
-            const styles = nicheAccentStyles[niche.id]
-            return (
-              <Link
-                key={niche.id}
-                href={`/${niche.id}`}
-                className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${niche.gradient} p-7 flex flex-col gap-4 group cursor-pointer`}
-              >
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden">
-                  <Image
-                    src={niche.banner}
-                    alt={niche.name}
-                    fill
-                    className="object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105 transition-all duration-500"
-                    sizes="(max-width: 640px) 100vw, 25vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <span className={`absolute bottom-3 ${isRTL ? 'right-3' : 'left-3'} text-5xl`}>{niche.emoji}</span>
-                </div>
-
-                <div>
-                  <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full mb-2 ${styles.badge}`}>
-                    {niche.categories.length} {t.home.categories}
-                  </span>
-                  <h2 className="text-xl font-black text-white mb-1">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</h2>
-                  <p className="text-sm text-gray-300 leading-relaxed mb-4">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.description ?? niche.description}</p>
-                  <span className={`inline-flex items-center gap-2 ${styles.btn} text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors`}>
-                    {t.home.shopNow} <Arrow className="w-4 h-4" />
-                  </span>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ── Trust badges ─────────────────────────────────────────────────── */}
-      <section className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-          {[
-            { icon: <Truck className="w-6 h-6 text-indigo-600" />, title: t.trust.delivery, text: t.trust.deliveryText },
-            { icon: <Shield className="w-6 h-6 text-indigo-600" />, title: t.trust.secure, text: t.trust.secureText },
-            { icon: <RefreshCw className="w-6 h-6 text-indigo-600" />, title: t.trust.returns, text: t.trust.returnsText },
-            { icon: <Star className="w-6 h-6 text-indigo-600" />, title: t.trust.quality, text: t.trust.qualityText },
-          ].map(({ icon, title, text }) => (
-            <div key={title} className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                {icon}
-              </div>
-              <div>
-                <p className="font-bold text-gray-900 text-sm">{title}</p>
-                <p className="text-xs text-gray-500">{text}</p>
-              </div>
+      {/* ── Stats ─────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 py-10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+          {STATS.map(({ value, label }) => (
+            <div key={label}>
+              <p className="text-3xl font-black text-gray-900">{value}</p>
+              <p className="text-sm text-gray-500 mt-1">{label}</p>
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* ── Sponsored Products ───────────────────────────────────────────── */}
-      <SponsoredSection />
-
-      {/* ── Featured Products ─────────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <p className="text-indigo-600 font-semibold text-sm mb-1">{t.home.trendingBadge}</p>
-            <h2 className="text-2xl sm:text-3xl font-black text-gray-900">{t.home.trendingTitle}</h2>
+      {/* ── Niche Selection ───────────────────────────────────────────── */}
+      <section className="bg-gray-50 py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-emerald-600 font-semibold text-sm mb-2">Choisissez votre spécialité</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
+              Dans quelle niche vendez-vous ?
+            </h2>
+            <p className="text-gray-500 max-w-xl mx-auto">
+              ShopDZ est organisé en niches spécialisées. Rejoignez la vôtre et touchez des acheteurs déjà intéressés par votre catégorie.
+            </p>
           </div>
-        </div>
-        {featured.length === 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" aria-busy="true">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-[3/4]" aria-hidden="true" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {featured.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── Niche Spotlights ─────────────────────────────────────────────── */}
-      {niches.map((niche) => {
-        const products = nicheProducts[niche.id] ?? []
-        const styles = nicheAccentStyles[niche.id]
-        if (products.length === 0) return null
-        return (
-          <section key={niche.id} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            <div className="flex items-end justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <span className="text-4xl">{niche.emoji}</span>
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</h2>
-                  <p className="text-sm text-gray-500">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.description ?? niche.description}</p>
-                </div>
-              </div>
-              <Link
-                href={`/${niche.id}`}
-                className={`hidden sm:inline-flex items-center gap-1.5 ${styles.btn} text-white text-sm font-bold px-5 py-2 rounded-xl transition-colors`}
-              >
-                {t.common.viewAll} <Arrow className="w-4 h-4" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-            <div className="mt-5 sm:hidden">
-              <Link
-                href={`/${niche.id}`}
-                className="inline-flex items-center gap-1.5 text-indigo-600 font-semibold text-sm hover:underline"
-              >
-                {t.common.viewAll} {t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name} <Arrow className="w-4 h-4" />
-              </Link>
-            </div>
-          </section>
-        )
-      })}
-
-      {/* ── Seller Signup ────────────────────────────────────────────────── */}
-      <SellerSignupSection />
-
-      {/* ── CTA Banner ───────────────────────────────────────────────────── */}
-      <section className="bg-indigo-600 text-white mx-4 sm:mx-6 lg:mx-8 rounded-2xl mb-8 overflow-hidden">
-        <div className="max-w-4xl mx-auto px-8 py-12 text-center">
-          <h2 className="text-2xl sm:text-3xl font-black mb-3">
-            {t.home.shopNow}
-          </h2>
-          <p className="text-indigo-200 mb-8">{t.home.sub}</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {niches.map((niche) => {
-              const styles = nicheAccentStyles[niche.id]
+              const styles = nicheAccent[niche.id] ?? { btn: 'bg-indigo-600 hover:bg-indigo-500' }
               return (
                 <Link
                   key={niche.id}
-                  href={`/${niche.id}`}
-                  className={`${styles.btn} font-bold px-7 py-3 rounded-xl transition-colors w-full sm:w-auto text-center`}
+                  href={`/seller/register?niche=${niche.id}`}
+                  className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${niche.gradient} p-6 flex flex-col gap-4 ring-2 ring-transparent hover:ring-white/20 transition-all duration-300 hover:scale-[1.02]`}
                 >
-                  {niche.emoji} {t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden">
+                    <Image
+                      src={niche.banner}
+                      alt={niche.name}
+                      fill
+                      className="object-cover opacity-50 group-hover:opacity-70 group-hover:scale-105 transition-all duration-500"
+                      sizes="(max-width: 640px) 100vw, 25vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <span className="absolute bottom-3 left-3 text-4xl">{niche.emoji}</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white mb-1">{niche.name}</h3>
+                    <p className="text-sm text-gray-300 mb-4 leading-relaxed">{niche.description}</p>
+                    <span className={`inline-flex items-center gap-2 ${styles.btn} text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors`}>
+                      Vendre ici <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
                 </Link>
               )
             })}
           </div>
         </div>
       </section>
+
+      {/* ── Features ─────────────────────────────────────────────────── */}
+      <div className="max-w-6xl mx-auto px-4 py-20">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl font-black text-gray-900 mb-3">{t.becomeSeller.featuresTitle}</h2>
+          <p className="text-gray-500 max-w-xl mx-auto">{t.becomeSeller.featuresSub}</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {FEATURES.map(({ icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
+                <Icon className="w-5 h-5 text-emerald-600" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── How It Works ─────────────────────────────────────────────── */}
+      <div className="bg-gray-50 py-20 px-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-black text-gray-900 mb-3">{t.becomeSeller.howItWorks}</h2>
+            <p className="text-gray-500">{t.becomeSeller.howItWorksSub}</p>
+          </div>
+          <div className="space-y-5">
+            {STEPS.map(({ n, title, desc }) => (
+              <div key={n} className="flex items-start gap-5 bg-white rounded-2xl p-6 shadow-sm">
+                <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-black text-lg">{n}</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-1">{title}</h3>
+                  <p className="text-sm text-gray-500">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Requirements ─────────────────────────────────────────────── */}
+      <div className="max-w-3xl mx-auto px-4 py-20">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-black text-gray-900 mb-3">{t.becomeSeller.requirementsTitle}</h2>
+        </div>
+        <div className="bg-white rounded-2xl p-8 shadow-sm space-y-4">
+          {REQUIREMENTS.map((item) => (
+            <div key={item} className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <span className="text-gray-700">{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Signup Form ───────────────────────────────────────────────── */}
+      <SellerSignupSection />
+
+      {/* ── Final CTA ────────────────────────────────────────────────── */}
+      <div className="bg-emerald-600 py-16 px-4 text-center text-white">
+        <h2 className="text-3xl font-black mb-4">{t.becomeSeller.ctaTitle}</h2>
+        <p className="text-white/80 mb-8 max-w-md mx-auto">{t.becomeSeller.ctaSub}</p>
+        <Link
+          href="/seller/register"
+          className="inline-flex items-center gap-2 bg-white text-emerald-700 font-black px-10 py-4 rounded-2xl hover:bg-emerald-50 transition-colors text-base"
+        >
+          {t.becomeSeller.createMyStore} <ArrowRight className="w-5 h-5" />
+        </Link>
+        <p className="text-white/60 text-sm mt-4">{t.becomeSeller.freeNote}</p>
+      </div>
     </>
   )
 }

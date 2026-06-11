@@ -369,8 +369,12 @@ export default function SellerAnalyticsPage() {
             </button>
             <button onClick={exportCSV} className="flex items-center gap-1.5 border border-gray-200 bg-white px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export CSV</span>
+              <span className="hidden sm:inline">Résumé CSV</span>
             </button>
+            <a href="/api/seller/analytics/export" className="flex items-center gap-1.5 border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-100">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Commandes CSV</span>
+            </a>
           </div>
         </div>
 

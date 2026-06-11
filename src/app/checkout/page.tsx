@@ -3,8 +3,9 @@
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X, Phone } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X, Phone, Gift, Star } from 'lucide-react'
 import PhoneInput from '@/components/checkout/PhoneInput'
+import B2BInvoiceFields, { type B2BFields } from '@/components/checkout/B2BInvoiceFields'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
@@ -73,6 +74,8 @@ export default function CheckoutPage() {
   const [phoneError, setPhoneError] = useState('')
   const { save: saveAbandoned, markRecovered } = useAbandonedCheckout()
 
+  const [b2b, setB2b] = useState<B2BFields>({ isB2B: false, companyName: '', nif: '', nis: '', rc: '' })
+
   const [baridimobModal, setBaridimobModal] = useState<{ qrCodeData: string; deepLink: string; expiresAt: string } | null>(null)
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null)
 
@@ -92,6 +95,21 @@ export default function CheckoutPage() {
     id: string; discountType: 'percentage' | 'fixed'; discountValue: number; discountAmount: number; code: string
   } | null>(null)
   const [promoError, setPromoError] = useState('')
+
+  const [giftCardInput, setGiftCardInput] = useState('')
+  const [giftCardApplying, setGiftCardApplying] = useState(false)
+  const [giftCardResult, setGiftCardResult] = useState<{ id: string; code: string; balance: number; deduction: number } | null>(null)
+  const [giftCardError, setGiftCardError] = useState('')
+
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null)
+  const [usePoints, setUsePoints] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/loyalty')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.balance > 0) setLoyaltyBalance(d.balance) })
+      .catch(() => {})
+  }, [])
 
   const handleLocate = () => {
     if (!navigator.geolocation) { setLocError(t.checkout.locationFailed); return }
@@ -127,7 +145,9 @@ export default function CheckoutPage() {
   )
 
   const discountAmount = promoResult?.discountAmount ?? 0
-  const orderTotal = cartTotal - discountAmount + delivery.cost
+  const giftCardDeduction = giftCardResult?.deduction ?? 0
+  const pointsDeduction = (usePoints && loyaltyBalance) ? Math.min(loyaltyBalance, Math.max(0, cartTotal - discountAmount - giftCardDeduction)) : 0
+  const orderTotal = Math.max(0, cartTotal - discountAmount - giftCardDeduction - pointsDeduction + delivery.cost)
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return
@@ -165,6 +185,31 @@ export default function CheckoutPage() {
     }
   }
 
+  const handleApplyGiftCard = async () => {
+    if (!giftCardInput.trim()) return
+    setGiftCardApplying(true)
+    setGiftCardError('')
+    setGiftCardResult(null)
+    try {
+      const res = await fetch('/api/gift-cards/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: giftCardInput.trim() }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const deduction = Math.min(data.balance, cartTotal)
+        setGiftCardResult({ id: data.id, code: giftCardInput.trim().toUpperCase(), balance: data.balance, deduction })
+      } else {
+        setGiftCardError(data.error ?? 'Code cadeau invalide')
+      }
+    } catch {
+      setGiftCardError('Erreur lors de la vérification')
+    } finally {
+      setGiftCardApplying(false)
+    }
+  }
+
   const validatePhone = (val: string) => {
     if (!val) { setPhoneError(''); return }
     const clean = val.replace(/\s+/g, '')
@@ -182,17 +227,35 @@ export default function CheckoutPage() {
     setSaving(true)
     setSaveError('')
 
+    // MOQ validation
+    for (const { product, quantity } of items) {
+      const moq = product.minOrderQuantity ?? 1
+      if (quantity < moq) {
+        setSaveError(`Quantité minimale pour "${product.name}" : ${moq} unités`)
+        setSaving(false)
+        return
+      }
+    }
+
     const orderPayload = {
-      fullName:      form.fullName,
-      phone:         form.phone,
-      wilaya:        form.wilaya,
-      city:          form.city,
-      address:       form.address,
-      paymentMethod: payment,
-      shippingCost:  delivery.cost,
-      promoCodeId:   promoResult?.id ?? null,
+      fullName:       form.fullName,
+      phone:          form.phone,
+      wilaya:         form.wilaya,
+      city:           form.city,
+      address:        form.address,
+      paymentMethod:  payment,
+      shippingCost:   delivery.cost,
+      promoCodeId:    promoResult?.id ?? null,
       discountAmount: discountAmount || 0,
-      notes:         form.notes.trim() || null,
+      giftCardCode:   giftCardResult?.code ?? null,
+      giftCardDeduction: giftCardDeduction || 0,
+      pointsRedeemed: pointsDeduction || 0,
+      notes:          form.notes.trim() || null,
+      isB2B:          b2b.isB2B || undefined,
+      companyName:    b2b.isB2B ? b2b.companyName || null : null,
+      nif:            b2b.isB2B ? b2b.nif || null : null,
+      nis:            b2b.isB2B ? b2b.nis || null : null,
+      rc:             b2b.isB2B ? b2b.rc  || null : null,
       items: items.map(({ product, quantity }) => ({
         productId:    product.id,
         productName:  product.name,
@@ -513,6 +576,9 @@ export default function CheckoutPage() {
             )}
           </div>
 
+          {/* B2B Invoice */}
+          <B2BInvoiceFields value={b2b} onChange={setB2b} />
+
           {saveError && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 mb-2">
               {saveError}
@@ -576,6 +642,70 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {/* Gift Card */}
+            {!giftCardResult ? (
+              <div className="mb-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={giftCardInput}
+                    onChange={(e) => { setGiftCardInput(e.target.value.toUpperCase()); setGiftCardError('') }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleApplyGiftCard()}
+                    placeholder="Code cadeau"
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyGiftCard}
+                    disabled={giftCardApplying || !giftCardInput.trim()}
+                    className="flex items-center gap-1.5 bg-gray-900 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                  >
+                    {giftCardApplying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
+                    Appliquer
+                  </button>
+                </div>
+                {giftCardError && <p className="text-xs text-red-500 mt-1.5">{giftCardError}</p>}
+              </div>
+            ) : (
+              <div className="mb-4 flex items-center justify-between bg-purple-50 border border-purple-200 rounded-xl px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-purple-600" />
+                  <div>
+                    <p className="text-xs font-bold text-purple-800">{giftCardResult.code}</p>
+                    <p className="text-xs text-purple-600">-{giftCardResult.deduction.toLocaleString('fr-DZ')} DA appliqués</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setGiftCardResult(null); setGiftCardInput('') }} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Loyalty Points */}
+            {loyaltyBalance !== null && (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => setUsePoints(!usePoints)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-colors ${usePoints ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Star className={`w-4 h-4 ${usePoints ? 'text-amber-500' : 'text-gray-400'}`} />
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-gray-800">Utiliser mes points</p>
+                      <p className="text-xs text-gray-500">{loyaltyBalance} points disponibles ({loyaltyBalance} DA)</p>
+                    </div>
+                  </div>
+                  <div className={`w-9 h-5 rounded-full transition-colors ${usePoints ? 'bg-amber-400' : 'bg-gray-200'} relative`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-all ${usePoints ? 'right-0.5' : 'left-0.5'}`} />
+                  </div>
+                </button>
+                {usePoints && pointsDeduction > 0 && (
+                  <p className="text-xs text-amber-600 mt-1 pl-1 font-semibold">-{pointsDeduction} DA déduits de votre commande</p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
               {items.map(({ product, quantity }) => (
                 <div key={product.id} className="flex items-center gap-3">
@@ -610,6 +740,18 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-green-600 font-semibold">
                   <span>{t.checkout.discount}</span>
                   <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+              {giftCardDeduction > 0 && (
+                <div className="flex justify-between text-purple-600 font-semibold">
+                  <span>Carte cadeau</span>
+                  <span>-{formatPrice(giftCardDeduction)}</span>
+                </div>
+              )}
+              {pointsDeduction > 0 && (
+                <div className="flex justify-between text-amber-600 font-semibold">
+                  <span>Points fidélité</span>
+                  <span>-{formatPrice(pointsDeduction)}</span>
                 </div>
               )}
               <div className="flex justify-between font-black text-gray-900 border-t pt-2 text-base">

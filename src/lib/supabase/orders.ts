@@ -45,6 +45,11 @@ export interface CreateOrderInput {
   discountAmount?: number
   notes?:          string | null
   status?:         string
+  isB2B?:          boolean
+  companyName?:    string | null
+  nif?:            string | null
+  nis?:            string | null
+  rc?:             string | null
   items: {
     productId:     string
     productName:   string
@@ -161,6 +166,11 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       promo_code_id:   input.promoCodeId ?? null,
       discount_amount: discountAmount,
       notes:           input.notes ?? null,
+      is_b2b:          input.isB2B ?? false,
+      company_name:    input.companyName ?? null,
+      nif:             input.nif ?? null,
+      nis:             input.nis ?? null,
+      rc:              input.rc ?? null,
     })
     .select('id')
     .single()

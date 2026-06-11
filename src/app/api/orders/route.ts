@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createOrder } from '@/lib/supabase/orders'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createRouteClient } from '@/lib/supabase/server'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { createSellerNotification } from '@/lib/notifications/seller'
+import { awardPoints, redeemPoints } from '@/lib/loyalty'
 import { logger } from '@/lib/logger'
 
 const OrderItemSchema = z.object({
@@ -26,10 +28,18 @@ const CreateOrderSchema = z.object({
   address:       z.string().min(5).max(500),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
   shippingCost:  z.number().min(0).max(10000),
-  promoCodeId:   z.string().uuid().optional().nullable(),
-  discountAmount: z.number().min(0).max(1_000_000).optional().default(0),
-  notes:         z.string().max(500).optional().nullable(),
-  items:         z.array(OrderItemSchema).min(1).max(50),
+  promoCodeId:      z.string().uuid().optional().nullable(),
+  discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
+  giftCardCode:     z.string().max(100).optional().nullable(),
+  giftCardDeduction: z.number().min(0).max(1_000_000).optional().default(0),
+  pointsRedeemed:   z.number().int().min(0).max(1_000_000).optional().default(0),
+  notes:            z.string().max(500).optional().nullable(),
+  isB2B:            z.boolean().optional().default(false),
+  companyName:      z.string().max(300).optional().nullable(),
+  nif:              z.string().max(50).optional().nullable(),
+  nis:              z.string().max(50).optional().nullable(),
+  rc:               z.string().max(50).optional().nullable(),
+  items:            z.array(OrderItemSchema).min(1).max(50),
 })
 
 function normalizePhone(phone: string): string {
@@ -60,17 +70,55 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 })
   }
 
-  const { promoCodeId: rawPromoCodeId, notes: rawNotes, email: rawEmail, ...rest } = parsed.data
+  const {
+    promoCodeId: rawPromoCodeId,
+    notes: rawNotes,
+    email: rawEmail,
+    giftCardCode: rawGiftCardCode,
+    giftCardDeduction,
+    pointsRedeemed,
+    isB2B,
+    companyName,
+    nif,
+    nis,
+    rc,
+    ...rest
+  } = parsed.data
   const input = {
     ...rest,
     phone: normalizePhone(parsed.data.phone),
     promoCodeId: rawPromoCodeId ?? undefined,
     notes: rawNotes ?? null,
+    isB2B: isB2B ?? false,
+    companyName: companyName ?? null,
+    nif: nif ?? null,
+    nis: nis ?? null,
+    rc: rc ?? null,
   }
   const buyerEmail = rawEmail ?? null
+  const giftCardCode = rawGiftCardCode?.trim().toUpperCase() || null
 
   try {
     const { id: orderId, total } = await createOrder(input)
+
+    // Redeem gift card balance (non-blocking — order already committed)
+    if (giftCardCode && giftCardDeduction > 0) {
+      fetch(`${req.nextUrl.origin}/api/gift-cards/redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: giftCardCode, amount: giftCardDeduction }),
+      }).catch((err) => logger.error('[gift-card] redeem failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+
+    // Redeem loyalty points (non-blocking)
+    if (pointsRedeemed > 0) {
+      const routeClient = createRouteClient(req)
+      routeClient.auth.getUser()
+        .then(({ data: { user } }) => {
+          if (user) return redeemPoints(user.id, pointsRedeemed)
+        })
+        .catch((err) => logger.error('[loyalty] redeem failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
 
     // Fire WhatsApp notification — non-blocking, never fails the order
     notifyOrderConfirmed({
@@ -119,6 +167,13 @@ export async function POST(req: NextRequest) {
         logger.error('[seller notification] order dispatch failed', { error: err instanceof Error ? err.message : String(err) })
       }
     })()
+
+    // Award loyalty points for this order (non-blocking)
+    createRouteClient(req).auth.getUser()
+      .then(({ data: { user } }) => {
+        if (user) return awardPoints(user.id, orderId, total)
+      })
+      .catch((err) => logger.error('[loyalty] award failed', { error: err instanceof Error ? err.message : String(err) }))
 
     return NextResponse.json({ orderId }, { status: 201 })
   } catch (err) {

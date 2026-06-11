@@ -6,6 +6,7 @@ import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone, X, RotateCcw 
 import { formatPrice } from '@/lib/utils'
 import { OrderRow } from '@/lib/supabase/queries'
 import { useT, useLang } from '@/lib/store/langStore'
+import TaxInvoicePrint from '@/components/ui/TaxInvoicePrint'
 
 function formatDate(iso: string, lang: string) {
   const locale = lang === 'ar' ? 'ar-DZ' : lang === 'fr' ? 'fr-DZ' : 'en-GB'
@@ -178,11 +179,30 @@ export default function OrdersPage() {
                     ))}
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400">
+                  <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2">
                     <span>{order.city}, {order.wilaya}</span>
-                    <span className="capitalize">
-                      {order.payment_method === 'cash' ? t.orders.cashOnDelivery : '💳 ' + order.payment_method}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="capitalize">
+                        {order.payment_method === 'cash' ? t.orders.cashOnDelivery : '💳 ' + order.payment_method}
+                      </span>
+                      {(order as (typeof order & { is_b2b?: boolean })).is_b2b && (
+                        <TaxInvoicePrint
+                          orderId={order.id}
+                          createdAt={order.created_at}
+                          buyerName={order.full_name}
+                          buyerPhone={order.phone}
+                          buyerAddress={`${order.address}, ${order.city}, ${order.wilaya}`}
+                          companyName={(order as (typeof order & { company_name?: string })).company_name}
+                          nif={(order as (typeof order & { nif?: string })).nif}
+                          nis={(order as (typeof order & { nis?: string })).nis}
+                          rc={(order as (typeof order & { rc?: string })).rc}
+                          items={items.map((i) => ({ productName: i.product_name, quantity: i.quantity, unitPrice: i.product_price }))}
+                          subtotal={order.subtotal}
+                          shippingCost={order.shipping_cost}
+                          total={order.total}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {order.status === 'shipped' && (

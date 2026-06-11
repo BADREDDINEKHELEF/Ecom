@@ -7,6 +7,7 @@ import { getVendorBySlug } from '@/lib/supabase/vendors'
 import { createClient } from '@/lib/supabase/client'
 import { dbToProduct } from '@/lib/supabase/products'
 import { Product } from '@/types'
+import ReferralCapture from '@/components/ui/ReferralCapture'
 
 interface VendorRow {
   id: string
@@ -85,6 +86,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ReferralCapture />
       {/* Banner */}
       <div
         className="relative h-48 sm:h-64 w-full overflow-hidden"

@@ -10,6 +10,7 @@ import { useT, useRTL } from '@/lib/store/langStore'
 import { niches } from '@/lib/data/niches'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import Logo from '@/components/ui/Logo'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 
 export default function Header() {
   const { toggleCart, itemCount } = useCartStore()
@@ -94,6 +95,8 @@ export default function Header() {
 
           {/* Right actions */}
           <div className="ml-auto flex items-center gap-1.5">
+            {/* Theme toggle */}
+            <ThemeToggle />
             {/* Language switcher */}
             <div className="hidden sm:block">
               <LanguageSwitcher />

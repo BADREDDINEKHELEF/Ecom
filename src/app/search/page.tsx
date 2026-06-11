@@ -6,6 +6,7 @@ import { products } from '@/lib/data/products'
 import { translations } from '@/lib/i18n/translations'
 import ProductCard from '@/components/shop/ProductCard'
 import SearchInput from '@/components/shop/SearchInput'
+import SearchFilters from '@/components/shop/SearchFilters'
 
 const t = translations.fr
 
@@ -14,16 +15,22 @@ export const metadata: Metadata = {
 }
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; niche?: string }>
+  searchParams: Promise<{ q?: string; niche?: string; minPrice?: string; maxPrice?: string; minRating?: string }>
 }
 
 export default async function SearchPage({ searchParams }: PageProps) {
-  const { q = '', niche } = await searchParams
+  const { q = '', niche, minPrice, maxPrice, minRating } = await searchParams
   const query = q.trim().toLowerCase()
+  const priceMin = minPrice ? Number(minPrice) : 0
+  const priceMax = maxPrice ? Number(maxPrice) : Infinity
+  const ratingMin = minRating ? Number(minRating) : 0
 
   const results = query
     ? products.filter((p) =>
         (!niche || p.nicheId === niche) &&
+        p.price >= priceMin &&
+        p.price <= priceMax &&
+        p.rating >= ratingMin &&
         (p.name.toLowerCase().includes(query) ||
           p.description.toLowerCase().includes(query) ||
           p.category.toLowerCase().includes(query) ||
@@ -39,6 +46,12 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <SearchInput initialValue={q} />
         </Suspense>
       </div>
+
+      {query && (
+        <Suspense>
+          <SearchFilters />
+        </Suspense>
+      )}
 
       {query ? (
         <>
@@ -67,12 +80,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <p className="text-gray-500 text-sm mb-6">{t.search.hint}</p>
               <div className="flex justify-center gap-3">
                 {[{ id: 'cars', emoji: '🚗' }, { id: 'animals', emoji: '🐾' }, { id: 'kids', emoji: '🧸' }].map(({ id, emoji }) => (
-                  <Link
-                    key={id}
-                    href={`/${id}`}
-                    className="text-2xl hover:scale-110 transition-transform"
-                    title={id}
-                  >
+                  <Link key={id} href={`/${id}`} className="text-2xl hover:scale-110 transition-transform" title={id}>
                     {emoji}
                   </Link>
                 ))}

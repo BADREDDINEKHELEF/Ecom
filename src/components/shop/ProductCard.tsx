@@ -2,11 +2,12 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Heart, Flame } from 'lucide-react'
+import { ShoppingCart, Heart, Flame, ArrowLeftRight } from 'lucide-react'
 import { memo, useMemo } from 'react'
 import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
+import { useCompareStore } from '@/lib/store/compareStore'
 import { useToastStore } from '@/lib/store/toastStore'
 import { useT, useRTL } from '@/lib/store/langStore'
 import { formatPrice, discount } from '@/lib/utils'
@@ -20,10 +21,12 @@ interface ProductCardProps {
 function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem)
   const { toggle, has } = useWishlistStore()
+  const { toggle: compareToggle, has: compareHas } = useCompareStore()
   const addToast = useToastStore((s) => s.add)
   const t = useT()
   const isRTL = useRTL()
   const wishlisted = has(product.id)
+  const inCompare = compareHas(product.id)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount ? discount(product.price, product.comparePrice!) : 0
@@ -149,6 +152,17 @@ function ProductCard({ product }: ProductCardProps) {
             {t.product.soldThisWeek.replace('{n}', String(soldThisWeek))}
           </p>
         )}
+        <button
+          onClick={(e) => { e.preventDefault(); compareToggle(product) }}
+          className={`mt-2 w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border transition-colors ${
+            inCompare
+              ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold'
+              : 'border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
+          }`}
+        >
+          <ArrowLeftRight className="w-3 h-3" />
+          {inCompare ? 'Dans la comparaison' : 'Comparer'}
+        </button>
       </div>
     </div>
   )

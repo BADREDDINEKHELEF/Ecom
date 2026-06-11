@@ -1,7 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { Heart, ArrowLeft } from 'lucide-react'
+import { Heart, ArrowLeft, Share2, Check } from 'lucide-react'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
 import ProductCard from '@/components/shop/ProductCard'
 import { useT } from '@/lib/store/langStore'
@@ -9,10 +10,20 @@ import { useT } from '@/lib/store/langStore'
 export default function WishlistPage() {
   const { items, clear } = useWishlistStore()
   const t = useT()
+  const [copied, setCopied] = useState(false)
+
+  const handleShare = () => {
+    const ids = items.map((p) => p.id).join(',')
+    const url = `${window.location.origin}/wishlist/share?ids=${ids}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Heart className="w-6 h-6 text-red-500 fill-red-500" />
           <h1 className="text-2xl font-black text-gray-900">
@@ -20,14 +31,25 @@ export default function WishlistPage() {
             <span className="text-gray-400 font-normal text-lg">({items.length})</span>
           </h1>
         </div>
-        {items.length > 0 && (
-          <button
-            onClick={clear}
-            className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors"
-          >
-            {t.wishlist.clearAll}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {items.length > 0 && (
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+              {copied ? 'Lien copié !' : 'Partager'}
+            </button>
+          )}
+          {items.length > 0 && (
+            <button
+              onClick={clear}
+              className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors"
+            >
+              {t.wishlist.clearAll}
+            </button>
+          )}
+        </div>
       </div>
 
       {items.length === 0 ? (

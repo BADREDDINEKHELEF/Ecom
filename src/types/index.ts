@@ -28,6 +28,10 @@ export interface Product {
   condition?: 'new' | 'used' | 'refurbished'
   metaTitle?: string
   metaDescription?: string
+  isPreOrder?: boolean
+  preOrderDate?: string
+  minOrderQuantity?: number
+  isBundle?: boolean
 }
 
 export interface CartItem {

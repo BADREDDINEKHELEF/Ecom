@@ -19,6 +19,11 @@ const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',
   price: 0, comparePrice: 0, stock: 1, tags: '', images: '',
   isNew: false, isFeatured: false, hasVariants: false,
+  condition: 'new' as 'new' | 'used' | 'refurbished',
+  metaTitle: '', metaDescription: '',
+  isPreOrder: false, preOrderDate: '',
+  minOrderQuantity: 1,
+  isBundle: false,
 }
 
 export default function SellerProductsPage() {
@@ -56,6 +61,13 @@ export default function SellerProductsPage() {
       description: p.description, price: p.price, comparePrice: p.comparePrice || 0,
       stock: p.stock, tags: p.tags.join(', '), images: p.images.join('\n'),
       isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false, hasVariants: false,
+      condition: p.condition ?? 'new',
+      metaTitle: p.metaTitle ?? '',
+      metaDescription: p.metaDescription ?? '',
+      isPreOrder: p.isPreOrder ?? false,
+      preOrderDate: p.preOrderDate ? p.preOrderDate.slice(0, 10) : '',
+      minOrderQuantity: p.minOrderQuantity ?? 1,
+      isBundle: p.isBundle ?? false,
     })
     setShowForm(true)
   }
@@ -89,7 +101,14 @@ export default function SellerProductsPage() {
       const { createClient } = await import('@/lib/supabase/client')
       const sb = createClient()
       await sb.from('products').update({
-        vendor_id: vendor.id,
+        vendor_id:          vendor.id,
+        condition:          form.condition,
+        meta_title:         form.metaTitle || null,
+        meta_description:   form.metaDescription || null,
+        is_pre_order:       form.isPreOrder,
+        pre_order_date:     form.preOrderDate || null,
+        min_order_quantity: form.minOrderQuantity || 1,
+        is_bundle:          form.isBundle,
         ...(form.hasVariants ? { variants: variants.length > 0 ? variants : null } : { variants: null }),
       }).eq('id', productId)
       await load()
@@ -227,6 +246,63 @@ export default function SellerProductsPage() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Condition + MOQ */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">État</label>
+                <select value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value as 'new' | 'used' | 'refurbished' })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
+                  <option value="new">Neuf</option>
+                  <option value="used">Occasion</option>
+                  <option value="refurbished">Reconditionné</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Qté min. (MOQ)</label>
+                <input type="number" min="1" value={form.minOrderQuantity}
+                  onChange={(e) => setForm({ ...form, minOrderQuantity: Number(e.target.value) })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+              </div>
+
+              {/* Pre-order */}
+              <div className="sm:col-span-2 flex flex-wrap gap-4 items-start">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.isPreOrder}
+                    onChange={(e) => setForm({ ...form, isPreOrder: e.target.checked })}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                  <span className="text-sm font-medium text-gray-700">Pré-commande</span>
+                </label>
+                {form.isPreOrder && (
+                  <div className="flex-1 min-w-[180px]">
+                    <label className="block text-xs font-bold text-gray-500 mb-1">Date de disponibilité</label>
+                    <input type="date" value={form.preOrderDate}
+                      onChange={(e) => setForm({ ...form, preOrderDate: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-400" />
+                  </div>
+                )}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.isBundle}
+                    onChange={(e) => setForm({ ...form, isBundle: e.target.checked })}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                  <span className="text-sm font-medium text-gray-700">Pack / bundle</span>
+                </label>
+              </div>
+
+              {/* SEO fields */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Titre SEO</label>
+                <input type="text" maxLength={120} value={form.metaTitle}
+                  onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
+                  placeholder="Titre affiché dans Google"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Description SEO</label>
+                <input type="text" maxLength={200} value={form.metaDescription}
+                  onChange={(e) => setForm({ ...form, metaDescription: e.target.value })}
+                  placeholder="Courte description pour les moteurs de recherche"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
               </div>
 
               <div className="flex gap-4">
