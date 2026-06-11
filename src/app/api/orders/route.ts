@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createOrder } from '@/lib/supabase/orders'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
+import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
+import { createSellerNotification } from '@/lib/notifications/seller'
 import { logger } from '@/lib/logger'
 
 const OrderItemSchema = z.object({
@@ -17,6 +20,7 @@ const OrderItemSchema = z.object({
 const CreateOrderSchema = z.object({
   fullName:      z.string().min(2).max(200),
   phone:         z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
+  email:         z.string().email().max(320).optional().nullable(),
   wilaya:        z.string().min(1).max(100),
   city:          z.string().min(1).max(200),
   address:       z.string().min(5).max(500),
@@ -56,13 +60,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 })
   }
 
-  const { promoCodeId: rawPromoCodeId, notes: rawNotes, ...rest } = parsed.data
+  const { promoCodeId: rawPromoCodeId, notes: rawNotes, email: rawEmail, ...rest } = parsed.data
   const input = {
     ...rest,
     phone: normalizePhone(parsed.data.phone),
     promoCodeId: rawPromoCodeId ?? undefined,
     notes: rawNotes ?? null,
   }
+  const buyerEmail = rawEmail ?? null
 
   try {
     const { id: orderId, total } = await createOrder(input)
@@ -76,6 +81,44 @@ export async function POST(req: NextRequest) {
       wilaya:    input.wilaya,
       itemCount: input.items.length,
     }).catch((err) => logger.error('[WhatsApp] notification failed', { error: err instanceof Error ? err.message : String(err) }))
+
+    // Fire email confirmation if buyer provided email
+    if (buyerEmail) {
+      sendOrderConfirmationEmail({
+        to:        buyerEmail,
+        fullName:  input.fullName,
+        orderId,
+        total,
+        wilaya:    input.wilaya,
+        itemCount: input.items.length,
+      }).catch((err) => logger.error('[email] order confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+
+    // Notify each seller whose items are in this order (non-blocking)
+    ;(async () => {
+      try {
+        const supabase = createAdminClient()
+        const { data: itemRows } = await supabase
+          .from('order_items')
+          .select('vendor_id')
+          .eq('order_id', orderId)
+          .not('vendor_id', 'is', null)
+        const vendorIds = [...new Set((itemRows ?? []).map((r: { vendor_id: string }) => r.vendor_id).filter(Boolean))]
+        await Promise.all(
+          vendorIds.map((vid) =>
+            createSellerNotification({
+              vendorId: vid,
+              type:     'new_order',
+              title:    'Nouvelle commande reçue',
+              body:     `Commande #${orderId.slice(0, 8).toUpperCase()} — ${total.toLocaleString('fr-DZ')} DA`,
+              link:     '/seller/orders',
+            })
+          )
+        )
+      } catch (err) {
+        logger.error('[seller notification] order dispatch failed', { error: err instanceof Error ? err.message : String(err) })
+      }
+    })()
 
     return NextResponse.json({ orderId }, { status: 201 })
   } catch (err) {

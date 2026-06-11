@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useT, useRTL } from '@/lib/store/langStore'
 import { useState } from 'react'
+import NotificationBell from './NotificationBell'
 
 interface Props {
   storeName: string
@@ -89,6 +90,7 @@ export default function SellerSidebar({
               <Store className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-white text-sm truncate flex-1">{storeName}</span>
+            <NotificationBell />
             {/* Close button — mobile only */}
             <button
               onClick={onMobileClose}
