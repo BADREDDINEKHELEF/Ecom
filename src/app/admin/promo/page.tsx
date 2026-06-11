@@ -21,10 +21,8 @@ export default function PromoPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const sb = createClient()
-      const { data } = await sb.from('promo_codes').select('*').order('created_at', { ascending: false })
-      setPromos((data || []) as PromoCode[])
+      const res = await fetch('/api/admin/promo-codes')
+      if (res.ok) setPromos(await res.json())
     } finally {
       setLoading(false)
     }
@@ -38,18 +36,20 @@ export default function PromoPage() {
     setSaving(true)
     setError('')
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const sb = createClient()
-      const { error: err } = await sb.from('promo_codes').insert({
-        code: form.code.toUpperCase().trim(),
-        discount_type: form.discount_type,
-        discount_value: form.discount_value,
-        min_order: form.min_order || 0,
-        max_uses: form.max_uses ? Number(form.max_uses) : null,
-        expires_at: form.expires_at || null,
-        is_active: form.is_active,
+      const res = await fetch('/api/admin/promo-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: form.code.toUpperCase().trim(),
+          discount_type: form.discount_type,
+          discount_value: form.discount_value,
+          min_order: form.min_order || 0,
+          max_uses: form.max_uses ? Number(form.max_uses) : null,
+          expires_at: form.expires_at || null,
+          is_active: form.is_active,
+        }),
       })
-      if (err) throw err
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed')
       setShowForm(false)
       setForm(EMPTY_FORM)
       await load()
@@ -61,17 +61,21 @@ export default function PromoPage() {
   }
 
   const handleToggle = async (promo: PromoCode) => {
-    const { createClient } = await import('@/lib/supabase/client')
-    const sb = createClient()
-    await sb.from('promo_codes').update({ is_active: !promo.is_active }).eq('id', promo.id)
+    await fetch('/api/admin/promo-codes', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: promo.id, is_active: !promo.is_active }),
+    })
     setPromos((prev) => prev.map((p) => p.id === promo.id ? { ...p, is_active: !p.is_active } : p))
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this promo code?')) return
-    const { createClient } = await import('@/lib/supabase/client')
-    const sb = createClient()
-    await sb.from('promo_codes').delete().eq('id', id)
+    await fetch('/api/admin/promo-codes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
     setPromos((prev) => prev.filter((p) => p.id !== id))
   }
 

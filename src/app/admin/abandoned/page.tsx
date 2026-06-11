@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { ShoppingCart, RefreshCw, MessageCircle, Check, X, Loader2, TrendingUp, Clock, DollarSign, Users } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { formatPrice } from '@/lib/utils'
 
 interface AbandonedCheckout {
@@ -50,24 +49,12 @@ export default function AbandonedCheckoutsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const supabase = createClient()
-    let query = supabase
-      .from('abandoned_checkouts')
-      .select('*')
-      .eq('status', 'abandoned')
-      .order('cart_total', { ascending: false })
-
-    if (filter === 'today') {
-      const start = new Date(); start.setHours(0, 0, 0, 0)
-      query = query.gte('created_at', start.toISOString())
-    } else if (filter === 'week') {
-      const start = new Date(); start.setDate(start.getDate() - 7)
-      query = query.gte('created_at', start.toISOString())
+    try {
+      const res = await fetch(`/api/admin/abandoned?period=${filter}`)
+      if (res.ok) setRows(await res.json())
+    } finally {
+      setLoading(false)
     }
-
-    const { data } = await query.limit(100)
-    setRows((data ?? []) as AbandonedCheckout[])
-    setLoading(false)
   }, [filter])
 
   useEffect(() => { load() }, [load])
@@ -81,15 +68,12 @@ export default function AbandonedCheckoutsPage() {
   const updateStatus = async (id: string, status: 'recovered' | 'ignored') => {
     setUpdating(id)
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('abandoned_checkouts').update({
-        status,
-        ...(status === 'recovered' ? { recovered_at: new Date().toISOString() } : {}),
-      }).eq('id', id)
-      if (error) throw error
-      setRows((prev) => prev.filter((r) => r.id !== id))
-    } catch {
-      // keep row in list if update failed
+      const res = await fetch('/api/admin/abandoned', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      })
+      if (res.ok) setRows((prev) => prev.filter((r) => r.id !== id))
     } finally {
       setUpdating(null)
     }
