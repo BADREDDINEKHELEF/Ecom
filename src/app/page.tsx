@@ -5,10 +5,13 @@ import HomepageContent from '@/components/home/HomepageContent'
 export const revalidate = 60
 
 export default async function HomePage() {
-  const [featured, ...nicheFeatured] = await Promise.all([
+  const results = await Promise.allSettled([
     getFeaturedProducts(undefined, 8),
     ...niches.map((n) => getFeaturedProducts(n.id, 4)),
   ])
+  const [featured, ...nicheFeatured] = results.map((r) =>
+    r.status === 'fulfilled' ? r.value : []
+  )
 
   const nicheProducts = Object.fromEntries(
     niches.map((n, i) => [n.id, nicheFeatured[i]])

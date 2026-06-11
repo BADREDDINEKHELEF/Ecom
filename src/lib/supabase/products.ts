@@ -32,7 +32,7 @@ export const getProducts = unstable_cache(
     if (nicheId)  query = query.eq('niche_id', nicheId)
     if (category) query = query.eq('category', category)
     const { data, error } = await query
-    if (error) throw error
+    if (error) return []
     return (data ?? []).map(dbToProduct)
   },
   ['products-list'],
@@ -51,7 +51,7 @@ export const getFeaturedProducts = unstable_cache(
       .limit(limit)
     if (nicheId) query = query.eq('niche_id', nicheId)
     const { data, error } = await query
-    if (error) throw error
+    if (error) return []
     return (data ?? []).map(dbToProduct)
   },
   ['products-featured'],
