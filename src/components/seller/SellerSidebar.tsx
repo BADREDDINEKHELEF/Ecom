@@ -15,6 +15,7 @@ interface Props {
   storeName: string
   slug: string
   onLogout: () => void
+  logoUrl?: string | null
   pendingOrders?: number
   unreadMessages?: number
   subscriptionStatus?: string | null
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export default function SellerSidebar({
-  storeName, slug, onLogout,
+  storeName, slug, onLogout, logoUrl,
   pendingOrders = 0, unreadMessages = 0, subscriptionStatus,
   isMobileOpen = false, onMobileClose,
 }: Props) {
@@ -86,8 +87,13 @@ export default function SellerSidebar({
         {/* Store header */}
         <div className="p-5 border-b border-gray-800 flex-shrink-0">
           <div className="flex items-center gap-2.5 mb-0.5">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Store className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-emerald-600 flex items-center justify-center">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={storeName} className="w-full h-full object-cover" />
+              ) : (
+                <Store className="w-4 h-4 text-white" />
+              )}
             </div>
             <span className="font-bold text-white text-sm truncate flex-1">{storeName}</span>
             <NotificationBell />

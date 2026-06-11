@@ -1,8 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
 import { Loader2, Check, ExternalLink, Copy, Instagram, Facebook, Menu, Plane, Banknote, Bell } from 'lucide-react'
+import LogoUploader from '@/components/seller/LogoUploader'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useRTL } from '@/lib/store/langStore'
@@ -155,7 +156,7 @@ export default function SellerSettingsPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
@@ -277,11 +278,10 @@ export default function SellerSettingsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Logo URL</label>
-                <input type="url" value={form.logo_url}
-                  onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400" />
+                <LogoUploader
+                  value={form.logo_url}
+                  onChange={(url) => setForm({ ...form, logo_url: url })}
+                />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Couleur principale</label>

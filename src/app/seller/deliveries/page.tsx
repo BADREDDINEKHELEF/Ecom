@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
@@ -210,7 +210,7 @@ export default function SellerDeliveriesPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>

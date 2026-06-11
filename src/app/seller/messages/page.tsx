@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
@@ -155,7 +155,7 @@ export default function SellerMessagesPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} unreadMessages={totalUnread}
+      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url} unreadMessages={totalUnread}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
 
       {/* Messages layout — on mobile: threads panel OR chat panel, not both */}
