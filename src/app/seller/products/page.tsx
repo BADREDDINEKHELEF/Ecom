@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, Upload } from 'lucide-react'
 import CsvImportModal from '@/components/seller/CsvImportModal'
+import ImageUploader from '@/components/seller/ImageUploader'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
@@ -17,7 +18,7 @@ import type { Product } from '@/types'
 
 const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',
-  price: 0, comparePrice: 0, stock: 1, tags: '', images: '',
+  price: 0, comparePrice: 0, stock: 1, tags: '', images: [] as string[],
   isNew: false, isFeatured: false, hasVariants: false,
   condition: 'new' as 'new' | 'used' | 'refurbished',
   metaTitle: '', metaDescription: '',
@@ -59,7 +60,7 @@ export default function SellerProductsPage() {
     setForm({
       id: p.id, nicheId: p.nicheId, category: p.category, name: p.name,
       description: p.description, price: p.price, comparePrice: p.comparePrice || 0,
-      stock: p.stock, tags: p.tags.join(', '), images: p.images.join('\n'),
+      stock: p.stock, tags: p.tags.join(', '), images: p.images,
       isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false, hasVariants: false,
       condition: p.condition ?? 'new',
       metaTitle: p.metaTitle ?? '',
@@ -90,7 +91,7 @@ export default function SellerProductsPage() {
         description: form.description,
         price: form.price,
         comparePrice: form.comparePrice || undefined,
-        images: form.images.split('\n').map((s) => s.trim()).filter(Boolean),
+        images: form.images,
         stock: form.stock,
         tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean),
         isNew: form.isNew,
@@ -218,10 +219,15 @@ export default function SellerProductsPage() {
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 resize-none" />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{sp.imagesLabel}</label>
-                <textarea value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })}
-                  rows={3} placeholder="https://example.com/image.jpg"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 resize-none" />
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                  {sp.imagesLabel}
+                </label>
+                <ImageUploader
+                  key={editing?.id ?? 'new'}
+                  value={form.images}
+                  onChange={(urls) => setForm((prev) => ({ ...prev, images: urls }))}
+                  maxImages={8}
+                />
               </div>
               {/* Variants toggle */}
               <div className="sm:col-span-2">

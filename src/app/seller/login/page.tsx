@@ -33,6 +33,10 @@ export default function SellerLoginPage() {
       setLoading(false)
       return
     }
+    if (!vendor.is_approved) {
+      router.push('/seller/pending')
+      return
+    }
     if (!vendor.is_active) {
       setError(t.seller.suspended)
       await supabase.auth.signOut()

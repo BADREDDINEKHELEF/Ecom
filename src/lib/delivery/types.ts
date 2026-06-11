@@ -6,6 +6,8 @@ export type ProviderId =
   | 'rex'
   | 'procolis'
   | 'yassir'
+  | 'ecom'
+  | 'apec'
 
 export interface DeliveryProvider {
   id: ProviderId

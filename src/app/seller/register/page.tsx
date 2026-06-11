@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Mail, Lock, User, Store, Phone, MapPin, FileText, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { createVendor } from '@/lib/supabase/queries'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useT } from '@/lib/store/langStore'
 
@@ -48,23 +47,32 @@ export default function SellerRegisterPage() {
     if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
 
     try {
-      await createVendor({
-        user_id: authData.user.id,
-        store_name: form.storeName,
-        store_slug: form.storeSlug,
-        logo_url: null,
-        description: form.description || null,
-        phone: form.phone || null,
-        wilaya: form.wilaya || null,
+      const res = await fetch('/api/seller/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id:     authData.user.id,
+          store_name:  form.storeName,
+          store_slug:  form.storeSlug,
+          logo_url:    null,
+          description: form.description || null,
+          phone:       form.phone || null,
+          wilaya:      form.wilaya || null,
+        }),
       })
-      setDone(true)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t.seller.registrationFailed
-      if (msg.includes('duplicate') || msg.includes('unique')) {
-        setError(t.seller.urlTaken)
+      if (!res.ok) {
+        const { error: msg } = await res.json()
+        if (res.status === 409) {
+          setError(t.seller.urlTaken)
+        } else {
+          setError(msg ?? t.seller.registrationFailed)
+        }
+        await supabase.auth.signOut()
       } else {
-        setError(msg)
+        setDone(true)
       }
+    } catch {
+      setError(t.seller.registrationFailed)
       await supabase.auth.signOut()
     } finally {
       setLoading(false)

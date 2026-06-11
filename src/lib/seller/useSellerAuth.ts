@@ -17,6 +17,7 @@ export function useSellerAuth() {
       if (!user) { router.push('/seller/login'); return }
       const v = await getVendorByUserId(user.id)
       if (!v) { router.push('/seller/login'); return }
+      if (!v.is_approved) { router.push('/seller/pending'); return }
       setVendor(v)
       setLoading(false)
     })

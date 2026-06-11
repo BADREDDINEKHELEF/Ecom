@@ -54,6 +54,22 @@ export const DELIVERY_PROVIDERS: DeliveryProvider[] = [
     color: '#0EA5E9',
     dashboardUrl: 'https://yassir.com',
   },
+  {
+    id: 'ecom',
+    name: 'Ecom Delivery',
+    hasApi: true,
+    color: '#10B981',
+    dashboardUrl: 'https://ecomdelivery.dz',
+    trackingUrl: 'https://ecomdelivery.dz/tracking?id=',
+  },
+  {
+    id: 'apec',
+    name: 'APEC Delivery',
+    hasApi: true,
+    color: '#6366F1',
+    dashboardUrl: 'https://apec.dz',
+    trackingUrl: 'https://apec.dz/tracking?id=',
+  },
 ]
 
 export function getProvider(id: ProviderId | string): DeliveryProvider | undefined {

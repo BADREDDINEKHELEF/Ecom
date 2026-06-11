@@ -18,6 +18,9 @@ export default function DeliverySettingsPage() {
     yalidine_api_token:   '',
     procolis_token:       '',
     zr_token:             '',
+    ecom_token:           '',
+    apec_api_id:          '',
+    apec_api_token:       '',
     auto_create_shipment: false,
     notify_whatsapp:      true,
     notify_sms:           false,
@@ -42,6 +45,9 @@ export default function DeliverySettingsPage() {
             yalidine_api_token:   cfg.yalidine_api_token ?? '',
             procolis_token:       cfg.procolis_token ?? '',
             zr_token:             cfg.zr_token ?? '',
+            ecom_token:           cfg.ecom_token ?? '',
+            apec_api_id:          cfg.apec_api_id ?? '',
+            apec_api_token:       cfg.apec_api_token ?? '',
             auto_create_shipment: cfg.auto_create_shipment,
             notify_whatsapp:      cfg.notify_whatsapp,
             notify_sms:           cfg.notify_sms,
@@ -67,6 +73,9 @@ export default function DeliverySettingsPage() {
           yalidine_api_token:   form.yalidine_api_token || null,
           procolis_token:       form.procolis_token || null,
           zr_token:             form.zr_token || null,
+          ecom_token:           form.ecom_token || null,
+          apec_api_id:          form.apec_api_id || null,
+          apec_api_token:       form.apec_api_token || null,
           auto_create_shipment: form.auto_create_shipment,
           notify_whatsapp:      form.notify_whatsapp,
           notify_sms:           form.notify_sms,
@@ -154,100 +163,86 @@ export default function DeliverySettingsPage() {
               </div>
             </div>
 
-            {/* Yalidine API */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <div className="flex items-start justify-between mb-1">
-                <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-orange-500" /> Intégration Yalidine API
+            {/* Provider credentials — only shown for selected provider */}
+            {form.default_provider === 'yalidine' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-orange-500" /> Clés API Yalidine
                 </h2>
-                <span className="text-xs bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full">Optionnel</span>
-              </div>
-              <p className="text-sm text-gray-500 mb-4">
-                Créez vos expéditions Yalidine automatiquement depuis ShopDZ. Obtenez vos identifiants API sur{' '}
-                <a href="https://yalidine.app" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yalidine.app</a>.
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    API ID <span className="text-gray-400 font-normal">(identifiant publique)</span>
-                  </label>
-                  <input type="text" value={form.yalidine_api_id}
-                    onChange={(e) => setForm({ ...form, yalidine_api_id: e.target.value })}
-                    placeholder="ex: 12345"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    API Token <span className="text-gray-400 font-normal">(clé secrète — chiffrée)</span>
-                  </label>
-                  <div className="relative">
-                    <input type={showToken ? 'text' : 'password'} value={form.yalidine_api_token}
-                      onChange={(e) => setForm({ ...form, yalidine_api_token: e.target.value })}
-                      placeholder="••••••••••••••••••••"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                    <button type="button" onClick={() => setShowToken(!showToken)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                    <Info className="w-3 h-3" /> Votre token est chiffré (AES-256) avant stockage. ShopDZ ne le lit jamais en clair.
-                  </p>
-                </div>
-
-                {/* Test connection */}
-                {form.yalidine_api_id && form.yalidine_api_token && (
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={testYalidineCredentials} disabled={testing}
-                      className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm disabled:opacity-60">
-                      {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                      Tester la connexion
-                    </button>
-                    {testResult === 'ok' && (
-                      <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600">
-                        <Check className="w-4 h-4" /> Connexion réussie
-                      </span>
-                    )}
-                    {testResult === 'fail' && (
-                      <span className="text-sm font-semibold text-red-500">Identifiants invalides</span>
-                    )}
-                  </div>
-                )}
-
-                {/* Auto-create toggle */}
-                <label className="flex items-start gap-3 cursor-pointer bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-                  <div className="mt-0.5">
-                    <input type="checkbox" checked={form.auto_create_shipment}
-                      onChange={(e) => setForm({ ...form, auto_create_shipment: e.target.checked })}
-                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                <p className="text-sm text-gray-500 mb-4">
+                  Obtenez vos identifiants sur{' '}
+                  <a href="https://yalidine.app" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yalidine.app</a>.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      API ID <span className="text-gray-400 font-normal">(identifiant publique)</span>
+                    </label>
+                    <input type="text" value={form.yalidine_api_id}
+                      onChange={(e) => setForm({ ...form, yalidine_api_id: e.target.value })}
+                      placeholder="ex: 12345"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Créer les expéditions automatiquement</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Dès qu&apos;une commande est confirmée, une expédition Yalidine est créée automatiquement.
-                      Un numéro de suivi vous est attribué instantanément.
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      API Token <span className="text-gray-400 font-normal">(clé secrète — chiffrée)</span>
+                    </label>
+                    <div className="relative">
+                      <input type={showToken ? 'text' : 'password'} value={form.yalidine_api_token}
+                        onChange={(e) => setForm({ ...form, yalidine_api_token: e.target.value })}
+                        placeholder="••••••••••••••••••••"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                      <button type="button" onClick={() => setShowToken(!showToken)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Info className="w-3 h-3" /> Chiffré (AES-256) — ShopDZ ne lit jamais votre token en clair.
                     </p>
                   </div>
-                </label>
+                  {form.yalidine_api_id && form.yalidine_api_token && (
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={testYalidineCredentials} disabled={testing}
+                        className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm disabled:opacity-60">
+                        {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                        Tester la connexion
+                      </button>
+                      {testResult === 'ok' && (
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600">
+                          <Check className="w-4 h-4" /> Connexion réussie
+                        </span>
+                      )}
+                      {testResult === 'fail' && (
+                        <span className="text-sm font-semibold text-red-500">Identifiants invalides</span>
+                      )}
+                    </div>
+                  )}
+                  <label className="flex items-start gap-3 cursor-pointer bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                    <input type="checkbox" checked={form.auto_create_shipment}
+                      onChange={(e) => setForm({ ...form, auto_create_shipment: e.target.checked })}
+                      className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Créer les expéditions automatiquement</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Dès qu&apos;une commande est confirmée, une expédition est créée et un numéro de suivi attribué.
+                      </p>
+                    </div>
+                  </label>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Procolis API */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <div className="flex items-start justify-between mb-1">
-                <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-amber-500" /> Intégration Procolis API
+            {form.default_provider === 'procolis' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-amber-500" /> Clé API Procolis
                 </h2>
-                <span className="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">Optionnel</span>
-              </div>
-              <p className="text-sm text-gray-500 mb-4">
-                Créez vos expéditions Procolis automatiquement. Obtenez votre token API sur{' '}
-                <a href="https://procolis.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">procolis.com</a>.
-              </p>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API Procolis</label>
+                <p className="text-sm text-gray-500 mb-4">
+                  Obtenez votre token sur{' '}
+                  <a href="https://procolis.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">procolis.com</a>.
+                </p>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API</label>
                 <input type="password" value={form.procolis_token}
                   onChange={(e) => setForm({ ...form, procolis_token: e.target.value })}
                   placeholder="••••••••••••••••••••"
@@ -256,22 +251,18 @@ export default function DeliverySettingsPage() {
                   <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
                 </p>
               </div>
-            </div>
+            )}
 
-            {/* ZR Express API */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <div className="flex items-start justify-between mb-1">
-                <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-blue-500" /> Intégration ZR Express API
+            {form.default_provider === 'zr' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-blue-500" /> Clé API ZR Express
                 </h2>
-                <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">Optionnel</span>
-              </div>
-              <p className="text-sm text-gray-500 mb-4">
-                Créez vos expéditions ZR Express automatiquement. Obtenez votre token sur{' '}
-                <a href="https://zrexpress.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">zrexpress.dz</a>.
-              </p>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API ZR Express</label>
+                <p className="text-sm text-gray-500 mb-4">
+                  Obtenez votre token sur{' '}
+                  <a href="https://zrexpress.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">zrexpress.dz</a>.
+                </p>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API</label>
                 <input type="password" value={form.zr_token}
                   onChange={(e) => setForm({ ...form, zr_token: e.target.value })}
                   placeholder="••••••••••••••••••••"
@@ -280,7 +271,75 @@ export default function DeliverySettingsPage() {
                   <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
                 </p>
               </div>
-            </div>
+            )}
+
+            {form.default_provider === 'ecom' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-emerald-500" /> Clé API Ecom Delivery
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  Obtenez votre token sur{' '}
+                  <a href="https://ecomdelivery.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">ecomdelivery.dz</a>.
+                </p>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API</label>
+                <input type="password" value={form.ecom_token}
+                  onChange={(e) => setForm({ ...form, ecom_token: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
+                </p>
+              </div>
+            )}
+
+            {form.default_provider === 'apec' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-indigo-500" /> Clés API APEC Delivery
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  Obtenez vos identifiants sur{' '}
+                  <a href="https://apec.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">apec.dz</a>.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      API ID <span className="text-gray-400 font-normal">(identifiant publique)</span>
+                    </label>
+                    <input type="text" value={form.apec_api_id}
+                      onChange={(e) => setForm({ ...form, apec_api_id: e.target.value })}
+                      placeholder="ex: 12345"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      API Token <span className="text-gray-400 font-normal">(clé secrète — chiffrée)</span>
+                    </label>
+                    <input type="password" value={form.apec_api_token}
+                      onChange={(e) => setForm({ ...form, apec_api_token: e.target.value })}
+                      placeholder="••••••••••••••••••••"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {['maystro', 'colivraison', 'rex', 'yassir'].includes(form.default_provider) && (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-blue-900">Transporteur manuel</p>
+                  <p className="text-sm text-blue-700 mt-0.5">
+                    Ce transporteur ne dispose pas d&apos;intégration API. Gérez vos expéditions directement
+                    depuis leur tableau de bord, puis collez le numéro de suivi dans chaque commande.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Notifications */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
