@@ -2,15 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { upsertNiche, deleteNiche } from '@/lib/supabase/niches'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyAdminToken } from '@/lib/auth/jwt'
+import { requireAdmin } from '@/lib/auth/adminAuth'
 import { logger } from '@/lib/logger'
-
-async function isAdminAuthed(req: NextRequest): Promise<boolean> {
-  const token = req.cookies.get('casbah_admin_token')?.value
-  if (!token) return false
-  const payload = await verifyAdminToken(token)
-  return payload !== null
-}
 
 const NicheSchema = z.object({
   id:          z.string().min(1).max(50),
@@ -25,7 +18,8 @@ const NicheSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
-  if (!await isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const denied = await requireAdmin(req)
+  if (denied) return denied
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase.from('niches').select('*').order('created_at', { ascending: true })
@@ -38,7 +32,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!await isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const denied = await requireAdmin(req)
+  if (denied) return denied
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
   const parsed = NicheSchema.safeParse(body)
@@ -53,7 +48,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!await isAdminAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const denied = await requireAdmin(req)
+  if (denied) return denied
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
   try {

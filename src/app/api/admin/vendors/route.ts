@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdminToken } from '@/lib/auth/jwt'
+import { requireAdmin } from '@/lib/auth/adminAuth'
+import { writeAuditLog, type AuditAction } from '@/lib/auth/auditLog'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAllVendors } from '@/lib/supabase/vendors'
 
-async function isAdmin(req: NextRequest) {
-  const token = req.cookies.get('casbah_admin_token')?.value
-  if (!token) return false
-  return (await verifyAdminToken(token)) !== null
-}
-
 // GET /api/admin/vendors?filter=pending|approved|all&page=0
 export async function GET(req: NextRequest) {
-  if (!(await isAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const denied = await requireAdmin(req)
+  if (denied) return denied
 
   try {
     const { searchParams } = new URL(req.url)
@@ -26,7 +22,11 @@ export async function GET(req: NextRequest) {
 // PATCH /api/admin/vendors
 // Body: { id, action: 'approve' | 'decline' | 'suspend' | 'reactivate', admin_note? }
 export async function PATCH(req: NextRequest) {
-  if (!(await isAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const denied = await requireAdmin(req)
+  if (denied) return denied
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '0.0.0.0'
+  const ua = req.headers.get('user-agent') ?? 'unknown'
 
   try {
     const body = await req.json().catch(() => ({})) as {
@@ -49,11 +49,23 @@ export async function PATCH(req: NextRequest) {
         : body.action === 'decline'
         ? { is_approved: false, is_active: false, admin_note: body.admin_note ?? null }
         : body.action === 'suspend'
-        ? { is_active: false }          // keeps is_approved intact
-        : { is_active: true }           // reactivate: keeps is_approved intact
+        ? { is_active: false }
+        : { is_active: true }
 
     const { error } = await admin.from('vendors').update(updates).eq('id', body.id)
     if (error) throw error
+
+    const actionMap: Record<string, AuditAction> = {
+      approve:    'vendor_approved',
+      decline:    'vendor_declined',
+      suspend:    'vendor_suspended',
+      reactivate: 'vendor_reactivated',
+    }
+    await writeAuditLog({
+      action:    actionMap[body.action],
+      ip, userAgent: ua, result: 'success',
+      meta: { vendor_id: body.id, admin_note: body.admin_note },
+    })
 
     return NextResponse.json({ ok: true })
   } catch {

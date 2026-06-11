@@ -9,6 +9,14 @@ export type AuditAction =
   | 'product_updated'
   | 'product_deleted'
   | 'order_status_updated'
+  | 'vendor_approved'
+  | 'vendor_declined'
+  | 'vendor_suspended'
+  | 'vendor_reactivated'
+  | 'vendor_verified'
+  | 'subscription_approved'
+  | 'subscription_rejected'
+  | 'subscription_updated'
 
 export async function writeAuditLog({
   action,
