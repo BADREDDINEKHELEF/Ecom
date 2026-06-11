@@ -147,7 +147,7 @@ export default function SellerDashboardPage() {
 
   const analytics    = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])
   const grossRevenue = orders.reduce((s, o) => s + o.vendorTotal, 0)
-  const netEarnings  = grossRevenue * (1 - (vendor?.commission_rate ?? 10) / 100)
+  const netEarnings  = grossRevenue
   const maxMonthly   = Math.max(...analytics.monthly.map((m) => m.revenue), 1)
   const hour         = new Date().getHours()
   const greeting     = hour < 12 ? sd.goodMorning : hour < 18 ? sd.goodAfternoon : sd.goodEvening
@@ -306,7 +306,7 @@ export default function SellerDashboardPage() {
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
           {[
-            { label: sd.netEarnings, value: formatPrice(Math.round(netEarnings)), icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', sub: sd.afterCommission.replace('{n}', String(vendor.commission_rate)) },
+            { label: sd.netEarnings, value: formatPrice(Math.round(netEarnings)), icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', sub: 'Revenu total (abonnement mensuel)' },
             { label: sd.totalOrders, value: orders.length.toLocaleString(), icon: ShoppingBag, color: 'text-blue-600 bg-blue-50', sub: sd.allTime },
             { label: sd.pending, value: analytics.pending.toLocaleString(), icon: Clock, color: analytics.pending > 0 ? 'text-amber-600 bg-amber-50' : 'text-gray-400 bg-gray-50', sub: sd.needAttention },
             { label: sd.products, value: allProducts.length.toLocaleString(), icon: Package, color: 'text-violet-600 bg-violet-50', sub: sd.listedInStore },
@@ -542,30 +542,46 @@ export default function SellerDashboardPage() {
             )}
           </div>
 
-          {/* Earnings Breakdown */}
+          {/* Subscription Status */}
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <TrendingUp className="w-5 h-5 text-emerald-600" />
-              <h2 className="font-bold text-gray-900">{sd.earningsBreakdown}</h2>
+              <h2 className="font-bold text-gray-900">Abonnement & Revenus</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-              <div className="bg-gray-50 rounded-xl p-4 flex sm:block items-center justify-between gap-4">
-                <p className="text-xs text-gray-500 sm:mb-1">{sd.grossSalesLabel}</p>
-                <p className="text-base sm:text-lg font-black text-gray-900 sm:mt-1">{formatPrice(grossRevenue)}</p>
-              </div>
-              <div className="bg-red-50 rounded-xl p-4 flex sm:block items-center justify-between gap-4">
-                <p className="text-xs text-gray-500 sm:mb-1">{sd.platformFee}</p>
-                <div className="flex items-center gap-2 sm:block">
-                  <p className="text-base sm:text-lg font-black text-red-600">{vendor.commission_rate}%</p>
-                  <p className="text-xs text-red-400">{formatPrice(Math.round(grossRevenue * vendor.commission_rate / 100))}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Ventes totales</p>
+                  <p className="text-lg font-black text-gray-900">{formatPrice(grossRevenue)}</p>
                 </div>
+                <DollarSign className="w-8 h-8 text-gray-200" />
               </div>
-              <div className="bg-emerald-50 rounded-xl p-4 flex sm:block items-center justify-between gap-4">
-                <p className="text-xs text-gray-500 sm:mb-1">{sd.youEarn}</p>
-                <div className="flex items-center gap-2 sm:block">
-                  <p className="text-base sm:text-lg font-black text-emerald-700">{formatPrice(Math.round(netEarnings))}</p>
-                  <p className="text-xs text-emerald-500">{sd.ofSales.replace('{n}', String(100 - vendor.commission_rate))}</p>
+              <div className={`rounded-xl p-4 flex items-center justify-between ${
+                vendor.subscription_status === 'active'       ? 'bg-emerald-50'
+                : vendor.subscription_status === 'trial'      ? 'bg-blue-50'
+                : vendor.subscription_status === 'grace_period' ? 'bg-amber-50'
+                : 'bg-red-50'
+              }`}>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Abonnement mensuel</p>
+                  <p className={`text-lg font-black ${
+                    vendor.subscription_status === 'active'       ? 'text-emerald-700'
+                    : vendor.subscription_status === 'trial'      ? 'text-blue-700'
+                    : vendor.subscription_status === 'grace_period' ? 'text-amber-700'
+                    : 'text-red-600'
+                  }`}>
+                    {vendor.subscription_status === 'active'       ? 'Actif'
+                     : vendor.subscription_status === 'trial'      ? 'Période d\'essai'
+                     : vendor.subscription_status === 'grace_period' ? 'Période de grâce'
+                     : 'Expiré'}
+                  </p>
+                  {vendor.subscription_expires_at && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Expire le {new Date(vendor.subscription_expires_at).toLocaleDateString('fr-DZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  )}
                 </div>
+                <Link href="/seller/subscription" className="text-xs font-bold text-gray-500 hover:text-emerald-600 underline">Gérer →</Link>
               </div>
             </div>
           </div>
@@ -614,12 +630,6 @@ export default function SellerDashboardPage() {
             {/* Quick info grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 divide-x divide-gray-50">
               {[
-                {
-                  icon: CreditCard,
-                  label: 'Commission',
-                  value: `${vendor.commission_rate}%`,
-                  color: 'text-blue-600',
-                },
                 {
                   icon: MapPin,
                   label: 'Wilaya',

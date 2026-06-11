@@ -411,10 +411,6 @@ export default function SellerOrdersPage() {
                               <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                              <span className="text-gray-400">Après commission ({vendor.commission_rate}%)</span>
-                              <span className="text-gray-700 font-semibold">{formatPrice(Math.round(vendorTotal * (1 - vendor.commission_rate / 100)))}</span>
-                            </div>
-                            <div className="flex justify-between text-xs">
                               <span className="text-gray-400">Date</span>
                               <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
@@ -559,10 +555,6 @@ export default function SellerOrdersPage() {
                                   <div className="flex justify-between">
                                     <span className="text-gray-500">Votre total</span>
                                     <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
-                                  </div>
-                                  <div className="flex justify-between text-xs">
-                                    <span className="text-gray-400">Après commission ({vendor.commission_rate}%)</span>
-                                    <span className="text-gray-700 font-semibold">{formatPrice(Math.round(vendorTotal * (1 - vendor.commission_rate / 100)))}</span>
                                   </div>
                                   <div className="flex justify-between text-xs">
                                     <span className="text-gray-400">Date commande</span>
