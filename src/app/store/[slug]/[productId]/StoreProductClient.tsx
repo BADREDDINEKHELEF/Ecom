@@ -26,10 +26,9 @@ export default function StoreProductClient({ product, accent }: Props) {
       id:       product.id,
       name:     product.name,
       price:    product.price,
-      image:    product.image,
+      images:   [product.image],
       nicheId:  product.nicheId,
-      quantity: qty,
-    })
+    } as Parameters<typeof addItem>[0], qty)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }
