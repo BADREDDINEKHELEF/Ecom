@@ -10,6 +10,7 @@ import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
 import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
+import OrderInvoicePrint from '@/components/ui/OrderInvoicePrint'
 import type { VendorOrderSummary } from '@/lib/supabase/queries'
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -415,6 +416,9 @@ export default function SellerOrdersPage() {
                               <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                           </div>
+                          <div className="pt-2">
+                            <OrderInvoicePrint order={{ ...order, order_items: items }} storeName={vendor.store_name} />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -559,6 +563,9 @@ export default function SellerOrdersPage() {
                                   <div className="flex justify-between text-xs">
                                     <span className="text-gray-400">Date commande</span>
                                     <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                  </div>
+                                  <div className="pt-2">
+                                    <OrderInvoicePrint order={{ ...order, order_items: items }} storeName={vendor.store_name} />
                                   </div>
                                 </div>
                               </div>

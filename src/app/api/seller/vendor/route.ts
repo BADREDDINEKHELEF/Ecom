@@ -22,6 +22,16 @@ const PatchSchema = z.object({
   social_tiktok:    z.string().max(100).nullable().optional(),
   theme_preset:     z.enum(['default','minimal','bold','elegant','earthy']).nullable().optional(),
   business_type:    z.enum(['individual','small_business','wholesaler','brand']).nullable().optional(),
+  // Bank / payout details
+  bank_rib:         z.string().max(30).nullable().optional(),
+  bank_ccp:         z.string().max(30).nullable().optional(),
+  bank_baridimob:   z.string().max(30).nullable().optional(),
+  bank_account_name: z.string().max(200).nullable().optional(),
+  // Inventory
+  low_stock_threshold: z.number().int().min(0).max(100).nullable().optional(),
+  // Store policies
+  return_policy:    z.string().max(2000).nullable().optional(),
+  shipping_policy:  z.string().max(2000).nullable().optional(),
 })
 
 export async function PATCH(req: NextRequest) {

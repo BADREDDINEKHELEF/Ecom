@@ -18,6 +18,9 @@ interface VendorRow {
   description: string | null
   wilaya: string | null
   is_approved: boolean
+  is_on_vacation?: boolean | null
+  vacation_message?: string | null
+  verified_at?: string | null
   seo_title?: string | null
   seo_description?: string | null
   created_at: string
@@ -115,7 +118,12 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h1 className="text-xl font-black text-gray-900 truncate">{vendor.store_name}</h1>
-              {vendor.is_approved && (
+              {vendor.verified_at && (
+                <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                  <BadgeCheck className="w-3.5 h-3.5" /> Certifié
+                </span>
+              )}
+              {vendor.is_approved && !vendor.verified_at && (
                 <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                   <BadgeCheck className="w-3.5 h-3.5" /> Vérifié
                 </span>
@@ -181,6 +189,21 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           </div>
         </div>
       </div>
+
+      {/* Vacation banner */}
+      {vendor.is_on_vacation && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-4">
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+            <span className="text-2xl flex-shrink-0">✈️</span>
+            <div>
+              <p className="font-bold text-amber-800 text-sm">Cette boutique est temporairement en congé</p>
+              {vendor.vacation_message && (
+                <p className="text-amber-700 text-sm mt-0.5">{vendor.vacation_message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Products */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-16">

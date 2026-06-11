@@ -16,6 +16,7 @@ import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import WilayaDeliveryEstimate from '@/components/ui/WilayaDeliveryEstimate'
 import RecentlyViewed, { trackRecentlyViewed } from '@/components/ui/RecentlyViewed'
 import StockAlertButton from '@/components/ui/StockAlertButton'
+import ProductQA from '@/components/shop/ProductQA'
 import type { Review } from '@/lib/supabase/queries'
 
 interface Props {
@@ -481,6 +482,9 @@ export default function ProductDetails({ product, niche, related }: Props) {
           )}
         </div>
       </section>
+
+      {/* Product Q&A */}
+      <ProductQA productId={product.id} />
 
       {/* Related Products */}
       {related.length > 0 && (

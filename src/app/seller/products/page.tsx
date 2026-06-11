@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, Upload } from 'lucide-react'
+import CsvImportModal from '@/components/seller/CsvImportModal'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
 import { formatPrice } from '@/lib/utils'
@@ -31,6 +32,7 @@ export default function SellerProductsPage() {
   const [loadingProds, setLoadingProds] = useState(true)
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(searchParams.get('new') === '1')
+  const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving]     = useState(false)
@@ -129,10 +131,16 @@ export default function SellerProductsPage() {
             <h1 className="text-2xl font-black text-gray-900">{sp.title}</h1>
             <p className="text-gray-500 text-sm mt-1">{sp.count.replace('{n}', String(products.length))}</p>
           </div>
-          <button onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm">
-            <Plus className="w-4 h-4" /> {sp.addBtn}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowImport(true)}
+              className="flex items-center gap-2 border border-gray-200 text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm">
+              <Upload className="w-4 h-4" /> CSV
+            </button>
+            <button onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm">
+              <Plus className="w-4 h-4" /> {sp.addBtn}
+            </button>
+          </div>
         </div>
 
         {/* Product Form */}
@@ -363,6 +371,10 @@ export default function SellerProductsPage() {
             </>
           )}
         </div>
+
+        {showImport && (
+          <CsvImportModal onClose={() => setShowImport(false)} onImported={load} />
+        )}
       </main>
     </div>
   )
