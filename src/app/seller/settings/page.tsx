@@ -521,8 +521,8 @@ export default function SellerSettingsPage() {
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Account Info</p>
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex justify-between">
-                <span>Commission rate</span>
-                <span className="font-bold text-gray-900">{vendor.commission_rate}%</span>
+                <span>Commission on sales</span>
+                <span className="font-bold text-emerald-600">0%</span>
               </div>
               <div className="flex justify-between">
                 <span>Account status</span>

@@ -108,9 +108,9 @@ export default function SellerSignupSection() {
 
             <div className="grid grid-cols-3 gap-4 pt-4">
               {[
-                { value: '58',  label: t.seller.wilayasCovered },
-                { value: '10%', label: t.seller.commissionOnly },
-                { value: '24h', label: t.seller.goesLive },
+                { value: '58',       label: t.seller.wilayasCovered },
+                { value: '2 000 DA', label: t.seller.commissionOnly },
+                { value: '24h',      label: t.seller.goesLive },
               ].map(({ value, label }) => (
                 <div key={label} className="bg-white/10 rounded-2xl p-4 text-center">
                   <p className="text-2xl font-black text-white">{value}</p>

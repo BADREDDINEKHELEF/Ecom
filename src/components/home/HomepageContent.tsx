@@ -44,10 +44,10 @@ export default function HomepageContent() {
   ]
 
   const STATS = [
-    { value: '200+',  label: t.becomeSeller.statSellers },
-    { value: '58',    label: t.becomeSeller.statWilayas },
-    { value: '10%',   label: t.becomeSeller.statCommission },
-    { value: '0 DA',  label: t.becomeSeller.statMonthlyFee },
+    { value: '200+',     label: t.becomeSeller.statSellers },
+    { value: '58',       label: t.becomeSeller.statWilayas },
+    { value: '2 000 DA', label: t.becomeSeller.statMonthlyFee },
+    { value: '0%',       label: t.becomeSeller.statCommission },
   ]
 
   return (
