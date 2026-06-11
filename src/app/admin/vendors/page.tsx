@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Store, CheckCircle, XCircle, ExternalLink, Loader2,
   Users, ToggleLeft, ToggleRight, Clock, AlertTriangle,
-  RefreshCw, ChevronDown, ChevronUp, CreditCard,
+  RefreshCw, ChevronDown, ChevronUp, CreditCard, BadgeCheck,
 } from 'lucide-react'
 
 interface Vendor {
@@ -19,6 +19,7 @@ interface Vendor {
   subscription_status:   string | null
   subscription_plan_id:  string | null
   admin_note:            string | null
+  verified_at:           string | null
   created_at:            string
 }
 
@@ -110,6 +111,20 @@ export default function AdminVendorsPage() {
       ))
     }
     setWorking(null)
+  }
+
+  const handleVerify = async (id: string) => {
+    setWorking(id)
+    try {
+      const res = await fetch(`/api/admin/vendors/${id}/verify`, { method: 'POST' })
+      if (res.ok) {
+        setVendors((prev) => prev.map((v) =>
+          v.id === id ? { ...v, verified_at: new Date().toISOString() } : v
+        ))
+      }
+    } finally {
+      setWorking(null)
+    }
   }
 
   const pending  = vendors.filter((v) =>  !v.is_approved && v.is_active)
@@ -230,6 +245,7 @@ export default function AdminVendorsPage() {
                       {isPending  && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1"><Clock className="w-3 h-3" /> En attente</span>}
                       {isDeclined && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 flex items-center gap-1"><XCircle className="w-3 h-3" /> Refusée</span>}
                       {v.is_approved && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Approuvée</span>}
+                      {v.verified_at && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Certifié</span>}
                       {/* Subscription status */}
                       {subCfg && (
                         <span className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 ${subCfg.color}`}>
@@ -329,6 +345,17 @@ export default function AdminVendorsPage() {
                             ? <><ToggleRight className="w-5 h-5 text-indigo-500" /> Suspendre</>
                             : <><ToggleLeft className="w-5 h-5" /> Activer</>
                           }
+                        </button>
+                      )}
+
+                      {v.is_approved && !v.verified_at && (
+                        <button
+                          onClick={() => handleVerify(v.id)}
+                          disabled={isWorking}
+                          className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl font-bold transition-colors disabled:opacity-50"
+                        >
+                          {isWorking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
+                          Certifier
                         </button>
                       )}
                     </div>

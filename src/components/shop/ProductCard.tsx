@@ -76,6 +76,8 @@ function ProductCard({ product }: ProductCardProps) {
           )}
 
           <div className={`absolute top-2.5 ${isRTL ? 'right-2.5' : 'left-2.5'} flex flex-col gap-1.5`}>
+            {product.condition === 'used'        && <Badge variant="warning">Occasion</Badge>}
+            {product.condition === 'refurbished' && <Badge variant="sale">Reconditionné</Badge>}
             {product.isNew && <Badge variant="new">{t.common.new}</Badge>}
             {hasDiscount && <Badge variant="sale">-{discountPct}%</Badge>}
           </div>

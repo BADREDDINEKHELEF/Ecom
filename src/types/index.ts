@@ -25,6 +25,9 @@ export interface Product {
   tags: string[]
   isNew?: boolean
   isFeatured?: boolean
+  condition?: 'new' | 'used' | 'refurbished'
+  metaTitle?: string
+  metaDescription?: string
 }
 
 export interface CartItem {

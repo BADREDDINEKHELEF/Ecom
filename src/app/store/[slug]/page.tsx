@@ -28,6 +28,8 @@ interface VendorRow {
   social_facebook?: string | null
   social_whatsapp?: string | null
   social_tiktok?: string | null
+  return_policy?: string | null
+  shipping_policy?: string | null
 }
 
 async function getStoreProducts(vendorId: string): Promise<{ products: Product[]; totalOrders: number }> {
@@ -202,6 +204,30 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Store Policies */}
+      {(vendor.return_policy || vendor.shipping_policy) && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-6 space-y-2">
+          {vendor.shipping_policy && (
+            <details className="bg-white rounded-2xl shadow-sm overflow-hidden group">
+              <summary className="flex items-center justify-between px-5 py-4 cursor-pointer select-none font-semibold text-gray-800 text-sm list-none">
+                Politique de livraison
+                <span className="text-gray-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p className="px-5 pb-4 text-sm text-gray-600 whitespace-pre-line">{vendor.shipping_policy}</p>
+            </details>
+          )}
+          {vendor.return_policy && (
+            <details className="bg-white rounded-2xl shadow-sm overflow-hidden group">
+              <summary className="flex items-center justify-between px-5 py-4 cursor-pointer select-none font-semibold text-gray-800 text-sm list-none">
+                Politique de retour
+                <span className="text-gray-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p className="px-5 pb-4 text-sm text-gray-600 whitespace-pre-line">{vendor.return_policy}</p>
+            </details>
+          )}
         </div>
       )}
 

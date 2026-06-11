@@ -5,20 +5,23 @@ import { Product } from '@/types'
 
 export function dbToProduct(row: Record<string, unknown>): Product {
   return {
-    id:           String(row.id),
-    nicheId:      String(row.niche_id),
-    category:     String(row.category),
-    name:         String(row.name),
-    description:  String(row.description ?? ''),
-    price:        Number(row.price),
-    comparePrice: row.compare_price != null ? Number(row.compare_price) : undefined,
-    images:       (row.images as string[]) ?? [],
-    stock:        Number(row.stock ?? 0),
-    rating:       Number(row.rating ?? 0),
-    reviewCount:  Number(row.review_count ?? 0),
-    tags:         (row.tags as string[]) ?? [],
-    isNew:        Boolean(row.is_new),
-    isFeatured:   Boolean(row.is_featured),
+    id:              String(row.id),
+    nicheId:         String(row.niche_id),
+    category:        String(row.category),
+    name:            String(row.name),
+    description:     String(row.description ?? ''),
+    price:           Number(row.price),
+    comparePrice:    row.compare_price != null ? Number(row.compare_price) : undefined,
+    images:          (row.images as string[]) ?? [],
+    stock:           Number(row.stock ?? 0),
+    rating:          Number(row.rating ?? 0),
+    reviewCount:     Number(row.review_count ?? 0),
+    tags:            (row.tags as string[]) ?? [],
+    isNew:           Boolean(row.is_new),
+    isFeatured:      Boolean(row.is_featured),
+    condition:       (row.condition as 'new' | 'used' | 'refurbished') ?? 'new',
+    metaTitle:       row.meta_title != null ? String(row.meta_title) : undefined,
+    metaDescription: row.meta_description != null ? String(row.meta_description) : undefined,
   }
 }
 
@@ -27,7 +30,7 @@ export const getProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,created_at')
       .order('created_at', { ascending: false })
     if (nicheId)  query = query.eq('niche_id', nicheId)
     if (category) query = query.eq('category', category)
@@ -44,7 +47,7 @@ export const getFeaturedProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,created_at')
       .eq('is_featured', true)
       .gt('stock', 0)
       .order('created_at', { ascending: false })
@@ -63,7 +66,7 @@ export const getProductById = unstable_cache(
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,created_at')
       .eq('id', id)
       .single()
     if (error || !data) return null

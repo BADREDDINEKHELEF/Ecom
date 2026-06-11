@@ -18,13 +18,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const product = await getProductById(productId)
   if (!product || product.nicheId !== nicheId) return {}
   const niche = getNiche(nicheId)
-  const desc = product.description || `${product.name} — ${niche?.name ?? ''} — Livraison dans toute l'Algérie.`
+  const title = product.metaTitle || `${product.name} | ${niche?.name ?? 'Casbah Store'}`
+  const desc  = product.metaDescription || product.description || `${product.name} — ${niche?.name ?? ''} — Livraison dans toute l'Algérie.`
   return {
-    title: `${product.name} | ${niche?.name ?? 'Casbah Store'}`,
+    title,
     description: desc.slice(0, 160),
     alternates: { canonical: `${SITE_URL}/${nicheId}/${productId}` },
     openGraph: {
-      title: `${product.name} — Casbah Store`,
+      title: title,
       description: desc.slice(0, 300),
       url: `${SITE_URL}/${nicheId}/${productId}`,
       images: product.images[0] ? [{ url: product.images[0], width: 800, height: 800, alt: product.name }] : [],

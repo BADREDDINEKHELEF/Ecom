@@ -46,6 +46,7 @@ export default function SellerSettingsPage() {
     theme_preset: 'default', business_type: 'individual',
     bank_account_name: '', bank_rib: '', bank_ccp: '', bank_baridimob: '',
     low_stock_threshold: 5,
+    return_policy: '', shipping_policy: '',
   })
   const [initialized, setInitialized] = useState(false)
 
@@ -77,6 +78,8 @@ export default function SellerSettingsPage() {
       bank_ccp:           vendor.bank_ccp || '',
       bank_baridimob:     vendor.bank_baridimob || '',
       low_stock_threshold: vendor.low_stock_threshold ?? 5,
+      return_policy:      vendor.return_policy || '',
+      shipping_policy:    vendor.shipping_policy || '',
     })
     setInitialized(true)
   }
@@ -128,6 +131,8 @@ export default function SellerSettingsPage() {
           bank_ccp:         form.bank_ccp || null,
           bank_baridimob:   form.bank_baridimob || null,
           low_stock_threshold: form.low_stock_threshold || null,
+          return_policy:   form.return_policy || null,
+          shipping_policy: form.shipping_policy || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Save failed')
@@ -469,6 +474,34 @@ export default function SellerSettingsPage() {
                     <span className="text-sm text-gray-500">unités restantes → alerter</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Store Policies */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
+                <span className="text-sm font-black text-gray-900">Politiques de la boutique</span>
+                <span className="text-xs text-gray-400">(affichées aux acheteurs)</span>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Politique de livraison</label>
+                <textarea
+                  value={form.shipping_policy}
+                  onChange={(e) => setForm({ ...form, shipping_policy: e.target.value })}
+                  rows={4}
+                  placeholder="Ex: Livraison sous 3-5 jours ouvrables dans toute l'Algérie via Yalidine. Retrait possible à Alger…"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Politique de retour</label>
+                <textarea
+                  value={form.return_policy}
+                  onChange={(e) => setForm({ ...form, return_policy: e.target.value })}
+                  rows={4}
+                  placeholder="Ex: Retours acceptés sous 7 jours après réception, produit non utilisé dans son emballage d'origine…"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 resize-none"
+                />
               </div>
             </div>
 
