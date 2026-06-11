@@ -7,7 +7,6 @@ import {
   Loader2, CheckCircle, TrendingUp, Shield, Zap, Users,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { createVendor } from '@/lib/supabase/queries'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useT } from '@/lib/store/langStore'
 
@@ -54,19 +53,27 @@ export default function SellerSignupSection() {
     if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
 
     try {
-      await createVendor({
-        user_id: authData.user.id,
-        store_name: form.storeName,
-        store_slug: form.storeSlug,
-        logo_url: null,
-        description: null,
-        phone: form.phone || null,
-        wilaya: form.wilaya || null,
+      const res = await fetch('/api/seller/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id:    authData.user.id,
+          store_name: form.storeName,
+          store_slug: form.storeSlug,
+          phone:      form.phone || null,
+          wilaya:     form.wilaya || null,
+          description: null,
+          logo_url:   null,
+        }),
       })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? t.seller.registrationFailed)
+      }
       setDone(true)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t.seller.registrationFailed
-      setError(msg.includes('duplicate') || msg.includes('unique') ? t.seller.urlTaken : msg)
+      setError(msg.includes('duplicate') || msg.includes('unique') || msg.includes('déjà') ? t.seller.urlTaken : msg)
       await supabase.auth.signOut()
     } finally {
       setLoading(false)
