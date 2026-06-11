@@ -96,12 +96,9 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           <Image src={vendor.banner_url} alt="Store banner" fill className="object-cover" sizes="100vw" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-        <Link
-          href="/"
-          className="absolute top-4 left-4 flex items-center gap-1.5 text-white/90 hover:text-white text-sm font-semibold bg-black/20 backdrop-blur px-3 py-1.5 rounded-full transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> ShopDZ
-        </Link>
+        <div className="absolute top-4 left-4 flex items-center gap-1.5 text-white/90 text-sm font-semibold bg-black/20 backdrop-blur px-3 py-1.5 rounded-full">
+          Powered by ShopDZ
+        </div>
       </div>
 
       {/* Store Header */}
@@ -247,7 +244,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} accent={accent} />
+                <ProductCard key={product.id} product={product} accent={accent} storeSlug={vendor.store_slug} />
               ))}
             </div>
           </>
@@ -257,7 +254,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
   )
 }
 
-function ProductCard({ product, accent }: { product: Product; accent: string }) {
+function ProductCard({ product, accent, storeSlug }: { product: Product; accent: string; storeSlug: string }) {
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
     ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
@@ -265,7 +262,7 @@ function ProductCard({ product, accent }: { product: Product; accent: string }) 
 
   return (
     <Link
-      href={`/${product.nicheId}/${product.id}`}
+      href={`/store/${storeSlug}/${product.id}`}
       className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100"
     >
       <div className="relative aspect-square bg-gray-100">

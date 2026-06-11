@@ -4,6 +4,10 @@ import Link from 'next/link'
 import { Store, TrendingUp, Shield, Truck, DollarSign, Users, Package, BarChart3, ArrowRight, CheckCircle } from 'lucide-react'
 import { useT } from '@/lib/store/langStore'
 
+function slugify(s: string) {
+  return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
+}
+
 export default function BecomeSellerPage() {
   const t = useT()
 
@@ -31,10 +35,10 @@ export default function BecomeSellerPage() {
   ]
 
   const STATS = [
-    { value: '200+',  label: t.becomeSeller.statSellers },
-    { value: '58',    label: t.becomeSeller.statWilayas },
-    { value: '10%',   label: t.becomeSeller.statCommission },
-    { value: '0 DZD', label: t.becomeSeller.statMonthlyFee },
+    { value: '200+',     label: t.becomeSeller.statSellers },
+    { value: '58',       label: t.becomeSeller.statWilayas },
+    { value: '2 000 DA', label: t.becomeSeller.statMonthlyFee },
+    { value: '0%',       label: t.becomeSeller.statCommission },
   ]
 
   return (
@@ -48,7 +52,7 @@ export default function BecomeSellerPage() {
           </div>
           <h1 className="text-4xl sm:text-5xl font-black leading-tight mb-4">
             {t.becomeSeller.heroTitle}<br />
-            {t.becomeSeller.heroTitleAccent}
+            <span className="text-emerald-400">{t.becomeSeller.heroTitleAccent}</span>
           </h1>
           <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
             {t.becomeSeller.heroSub}
@@ -148,8 +152,8 @@ export default function BecomeSellerPage() {
 
       {/* Footer nav */}
       <div className="py-6 px-4 text-center border-t border-gray-100">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
-          <Package className="inline w-4 h-4 mr-1" /> {t.becomeSeller.backToShopDZ}
+        <Link href="/seller/login" className="text-sm text-gray-500 hover:text-gray-700">
+          <Package className="inline w-4 h-4 mr-1" /> {t.becomeSeller.signInDashboard}
         </Link>
       </div>
     </div>

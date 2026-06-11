@@ -14,17 +14,18 @@ import ExitIntentPopup from '@/components/ui/ExitIntentPopup'
 import SocialProofTicker from '@/components/ui/SocialProofTicker'
 import CompareBar from '@/components/shop/CompareBar'
 import ScrollToTop from '@/components/ui/ScrollToTop'
+import HideOnStore from '@/components/layout/HideOnStore'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: { default: 'Casbah Store — متجر الجزائر الأول', template: '%s | Casbah Store' },
-  description: 'تسوق إكسسوارات السيارات، مستلزمات الحيوانات، ومنتجات الأطفال. توصيل لجميع ولايات الجزائر.',
-  keywords: ['algerie', 'algérie', 'الجزائر', 'shopping', 'livraison', 'cars', 'kids', 'animals'],
+  title: { default: 'ShopDZ — Ouvrez votre boutique en ligne', template: '%s | ShopDZ' },
+  description: 'Créez votre boutique en ligne en Algérie. Livraison vers les 58 wilayas. 0% de commission.',
+  keywords: ['algerie', 'algérie', 'الجزائر', 'boutique en ligne', 'vendeur', 'e-commerce'],
   manifest: '/manifest.json',
   openGraph: {
-    siteName: 'Casbah Store',
+    siteName: 'ShopDZ',
     locale: 'fr_DZ',
     type: 'website',
   },
@@ -44,19 +45,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <RTLWrapper>
-          <AnnouncementBanner />
-          <Header />
+          <HideOnStore><AnnouncementBanner /></HideOnStore>
+          <HideOnStore><Header /></HideOnStore>
+          <HideOnStore><LocaleBanner /></HideOnStore>
           <CartSidebar />
           <Toaster />
           <WhatsAppButton />
-          <LocaleBanner />
           <main>{children}</main>
-          <MobileCartBar />
-          <ExitIntentPopup />
-          <SocialProofTicker />
-          <CompareBar />
+          <HideOnStore><MobileCartBar /></HideOnStore>
+          <HideOnStore><ExitIntentPopup /></HideOnStore>
+          <HideOnStore><SocialProofTicker /></HideOnStore>
+          <HideOnStore><CompareBar /></HideOnStore>
           <ScrollToTop />
-          <Footer />
+          <HideOnStore><Footer /></HideOnStore>
         </RTLWrapper>
       </body>
     </html>
