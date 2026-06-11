@@ -60,7 +60,7 @@ export default function SellerProductsPage() {
 
   const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); setFormError(''); setVariants([]) }
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: { preventDefault(): void }) => {
     e.preventDefault()
     if (!vendor) return
     if (!form.name || form.price <= 0) { setFormError('Name and price are required'); return }

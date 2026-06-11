@@ -303,7 +303,7 @@ export default function SellerDashboardPage() {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
           {[
             { label: sd.netEarnings, value: formatPrice(Math.round(netEarnings)), icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', sub: sd.afterCommission.replace('{n}', String(vendor.commission_rate)) },
             { label: sd.totalOrders, value: orders.length.toLocaleString(), icon: ShoppingBag, color: 'text-blue-600 bg-blue-50', sub: sd.allTime },
@@ -371,7 +371,7 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Best Sellers + Recent Orders */}
-        <div className="grid xl:grid-cols-5 gap-6 mb-6">
+        <div className="grid lg:grid-cols-5 gap-4 lg:gap-6 mb-6">
 
           {/* Best Sellers */}
           <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
@@ -444,7 +444,7 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Worst Sellers + Top Customers */}
-        <div className="grid xl:grid-cols-2 gap-6 mb-6">
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
 
           {/* Worst Sellers */}
           <div className="bg-white rounded-2xl p-6 shadow-sm">
@@ -507,7 +507,7 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Delivery Breakdown + Earnings */}
-        <div className="grid xl:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
 
           {/* Delivery Company Breakdown */}
           <div className="bg-white rounded-2xl p-6 shadow-sm">

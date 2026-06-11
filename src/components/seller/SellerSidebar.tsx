@@ -185,7 +185,7 @@ export default function SellerSidebar({
           {/* Bottom actions */}
           <div className="space-y-0.5 pt-2 border-t border-gray-800 flex-shrink-0">
             <a
-              href={`/shop/${slug}`}
+              href={`/store/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
