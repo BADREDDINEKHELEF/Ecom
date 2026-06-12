@@ -48,6 +48,7 @@ export const translations = {
     checkout: {
       title: 'Checkout', shippingInfo: 'Delivery Information',
       fullName: 'Full Name', phone: 'Phone Number', city: 'City',
+      commune: 'Commune (Baladiya)', selectCommune: 'Select commune…',
       wilaya: 'Wilaya', address: 'Street Address', selectWilaya: 'Select wilaya…',
       payment: 'Payment Method',
       cash: 'Cash on Delivery', cashDesc: 'Pay when you receive',
@@ -461,6 +462,7 @@ export const translations = {
     checkout: {
       title: 'Paiement', shippingInfo: 'Informations de livraison',
       fullName: 'Nom complet', phone: 'Numéro de téléphone', city: 'Ville',
+      commune: 'Commune (Baladiya)', selectCommune: 'Choisir une commune…',
       wilaya: 'Wilaya', address: 'Adresse', selectWilaya: 'Choisir une wilaya…',
       payment: 'Mode de paiement',
       cash: 'Paiement à la livraison', cashDesc: 'Payez à la réception',
@@ -874,6 +876,7 @@ export const translations = {
     checkout: {
       title: 'إتمام الطلب', shippingInfo: 'معلومات التوصيل',
       fullName: 'الاسم الكامل', phone: 'رقم الهاتف', city: 'المدينة',
+      commune: 'البلدية', selectCommune: 'اختر البلدية...',
       wilaya: 'الولاية', address: 'العنوان التفصيلي', selectWilaya: 'اختر الولاية...',
       payment: 'طريقة الدفع',
       cash: 'الدفع عند الاستلام', cashDesc: 'ادفع عند وصول طلبك',

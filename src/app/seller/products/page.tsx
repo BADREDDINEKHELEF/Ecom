@@ -9,7 +9,7 @@ import CsvImportModal from '@/components/seller/CsvImportModal'
 import ImageUploader from '@/components/seller/ImageUploader'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/queries'
-import { upsertProduct, deleteProduct, updateProductExtras } from '@/lib/supabase/mutations'
+import { upsertProduct, deleteProduct, updateProductExtras, checkVendorProductLimit } from '@/lib/supabase/mutations'
 import { formatPrice } from '@/lib/utils'
 import { niches } from '@/lib/data/niches'
 import { useT, useRTL } from '@/lib/store/langStore'
@@ -84,6 +84,19 @@ export default function SellerProductsPage() {
     setSaving(true)
     setFormError('')
     try {
+      // Enforce subscription product limit for new products only
+      if (!editing) {
+        const limitCheck = await checkVendorProductLimit(vendor.id)
+        if (!limitCheck.allowed) {
+          const limitMsg = limitCheck.limit !== null
+            ? `Limite atteinte : ${limitCheck.count}/${limitCheck.limit} produits. Passez à un plan supérieur pour ajouter plus de produits.`
+            : 'Limite de produits atteinte. Veuillez contacter le support.'
+          setFormError(limitMsg)
+          setSaving(false)
+          return
+        }
+      }
+
       const productId = editing?.id || `v-${vendor.id.slice(0, 8)}-${Date.now()}`
       await upsertProduct({
         id: productId,

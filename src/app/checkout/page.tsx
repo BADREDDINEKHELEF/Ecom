@@ -10,6 +10,7 @@ import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 import { getDeliveryInfo, ALL_WILAYAS } from '@/lib/data/wilayas'
+import { getCommunesForWilaya } from '@/lib/data/communes'
 // createOrder is now called via /api/orders (server-side, not client-side)
 import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
 
@@ -483,17 +484,21 @@ export default function CheckoutPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.city}</label>
-                <input required type="text" value={form.city} onChange={(e) => f('city', e.target.value)}
-                  placeholder="Alger"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
-              </div>
-              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.wilaya}</label>
-                <select required value={form.wilaya} onChange={(e) => f('wilaya', e.target.value)}
+                <select required value={form.wilaya}
+                  onChange={(e) => setForm((prev) => ({ ...prev, wilaya: e.target.value, city: '' }))}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 bg-white">
                   <option value="">{t.checkout.selectWilaya}</option>
                   {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.commune}</label>
+                <select required value={form.city} onChange={(e) => f('city', e.target.value)}
+                  disabled={!form.wilaya}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 bg-white disabled:bg-gray-50 disabled:text-gray-400">
+                  <option value="">{form.wilaya ? t.checkout.selectCommune : t.checkout.selectWilaya}</option>
+                  {getCommunesForWilaya(form.wilaya).map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               {/* Delivery estimate shown once wilaya selected */}

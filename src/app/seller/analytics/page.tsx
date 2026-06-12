@@ -6,10 +6,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
-  TrendingUp, DollarSign, ShoppingBag, RotateCcw,
+  TrendingUp, TrendingDown, DollarSign, ShoppingBag, RotateCcw,
   Truck, Download, RefreshCw, AlertTriangle, BarChart2,
   Lightbulb, ArrowRight, CheckCircle, XCircle, Package,
-  ChevronRight, Star, MapPin, Clock, Menu,
+  ChevronRight, Star, MapPin, Clock, Menu, Zap,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
@@ -35,9 +35,23 @@ const DAYS_OPTIONS = [
 
 type AnalyticsTab = 'overview' | 'funnel' | 'insights'
 
+// ─── Growth badge ─────────────────────────────────────────────────────────────
+function GrowthBadge({ pct }: { pct: number }) {
+  if (pct === 0) return null
+  const up = pct > 0
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+      up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+    }`}>
+      {up ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+      {up ? '+' : ''}{pct}%
+    </span>
+  )
+}
+
 // ─── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, sub, color = 'indigo' }: {
-  icon: React.ElementType; label: string; value: string; sub?: string; color?: string
+function StatCard({ icon: Icon, label, value, sub, color = 'indigo', growth }: {
+  icon: React.ElementType; label: string; value: string; sub?: string; color?: string; growth?: number
 }) {
   const bg: Record<string, string> = {
     indigo: 'bg-indigo-50 text-indigo-600',
@@ -51,9 +65,12 @@ function StatCard({ icon: Icon, label, value, sub, color = 'indigo' }: {
       <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bg[color]}`}>
         <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wide truncate">{label}</p>
-        <p className="text-lg sm:text-2xl font-black text-gray-900 mt-0.5 truncate">{value}</p>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <p className="text-lg sm:text-2xl font-black text-gray-900 truncate">{value}</p>
+          {growth !== undefined && <GrowthBadge pct={growth} />}
+        </div>
         {sub && <p className="text-xs text-gray-500 mt-0.5 truncate">{sub}</p>}
       </div>
     </div>
@@ -413,12 +430,14 @@ export default function SellerAnalyticsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                       <StatCard icon={DollarSign} label="CA Total" color="indigo"
                         value={formatPrice(data.totalRevenue)}
-                        sub={`${data.totalOrders} commandes · moy. ${formatPrice(data.avgOrderValue)}`} />
+                        growth={data.revenueGrowth}
+                        sub={`moy. ${formatPrice(data.avgOrderValue)} / cmd`} />
                       <StatCard icon={ShoppingBag} label="Commandes" color="blue"
                         value={String(data.totalOrders)}
+                        growth={data.ordersGrowth}
                         sub={`${data.pendingOrders} en attente`} />
                       <StatCard icon={Truck} label="Livrées" color="green"
                         value={String(data.deliveredOrders)}
@@ -428,13 +447,51 @@ export default function SellerAnalyticsPage() {
                         sub={`${data.returnedOrders} retours`} />
                     </div>
 
+                    {/* Projected revenue & prior period banner */}
+                    {data.projectedRevenue > 0 && (
+                      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+                        <div className="flex items-center gap-2.5 bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-3 flex-1">
+                          <Zap className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs text-indigo-500 font-semibold">Projection 30 jours (au rythme actuel)</p>
+                            <p className="font-black text-indigo-700 text-lg">{formatPrice(data.projectedRevenue)}</p>
+                          </div>
+                        </div>
+                        {data.priorRevenue > 0 && (
+                          <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 flex-1">
+                            <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs text-gray-400 font-semibold">Période précédente ({days} j avant)</p>
+                              <p className="font-black text-gray-700 text-lg">{formatPrice(data.priorRevenue)}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="bg-white rounded-2xl p-6 shadow-sm mb-5">
-                      <h2 className="font-bold text-gray-900 mb-4">Chiffre d'affaires dans le temps</h2>
-                      {data.monthly.length === 0 ? (
-                        <p className="text-gray-400 text-sm text-center py-8">Pas de données pour cette période</p>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={240}>
-                          <AreaChart data={data.monthly} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-bold text-gray-900">
+                          {days <= 30 ? 'CA par jour' : 'CA dans le temps'}
+                        </h2>
+                        {days <= 30 && data.byDay.some((d) => d.revenue > 0) && (
+                          <span className="text-xs text-gray-400">
+                            Meilleur jour : {formatPrice(Math.max(...data.byDay.map((d) => d.revenue)))}
+                          </span>
+                        )}
+                      </div>
+                      {(() => {
+                        const chartData = days <= 30 ? data.byDay : data.monthly
+                        const isEmpty   = chartData.length === 0 || chartData.every((d) => d.revenue === 0)
+                        const xKey      = days <= 30 ? 'date' : 'month'
+                        return isEmpty ? (
+                          <p className="text-gray-400 text-sm text-center py-8">Pas de données pour cette période</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={240}>
+                            <AreaChart
+                              data={chartData as { [k: string]: number | string }[]}
+                              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                            >
                             <defs>
                               <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
@@ -442,14 +499,20 @@ export default function SellerAnalyticsPage() {
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                            <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false}
-                              tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                            <XAxis
+                              dataKey={xKey}
+                              tick={{ fontSize: days <= 7 ? 11 : 10, fill: '#9ca3af' }}
+                              axisLine={false} tickLine={false}
+                              interval={days <= 7 ? 0 : days <= 30 ? 4 : 0}
+                            />
+                            <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false}
+                              tickFormatter={(v) => v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)} />
                             <Tooltip content={<RevTooltip />} />
                             <Area type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2.5} fill="url(#grad)" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      )}
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        )
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">

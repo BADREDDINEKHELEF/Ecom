@@ -1,211 +1,475 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { TrendingUp, ShoppingBag, DollarSign, Truck, XCircle, RotateCcw, Clock, Package, ArrowRight, Download } from 'lucide-react'
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts'
+import {
+  TrendingUp, TrendingDown, DollarSign, ShoppingBag, Truck,
+  Users, Package, CreditCard, RefreshCw, Download, ArrowRight,
+  Store, BarChart2, MapPin, Star,
+} from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { getCodStats, getAnalyticsData } from '@/lib/supabase/analytics'
+import type { AdminStats } from '@/lib/supabase/analytics'
 
-export const revalidate = 120
+// ── Colour constants ───────────────────────────────────────────
+const PALETTE = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#EC4899', '#14B8A6']
 
-export default async function AnalyticsPage() {
-  const [analytics, cod] = await Promise.all([
-    getAnalyticsData().catch(() => ({
-      totalRevenue: 0,
-      totalOrders: 0,
-      monthly: [],
-      topProducts: [],
-    })),
-    getCodStats().catch(() => ({ total: 0, delivered: 0, failed: 0, returned: 0, pending: 0 })),
-  ])
+const PERIOD_OPTIONS = [
+  { label: '7 j',  days: 7  },
+  { label: '30 j', days: 30 },
+  { label: '90 j', days: 90 },
+  { label: '1 an', days: 365 },
+]
 
-  const deliveryRate = cod.total > 0 ? Math.round((cod.delivered / cod.total) * 100) : 0
-  const failureRate  = cod.total > 0 ? Math.round((cod.failed  / cod.total) * 100) : 0
-  const returnRate   = cod.total > 0 ? Math.round((cod.returned / cod.total) * 100) : 0
-  const maxRevenue   = Math.max(...analytics.monthly.map((m) => m.revenue), 1)
+type Tab = 'overview' | 'vendors' | 'geography'
 
-  const kpis = [
-    {
-      label: 'Revenue (6 months)',
-      value: formatPrice(analytics.totalRevenue),
-      icon: DollarSign,
-      color: 'text-indigo-600 bg-indigo-50',
-      sub: analytics.totalRevenue === 0 ? 'No orders yet' : 'All time in period',
-    },
-    {
-      label: 'Total Orders',
-      value: analytics.totalOrders.toLocaleString(),
-      icon: ShoppingBag,
-      color: 'text-emerald-600 bg-emerald-50',
-      sub: 'Last 6 months',
-    },
-    {
-      label: 'COD Orders',
-      value: cod.total.toLocaleString(),
-      icon: Truck,
-      color: 'text-violet-600 bg-violet-50',
-      sub: `${deliveryRate}% delivery rate`,
-    },
-    {
-      label: 'Avg. Order Value',
-      value: analytics.totalOrders > 0 ? formatPrice(Math.round(analytics.totalRevenue / analytics.totalOrders)) : '—',
-      icon: TrendingUp,
-      color: 'text-amber-600 bg-amber-50',
-      sub: 'Last 6 months',
-    },
-  ]
+// ── Helpers ────────────────────────────────────────────────────
+
+function GrowthBadge({ pct }: { pct: number }) {
+  if (pct === 0) return null
+  const up = pct > 0
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-full ${
+      up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+    }`}>
+      {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+      {up ? '+' : ''}{pct}%
+    </span>
+  )
+}
+
+function KpiCard({
+  icon: Icon, label, value, sub, color = 'indigo', growth,
+}: {
+  icon: React.ElementType
+  label: string
+  value: string
+  sub?: string
+  color?: string
+  growth?: number
+}) {
+  const bg: Record<string, string> = {
+    indigo: 'bg-indigo-50 text-indigo-600',
+    green:  'bg-green-50 text-green-600',
+    amber:  'bg-amber-50 text-amber-600',
+    red:    'bg-red-50 text-red-600',
+    violet: 'bg-violet-50 text-violet-600',
+    blue:   'bg-blue-50 text-blue-600',
+    emerald:'bg-emerald-50 text-emerald-600',
+    pink:   'bg-pink-50 text-pink-600',
+  }
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col gap-3">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${bg[color] ?? bg.indigo}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div>
+        <div className="flex items-center gap-2 mb-0.5">
+          <p className="text-2xl font-black text-gray-900">{value}</p>
+          {growth !== undefined && <GrowthBadge pct={growth} />}
+        </div>
+        <p className="text-sm text-gray-500">{label}</p>
+        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  )
+}
+
+function RevTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg space-y-1">
+      <p className="font-bold">{label}</p>
+      {payload.map((p, i) => (
+        <p key={i}>{i === 0 ? formatPrice(p.value) : `${p.value} cmd`}</p>
+      ))}
+    </div>
+  )
+}
+
+// ── Page ───────────────────────────────────────────────────────
+export default function AdminAnalyticsPage() {
+  const [days, setDays]   = useState(30)
+  const [tab, setTab]     = useState<Tab>('overview')
+  const [data, setData]   = useState<AdminStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/analytics?days=${days}`, {
+        headers: { 'x-admin-token': localStorage.getItem('adminToken') ?? '' },
+      })
+      if (res.ok) setData(await res.json())
+    } finally {
+      setLoading(false)
+    }
+  }, [days])
+
+  useEffect(() => { load() }, [load])
+
+  // ── Loading skeleton ─────────────────────────────────────────
+  if (loading && !data) {
+    return (
+      <div className="p-4 sm:p-8">
+        <div className="h-8 w-48 bg-gray-200 rounded-xl animate-pulse mb-8" />
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm h-28 animate-pulse" />
+          ))}
+        </div>
+        <div className="bg-white rounded-2xl p-6 shadow-sm h-72 animate-pulse" />
+      </div>
+    )
+  }
+
+  const d = data
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex items-start justify-between gap-4 mb-8">
+
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Analytics</h1>
-          <p className="text-gray-500 text-sm mt-1">Last 6 months — live data from your orders</p>
+          <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+            <BarChart2 className="w-6 h-6 text-indigo-600" /> Analytics Plateforme
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">Données en temps réel — toutes boutiques confondues</p>
         </div>
-        <a
-          href="/api/admin/analytics/export"
-          className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors flex-shrink-0"
-        >
-          <Download className="w-4 h-4" />
-          Exporter CSV
-        </a>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+            {PERIOD_OPTIONS.map(({ label, days: d }) => (
+              <button key={d} onClick={() => setDays(d)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${days === d ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <button onClick={load} className="border border-gray-200 bg-white p-2 rounded-xl text-gray-500 hover:bg-gray-50">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <a href="/api/admin/analytics/export"
+            className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
+            <Download className="w-4 h-4" /> Exporter CSV
+          </a>
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-        {kpis.map(({ label, value, icon: Icon, color, sub }) => (
-          <div key={label} className="bg-white rounded-2xl p-5 shadow-sm">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
-              <Icon className="w-5 h-5" />
-            </div>
-            <p className="text-2xl font-black text-gray-900">{value}</p>
-            <p className="text-sm text-gray-500 mt-0.5">{label}</p>
-            <p className="text-xs text-gray-400 mt-1">{sub}</p>
-          </div>
+      {/* ── Tabs ───────────────────────────────────────────────── */}
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
+        {([
+          ['overview',   BarChart2, 'Vue d\'ensemble'],
+          ['vendors',    Store,     'Vendeurs'],
+          ['geography',  MapPin,    'Géographie'],
+        ] as const).map(([key, Icon, label]) => (
+          <button key={key} onClick={() => setTab(key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <Icon className="w-4 h-4" />{label}
+          </button>
         ))}
       </div>
 
-      {/* Revenue Chart */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-        <h2 className="font-bold text-gray-900 mb-6">Monthly Revenue</h2>
-        {analytics.monthly.every((m) => m.revenue === 0) ? (
-          <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-            No orders yet — revenue will appear here once you start selling.
-          </div>
-        ) : (
-          <div className="flex items-end gap-3 h-48">
-            {analytics.monthly.map((m) => {
-              const height = Math.max(Math.round((m.revenue / maxRevenue) * 100), m.revenue > 0 ? 4 : 0)
-              return (
-                <div key={m.month} className="flex-1 flex flex-col items-center gap-2">
-                  {m.revenue > 0 && (
-                    <span className="text-xs text-gray-500 font-medium">
-                      {m.revenue >= 1000 ? `${Math.round(m.revenue / 1000)}k` : m.revenue}
-                    </span>
-                  )}
-                  <div className="w-full flex-1 flex items-end">
-                    <div className="w-full relative group">
-                      <div
-                        className="w-full bg-indigo-500 rounded-t-lg hover:bg-indigo-600 transition-colors cursor-default"
-                        style={{ height: `${height * 1.5}px` }}
+      {!d ? (
+        <div className="text-center py-24 text-gray-400">
+          <BarChart2 className="w-12 h-12 mx-auto mb-3 opacity-20" />
+          <p className="font-medium">Impossible de charger les données</p>
+          <button onClick={load} className="mt-4 text-indigo-600 text-sm font-semibold hover:underline">Réessayer</button>
+        </div>
+      ) : (
+        <>
+
+          {/* ══ OVERVIEW TAB ═════════════════════════════════════ */}
+          {tab === 'overview' && (
+            <>
+              {/* KPI grid — row 1: revenue metrics */}
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+                <KpiCard icon={DollarSign} label="Chiffre d'affaires" color="indigo"
+                  value={formatPrice(d.totalRevenue)} growth={d.revenueGrowth}
+                  sub={`moy. ${formatPrice(d.avgOrderValue)} / commande`} />
+                <KpiCard icon={ShoppingBag} label="Commandes" color="blue"
+                  value={d.totalOrders.toLocaleString('fr-DZ')} growth={d.ordersGrowth} />
+                <KpiCard icon={Truck} label="Taux de livraison" color="green"
+                  value={`${d.deliveryRate}%`}
+                  sub={`Retours : ${d.returnRate}%`} />
+                <KpiCard icon={CreditCard} label="MRR Abonnements" color="violet"
+                  value={formatPrice(d.mrr)}
+                  sub={`${d.activeSubscriptions} abonnements actifs`} />
+              </div>
+
+              {/* KPI grid — row 2: platform health */}
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                <KpiCard icon={Users} label="Vendeurs actifs" color="emerald"
+                  value={d.activeVendors.toLocaleString()}
+                  sub={`+${d.newVendorsThisMonth} ce mois · ${d.totalVendors} total`} />
+                <KpiCard icon={Package} label="Produits publiés" color="amber"
+                  value={d.totalProducts.toLocaleString()} />
+                <KpiCard icon={Star} label="Vendeurs vérifiés" color="pink"
+                  value="—" sub="Gérer dans Vendeurs → Vérifier" />
+                <KpiCard icon={TrendingUp} label="Croissance CA" color={d.revenueGrowth >= 0 ? 'green' : 'red'}
+                  value={`${d.revenueGrowth > 0 ? '+' : ''}${d.revenueGrowth}%`}
+                  sub={`vs ${days} j précédents`} />
+              </div>
+
+              {/* Revenue chart */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm mb-5">
+                <h2 className="font-bold text-gray-900 mb-4">Chiffre d'affaires dans le temps</h2>
+                {d.monthly.every((m) => m.revenue === 0) ? (
+                  <div className="h-52 flex items-center justify-center text-gray-400 text-sm">
+                    Aucune commande sur cette période
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <AreaChart data={d.monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="adminGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#6366F1" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false}
+                        tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                      <Tooltip content={<RevTooltip />} />
+                      <Area type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2.5} fill="url(#adminGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              {/* Orders volume chart */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm mb-5">
+                <h2 className="font-bold text-gray-900 mb-4">Volume de commandes</h2>
+                {d.monthly.every((m) => m.orders === 0) ? (
+                  <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Aucune donnée</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={d.monthly} margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        formatter={(v) => [v, 'Commandes']}
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                       />
-                      {m.orders > 0 && (
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                          {m.orders} order{m.orders !== 1 ? 's' : ''}
+                      <Bar dataKey="orders" fill="#10B981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              {/* COD deep-dive link */}
+              <Link href="/admin/analytics/cod"
+                className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-2xl p-5 hover:bg-indigo-100 transition-colors group mb-5">
+                <div>
+                  <p className="font-bold text-indigo-900">Analytiques COD détaillées →</p>
+                  <p className="text-sm text-indigo-600 mt-0.5">
+                    Taux de collecte par wilaya et transporteur · Export CSV
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-indigo-500 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </>
+          )}
+
+          {/* ══ VENDORS TAB ══════════════════════════════════════ */}
+          {tab === 'vendors' && (
+            <>
+              {/* Vendor summary KPIs */}
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                <KpiCard icon={Users}    label="Total vendeurs"    color="indigo" value={d.totalVendors.toLocaleString()} />
+                <KpiCard icon={Store}    label="Vendeurs actifs"   color="green"  value={d.activeVendors.toLocaleString()} />
+                <KpiCard icon={TrendingUp} label="Nouveaux ce mois" color="amber" value={String(d.newVendorsThisMonth)} />
+                <KpiCard icon={CreditCard} label="MRR total"       color="violet" value={formatPrice(d.mrr)}
+                  sub={`${d.activeSubscriptions} plans actifs`} />
+              </div>
+
+              {/* Top vendors leaderboard */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-5">
+                <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-500" />
+                  <h2 className="font-bold text-gray-900">Top 10 Vendeurs par Chiffre d'affaires</h2>
+                  <span className="ml-auto text-xs text-gray-400">Période : {days} j</span>
+                </div>
+                {d.topVendors.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 text-sm">
+                    Aucune donnée de vente sur cette période
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {['#', 'Boutique', 'Commandes', 'CA', 'Part', 'Taux livraison'].map((h) => (
+                            <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3 whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {d.topVendors.map((v, i) => {
+                          const share = d.totalRevenue > 0 ? Math.round((v.revenue / d.totalRevenue) * 100) : 0
+                          return (
+                            <tr key={v.id} className="hover:bg-gray-50">
+                              <td className="px-5 py-4 font-black text-gray-400 text-xs">{i + 1}</td>
+                              <td className="px-5 py-4">
+                                <Link href={`/store/${v.slug}`} target="_blank"
+                                  className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
+                                  {v.name}
+                                </Link>
+                                <p className="text-xs text-gray-400">{v.slug}</p>
+                              </td>
+                              <td className="px-5 py-4 font-bold text-gray-700">{v.orders}</td>
+                              <td className="px-5 py-4 font-black text-indigo-600">{formatPrice(v.revenue)}</td>
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-20 bg-gray-100 rounded-full h-1.5 flex-shrink-0">
+                                    <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${share}%` }} />
+                                  </div>
+                                  <span className="text-xs text-gray-500 tabular-nums">{share}%</span>
+                                </div>
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                  v.deliveryRate >= 70 ? 'bg-green-100 text-green-700'
+                                  : v.deliveryRate >= 50 ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {v.deliveryRate}%
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Vendor revenue pie chart */}
+              {d.topVendors.length > 0 && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <h2 className="font-bold text-gray-900 mb-4">Répartition du CA par boutique (Top 8)</h2>
+                  <div className="flex items-center gap-8">
+                    <ResponsiveContainer width={220} height={220}>
+                      <PieChart>
+                        <Pie
+                          data={d.topVendors.slice(0, 8)}
+                          cx="50%" cy="50%"
+                          innerRadius={60} outerRadius={100}
+                          dataKey="revenue" nameKey="name"
+                          strokeWidth={0}
+                        >
+                          {d.topVendors.slice(0, 8).map((_, i) => (
+                            <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(v) => formatPrice(Number(v ?? 0))}
+                          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 flex-1 min-w-0">
+                      {d.topVendors.slice(0, 8).map((v, i) => (
+                        <div key={v.id} className="flex items-center justify-between text-sm gap-2 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
+                            <span className="text-gray-700 truncate">{v.name}</span>
+                          </div>
+                          <span className="font-bold text-gray-900 tabular-nums flex-shrink-0">{formatPrice(v.revenue)}</span>
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
-                  <span className="text-xs font-semibold text-gray-600">{m.month}</span>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+              )}
+            </>
+          )}
 
-      {/* COD Performance */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Truck className="w-5 h-5 text-indigo-600" />
-          <h2 className="font-bold text-gray-900">COD Performance</h2>
-          <span className="text-xs text-gray-400 ml-auto">{cod.total} total COD orders</span>
-        </div>
-        {cod.total === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
-            Mark orders as delivered / failed in the Orders page to see COD analytics.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            {[
-              { label: 'Delivered', value: cod.delivered, rate: deliveryRate, icon: Truck,       color: 'text-green-600 bg-green-50',  bar: 'bg-green-500' },
-              { label: 'Failed',    value: cod.failed,    rate: failureRate,  icon: XCircle,     color: 'text-red-600 bg-red-50',      bar: 'bg-red-500' },
-              { label: 'Returned',  value: cod.returned,  rate: returnRate,   icon: RotateCcw,   color: 'text-amber-600 bg-amber-50',  bar: 'bg-amber-500' },
-              { label: 'Pending',   value: cod.pending,   rate: cod.total > 0 ? Math.round((cod.pending / cod.total) * 100) : 0, icon: Clock, color: 'text-gray-600 bg-gray-100', bar: 'bg-gray-400' },
-            ].map(({ label, value, rate, icon: Icon, color, bar }) => (
-              <div key={label} className="space-y-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
-                  <Icon className="w-4 h-4" />
+          {/* ══ GEOGRAPHY TAB ════════════════════════════════════ */}
+          {tab === 'geography' && (
+            <>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+                {/* Wilaya bar chart */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm xl:col-span-2">
+                  <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-indigo-500" /> Commandes par Wilaya (Top 15)
+                  </h2>
+                  {d.byWilaya.length === 0 ? (
+                    <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
+                      Aucune donnée géographique
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={360}>
+                      <BarChart data={d.byWilaya} layout="vertical" margin={{ left: 100, right: 60, top: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="wilaya" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} width={95} />
+                        <Tooltip
+                          formatter={(v, name) => [name === 'orders' ? String(v) : formatPrice(Number(v ?? 0)), name === 'orders' ? 'Commandes' : 'CA']}
+                          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                        />
+                        <Bar dataKey="orders" fill="#6366F1" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
-                <div>
-                  <p className="text-2xl font-black text-gray-900">{value}</p>
-                  <p className="text-sm text-gray-500">{label}</p>
-                </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${bar}`} style={{ width: `${rate}%` }} />
-                </div>
-                <p className="text-xs font-bold text-gray-500">{rate}%</p>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Top Products */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-5">
-          <Package className="w-5 h-5 text-indigo-600" />
-          <h2 className="font-bold text-gray-900">Top Selling Products</h2>
-        </div>
-        {analytics.topProducts.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
-            Top products will appear here once orders come in.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  {['#', 'Product', 'Units Sold', 'Revenue'].map((h) => (
-                    <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide pb-3 pr-6">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {analytics.topProducts.map((p, i) => (
-                  <tr key={p.name} className="hover:bg-gray-50">
-                    <td className="py-3 pr-6 font-bold text-gray-400 text-xs">{i + 1}</td>
-                    <td className="py-3 pr-6 font-semibold text-gray-900 max-w-[200px] truncate">{p.name}</td>
-                    <td className="py-3 pr-6 font-bold text-gray-900">{p.sales}</td>
-                    <td className="py-3 font-bold text-indigo-600">{formatPrice(p.revenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              {/* Wilaya table with revenue */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-50">
+                  <h2 className="font-bold text-gray-900">Détail par Wilaya</h2>
+                </div>
+                {d.byWilaya.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 text-sm">Aucune donnée</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {['#', 'Wilaya', 'Commandes', 'CA', 'Part commandes', 'Panier moyen'].map((h) => (
+                            <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3 whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {d.byWilaya.map((w, i) => {
+                          const total = d.byWilaya.reduce((s, x) => s + x.orders, 0)
+                          const share = total > 0 ? Math.round((w.orders / total) * 100) : 0
+                          const avg   = w.orders > 0 ? Math.round(w.revenue / w.orders) : 0
+                          return (
+                            <tr key={w.wilaya} className="hover:bg-gray-50">
+                              <td className="px-5 py-3.5 font-black text-gray-400 text-xs">{i + 1}</td>
+                              <td className="px-5 py-3.5 font-semibold text-gray-900">{w.wilaya}</td>
+                              <td className="px-5 py-3.5 font-bold text-gray-700">{w.orders}</td>
+                              <td className="px-5 py-3.5 font-black text-indigo-600">{formatPrice(w.revenue)}</td>
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-20 bg-gray-100 rounded-full h-1.5">
+                                    <div className="bg-indigo-400 h-1.5 rounded-full" style={{ width: `${share}%` }} />
+                                  </div>
+                                  <span className="text-xs text-gray-500 tabular-nums">{share}%</span>
+                                </div>
+                              </td>
+                              <td className="px-5 py-3.5 text-gray-600">{formatPrice(avg)}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
-      {/* COD deep-dive link */}
-      <Link
-        href="/admin/analytics/cod"
-        className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-2xl p-5 hover:bg-indigo-100 transition-colors group"
-      >
-        <div>
-          <p className="font-bold text-indigo-900">Analytiques COD détaillées →</p>
-          <p className="text-sm text-indigo-600 mt-0.5">
-            Taux de collecte par wilaya et transporteur · Export CSV
-          </p>
-        </div>
-        <ArrowRight className="w-5 h-5 text-indigo-500 group-hover:translate-x-1 transition-transform" />
-      </Link>
+        </>
+      )}
     </div>
   )
 }
