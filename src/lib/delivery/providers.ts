@@ -28,7 +28,7 @@ export const DELIVERY_PROVIDERS: DeliveryProvider[] = [
   {
     id: 'maystro',
     name: 'Maystro Delivery',
-    hasApi: false,
+    hasApi: true,
     color: '#059669',
     dashboardUrl: 'https://maystro-delivery.com/app',
     trackingUrl: 'https://maystro-delivery.com/tracking?ref=',
@@ -36,23 +36,26 @@ export const DELIVERY_PROVIDERS: DeliveryProvider[] = [
   {
     id: 'colivraison',
     name: 'Colivraison',
-    hasApi: false,
+    hasApi: true,
     color: '#7C3AED',
     dashboardUrl: 'https://app.colivraison.com',
+    trackingUrl: 'https://app.colivraison.com/tracking/',
   },
   {
     id: 'rex',
     name: 'Rex Livraison',
-    hasApi: false,
+    hasApi: true,
     color: '#DC2626',
     dashboardUrl: 'https://rexlivraison.com',
+    trackingUrl: 'https://rexlivraison.com/tracking/',
   },
   {
     id: 'yassir',
     name: 'Yassir Express',
-    hasApi: false,
+    hasApi: true,
     color: '#0EA5E9',
     dashboardUrl: 'https://yassir.com',
+    trackingUrl: 'https://yassir.com/tracking?id=',
   },
   {
     id: 'ecom',

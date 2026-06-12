@@ -2,6 +2,10 @@ import { ShipmentInput, ShipmentResult } from './types'
 import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfigured } from './yalidine'
 import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured } from './procolis'
 import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured } from './zrexpress'
+import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured } from './colivraison'
+import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured } from './maystro'
+import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured } from './rex'
+import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured } from './yassir'
 
 export interface DispatchResult extends ShipmentResult {
   provider: string
@@ -16,6 +20,10 @@ export async function dispatchShipment(
     yalidine_api_token?: string
     procolis_token?: string
     zr_token?: string
+    colivraison_token?: string
+    maystro_token?: string
+    rex_token?: string
+    yassir_api_key?: string
   }
 ): Promise<DispatchResult> {
   switch (provider) {
@@ -52,10 +60,50 @@ export async function dispatchShipment(
       return { ...result, provider, requiresManual: false }
     }
 
-    case 'colivraison':
-    case 'maystro':
-    case 'rex':
-    case 'yassir':
+    case 'colivraison': {
+      const token = vendorCreds?.colivraison_token
+      if (!colivraisonConfigured() && !token) {
+        return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+      }
+      const result = token
+        ? await colivraisonCreateShipmentWithToken(input, token)
+        : await colivraisonCreateShipment(input)
+      return { ...result, provider, requiresManual: false }
+    }
+
+    case 'maystro': {
+      const token = vendorCreds?.maystro_token
+      if (!maystroConfigured() && !token) {
+        return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+      }
+      const result = token
+        ? await maystroCreateShipmentWithToken(input, token)
+        : await maystroCreateShipment(input)
+      return { ...result, provider, requiresManual: false }
+    }
+
+    case 'rex': {
+      const token = vendorCreds?.rex_token
+      if (!rexConfigured() && !token) {
+        return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+      }
+      const result = token
+        ? await rexCreateShipmentWithToken(input, token)
+        : await rexCreateShipment(input)
+      return { ...result, provider, requiresManual: false }
+    }
+
+    case 'yassir': {
+      const apiKey = vendorCreds?.yassir_api_key
+      if (!yassirConfigured() && !apiKey) {
+        return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+      }
+      const result = apiKey
+        ? await yassirCreateShipmentWithKey(input, apiKey)
+        : await yassirCreateShipment(input)
+      return { ...result, provider, requiresManual: false }
+    }
+
     default:
       return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
   }

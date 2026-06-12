@@ -92,11 +92,15 @@ export interface VendorDeliveryConfig {
   default_provider:     string
   yalidine_api_id:      string | null
   yalidine_api_token:   string | null
-  procolis_token?:       string | null
-  zr_token?:             string | null
-  ecom_token?:           string | null
-  apec_api_id?:          string | null
-  apec_api_token?:       string | null
+  procolis_token?:      string | null
+  zr_token?:            string | null
+  colivraison_token?:   string | null
+  maystro_token?:       string | null
+  rex_token?:           string | null
+  yassir_api_key?:      string | null
+  ecom_token?:          string | null
+  apec_api_id?:         string | null
+  apec_api_token?:      string | null
   auto_create_shipment: boolean
   notify_whatsapp:      boolean
   notify_sms:           boolean
@@ -197,13 +201,17 @@ function encryptConfigCredentials(
 ): typeof config {
   const e = { ...config }
   const enc = (v?: string | null) => (v && !isEncrypted(v) ? encryptField(v) : v)
-  if (e.yalidine_api_id)   e.yalidine_api_id   = enc(e.yalidine_api_id)
+  if (e.yalidine_api_id)    e.yalidine_api_id    = enc(e.yalidine_api_id)
   if (e.yalidine_api_token) e.yalidine_api_token = enc(e.yalidine_api_token)
-  if (e.procolis_token)    e.procolis_token    = enc(e.procolis_token)
-  if (e.zr_token)          e.zr_token          = enc(e.zr_token)
-  if (e.ecom_token)        e.ecom_token        = enc(e.ecom_token)
-  if (e.apec_api_id)       e.apec_api_id       = enc(e.apec_api_id)
-  if (e.apec_api_token)    e.apec_api_token    = enc(e.apec_api_token)
+  if (e.procolis_token)     e.procolis_token     = enc(e.procolis_token)
+  if (e.zr_token)           e.zr_token           = enc(e.zr_token)
+  if (e.colivraison_token)  e.colivraison_token  = enc(e.colivraison_token)
+  if (e.maystro_token)      e.maystro_token      = enc(e.maystro_token)
+  if (e.rex_token)          e.rex_token          = enc(e.rex_token)
+  if (e.yassir_api_key)     e.yassir_api_key     = enc(e.yassir_api_key)
+  if (e.ecom_token)         e.ecom_token         = enc(e.ecom_token)
+  if (e.apec_api_id)        e.apec_api_id        = enc(e.apec_api_id)
+  if (e.apec_api_token)     e.apec_api_token     = enc(e.apec_api_token)
   return e
 }
 
@@ -216,6 +224,10 @@ function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryC
     yalidine_api_token: dec(config.yalidine_api_token),
     procolis_token:     dec(config.procolis_token),
     zr_token:           dec(config.zr_token),
+    colivraison_token:  dec(config.colivraison_token),
+    maystro_token:      dec(config.maystro_token),
+    rex_token:          dec(config.rex_token),
+    yassir_api_key:     dec(config.yassir_api_key),
     ecom_token:         dec(config.ecom_token),
     apec_api_id:        dec(config.apec_api_id),
     apec_api_token:     dec(config.apec_api_token),

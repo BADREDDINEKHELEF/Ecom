@@ -79,6 +79,10 @@ export async function POST(req: NextRequest) {
           yalidine_api_token: config?.yalidine_api_token ?? undefined,
           procolis_token:     config?.procolis_token     ?? undefined,
           zr_token:           config?.zr_token           ?? undefined,
+          colivraison_token:  config?.colivraison_token  ?? undefined,
+          maystro_token:      config?.maystro_token      ?? undefined,
+          rex_token:          config?.rex_token          ?? undefined,
+          yassir_api_key:     config?.yassir_api_key     ?? undefined,
         }
       )
       finalTracking  = result.tracking
