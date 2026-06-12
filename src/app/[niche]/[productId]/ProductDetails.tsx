@@ -121,7 +121,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
   const buildWhatsAppOrder = () => {
     const ref = `DZ-${Math.random().toString(36).slice(2, 7).toUpperCase()}`
     return encodeURIComponent(
-      `🛍️ *COMMANDE CASBAH STORE*\n` +
+      `🛍️ *COMMANDE SHOPDZ*\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\n` +
       `📦 *Produit:* ${product.name}\n` +
       `🔢 *Quantité:* ${quantity}\n` +
@@ -258,15 +258,22 @@ export default function ProductDetails({ product, niche, related }: Props) {
           </div>
 
           {/* Price */}
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <span className="text-2xl sm:text-3xl font-black text-gray-900">{formatPrice(product.price)}</span>
-            {hasDiscount && (
-              <>
-                <span className="text-lg text-gray-400 line-through">{formatPrice(product.comparePrice!)}</span>
-                <span className="bg-red-100 text-red-600 text-sm font-bold px-2.5 py-0.5 rounded-lg">
-                  -{discountPct}% OFF
-                </span>
-              </>
+          <div>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="text-2xl sm:text-3xl font-black text-gray-900">{formatPrice(product.price)}</span>
+              {hasDiscount && (
+                <>
+                  <span className="text-lg text-gray-400 line-through">{formatPrice(product.comparePrice!)}</span>
+                  <span className="bg-red-100 text-red-600 text-sm font-bold px-2.5 py-0.5 rounded-lg">
+                    -{discountPct}% OFF
+                  </span>
+                </>
+              )}
+            </div>
+            {hasDiscount && product.comparePrice && (
+              <p className="text-emerald-600 text-sm font-bold mt-1">
+                Vous économisez {formatPrice(product.comparePrice - product.price)} 🎉
+              </p>
             )}
           </div>
 
