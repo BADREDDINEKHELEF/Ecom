@@ -36,9 +36,24 @@ export interface SellerAnalytics {
   // Charts
   monthly:          { month: string; revenue: number; orders: number }[]
   byDay:            { date: string; revenue: number; orders: number }[]
-  byWilaya:         { wilaya: string; orders: number; revenue: number }[]
+  byWilaya:         {
+    wilaya:       string
+    orders:       number
+    revenue:      number
+    delivered:    number
+    returned:     number
+    avgOrder:     number
+    deliveryRate: number
+    returnRate:   number
+  }[]
   byProvider:       { provider: string; count: number }[]
-  topProducts:      { name: string; units: number; revenue: number }[]
+  topProducts:      {
+    name:     string
+    units:    number
+    revenue:  number
+    orders:   number
+    avgPrice: number
+  }[]
   worstProducts:    { name: string; id: string; image?: string }[]
   byDayOfWeek:      { day: string; orders: number; revenue: number }[]
 }
@@ -368,7 +383,7 @@ export async function getSellerAnalytics(
   // ── Current period aggregation ──────────────────────────────
   const orderMap   = new Map<string, { order: ItemRow['orders']; vendorTotal: number }>()
   const productMap: Record<string, { units: number; revenue: number }> = {}
-  const wilayaMap:  Record<string, { orders: number; revenue: number }> = {}
+  const productOrderMap: Record<string, Set<string>> = {}
   const providerMap: Record<string, number> = {}
   const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
   const dowMap: Record<number, { orders: number; revenue: number }> = {}
@@ -385,12 +400,8 @@ export async function getSellerAnalytics(
     if (!productMap[pk]) productMap[pk] = { units: 0, revenue: 0 }
     productMap[pk].units   += row.quantity
     productMap[pk].revenue += row.subtotal
-
-    if (order.wilaya) {
-      if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0 }
-      wilayaMap[order.wilaya].orders++
-      wilayaMap[order.wilaya].revenue += row.subtotal
-    }
+    if (!productOrderMap[pk]) productOrderMap[pk] = new Set()
+    productOrderMap[pk].add(order.id)
 
     const prov = order.delivery_provider ?? 'direct'
     providerMap[prov] = (providerMap[prov] ?? 0) + 1
@@ -408,11 +419,22 @@ export async function getSellerAnalytics(
     (o) => !o.order?.delivery_outcome && o.order?.status !== 'cancelled'
   ).length
 
+  // Wilaya + day-of-week tracked at order level to avoid double-counting
+  const wilayaMap: Record<string, { orders: number; revenue: number; delivered: number; returned: number }> = {}
+
   for (const { order, vendorTotal } of allOrders) {
     if (!order) continue
     const dow = new Date(order.created_at).getDay()
     dowMap[dow].orders++
     dowMap[dow].revenue += vendorTotal
+
+    if (order.wilaya) {
+      if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0, delivered: 0, returned: 0 }
+      wilayaMap[order.wilaya].orders++
+      wilayaMap[order.wilaya].revenue += vendorTotal
+      if (order.delivery_outcome === 'delivered') wilayaMap[order.wilaya].delivered++
+      if (order.delivery_outcome === 'returned')  wilayaMap[order.wilaya].returned++
+    }
   }
 
   // ── Prior period ────────────────────────────────────────────
@@ -485,16 +507,31 @@ export async function getSellerAnalytics(
     monthly,
     byDay,
     byWilaya: Object.entries(wilayaMap)
-      .map(([wilaya, d]) => ({ wilaya, ...d }))
+      .map(([wilaya, d]) => ({
+        wilaya,
+        orders:       d.orders,
+        revenue:      d.revenue,
+        delivered:    d.delivered,
+        returned:     d.returned,
+        avgOrder:     d.orders > 0 ? Math.round(d.revenue / d.orders) : 0,
+        deliveryRate: d.orders > 0 ? Math.round((d.delivered / d.orders) * 100) : 0,
+        returnRate:   d.orders > 0 ? Math.round((d.returned  / d.orders) * 100) : 0,
+      }))
       .sort((a, b) => b.orders - a.orders)
-      .slice(0, 10),
+      .slice(0, 15),
     byProvider: Object.entries(providerMap)
       .map(([provider, count]) => ({ provider, count }))
       .sort((a, b) => b.count - a.count),
     topProducts: Object.entries(productMap)
-      .map(([name, d]) => ({ name, ...d }))
+      .map(([name, d]) => ({
+        name,
+        units:    d.units,
+        revenue:  d.revenue,
+        orders:   productOrderMap[name]?.size ?? 0,
+        avgPrice: d.units > 0 ? Math.round(d.revenue / d.units) : 0,
+      }))
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10),
+      .slice(0, 15),
     worstProducts: [],
     byDayOfWeek: Object.entries(dowMap).map(([dow, d]) => ({
       day: DAY_NAMES[Number(dow)],
