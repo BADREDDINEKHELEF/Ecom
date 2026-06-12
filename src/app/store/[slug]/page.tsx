@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, BadgeCheck, Package, ShoppingBag, Star, ArrowLeft, Instagram, Facebook } from 'lucide-react'
+import { MapPin, BadgeCheck, Package, ShoppingBag, Star, Instagram, Facebook } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getVendorBySlug } from '@/lib/supabase/vendors'
-import { createClient } from '@/lib/supabase/client'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { dbToProduct } from '@/lib/supabase/products'
 import { Product } from '@/types'
 import ReferralCapture from '@/components/ui/ReferralCapture'
@@ -34,7 +34,7 @@ interface VendorRow {
 }
 
 async function getStoreProducts(vendorId: string): Promise<{ products: Product[]; totalOrders: number }> {
-  const supabase = createClient()
+  const supabase = createAdminClient()
   const [{ data: products }, { count }] = await Promise.all([
     supabase
       .from('products')
