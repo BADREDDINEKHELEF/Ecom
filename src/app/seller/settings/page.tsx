@@ -85,6 +85,19 @@ export default function SellerSettingsPage() {
     setInitialized(true)
   }
 
+  const handleLogoChange = async (url: string) => {
+    setForm((prev) => ({ ...prev, logo_url: url }))
+    try {
+      await fetch('/api/seller/vendor', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo_url: url || null }),
+      })
+    } catch {
+      // Will be saved when they click Save Changes
+    }
+  }
+
   const handleVacationSave = async () => {
     setVacationSaving(true)
     try {
@@ -280,7 +293,7 @@ export default function SellerSettingsPage() {
               <div>
                 <LogoUploader
                   value={form.logo_url}
-                  onChange={(url) => setForm({ ...form, logo_url: url })}
+                  onChange={handleLogoChange}
                 />
               </div>
               <div>
