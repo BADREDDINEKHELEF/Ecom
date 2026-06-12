@@ -2,8 +2,8 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Heart, Flame, ArrowLeftRight } from 'lucide-react'
-import { memo, useMemo } from 'react'
+import { ShoppingCart, Heart, ArrowLeftRight } from 'lucide-react'
+import { memo } from 'react'
 import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
@@ -31,11 +31,6 @@ function ProductCard({ product }: ProductCardProps) {
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount ? discount(product.price, product.comparePrice!) : 0
 
-  const soldThisWeek = useMemo(() => {
-    const hash = product.id.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0)
-    return 14 + (hash % 63)
-  }, [product.id])
-
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     addItem(product)
@@ -62,6 +57,8 @@ function ProductCard({ product }: ProductCardProps) {
               fill
               className={`object-cover transition-transform duration-500 group-hover:scale-105 ${product.stock === 0 ? 'opacity-60' : ''}`}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              placeholder="blur"
+              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-gray-300">
@@ -131,14 +128,17 @@ function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
           </div>
-          <button
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            aria-label={t.product.addedMsg ? `${t.product.addedMsg} ${product.name}` : `Add ${product.name} to cart`}
-            className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all disabled:bg-gray-200 disabled:cursor-not-allowed"
-          >
-            <ShoppingCart className="w-4 h-4" />
-          </button>
+          {product.stock === 0 ? (
+            <span className="text-xs text-gray-400 font-medium">{t.product.outOfStock}</span>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              aria-label={`${t.cart.add} ${product.name}`}
+              className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all"
+            >
+              <ShoppingCart className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {product.stock > 0 && product.stock < 10 && (
@@ -146,14 +146,10 @@ function ProductCard({ product }: ProductCardProps) {
             {t.common.lowStock.replace('{n}', String(product.stock))}
           </p>
         )}
-        {product.stock > 0 && soldThisWeek > 25 && (
-          <p className="text-xs text-rose-600 font-semibold mt-1.5 flex items-center gap-1">
-            <Flame className="w-3 h-3" />
-            {t.product.soldThisWeek.replace('{n}', String(soldThisWeek))}
-          </p>
-        )}
         <button
           onClick={(e) => { e.preventDefault(); compareToggle(product) }}
+          aria-label={inCompare ? `Retirer ${product.name} de la comparaison` : `Comparer ${product.name}`}
+          aria-pressed={inCompare}
           className={`mt-2 w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border transition-colors ${
             inCompare
               ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold'
@@ -161,7 +157,7 @@ function ProductCard({ product }: ProductCardProps) {
           }`}
         >
           <ArrowLeftRight className="w-3 h-3" />
-          {inCompare ? 'Dans la comparaison' : 'Comparer'}
+          {inCompare ? t.product.inCompare : t.product.compare}
         </button>
       </div>
     </div>

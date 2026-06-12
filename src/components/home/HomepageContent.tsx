@@ -17,22 +17,22 @@ const nicheAccent: Record<string, { btn: string }> = {
   deco:    { btn: 'bg-amber-700 hover:bg-amber-600' },
 }
 
-const STEPS = [
-  { n: '1', title: 'Créez votre compte', desc: 'Inscrivez-vous gratuitement en moins de 2 minutes.' },
-  { n: '2', title: 'Choisissez votre niche', desc: 'Spécialisez-vous dans une catégorie : autos, animaux, enfants ou décoration.' },
-  { n: '3', title: 'Ajoutez vos produits', desc: 'Photos, descriptions, prix et stock depuis votre tableau de bord.' },
-  { n: '4', title: 'Commencez à vendre', desc: 'Recevez des commandes et suivez vos livraisons en temps réel.' },
-]
-
-const REQUIREMENTS = [
-  'Un téléphone algérien (0550 / 0770…)',
-  'Des produits à vendre (stock physique ou dropshipping)',
-  'Une photo de profil ou logo de boutique',
-  'Un numéro de compte bancaire ou CCP pour recevoir vos paiements',
-]
-
 export default function HomepageContent() {
   const t = useT()
+
+  const STEPS = [
+    { n: '1', title: t.becomeSeller.step1Title, desc: t.becomeSeller.step1Desc },
+    { n: '2', title: t.becomeSeller.step2Title, desc: t.becomeSeller.step2Desc },
+    { n: '3', title: t.becomeSeller.step3Title, desc: t.becomeSeller.step3Desc },
+    { n: '4', title: t.becomeSeller.step4Title, desc: t.becomeSeller.step4Desc },
+  ]
+
+  const REQUIREMENTS = [
+    t.becomeSeller.req1,
+    t.becomeSeller.req2,
+    t.becomeSeller.req3,
+    t.becomeSeller.req4,
+  ]
 
   const FEATURES = [
     { icon: Store,      title: t.becomeSeller.feature1Title, desc: t.becomeSeller.feature1Desc },
@@ -99,12 +99,12 @@ export default function HomepageContent() {
       <section className="bg-gray-50 py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-emerald-600 font-semibold text-sm mb-2">Choisissez votre spécialité</p>
+            <p className="text-emerald-600 font-semibold text-sm mb-2">{t.becomeSeller.nicheSectionBadge}</p>
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
-              Dans quelle niche vendez-vous ?
+              {t.becomeSeller.nicheSectionTitle}
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto">
-              ShopDZ est organisé en niches spécialisées. Rejoignez la vôtre et touchez des acheteurs déjà intéressés par votre catégorie.
+              {t.becomeSeller.nicheSectionSub}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -131,7 +131,7 @@ export default function HomepageContent() {
                     <h3 className="text-lg font-black text-white mb-1">{niche.name}</h3>
                     <p className="text-sm text-gray-300 mb-4 leading-relaxed">{niche.description}</p>
                     <span className={`inline-flex items-center gap-2 ${styles.btn} text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors`}>
-                      Vendre ici <ArrowRight className="w-4 h-4" />
+                      {t.becomeSeller.nicheSellHere} <ArrowRight className="w-4 h-4" />
                     </span>
                   </div>
                 </Link>

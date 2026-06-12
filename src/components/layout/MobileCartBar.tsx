@@ -18,7 +18,7 @@ export default function MobileCartBar() {
   if (!mounted || count === 0) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 z-20 sm:hidden pb-safe">
       <button
         onClick={toggleCart}
         className="w-full flex items-center justify-between bg-indigo-600 text-white px-5 py-4 shadow-2xl"

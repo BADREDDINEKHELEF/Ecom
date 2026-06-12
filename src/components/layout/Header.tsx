@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ShoppingCart, Search, Menu, X, ChevronDown, Heart, Tag, User } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
@@ -27,6 +27,16 @@ export default function Header() {
   const [searchValue, setSearchValue] = useState('')
   const router = useRouter()
   const searchRef = useRef<HTMLInputElement>(null)
+  const nichesButtonRef = useRef<HTMLButtonElement>(null)
+
+  const closeNiches = useCallback(() => setNichesOpen(false), [])
+
+  const handleNichesKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeNiches()
+      nichesButtonRef.current?.focus()
+    }
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,21 +58,32 @@ export default function Header() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-0.5 ml-3">
-            <div className="relative">
+            <div className="relative" onKeyDown={handleNichesKeyDown}>
               <button
+                ref={nichesButtonRef}
                 onClick={() => setNichesOpen(!nichesOpen)}
                 onBlur={() => setTimeout(() => setNichesOpen(false), 150)}
+                aria-haspopup="menu"
+                aria-expanded={nichesOpen}
+                aria-controls="niches-menu"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
               >
                 {t.nav.shop}
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${nichesOpen ? 'rotate-180' : ''}`} />
               </button>
               {nichesOpen && (
-                <div className={`absolute top-full ${isRTL ? 'right-0' : 'left-0'} mt-1 w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-2 animate-fade-in`}>
+                <div
+                  id="niches-menu"
+                  role="menu"
+                  aria-label={t.nav.shop}
+                  className={`absolute top-full ${isRTL ? 'right-0' : 'left-0'} mt-1 w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-2 animate-fade-in`}
+                >
                   {niches.map((niche) => (
                     <Link
                       key={niche.id}
                       href={`/${niche.id}`}
+                      role="menuitem"
+                      onClick={closeNiches}
                       className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
                     >
                       <span className="text-xl">{niche.emoji}</span>
@@ -104,8 +125,10 @@ export default function Header() {
 
             {/* Search */}
             <form onSubmit={handleSearch} className="hidden sm:flex items-center relative">
+              <label htmlFor="header-search" className="sr-only">{t.nav.search}</label>
               <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} w-4 h-4 text-gray-400 pointer-events-none`} />
               <input
+                id="header-search"
                 ref={searchRef}
                 type="text"
                 value={searchValue}
@@ -125,7 +148,7 @@ export default function Header() {
             </button>
 
             {/* Wishlist */}
-            <Link href="/wishlist" className="relative p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
+            <Link href="/wishlist" aria-label={t.nav.wishlist ?? 'Liste de souhaits'} className="relative p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
               <Heart className="w-5 h-5" />
               {mounted && wishlistCount > 0 && (
                 <span className={`absolute -top-0.5 ${isRTL ? '-left-0.5' : '-right-0.5'} min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1`}>
@@ -158,8 +181,9 @@ export default function Header() {
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
               className="md:hidden p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
             >
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -186,7 +210,7 @@ export default function Header() {
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden border-t border-gray-100 py-3 space-y-1 animate-fade-in">
+          <div id="mobile-menu" className="md:hidden border-t border-gray-100 py-3 space-y-1 animate-fade-in">
             {niches.map((niche) => (
               <Link
                 key={niche.id}

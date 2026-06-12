@@ -159,65 +159,89 @@ export default function SellerSignupSection() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-3.5">
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
-                      placeholder={t.seller.fullNamePH}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                  <div>
+                    <label htmlFor="ss-fullName" className="sr-only">{t.seller.fullNamePH}</label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input id="ss-fullName" required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
+                        placeholder={t.seller.fullNamePH}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                    </div>
                   </div>
 
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input required type="email" value={form.email} onChange={(e) => f('email', e.target.value)}
-                      placeholder={t.seller.emailPH}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                  <div>
+                    <label htmlFor="ss-email" className="sr-only">{t.seller.emailPH}</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input id="ss-email" required type="email" value={form.email} onChange={(e) => f('email', e.target.value)}
+                        placeholder={t.seller.emailPH}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                    </div>
                   </div>
 
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input required type={showPwd ? 'text' : 'password'} minLength={6}
-                      value={form.password} onChange={(e) => f('password', e.target.value)}
-                      placeholder={t.seller.passwordPH}
-                      className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
-                    <button type="button" onClick={() => setShowPwd(!showPwd)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                  <div>
+                    <label htmlFor="ss-password" className="sr-only">{t.seller.passwordPH}</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input id="ss-password" required type={showPwd ? 'text' : 'password'} minLength={6}
+                        value={form.password} onChange={(e) => f('password', e.target.value)}
+                        placeholder={t.seller.passwordPH}
+                        className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                      <button type="button" onClick={() => setShowPwd(!showPwd)}
+                        aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="border-t border-gray-100 pt-3">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{t.seller.storeInfo}</p>
                   </div>
 
-                  <div className="relative">
-                    <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input required type="text" value={form.storeName} onChange={(e) => f('storeName', e.target.value)}
-                      placeholder={t.seller.storeNamePH}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                  <div>
+                    <label htmlFor="ss-storeName" className="sr-only">{t.seller.storeNamePH}</label>
+                    <div className="relative">
+                      <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input id="ss-storeName" required type="text" value={form.storeName} onChange={(e) => f('storeName', e.target.value)}
+                        placeholder={t.seller.storeNamePH}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                    </div>
                   </div>
 
-                  <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
-                    <span className="px-3 py-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap">shopdz.dz/shop/</span>
-                    <input required type="text" value={form.storeSlug}
-                      onChange={(e) => f('storeSlug', slugify(e.target.value))}
-                      placeholder={t.seller.myStorePH}
-                      className="flex-1 px-3 py-3 text-sm focus:outline-none" />
+                  <div>
+                    <label htmlFor="ss-storeSlug" className="sr-only">{t.seller.myStorePH}</label>
+                    <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
+                      <span className="px-3 py-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap">shopdz.dz/shop/</span>
+                      <input id="ss-storeSlug" required type="text" value={form.storeSlug}
+                        onChange={(e) => f('storeSlug', slugify(e.target.value))}
+                        placeholder={t.seller.myStorePH}
+                        className="flex-1 px-3 py-3 text-sm focus:outline-none" />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input type="tel" value={form.phone} onChange={(e) => f('phone', e.target.value)}
-                        placeholder={t.seller.phonePH}
-                        className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                    <div>
+                      <label htmlFor="ss-phone" className="sr-only">{t.seller.phonePH}</label>
+                      <div className="relative">
+                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input id="ss-phone" type="tel" value={form.phone} onChange={(e) => f('phone', e.target.value)}
+                          placeholder={t.seller.phonePH}
+                          pattern="^(0[5-7][0-9]{8})$"
+                          title="Format: 05XXXXXXXX ou 06XXXXXXXX ou 07XXXXXXXX"
+                          className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                      </div>
                     </div>
-                    <div className="relative">
-                      <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      <select value={form.wilaya} onChange={(e) => f('wilaya', e.target.value)}
-                        className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white">
-                        <option value="">{t.seller.wilayaPH}</option>
-                        {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
-                      </select>
+                    <div>
+                      <label htmlFor="ss-wilaya" className="sr-only">{t.seller.wilayaPH}</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        <select id="ss-wilaya" value={form.wilaya} onChange={(e) => f('wilaya', e.target.value)}
+                          className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white">
+                          <option value="">{t.seller.wilayaPH}</option>
+                          {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
 

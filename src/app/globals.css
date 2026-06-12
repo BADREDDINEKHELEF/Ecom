@@ -45,6 +45,14 @@
 }
 
 @layer utilities {
+  /* Safe-area padding for iPhone notch/home-indicator */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
