@@ -30,6 +30,7 @@ function ProductCard({ product }: ProductCardProps) {
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount ? discount(product.price, product.comparePrice!) : 0
+  const savings = hasDiscount ? product.comparePrice! - product.price : 0
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -47,7 +48,7 @@ function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <div className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
       <Link href={`/${product.nicheId}/${product.id}`}>
         <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
           {product.images[0] ? (
@@ -75,6 +76,7 @@ function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
+          {/* Condition / new / discount badges — top-left */}
           <div className={`absolute top-2.5 ${isRTL ? 'right-2.5' : 'left-2.5'} flex flex-col gap-1.5`}>
             {product.condition === 'used'        && <Badge variant="warning">Occasion</Badge>}
             {product.condition === 'refurbished' && <Badge variant="sale">Reconditionné</Badge>}
@@ -82,13 +84,14 @@ function ProductCard({ product }: ProductCardProps) {
             {hasDiscount && <Badge variant="sale">-{discountPct}%</Badge>}
           </div>
 
+          {/* Wishlist — top-right, always visible at 60% opacity */}
           <button
             onClick={handleWishlist}
             aria-label={wishlisted ? t.product.removedWishlist : t.product.savedWishlist}
-            className={`absolute top-2.5 ${isRTL ? 'left-2.5' : 'right-2.5'} p-2 rounded-full transition-all ${
+            className={`absolute top-2.5 ${isRTL ? 'left-2.5' : 'right-2.5'} p-2 rounded-full shadow-sm transition-all ${
               wishlisted
                 ? 'bg-red-50 opacity-100'
-                : 'bg-white/90 opacity-0 group-hover:opacity-100 hover:bg-white'
+                : 'bg-white/90 opacity-60 hover:opacity-100 hover:bg-white'
             }`}
           >
             <Heart
@@ -96,7 +99,22 @@ function ProductCard({ product }: ProductCardProps) {
             />
           </button>
 
-          {/* Multi-image indicator */}
+          {/* Compare — bottom-right, visible on hover */}
+          <button
+            onClick={(e) => { e.preventDefault(); compareToggle(product) }}
+            aria-label={inCompare ? `Retirer ${product.name} de la comparaison` : `Comparer ${product.name}`}
+            aria-pressed={inCompare}
+            className={`absolute bottom-2.5 ${isRTL ? 'left-2.5' : 'right-2.5'} flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full backdrop-blur-sm transition-all duration-200 ${
+              inCompare
+                ? 'bg-indigo-600 text-white opacity-100'
+                : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
+            }`}
+          >
+            <ArrowLeftRight className="w-3 h-3" />
+            {inCompare ? t.product.inCompare : t.product.compare}
+          </button>
+
+          {/* Multi-image dots */}
           {product.images.length > 1 && (
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
               {product.images.slice(0, 4).map((_, i) => (
@@ -108,9 +126,6 @@ function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       <div className="p-4">
-        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
-          {product.category}
-        </p>
         <Link href={`/${product.nicheId}/${product.id}`}>
           <h3 className="text-gray-900 font-semibold text-sm leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-2">
             {product.name}
@@ -119,46 +134,53 @@ function ProductCard({ product }: ProductCardProps) {
 
         <StarRating rating={product.rating} reviewCount={product.reviewCount} className="mb-3" />
 
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="mb-3">
+          <div className="flex items-baseline gap-1.5">
             <span className="text-gray-900 font-bold text-base">{formatPrice(product.price)}</span>
             {hasDiscount && (
-              <span className="text-gray-500 line-through text-xs ms-1.5">
+              <span className="text-gray-400 line-through text-xs">
                 {formatPrice(product.comparePrice!)}
               </span>
             )}
           </div>
-          {product.stock === 0 ? (
-            <span className="text-xs text-gray-400 font-medium">{t.product.outOfStock}</span>
-          ) : (
-            <button
-              onClick={handleAddToCart}
-              aria-label={`${t.cart.add} ${product.name}`}
-              className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all"
-            >
-              <ShoppingCart className="w-4 h-4" />
-            </button>
+          {hasDiscount && savings > 0 && (
+            <p className="text-emerald-600 text-xs font-medium mt-0.5">
+              Vous économisez {formatPrice(savings)}
+            </p>
           )}
         </div>
 
         {product.stock > 0 && product.stock < 10 && (
-          <p className="text-xs text-orange-500 font-medium mt-2">
-            {t.common.lowStock.replace('{n}', String(product.stock))}
-          </p>
+          <div className="mb-3">
+            <p className="text-xs text-orange-500 font-medium mb-1">
+              {t.common.lowStock.replace('{n}', String(product.stock))}
+            </p>
+            <div className="h-1 bg-orange-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-orange-400 rounded-full"
+                style={{ width: `${Math.min(100, (product.stock / 10) * 100)}%` }}
+              />
+            </div>
+          </div>
         )}
-        <button
-          onClick={(e) => { e.preventDefault(); compareToggle(product) }}
-          aria-label={inCompare ? `Retirer ${product.name} de la comparaison` : `Comparer ${product.name}`}
-          aria-pressed={inCompare}
-          className={`mt-2 w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border transition-colors ${
-            inCompare
-              ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold'
-              : 'border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
-          }`}
-        >
-          <ArrowLeftRight className="w-3 h-3" />
-          {inCompare ? t.product.inCompare : t.product.compare}
-        </button>
+
+        {product.stock === 0 ? (
+          <button
+            disabled
+            className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed font-medium"
+          >
+            {t.product.outOfStock}
+          </button>
+        ) : (
+          <button
+            onClick={handleAddToCart}
+            aria-label={`${t.cart.add} ${product.name}`}
+            className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all font-semibold"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Ajouter
+          </button>
+        )}
       </div>
     </div>
   )
