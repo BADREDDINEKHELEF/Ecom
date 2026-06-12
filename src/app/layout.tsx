@@ -15,6 +15,8 @@ import SocialProofTicker from '@/components/ui/SocialProofTicker'
 import CompareBar from '@/components/shop/CompareBar'
 import ScrollToTop from '@/components/ui/ScrollToTop'
 import HideOnStore from '@/components/layout/HideOnStore'
+import AnalyticsScripts from '@/components/analytics/AnalyticsScripts'
+import PageViewTracker from '@/components/analytics/PageViewTracker'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
@@ -38,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#4f46e5" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <AnalyticsScripts />
         <script dangerouslySetInnerHTML={{ __html: `
           try{const t=JSON.parse(localStorage.getItem('theme-preference')||'{}').state?.theme;if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}
           if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}
@@ -58,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <HideOnStore><CompareBar /></HideOnStore>
           <ScrollToTop />
           <HideOnStore><Footer /></HideOnStore>
+          <PageViewTracker />
         </RTLWrapper>
       </body>
     </html>

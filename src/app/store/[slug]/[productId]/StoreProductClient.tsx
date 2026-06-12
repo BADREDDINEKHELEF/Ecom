@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ShoppingCart, CheckCircle, Minus, Plus } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { formatPrice } from '@/lib/utils'
+import { trackAddToCart } from '@/lib/analytics'
 
 interface Props {
   product: {
@@ -61,6 +62,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
       images:  [product.image],
       nicheId: product.nicheId,
     } as Parameters<typeof addItem>[0], qty)
+    trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: qty })
     setAdded(true)
     setTimeout(() => setAdded(false), 2500)
   }

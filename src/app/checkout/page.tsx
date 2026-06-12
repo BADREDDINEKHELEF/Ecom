@@ -13,6 +13,7 @@ import { getDeliveryInfo, ALL_WILAYAS } from '@/lib/data/wilayas'
 import { getCommunesForWilaya } from '@/lib/data/communes'
 // createOrder is now called via /api/orders (server-side, not client-side)
 import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
+import { trackPurchase } from '@/lib/analytics'
 
 // Strip accents + "wilaya de/d'" prefix so Nominatim state names match our list
 function normalizeW(s: string) {
@@ -265,6 +266,11 @@ export default function CheckoutPage() {
       })),
     }
 
+    // Snapshot cart before any clearCart() call
+    const cartSnapshot = items.map(({ product, quantity }) => ({
+      id: product.id, name: product.name, price: product.price, quantity,
+    }))
+
     try {
       // Cash on Delivery — existing fast path
       if (payment === 'cash') {
@@ -278,6 +284,9 @@ export default function CheckoutPage() {
           setSaveError(res.status === 409 ? (errData.error ?? t.checkout.orderFailed) : t.checkout.orderFailed)
           return
         }
+        const orderData = await res.json().catch(() => ({}))
+        trackPurchase({ transactionId: orderData.id ?? `cod_${Date.now()}`, total: orderTotal, items: cartSnapshot })
+
         markRecovered()
         setSubmitted(true)
         clearCart()

@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/utils'
 import { Product } from '@/types'
 import ProductColorGallery from './ProductColorGallery'
 import StoreProductClient from './StoreProductClient'
+import TrackViewContent from '@/components/analytics/TrackViewContent'
 
 interface PageProps {
   params: Promise<{ slug: string; productId: string }>
@@ -223,6 +224,9 @@ export default async function StoreProductPage({ params }: PageProps) {
 
             {/* Separator */}
             <div className="h-px bg-[#f5f5f7]" />
+
+            {/* Analytics: fires ViewContent once on mount */}
+            <TrackViewContent product={{ id: product.id, name: product.name, price: product.price }} />
 
             {/* CTA buttons */}
             <StoreProductClient
