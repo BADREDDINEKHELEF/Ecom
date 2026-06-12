@@ -57,7 +57,6 @@ export default function SellerSignupSection() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id:    authData.user.id,
           store_name: form.storeName,
           store_slug: form.storeSlug,
           phone:      form.phone || null,

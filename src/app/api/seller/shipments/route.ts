@@ -48,15 +48,14 @@ export async function POST(req: NextRequest) {
   try {
     const admin = createAdminClient()
 
-    // Verify the order belongs to this vendor
-    const { data: order } = await admin
-      .from('orders')
-      .select('full_name, phone, wilaya, city, address, total, vendor_id')
-      .eq('id', orderId)
-      .single()
+    // Verify the order exists and contains at least one item from this vendor
+    const [{ data: order }, { data: vendorItem }] = await Promise.all([
+      admin.from('orders').select('full_name, phone, wilaya, city, address, total').eq('id', orderId).single(),
+      admin.from('order_items').select('id').eq('order_id', orderId).eq('vendor_id', vendor.id).limit(1).maybeSingle(),
+    ])
 
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    if (order.vendor_id !== vendor.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!vendorItem) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     let finalTracking = trackingNumber ?? ''
     let labelUrl: string | undefined
