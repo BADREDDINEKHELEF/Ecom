@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { ShoppingCart, CheckCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ShoppingCart, CheckCircle, Minus, Plus } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { formatPrice } from '@/lib/utils'
 
@@ -26,9 +26,16 @@ const WA_SVG = (
 )
 
 export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName }: Props) {
-  const addItem = useCartStore((s) => s.addItem)
-  const [qty, setQty]     = useState(1)
-  const [added, setAdded] = useState(false)
+  const addItem = useCartStore(s => s.addItem)
+  const [qty,     setQty]     = useState(1)
+  const [added,   setAdded]   = useState(false)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setVisible(window.scrollY > 250)
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
+  }, [])
 
   const handleAdd = () => {
     addItem({
@@ -39,10 +46,10 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
       nicheId: product.nicheId,
     } as Parameters<typeof addItem>[0], qty)
     setAdded(true)
-    setTimeout(() => setAdded(false), 2000)
+    setTimeout(() => setAdded(false), 2500)
   }
 
-  const buildWhatsAppHref = () => {
+  const buildWaHref = () => {
     if (!vendorWhatsApp) return null
     const number = vendorWhatsApp.replace(/\D/g, '')
     const total  = formatPrice(product.price * qty)
@@ -65,49 +72,51 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
 
   if (product.stock === 0) {
     return (
-      <button
-        disabled
-        className="w-full py-3.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed"
-      >
+      <button disabled className="w-full py-4 rounded-2xl text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed">
         Rupture de stock
       </button>
     )
   }
 
-  const waHref = buildWhatsAppHref()
+  const waHref = buildWaHref()
 
   return (
-    <div className="space-y-3">
+    <>
       {/* Quantity selector */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-600 font-medium">Quantité</span>
-        <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-gray-600 font-semibold">Quantité</span>
+        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
           <button
-            onClick={() => setQty(Math.max(1, qty - 1))}
-            className="w-9 h-9 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors font-bold"
+            onClick={() => setQty(q => Math.max(1, q - 1))}
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
           >
-            −
+            <Minus className="w-4 h-4" />
           </button>
-          <span className="w-10 text-center text-sm font-bold text-gray-900">{qty}</span>
+          <span className="w-12 text-center text-sm font-black text-gray-900">{qty}</span>
           <button
-            onClick={() => setQty(Math.min(product.stock, qty + 1))}
-            className="w-9 h-9 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors font-bold"
+            onClick={() => setQty(q => Math.min(product.stock, q + 1))}
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
           >
-            +
+            <Plus className="w-4 h-4" />
           </button>
         </div>
+        {qty > 1 && (
+          <span className="text-sm font-bold text-gray-400">
+            = {formatPrice(product.price * qty)}
+          </span>
+        )}
       </div>
 
-      {/* WhatsApp CTA — primary (shown when vendor has WhatsApp) */}
+      {/* WhatsApp — PRIMARY */}
       {waHref && (
         <a
           href={waHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-white bg-[#25D366] hover:bg-[#1fbe5d] active:scale-95 transition-all shadow-md shadow-green-200 text-sm sm:text-base"
+          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-white bg-[#25D366] hover:bg-[#20c35a] active:scale-[.98] transition-all shadow-xl shadow-green-200 text-base"
         >
           {WA_SVG}
-          <span>Commander via WhatsApp</span>
+          Commander via WhatsApp
         </a>
       )}
 
@@ -115,16 +124,51 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
       <button
         onClick={handleAdd}
         style={added ? {} : { background: accent }}
-        className={`w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 ${
+        className={`w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[.98] ${
           added ? 'bg-green-600' : 'hover:opacity-90'
         }`}
       >
         {added ? (
-          <><CheckCircle className="w-4 h-4" /> Ajouté au panier</>
+          <><CheckCircle className="w-4 h-4" /> Ajouté au panier ✓</>
         ) : (
           <><ShoppingCart className="w-4 h-4" /> Ajouter au panier</>
         )}
       </button>
-    </div>
+
+      {/* ── Mobile sticky bottom bar ────────────────────────────────── */}
+      <div
+        className={`fixed bottom-0 inset-x-0 z-50 lg:hidden transition-transform duration-300 ${
+          visible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className="bg-white border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.10)] px-4 py-3 flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <p className="text-base font-black text-gray-900 leading-tight">{formatPrice(product.price)}</p>
+            {qty > 1 && <p className="text-xs text-gray-400">×{qty} = {formatPrice(product.price * qty)}</p>}
+          </div>
+          <div className="flex-1 flex gap-2">
+            {waHref ? (
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 bg-[#25D366] text-white font-black py-3 rounded-xl text-sm shadow-lg shadow-green-200/60"
+              >
+                {WA_SVG} Commander
+              </a>
+            ) : (
+              <button
+                onClick={handleAdd}
+                style={{ background: accent }}
+                className="flex-1 flex items-center justify-center gap-2 text-white font-black py-3 rounded-xl text-sm"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                {added ? 'Ajouté ✓' : 'Ajouter'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
