@@ -15,7 +15,8 @@ import { niches } from '@/lib/data/niches'
 import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import VariantBuilder, { type ProductVariant } from '@/components/seller/VariantBuilder'
-import type { Product } from '@/types'
+import ColorVariantBuilder from '@/components/seller/ColorVariantBuilder'
+import type { Product, ColorVariant } from '@/types'
 
 const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',
@@ -45,6 +46,7 @@ export default function SellerProductsPage() {
   const [saving, setSaving]     = useState(false)
   const [formError, setFormError] = useState('')
   const [variants, setVariants] = useState<ProductVariant[]>([])
+  const [colorVariants, setColorVariants] = useState<ColorVariant[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   const load = useCallback(async () => {
@@ -72,10 +74,11 @@ export default function SellerProductsPage() {
       minOrderQuantity: p.minOrderQuantity ?? 1,
       isBundle: p.isBundle ?? false,
     })
+    setColorVariants(p.colorVariants ?? [])
     setShowForm(true)
   }
 
-  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); setFormError(''); setVariants([]) }
+  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); setFormError(''); setVariants([]); setColorVariants([]) }
 
   const handleSave = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -124,6 +127,7 @@ export default function SellerProductsPage() {
         min_order_quantity: form.minOrderQuantity || 1,
         is_bundle:          form.isBundle,
         variants:           form.hasVariants ? (variants.length > 0 ? variants : null) : null,
+        color_variants:     colorVariants.length > 0 ? colorVariants : null,
       })
       await load()
       closeForm()
@@ -390,7 +394,12 @@ export default function SellerProductsPage() {
                         className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
                     </div>
 
-                    {/* Variants */}
+                    {/* Color variants */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-4">
+                      <ColorVariantBuilder variants={colorVariants} onChange={setColorVariants} />
+                    </div>
+
+                    {/* Size/price variants */}
                     <label className="flex items-center gap-3 cursor-pointer bg-gray-50 border border-gray-200 rounded-xl p-4 hover:bg-gray-100 transition-colors">
                       <input type="checkbox" checked={form.hasVariants}
                         onChange={(e) => setForm({ ...form, hasVariants: e.target.checked })}
@@ -398,8 +407,8 @@ export default function SellerProductsPage() {
                       <div className="flex items-center gap-2">
                         <Layers className="w-4 h-4 text-indigo-600" />
                         <div>
-                          <p className="text-sm font-bold text-gray-900">Ce produit a des variantes</p>
-                          <p className="text-xs text-gray-500">Taille × Couleur × Pointure… avec stock et prix individuels</p>
+                          <p className="text-sm font-bold text-gray-900">Ce produit a des variantes de taille / prix</p>
+                          <p className="text-xs text-gray-500">Taille × Pointure… avec stock et prix individuels</p>
                         </div>
                       </div>
                     </label>

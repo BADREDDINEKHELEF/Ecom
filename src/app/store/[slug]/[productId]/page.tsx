@@ -8,7 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { dbToProduct } from '@/lib/supabase/products'
 import { formatPrice } from '@/lib/utils'
 import { Product } from '@/types'
-import ProductGallery from './ProductGallery'
+import ProductColorGallery from './ProductColorGallery'
 import StoreProductClient from './StoreProductClient'
 
 interface PageProps {
@@ -107,7 +107,11 @@ export default async function StoreProductPage({ params }: PageProps) {
         <div className="grid lg:grid-cols-[55%_45%] gap-10 lg:gap-14 items-start">
 
           {/* LEFT — Gallery */}
-          <ProductGallery images={product.images ?? []} name={product.name} />
+          <ProductColorGallery
+            mainImages={product.images ?? []}
+            colorVariants={product.colorVariants ?? []}
+            name={product.name}
+          />
 
           {/* RIGHT — Purchase panel (sticky desktop) */}
           <div className="lg:sticky lg:top-[68px] space-y-6 pb-28 lg:pb-0">

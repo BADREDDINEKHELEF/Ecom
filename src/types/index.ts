@@ -10,6 +10,12 @@ export interface Niche {
   banner: string
 }
 
+export interface ColorVariant {
+  name: string
+  hex: string
+  images: string[]
+}
+
 export interface Product {
   id: string
   nicheId: string
@@ -32,6 +38,7 @@ export interface Product {
   preOrderDate?: string
   minOrderQuantity?: number
   isBundle?: boolean
+  colorVariants?: ColorVariant[]
 }
 
 export interface CartItem {

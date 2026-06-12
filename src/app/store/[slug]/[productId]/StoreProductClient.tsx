@@ -33,14 +33,24 @@ const WA_SVG_SM = (
 
 export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName }: Props) {
   const addItem = useCartStore(s => s.addItem)
-  const [qty,     setQty]     = useState(1)
-  const [added,   setAdded]   = useState(false)
-  const [visible, setVisible] = useState(false)
+  const [qty,           setQty]           = useState(1)
+  const [added,         setAdded]         = useState(false)
+  const [visible,       setVisible]       = useState(false)
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
 
   useEffect(() => {
     const handler = () => setVisible(window.scrollY > 300)
     window.addEventListener('scroll', handler, { passive: true })
     return () => window.removeEventListener('scroll', handler)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ colorName: string | null }>).detail
+      setSelectedColor(detail.colorName)
+    }
+    window.addEventListener('productColorChanged', handler)
+    return () => window.removeEventListener('productColorChanged', handler)
   }, [])
 
   const handleAdd = () => {
@@ -59,10 +69,12 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
     if (!vendorWhatsApp) return null
     const number = vendorWhatsApp.replace(/\D/g, '')
     const total  = formatPrice(product.price * qty)
+    const colorLine = selectedColor ? `🎨 *Couleur:* ${selectedColor}\n` : ''
     const msg = encodeURIComponent(
       `🛍️ *COMMANDE — ${storeName}*\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\n` +
       `📦 *Produit:* ${product.name}\n` +
+      colorLine +
       `🔢 *Quantité:* ${qty}\n` +
       `💰 *Total:* ${total}\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\n` +

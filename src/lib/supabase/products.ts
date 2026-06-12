@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { createClient } from './client'
 import { createAdminClient } from './admin'
-import { Product } from '@/types'
+import { Product, ColorVariant } from '@/types'
 
 export function dbToProduct(row: Record<string, unknown>): Product {
   return {
@@ -26,6 +26,7 @@ export function dbToProduct(row: Record<string, unknown>): Product {
     preOrderDate:      row.pre_order_date != null ? String(row.pre_order_date) : undefined,
     minOrderQuantity:  row.min_order_quantity != null ? Number(row.min_order_quantity) : 1,
     isBundle:          Boolean(row.is_bundle),
+    colorVariants:     Array.isArray(row.color_variants) ? (row.color_variants as ColorVariant[]) : [],
   }
 }
 
@@ -34,7 +35,7 @@ export const getProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at')
       .order('created_at', { ascending: false })
     if (nicheId)  query = query.eq('niche_id', nicheId)
     if (category) query = query.eq('category', category)
@@ -51,7 +52,7 @@ export const getFeaturedProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at')
       .eq('is_featured', true)
       .gt('stock', 0)
       .order('created_at', { ascending: false })
@@ -70,7 +71,7 @@ export const getProductById = unstable_cache(
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at')
       .eq('id', id)
       .single()
     if (error || !data) return null

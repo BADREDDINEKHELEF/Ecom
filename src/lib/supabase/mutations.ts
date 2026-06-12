@@ -42,6 +42,7 @@ export async function updateProductExtras(
     min_order_quantity?: number
     is_bundle?:         boolean
     variants?:          unknown
+    color_variants?:    unknown
   }
 ): Promise<void> {
   const supabase = createAdminClient()
