@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import {
-  getVendorByUserId,
+  getVendorByUserIdServer,
   getSubscriptionPlans,
   getVendorSubscription,
   createVendorSubscription,
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const vendor = await getVendorByUserId(user.id)
+    const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
     const [plans, subscription, settings] = await Promise.all([
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const vendor = await getVendorByUserId(user.id)
+    const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
     const body = await req.json().catch(() => ({})) as {

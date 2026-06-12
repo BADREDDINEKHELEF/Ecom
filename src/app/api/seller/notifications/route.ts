@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
-import { getVendorByUserId } from '@/lib/supabase/vendors'
+import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import {
   getSellerNotifications,
   markNotificationRead,
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const vendor = await getVendorByUserId(user.id)
+    const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
     const notifications = await getSellerNotifications(vendor.id)
@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const vendor = await getVendorByUserId(user.id)
+    const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
     const { id, markAll } = await req.json().catch(() => ({}))

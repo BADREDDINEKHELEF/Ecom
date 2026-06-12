@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { getVendorPendingOrders } from '@/lib/supabase/orders'
-import { getVendorByUserId } from '@/lib/supabase/vendors'
+import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const vendor = await getVendorByUserId(user.id)
+    const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor account not found' }, { status: 403 })
     }

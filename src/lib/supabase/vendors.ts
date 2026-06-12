@@ -126,6 +126,17 @@ export async function getVendorByUserId(userId: string): Promise<Vendor | null> 
   return (fallback as Vendor) ?? null
 }
 
+/** Server-side variant — uses admin client to bypass RLS. Use in API route handlers. */
+export async function getVendorByUserIdServer(userId: string): Promise<Vendor | null> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('vendors')
+    .select(VENDOR_COLS)
+    .eq('user_id', userId)
+    .maybeSingle()
+  return (data as Vendor) ?? null
+}
+
 export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
   const supabase = createClient()
   const { data, error } = await supabase

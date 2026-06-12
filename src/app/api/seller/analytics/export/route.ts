@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getVendorByUserId } from '@/lib/supabase/vendors'
+import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 
 export async function GET(req: NextRequest) {
   const routeClient = createRouteClient(req)
   const { data: { user } } = await routeClient.auth.getUser()
   if (!user) return new NextResponse('Non authentifié', { status: 401 })
 
-  const vendor = await getVendorByUserId(user.id)
+  const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return new NextResponse('Vendeur introuvable', { status: 403 })
 
   const supabase = createAdminClient()
