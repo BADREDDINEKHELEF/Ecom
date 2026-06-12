@@ -35,7 +35,7 @@ export const getProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,created_at')
       .order('created_at', { ascending: false })
     if (nicheId)  query = query.eq('niche_id', nicheId)
     if (category) query = query.eq('category', category)
@@ -52,7 +52,7 @@ export const getFeaturedProducts = unstable_cache(
     const supabase = createClient()
     let query = supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,created_at')
       .eq('is_featured', true)
       .gt('stock', 0)
       .order('created_at', { ascending: false })
@@ -71,11 +71,24 @@ export const getProductById = unstable_cache(
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('products')
-      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at')
+      .select('id,niche_id,category,name,description,price,compare_price,images,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,created_at')
       .eq('id', id)
       .single()
     if (error || !data) return null
-    return dbToProduct(data)
+
+    const product = dbToProduct(data)
+
+    // Fetch color_variants separately — column may not exist yet before migration 029
+    const { data: cv } = await supabase
+      .from('products')
+      .select('color_variants')
+      .eq('id', id)
+      .single()
+    if (cv && Array.isArray(cv.color_variants)) {
+      product.colorVariants = cv.color_variants as ColorVariant[]
+    }
+
+    return product
   },
   ['product-by-id'],
   { revalidate: 60, tags: ['products'] }
