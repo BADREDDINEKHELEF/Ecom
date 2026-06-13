@@ -32,6 +32,9 @@ const PatchSchema = z.object({
   // Store policies
   return_policy:    z.string().max(2000).nullable().optional(),
   shipping_policy:  z.string().max(2000).nullable().optional(),
+  // Vendor-specific pixels
+  meta_pixel_id:    z.string().max(50).nullable().optional(),
+  gtag_id:          z.string().max(50).nullable().optional(),
 })
 
 export async function PATCH(req: NextRequest) {

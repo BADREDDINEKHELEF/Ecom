@@ -11,6 +11,7 @@ import { Product } from '@/types'
 import ProductColorGallery from './ProductColorGallery'
 import StoreProductClient from './StoreProductClient'
 import TrackViewContent from '@/components/analytics/TrackViewContent'
+import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
 
 interface PageProps {
   params: Promise<{ slug: string; productId: string }>
@@ -21,6 +22,9 @@ interface VendorExt {
   verified_at?: string | null
   logo_url?: string | null
   social_whatsapp?: string | null
+  meta_pixel_id?: string | null
+  gtag_id?: string | null
+  pixel_id?: string | null
 }
 
 async function getRelatedProducts(vendorId: string, excludeId: string): Promise<Product[]> {
@@ -74,6 +78,11 @@ export default async function StoreProductPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-white">
+      <VendorAnalyticsScripts
+        metaPixelId={v.meta_pixel_id}
+        gtagId={v.gtag_id}
+        pixelId={v.pixel_id}
+      />
 
       {/* ── Sticky store bar ──────────────────────────────────────── */}
       <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-black/[0.06] shadow-[0_1px_0_rgba(0,0,0,0.04)]">

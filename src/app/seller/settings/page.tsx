@@ -36,9 +36,11 @@ export default function SellerSettingsPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [linkCopied, setLinkCopied] = useState(false)
+  const [pixelCopied, setPixelCopied] = useState(false)
   const [vacationSaving, setVacationSaving] = useState(false)
   const [vacationSaved, setVacationSaved] = useState(false)
   const [vacation, setVacation] = useState({ is_on_vacation: false, vacation_message: '' })
+  const [pixels, setPixels] = useState({ meta_pixel_id: '', gtag_id: '' })
   const [form, setForm] = useState({
     store_name: '', store_slug: '', phone: '', wilaya: '', description: '',
     logo_url: '', banner_url: '', cover_url: '', accent_color: '#4f46e5',
@@ -55,6 +57,10 @@ export default function SellerSettingsPage() {
     setVacation({
       is_on_vacation:   vendor.is_on_vacation ?? false,
       vacation_message: vendor.vacation_message ?? '',
+    })
+    setPixels({
+      meta_pixel_id: vendor.meta_pixel_id ?? '',
+      gtag_id:       vendor.gtag_id ?? '',
     })
     setForm({
       store_name:       vendor.store_name,
@@ -147,6 +153,8 @@ export default function SellerSettingsPage() {
           low_stock_threshold: form.low_stock_threshold || null,
           return_policy:   form.return_policy || null,
           shipping_policy: form.shipping_policy || null,
+          meta_pixel_id:   pixels.meta_pixel_id || null,
+          gtag_id:         pixels.gtag_id || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Save failed')
@@ -515,6 +523,64 @@ export default function SellerSettingsPage() {
                   placeholder="Ex: Retours acceptés sous 7 jours après réception, produit non utilisé dans son emballage d'origine…"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 resize-none"
                 />
+              </div>
+            </div>
+
+            {/* Analytics Pixels */}
+            <div className="border-t border-gray-100 pt-5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Pixels & Tracking</p>
+              <p className="text-xs text-gray-500 mb-4">Ajoutez vos propres pixels sur votre boutique uniquement.</p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Meta Pixel ID</label>
+                  <input
+                    type="text"
+                    value={pixels.meta_pixel_id}
+                    onChange={(e) => setPixels({ ...pixels, meta_pixel_id: e.target.value })}
+                    placeholder="1234567890123456"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-emerald-400"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Trouvez votre Pixel ID dans Meta Business Suite → Events Manager.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Google Tag ID</label>
+                  <input
+                    type="text"
+                    value={pixels.gtag_id}
+                    onChange={(e) => setPixels({ ...pixels, gtag_id: e.target.value })}
+                    placeholder="G-XXXXXXXXXX ou AW-XXXXXXXXXX"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                {/* Custom first-party pixel */}
+                {vendor.pixel_id && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-gray-800">Pixel ShopDZ (1st party)</p>
+                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">ACTIF</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Intégrez ce snippet sur n&apos;importe quelle page externe pour collecter des données dans votre tableau de bord ShopDZ.</p>
+                    <div className="relative">
+                      <pre className="bg-gray-900 text-green-400 text-[11px] rounded-xl p-3 overflow-x-auto leading-relaxed whitespace-pre-wrap break-all">
+{`<img src="https://shopdz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`}
+                      </pre>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`<img src="https://shopdz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`)
+                          setPixelCopied(true)
+                          setTimeout(() => setPixelCopied(false), 2000)
+                        }}
+                        className="absolute top-2 right-2 flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-[11px] font-semibold px-2 py-1 rounded-lg transition-colors"
+                      >
+                        {pixelCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {pixelCopied ? 'Copié' : 'Copier'}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400">Pixel ID: <span className="font-mono text-gray-600">{vendor.pixel_id}</span></p>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -12,6 +12,7 @@ import { dbToProduct } from '@/lib/supabase/products'
 import { Product } from '@/types'
 import ReferralCapture from '@/components/ui/ReferralCapture'
 import StoreProductsGrid from './StoreProductsGrid'
+import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
 
 interface VendorRow {
   id: string
@@ -35,6 +36,9 @@ interface VendorRow {
   social_tiktok?: string | null
   return_policy?: string | null
   shipping_policy?: string | null
+  meta_pixel_id?: string | null
+  gtag_id?: string | null
+  pixel_id?: string | null
 }
 
 async function getStoreProducts(vendorId: string): Promise<{ products: Product[]; totalOrders: number }> {
@@ -113,6 +117,11 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="min-h-screen bg-[#f5f5f7]">
+      <VendorAnalyticsScripts
+        metaPixelId={vendor.meta_pixel_id}
+        gtagId={vendor.gtag_id}
+        pixelId={vendor.pixel_id}
+      />
       <ReferralCapture />
 
       {/* ── Cinematic Hero ──────────────────────────────────────────── */}
