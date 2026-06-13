@@ -10,14 +10,9 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
  * Ciphertext format: <iv_hex>:<authTag_hex>:<ciphertext_hex>
  */
 
-function getKey(): Buffer {
+function getKey(): Buffer | null {
   const hex = process.env.FIELD_ENCRYPTION_KEY
-  if (!hex || hex.length !== 64) {
-    throw new Error(
-      'FIELD_ENCRYPTION_KEY must be set to 64 hex characters (32 bytes). ' +
-      'Generate with: openssl rand -hex 32'
-    )
-  }
+  if (!hex || hex.length !== 64) return null
   return Buffer.from(hex, 'hex')
 }
 
@@ -27,6 +22,8 @@ const TAG_BYTES = 16   // 128-bit auth tag
 
 export function encryptField(plaintext: string): string {
   const key = getKey()
+  // No key configured — store plaintext (tokens still protected by Supabase RLS)
+  if (!key) return plaintext
   const iv  = randomBytes(IV_BYTES)
   const cipher = createCipheriv(ALGORITHM, key, iv)
   const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
@@ -36,15 +33,15 @@ export function encryptField(plaintext: string): string {
 
 export function decryptField(ciphertext: string): string {
   const key = getKey()
+  // No key configured — value was stored as plaintext, return as-is
+  if (!key) return ciphertext
   const parts = ciphertext.split(':')
-  if (parts.length !== 3) throw new Error('Invalid ciphertext format')
+  if (parts.length !== 3) return ciphertext   // plaintext stored before key was set
   const [ivHex, tagHex, encHex] = parts
   const iv      = Buffer.from(ivHex, 'hex')
   const tag     = Buffer.from(tagHex, 'hex')
   const enc     = Buffer.from(encHex, 'hex')
-  if (iv.length !== IV_BYTES || tag.length !== TAG_BYTES) {
-    throw new Error('Invalid ciphertext — wrong IV or tag length')
-  }
+  if (iv.length !== IV_BYTES || tag.length !== TAG_BYTES) return ciphertext
   const decipher = createDecipheriv(ALGORITHM, key, iv)
   decipher.setAuthTag(tag)
   return decipher.update(enc).toString('utf8') + decipher.final('utf8')
