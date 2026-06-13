@@ -18,8 +18,16 @@ CREATE TABLE IF NOT EXISTS public.niches (
 ALTER TABLE public.niches ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read niches (needed for public store pages)
-CREATE POLICY "Public read niches"
-  ON public.niches FOR SELECT USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'niches' AND policyname = 'Public read niches'
+  ) THEN
+    CREATE POLICY "Public read niches" ON public.niches FOR SELECT USING (true);
+  END IF;
+END
+$$;
 
 -- Seed default 4 niches
 INSERT INTO public.niches (id, name, description, emoji, gradient, accent_color, text_accent, banner, categories)
