@@ -259,7 +259,7 @@ export async function saveVendorDeliveryConfig(
   const encrypted = encryptConfigCredentials(config)
   const { error } = await supabase
     .from('vendor_delivery_config')
-    .upsert({ vendor_id: vendorId, ...encrypted })
+    .upsert({ vendor_id: vendorId, ...encrypted }, { onConflict: 'vendor_id' })
   if (error) throw error
 }
 
