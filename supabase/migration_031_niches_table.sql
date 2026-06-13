@@ -15,8 +15,25 @@ CREATE TABLE IF NOT EXISTS public.niches (
   updated_at   TIMESTAMPTZ DEFAULT now()
 );
 
--- Niches are public config — no RLS needed; writes are protected at the API layer
-ALTER TABLE public.niches DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.niches ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read niches (public store pages)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='niches' AND policyname='Public read niches') THEN
+    CREATE POLICY "Public read niches" ON public.niches FOR SELECT USING (true);
+  END IF;
+END $$;
+
+-- Service role (admin API routes) can insert/update/delete
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='niches' AND policyname='Service role manages niches') THEN
+    CREATE POLICY "Service role manages niches" ON public.niches FOR ALL
+      USING (auth.role() = 'service_role')
+      WITH CHECK (auth.role() = 'service_role');
+  END IF;
+END $$;
 
 -- Seed default 4 niches
 INSERT INTO public.niches (id, name, description, emoji, gradient, accent_color, text_accent, banner, categories)
