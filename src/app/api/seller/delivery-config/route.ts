@@ -56,7 +56,14 @@ export async function PATCH(req: NextRequest) {
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
 
-    await saveVendorDeliveryConfig(vendor.id, parsed.data)
+    try {
+      await saveVendorDeliveryConfig(vendor.id, parsed.data)
+    } catch (dbErr) {
+      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr)
+      logger.error('[PATCH /api/seller/delivery-config] db error', { error: msg })
+      // Surface DB errors (e.g. missing columns from unrun migrations) to the client
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
     return NextResponse.json({ ok: true })
   } catch (err) {
     logger.error('[PATCH /api/seller/delivery-config]', { error: err instanceof Error ? err.message : String(err) })
