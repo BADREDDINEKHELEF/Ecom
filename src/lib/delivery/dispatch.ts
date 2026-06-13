@@ -6,6 +6,8 @@ import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivrai
 import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured } from './maystro'
 import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured } from './rex'
 import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured } from './yassir'
+import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured } from './ecom'
+import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured } from './apec'
 
 export interface DispatchResult extends ShipmentResult {
   provider: string
@@ -24,6 +26,9 @@ export async function dispatchShipment(
     maystro_token?: string
     rex_token?: string
     yassir_api_key?: string
+    ecom_token?: string
+    apec_api_id?: string
+    apec_api_token?: string
   }
 ): Promise<DispatchResult> {
   switch (provider) {
@@ -104,6 +109,28 @@ export async function dispatchShipment(
       return { ...result, provider, requiresManual: false }
     }
 
+    case 'ecom': {
+      const token = vendorCreds?.ecom_token
+      if (!ecomConfigured() && !token) {
+        return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+      }
+      const result = token
+        ? await ecomCreateShipmentWithToken(input, token)
+        : await ecomCreateShipment(input)
+      return { ...result, provider, requiresManual: false }
+    }
+
+    case 'apec': {
+      const { apec_api_id, apec_api_token } = vendorCreds ?? {}
+      if (!apecConfigured() && (!apec_api_id || !apec_api_token)) {
+        return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+      }
+      const result = apec_api_id && apec_api_token
+        ? await apecCreateShipmentWithCreds(input, apec_api_id, apec_api_token)
+        : await apecCreateShipment(input)
+      return { ...result, provider, requiresManual: false }
+    }
+
     default:
       return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
   }
@@ -118,6 +145,8 @@ export function getTrackingUrl(provider: string, trackingNumber: string): string
     colivraison: `https://app.colivraison.com/tracking/${trackingNumber}`,
     rex:         `https://rexlivraison.com/tracking/${trackingNumber}`,
     yassir:      `https://yassir.com/tracking/${trackingNumber}`,
+    ecom:        `https://ecomdelivery.dz/tracking?id=${trackingNumber}`,
+    apec:        `https://apec.dz/tracking?id=${trackingNumber}`,
   }
   return urls[provider] ?? `#`
 }
