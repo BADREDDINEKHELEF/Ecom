@@ -1,7 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
-// Ecom Delivery DZ — update BASE_URL if the vendor provides a different endpoint
-const BASE_URL = 'https://ecomdz.com/api/v1'
+const BASE_URL = 'https://ecomdelivery.dz/api/v1'
 
 export function ecomConfigured(): boolean {
   return !!process.env.ECOM_TOKEN
