@@ -12,6 +12,7 @@ const config: Config = {
       fontFamily: {
         sans:   ['var(--font-inter)', 'system-ui', 'sans-serif'],
         arabic: ['var(--font-cairo)', 'Cairo', 'sans-serif'],
+        pixel:  ['"Press Start 2P"', 'monospace'],
       },
       animation: {
         'fade-in':   'fadeIn 0.2s ease-in-out',

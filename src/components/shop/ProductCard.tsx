@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ShoppingCart, Heart, ArrowLeftRight } from 'lucide-react'
-import { memo } from 'react'
+import { memo, useRef } from 'react'
 import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
@@ -13,6 +13,8 @@ import { useT, useRTL } from '@/lib/store/langStore'
 import { formatPrice, discount } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import StarRating from '@/components/ui/StarRating'
+import PixelBadge from '@/components/ui/PixelBadge'
+import { usePixelCartPop } from '@/components/effects/usePixelCartPop'
 
 interface ProductCardProps {
   product: Product
@@ -23,6 +25,8 @@ function ProductCard({ product }: ProductCardProps) {
   const { toggle, has } = useWishlistStore()
   const { toggle: compareToggle, has: compareHas } = useCompareStore()
   const addToast = useToastStore((s) => s.add)
+  const imgRef = useRef<HTMLImageElement>(null)
+  const { triggerPop } = usePixelCartPop()
   const t = useT()
   const isRTL = useRTL()
   const wishlisted = has(product.id)
@@ -36,6 +40,7 @@ function ProductCard({ product }: ProductCardProps) {
     e.preventDefault()
     addItem(product)
     addToast(`${product.name} ${t.product.addedMsg}`)
+    triggerPop(imgRef)
   }
 
   const handleWishlist = (e: React.MouseEvent) => {
@@ -53,6 +58,7 @@ function ProductCard({ product }: ProductCardProps) {
         <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
           {product.images[0] ? (
             <Image
+              ref={imgRef}
               src={product.images[0]}
               alt={product.name}
               fill
@@ -80,9 +86,16 @@ function ProductCard({ product }: ProductCardProps) {
           <div className={`absolute top-2.5 ${isRTL ? 'right-2.5' : 'left-2.5'} flex flex-col gap-1.5`}>
             {product.condition === 'used'        && <Badge variant="warning">Occasion</Badge>}
             {product.condition === 'refurbished' && <Badge variant="sale">Reconditionné</Badge>}
-            {product.isNew && <Badge variant="new">{t.common.new}</Badge>}
-            {hasDiscount && <Badge variant="sale">-{discountPct}%</Badge>}
+            {product.isNew && <PixelBadge variant="new" />}
+            {hasDiscount && <PixelBadge variant="promo" discount={discountPct} />}
           </div>
+
+          {/* Pixel top-seller badge — bottom-left */}
+          {product.isFeatured && (
+            <div className="absolute bottom-9 left-2.5">
+              <PixelBadge variant="top-seller" />
+            </div>
+          )}
 
           {/* Wishlist — top-right, always visible at 60% opacity */}
           <button

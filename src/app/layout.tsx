@@ -17,6 +17,7 @@ import ScrollToTop from '@/components/ui/ScrollToTop'
 import HideOnStore from '@/components/layout/HideOnStore'
 import AnalyticsScripts from '@/components/analytics/AnalyticsScripts'
 import PageViewTracker from '@/components/analytics/PageViewTracker'
+import PixelLoadingBar from '@/components/effects/PixelLoadingBar'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
@@ -40,6 +41,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#4f46e5" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
         <AnalyticsScripts />
         <script dangerouslySetInnerHTML={{ __html: `
           try{const t=JSON.parse(localStorage.getItem('theme-preference')||'{}').state?.theme;if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}
@@ -62,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScrollToTop />
           <HideOnStore><Footer /></HideOnStore>
           <PageViewTracker />
+          <PixelLoadingBar />
         </RTLWrapper>
       </body>
     </html>
