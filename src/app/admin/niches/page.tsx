@@ -78,9 +78,14 @@ export default function AdminNichesPage() {
     setDbError(false)
     try {
       const res = await fetch('/api/admin/niches')
-      if (!res.ok) throw new Error('fetch failed')
-      const { niches: data } = await res.json()
-      setNicheList(data.length > 0 ? data : staticNiches)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      if (json.tableExists === false) {
+        setNicheList(staticNiches)
+        setDbError(true)
+      } else {
+        setNicheList(json.niches.length > 0 ? json.niches : staticNiches)
+      }
     } catch {
       setNicheList(staticNiches)
       setDbError(true)
@@ -153,15 +158,19 @@ export default function AdminNichesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(niche),
       })
-      if (!res.ok) throw new Error('save failed')
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error(json.error ?? `HTTP ${res.status}`)
+      }
       if (editing) {
         setNicheList((prev) => prev.map((n) => (n.id === editing.id ? niche : n)))
       } else {
         setNicheList((prev) => [...prev, niche])
       }
       setShowModal(false)
-    } catch {
-      setSaveError('Failed to save. Make sure the niches table exists in Supabase (see SQL below).')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setSaveError(`Failed to save: ${msg}`)
     } finally {
       setSaving(false)
     }

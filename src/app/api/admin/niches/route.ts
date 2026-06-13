@@ -23,8 +23,13 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase.from('niches').select('*').order('created_at', { ascending: true })
-    if (error) throw error
-    return NextResponse.json({ niches: data ?? [] })
+    if (error) {
+      const pg = error as { code?: string; message?: string }
+      // Table doesn't exist yet — return empty list so the page can still load
+      if (pg.code === '42P01') return NextResponse.json({ niches: [], tableExists: false })
+      throw error
+    }
+    return NextResponse.json({ niches: data ?? [], tableExists: true })
   } catch (err) {
     logger.error('[GET /api/admin/niches]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -42,8 +47,10 @@ export async function POST(req: NextRequest) {
     await upsertNiche(parsed.data)
     return NextResponse.json({ ok: true })
   } catch (err) {
-    logger.error('[POST /api/admin/niches]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const pg = err as { code?: string; message?: string }
+    const msg = pg?.message ?? (err instanceof Error ? err.message : String(err))
+    logger.error('[POST /api/admin/niches]', { error: msg })
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
