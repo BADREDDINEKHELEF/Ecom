@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { ShoppingCart, Heart, ArrowLeftRight } from 'lucide-react'
 import { memo, useRef } from 'react'
 import { Product } from '@/types'
@@ -15,6 +16,12 @@ import Badge from '@/components/ui/Badge'
 import StarRating from '@/components/ui/StarRating'
 import PixelBadge from '@/components/ui/PixelBadge'
 import { usePixelCartPop } from '@/components/effects/usePixelCartPop'
+import { usePixelCartFloat } from '@/components/effects/PixelCartFloat'
+
+const PixelCartFloat = dynamic(
+  () => import('@/components/effects/PixelCartFloat').then(m => ({ default: m.default })),
+  { ssr: false },
+)
 
 interface ProductCardProps {
   product: Product
@@ -25,22 +32,28 @@ function ProductCard({ product }: ProductCardProps) {
   const { toggle, has } = useWishlistStore()
   const { toggle: compareToggle, has: compareHas } = useCompareStore()
   const addToast = useToastStore((s) => s.add)
-  const imgRef = useRef<HTMLImageElement>(null)
+  const imgRef  = useRef<HTMLImageElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
   const { triggerPop } = usePixelCartPop()
+  const { floatState, triggerFloat, resetFloat } = usePixelCartFloat()
   const t = useT()
   const isRTL = useRTL()
   const wishlisted = has(product.id)
-  const inCompare = compareHas(product.id)
+  const inCompare  = compareHas(product.id)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount ? discount(product.price, product.comparePrice!) : 0
-  const savings = hasDiscount ? product.comparePrice! - product.price : 0
+  const savings     = hasDiscount ? product.comparePrice! - product.price : 0
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     addItem(product)
     addToast(`${product.name} ${t.product.addedMsg}`)
+    // V2 effects fire simultaneously
     triggerPop(imgRef)
+    if (cardRef.current) {
+      triggerFloat(cardRef.current.getBoundingClientRect(), product.images[0] ?? '')
+    }
   }
 
   const handleWishlist = (e: React.MouseEvent) => {
@@ -53,7 +66,7 @@ function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+    <div ref={cardRef} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
       <Link href={`/${product.nicheId}/${product.id}`}>
         <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
           {product.images[0] ? (
@@ -82,7 +95,7 @@ function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          {/* Condition / new / discount badges — top-left */}
+          {/* Condition / new / discount / cod-safe badges — top-left */}
           <div className={`absolute top-2.5 ${isRTL ? 'right-2.5' : 'left-2.5'} flex flex-col gap-1.5`}>
             {product.condition === 'used'        && <Badge variant="warning">Occasion</Badge>}
             {product.condition === 'refurbished' && <Badge variant="sale">Reconditionné</Badge>}
@@ -90,14 +103,21 @@ function ProductCard({ product }: ProductCardProps) {
             {hasDiscount && <PixelBadge variant="promo" discount={discountPct} />}
           </div>
 
-          {/* Pixel top-seller badge — bottom-left */}
+          {/* COD-safe badge — always shown for COD products */}
+          {(product as Product & { paymentMethod?: string }).paymentMethod === 'cod' && (
+            <div className={`absolute bottom-9 ${isRTL ? 'right-2.5' : 'left-2.5'}`}>
+              <PixelBadge variant="cod-safe" size="sm" />
+            </div>
+          )}
+
+          {/* Pixel top-seller badge */}
           {product.isFeatured && (
             <div className="absolute bottom-9 left-2.5">
               <PixelBadge variant="top-seller" />
             </div>
           )}
 
-          {/* Wishlist — top-right, always visible at 60% opacity */}
+          {/* Wishlist — top-right */}
           <button
             onClick={handleWishlist}
             aria-label={wishlisted ? t.product.removedWishlist : t.product.savedWishlist}
@@ -195,6 +215,15 @@ function ProductCard({ product }: ProductCardProps) {
           </button>
         )}
       </div>
+
+      {/* Lazy-loaded fly-to-cart animation */}
+      <PixelCartFloat
+        trigger={floatState.trigger}
+        fromRect={floatState.fromRect}
+        toRect={floatState.toRect}
+        productImageSrc={floatState.productImageSrc}
+        onComplete={resetFloat}
+      />
     </div>
   )
 }

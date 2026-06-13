@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import PixelConfetti from '@/components/effects/PixelConfetti'
+import dynamic from 'next/dynamic'
+const PixelConfetti = dynamic(() => import('@/components/effects/PixelConfetti'), { ssr: false })
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X, Phone, Gift, Star } from 'lucide-react'
@@ -397,7 +398,7 @@ export default function CheckoutPage() {
   if (submitted) {
     return (
       <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <PixelConfetti trigger={!confettiDone} onComplete={() => setConfettiDone(true)} />
+        <PixelConfetti trigger={!confettiDone} onComplete={() => setConfettiDone(true)} message="تبارك الله! طلبك تأكد" />
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-10 h-10 text-green-600" />
         </div>

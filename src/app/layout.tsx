@@ -18,6 +18,7 @@ import HideOnStore from '@/components/layout/HideOnStore'
 import AnalyticsScripts from '@/components/analytics/AnalyticsScripts'
 import PageViewTracker from '@/components/analytics/PageViewTracker'
 import PixelLoadingBar from '@/components/effects/PixelLoadingBar'
+import NavigationEvents from '@/components/effects/NavigationEvents'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <HideOnStore><Footer /></HideOnStore>
           <PageViewTracker />
           <PixelLoadingBar />
+          <NavigationEvents />
         </RTLWrapper>
       </body>
     </html>

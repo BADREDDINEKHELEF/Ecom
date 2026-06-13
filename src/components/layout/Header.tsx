@@ -160,6 +160,7 @@ export default function Header() {
             {/* Cart */}
             <button
               onClick={() => toggleCart()}
+              data-pixel-cart-target="true"
               className="relative p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
               aria-label={t.nav.cart}
             >
