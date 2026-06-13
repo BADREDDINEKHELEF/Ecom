@@ -56,7 +56,7 @@ export async function apecCreateShipmentWithCreds(
   }
 
   const data = await res.json()
-  const tracking = String(data?.tracking ?? data?.id ?? data?.parcel_id ?? '')
+  const tracking = String(data?.tracking ?? data?.tracking_code ?? data?.tracking_number ?? data?.parcel_id ?? data?.id ?? '')
   const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
 
   return { tracking, labelUrl }

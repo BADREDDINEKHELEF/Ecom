@@ -54,7 +54,7 @@ async function createShipmentWithHeaders(
   }
   const data = await res.json()
   return {
-    tracking: String(data.tracking ?? data.id ?? data.parcel_id ?? ''),
+    tracking: String(data.tracking ?? data.tracking_code ?? data.tracking_number ?? data.parcel_id ?? data.id ?? ''),
     labelUrl: data.label ?? data.label_url ?? undefined,
   }
 }

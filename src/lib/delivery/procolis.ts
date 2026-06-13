@@ -13,7 +13,6 @@ export async function procolisCreateShipmentWithToken(
   const body = {
     Colis: [
       {
-        tracking: '',
         TypeColis: 0,
         Confrimee: 0,
         client: input.fullName,

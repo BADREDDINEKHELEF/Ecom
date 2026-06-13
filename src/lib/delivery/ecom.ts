@@ -13,12 +13,12 @@ export async function ecomCreateShipmentWithToken(
   const body = {
     client_name:    input.fullName,
     client_phone:   input.phone,
-    adresse:        input.address,
+    address:        input.address,
     wilaya:         input.wilaya,
     commune:        input.city,
-    montant:        input.total,
-    produit:        input.items || 'Colis',
-    remarque:       '',
+    price:          input.total,
+    product_list:   input.items || 'Colis',
+    note:           '',
     can_open:       false,
   }
 
@@ -38,7 +38,7 @@ export async function ecomCreateShipmentWithToken(
 
   const data = await res.json()
   const tracking = String(
-    data?.tracking ?? data?.code_suivi ?? data?.tracking_code ?? data?.id ?? ''
+    data?.tracking ?? data?.tracking_code ?? data?.tracking_number ?? data?.code_suivi ?? data?.parcel_id ?? data?.id ?? ''
   )
   const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
 

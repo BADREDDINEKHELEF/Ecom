@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminToken } from '@/lib/auth/jwt'
 import { updateShippingInfo, updateOrderStatus } from '@/lib/supabase/queries'
-import { yalidineCreateShipment } from '@/lib/delivery/yalidine'
+import { dispatchShipment } from '@/lib/delivery/dispatch'
 import { ShipmentInput } from '@/lib/delivery/types'
 import { logger } from '@/lib/logger'
 
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     let finalTracking = tracking ?? ''
     let labelUrl: string | undefined
 
-    if (provider === 'yalidine' && autoCreate && orderData) {
-      const result = await yalidineCreateShipment(orderData)
+    if (autoCreate && orderData) {
+      const result = await dispatchShipment(provider, orderData)
       finalTracking = result.tracking
       labelUrl = result.labelUrl
     }
