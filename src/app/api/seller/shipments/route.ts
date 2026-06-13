@@ -63,31 +63,38 @@ export async function POST(req: NextRequest) {
 
     if (autoCreate && !trackingNumber) {
       const config = await getVendorDeliveryConfig(vendor.id)
-      const result = await dispatchShipment(
-        provider,
-        {
-          orderId,
-          fullName: order.full_name,
-          phone:    order.phone,
-          address:  order.address,
-          city:     order.city,
-          wilaya:   order.wilaya,
-          total:    order.total,
-        },
-        {
-          yalidine_api_id:    config?.yalidine_api_id    ?? undefined,
-          yalidine_api_token: config?.yalidine_api_token ?? undefined,
-          procolis_token:     config?.procolis_token     ?? undefined,
-          zr_token:           config?.zr_token           ?? undefined,
-          colivraison_token:  config?.colivraison_token  ?? undefined,
-          maystro_token:      config?.maystro_token      ?? undefined,
-          rex_token:          config?.rex_token          ?? undefined,
-          yassir_api_key:     config?.yassir_api_key     ?? undefined,
-          ecom_token:         config?.ecom_token         ?? undefined,
-          apec_api_id:        config?.apec_api_id        ?? undefined,
-          apec_api_token:     config?.apec_api_token     ?? undefined,
-        }
-      )
+      let result
+      try {
+        result = await dispatchShipment(
+          provider,
+          {
+            orderId,
+            fullName: order.full_name,
+            phone:    order.phone,
+            address:  order.address,
+            city:     order.city,
+            wilaya:   order.wilaya,
+            total:    order.total,
+          },
+          {
+            yalidine_api_id:    config?.yalidine_api_id    ?? undefined,
+            yalidine_api_token: config?.yalidine_api_token ?? undefined,
+            procolis_token:     config?.procolis_token     ?? undefined,
+            zr_token:           config?.zr_token           ?? undefined,
+            colivraison_token:  config?.colivraison_token  ?? undefined,
+            maystro_token:      config?.maystro_token      ?? undefined,
+            rex_token:          config?.rex_token          ?? undefined,
+            yassir_api_key:     config?.yassir_api_key     ?? undefined,
+            ecom_token:         config?.ecom_token         ?? undefined,
+            apec_api_id:        config?.apec_api_id        ?? undefined,
+            apec_api_token:     config?.apec_api_token     ?? undefined,
+          }
+        )
+      } catch (providerErr) {
+        const msg = providerErr instanceof Error ? providerErr.message : String(providerErr)
+        logger.error(`[POST /api/seller/shipments] provider=${provider} error`, { error: msg })
+        return NextResponse.json({ error: `Delivery provider error: ${msg}` }, { status: 502 })
+      }
       finalTracking  = result.tracking
       labelUrl       = result.labelUrl
       requiresManual = result.requiresManual
