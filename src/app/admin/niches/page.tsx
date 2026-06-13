@@ -72,21 +72,32 @@ export default function AdminNichesPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [saveError, setSaveError] = useState('')
   const [dbError, setDbError] = useState(false)
+  const [dbErrorMsg, setDbErrorMsg] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
     setDbError(false)
+    setDbErrorMsg('')
     try {
       const res = await fetch('/api/admin/niches')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        const msg = json.error ?? `HTTP ${res.status}`
+        setDbErrorMsg(msg)
+        setNicheList(staticNiches)
+        setDbError(true)
+        return
+      }
       const json = await res.json()
       if (json.tableExists === false) {
+        setDbErrorMsg('Table "niches" does not exist — run the SQL below.')
         setNicheList(staticNiches)
         setDbError(true)
       } else {
         setNicheList(json.niches.length > 0 ? json.niches : staticNiches)
       }
-    } catch {
+    } catch (err) {
+      setDbErrorMsg(err instanceof Error ? err.message : String(err))
       setNicheList(staticNiches)
       setDbError(true)
     } finally {
@@ -209,9 +220,12 @@ export default function AdminNichesPage() {
       {dbError && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 flex gap-3">
           <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-amber-800 text-sm">Niches table not found in Supabase</p>
-            <p className="text-amber-700 text-xs mt-1">Showing static niches. Run this SQL in your Supabase SQL editor to enable niche management:</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-amber-800 text-sm">Niches API error — showing static niches</p>
+            {dbErrorMsg && (
+              <p className="text-red-700 text-xs font-mono bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2 break-all">{dbErrorMsg}</p>
+            )}
+            <p className="text-amber-700 text-xs mt-2">If the table is missing, run this SQL in your Supabase SQL editor:</p>
             <pre className="bg-amber-100 text-amber-900 text-xs rounded-lg p-3 mt-2 overflow-x-auto whitespace-pre-wrap">{SQL_SETUP}</pre>
           </div>
         </div>
