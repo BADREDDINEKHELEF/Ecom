@@ -15,6 +15,7 @@ import ProductCard from '@/components/shop/ProductCard'
 import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import WilayaDeliveryEstimate from '@/components/ui/WilayaDeliveryEstimate'
 import RecentlyViewed, { trackRecentlyViewed } from '@/components/ui/RecentlyViewed'
+import { trackViewContent, trackAddToCart } from '@/lib/analytics'
 import StockAlertButton from '@/components/ui/StockAlertButton'
 import ProductQA from '@/components/shop/ProductQA'
 import CrossSellCarousel from '@/components/shop/CrossSellCarousel'
@@ -58,7 +59,6 @@ export default function ProductDetails({ product, niche, related }: Props) {
   const [reviewError, setReviewError] = useState('')
 
   useEffect(() => {
-    // Track this product as recently viewed
     trackRecentlyViewed({
       id: product.id,
       nicheId: product.nicheId,
@@ -66,6 +66,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
       price: product.price,
       image: product.images[0] ?? '',
     })
+    trackViewContent({ id: product.id, name: product.name, price: product.price })
 
     fetch(`/api/reviews/${product.id}`)
       .then((r) => r.json())
@@ -140,6 +141,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
 
   const handleAddToCart = () => {
     addItem(product, quantity)
+    trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }

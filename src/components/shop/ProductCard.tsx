@@ -17,6 +17,7 @@ import StarRating from '@/components/ui/StarRating'
 import PixelBadge from '@/components/ui/PixelBadge'
 import { usePixelCartPop } from '@/components/effects/usePixelCartPop'
 import { usePixelCartFloat } from '@/components/effects/PixelCartFloat'
+import { trackAddToCart } from '@/lib/analytics'
 
 const PixelCartFloat = dynamic(
   () => import('@/components/effects/PixelCartFloat').then(m => ({ default: m.default })),
@@ -49,6 +50,7 @@ function ProductCard({ product }: ProductCardProps) {
     e.preventDefault()
     addItem(product)
     addToast(`${product.name} ${t.product.addedMsg}`)
+    trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: 1 })
     // V2 effects fire simultaneously
     triggerPop(imgRef)
     if (cardRef.current) {

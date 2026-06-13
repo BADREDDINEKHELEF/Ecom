@@ -1,13 +1,15 @@
 /**
- * Analytics helpers — safe wrappers around Meta Pixel (fbq) and Google Tag (gtag).
- * All calls are no-ops when the scripts are blocked (ad blockers) or not configured.
+ * Analytics helpers — safe wrappers around Meta Pixel (fbq), Google Tag (gtag),
+ * and the ShopDZ first-party pixel (window.__pixel).
+ * All calls are no-ops when scripts are blocked (ad blockers) or not configured.
  */
 
 declare global {
   interface Window {
-    fbq?:       (...args: unknown[]) => void
-    gtag?:      (...args: unknown[]) => void
-    dataLayer?:  unknown[]
+    fbq?:      (...args: unknown[]) => void
+    gtag?:     (...args: unknown[]) => void
+    dataLayer?: unknown[]
+    __pixel?:  (event: string, meta?: Record<string, unknown>) => void
   }
 }
 
@@ -17,12 +19,16 @@ function _fbq(...args: unknown[]) {
 function _gtag(...args: unknown[]) {
   try { if (typeof window !== 'undefined') window.gtag?.(...args) } catch {}
 }
+function _pixel(event: string, meta?: Record<string, unknown>) {
+  try { if (typeof window !== 'undefined') window.__pixel?.(event, meta) } catch {}
+}
 
 // ── Events ─────────────────────────────────────────────────────────────────
 
 export function trackPageView(url: string) {
   _fbq('track', 'PageView')
   _gtag('event', 'page_view', { page_path: url })
+  _pixel('PageView', { url })
 }
 
 export function trackViewContent(product: {
@@ -42,6 +48,7 @@ export function trackViewContent(product: {
     value:    product.price,
     items: [{ item_id: product.id, item_name: product.name, price: product.price }],
   })
+  _pixel('ViewContent', { product_id: product.id, name: product.name, price: product.price, currency: 'DZD' })
 }
 
 export function trackAddToCart(product: {
@@ -67,6 +74,14 @@ export function trackAddToCart(product: {
       quantity:  product.quantity,
     }],
   })
+  _pixel('AddToCart', {
+    product_id: product.id,
+    name:       product.name,
+    price:      product.price,
+    quantity:   product.quantity,
+    value:      product.price * product.quantity,
+    currency:   'DZD',
+  })
 }
 
 export function trackPurchase(order: {
@@ -91,5 +106,12 @@ export function trackPurchase(order: {
       price:     i.price,
       quantity:  i.quantity,
     })),
+  })
+  _pixel('Purchase', {
+    transaction_id: order.transactionId,
+    total:          order.total,
+    currency:       'DZD',
+    num_items:      order.items.reduce((s, i) => s + i.quantity, 0),
+    product_ids:    order.items.map(i => i.id),
   })
 }
