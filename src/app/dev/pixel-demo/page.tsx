@@ -2,19 +2,17 @@
 
 import { useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
+import { notFound } from 'next/navigation'
 import PixelBadge from '@/components/ui/PixelBadge'
 import { usePixelCartPop } from '@/components/effects/usePixelCartPop'
 import { usePixelCartFloat } from '@/components/effects/PixelCartFloat'
-
-// Guard: this page only renders in dev
-if (process.env.NODE_ENV === 'production') {
-  throw new Error('pixel-demo page is dev-only')
-}
 
 const PixelConfetti  = dynamic(() => import('@/components/effects/PixelConfetti'),  { ssr: false })
 const PixelCartFloat = dynamic(() => import('@/components/effects/PixelCartFloat').then(m => ({ default: m.default })), { ssr: false })
 
 export default function PixelDemoPage() {
+  if (process.env.NODE_ENV === 'production') notFound()
+
   const [confettiTrigger, setConfettiTrigger] = useState(false)
   const [confettiDone,    setConfettiDone]    = useState(false)
   const imgRef  = useRef<HTMLImageElement>(null)
