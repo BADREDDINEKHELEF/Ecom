@@ -257,10 +257,25 @@ export async function saveVendorDeliveryConfig(
 ): Promise<void> {
   const supabase = createAdminClient()
   const encrypted = encryptConfigCredentials(config)
-  const { error } = await supabase
+
+  const { data: existing } = await supabase
     .from('vendor_delivery_config')
-    .upsert({ vendor_id: vendorId, ...encrypted }, { onConflict: 'vendor_id' })
-  if (error) throw error
+    .select('id')
+    .eq('vendor_id', vendorId)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('vendor_delivery_config')
+      .update(encrypted)
+      .eq('vendor_id', vendorId)
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('vendor_delivery_config')
+      .insert({ vendor_id: vendorId, ...encrypted })
+    if (error) throw error
+  }
 }
 
 // ── Subscription helpers ────────────────────────────────────────
