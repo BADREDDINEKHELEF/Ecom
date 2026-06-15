@@ -5,10 +5,10 @@ import {
   GraduationCap, Play, CheckCircle, Clock, ChevronRight, ChevronDown,
   Star, Zap, Package, Tag, BarChart2, MessageSquare, Truck,
   TrendingUp, BookOpen, Award, CreditCard, Smartphone, Banknote,
-  ArrowRight, AlertCircle, Info, Lightbulb, Menu,
+  ArrowRight, AlertCircle, Info, Lightbulb, Menu, Target, Link2,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { useRTL } from '@/lib/store/langStore'
+import { useRTL, useLang } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -587,6 +587,381 @@ const MODULES: Module[] = [
   },
 ]
 
+// ─── Translatable extra modules (Pixels + Delivery API) ───────────────────────
+
+type Lang = 'fr' | 'en' | 'ar'
+
+function getExtraModules(lang: Lang): Module[] {
+  // ── PIXELS MODULE ────────────────────────────────────────────────────────────
+  const pixelsModule: Module = {
+    id:      'pixels',
+    title:   lang === 'ar' ? 'البيكسل والإعلانات — Meta، Google، TikTok' : lang === 'en' ? 'Pixels & Ads — Meta, Google, TikTok' : 'Pixels & Publicité — Meta, Google, TikTok',
+    icon:    Target,
+    color:   'text-purple-600',
+    bg:      'bg-purple-50',
+    badge:   lang === 'ar' ? 'متقدم' : lang === 'en' ? 'Advanced' : 'Avancé',
+    badgeBg: 'bg-purple-100 text-purple-700',
+    desc:    lang === 'ar'
+      ? 'كيفية إعداد بيكسل Meta وGoogle Analytics وTikTok مع الـ API من جهة الخادم لتتبع مبيعاتك بدقة.'
+      : lang === 'en'
+      ? 'Set up Meta Pixel, Google Analytics 4, and TikTok Pixel with server-side CAPI for accurate sales tracking.'
+      : 'Configurez Meta Pixel, Google Analytics 4 et TikTok Pixel avec la CAPI serveur pour un suivi précis de vos ventes.',
+    lessons: lang === 'ar' ? [
+      {
+        id: 'px1',
+        title: 'Meta Pixel + Conversions API — الإعداد الكامل',
+        duration: '10 min',
+        intro: 'بيكسل Meta يتتبع زوار متجرك في المتصفح. Conversions API ترسل بيانات الشراء مباشرة من خادمنا — تعمل حتى مع أدوات حجب الإعلانات.',
+        steps: [
+          { text: 'أنشئ حساب Meta Business Suite على business.facebook.com إذا لم يكن لديك واحد. استخدم بريدك الإلكتروني المهني.', tip: 'ربط حسابك الشخصي بـ Business Suite يمنحك وصولاً لجميع أدوات الإعلانات.' },
+          { text: 'في Business Suite ← Events Manager ← اضغط "ربط مصدر بيانات" ← "الويب" ← "Meta Pixel". أعطِه اسم متجرك وانسخ Pixel ID (سلسلة من 15-16 رقماً).' },
+          { text: 'في إعدادات ShopDZ ← قسم "Pixels والتتبع" ← الصق Pixel ID في خانة "Meta Pixel ID". احفظ.', tip: 'البيكسل يبدأ بالعمل فوراً بعد الحفظ على كل صفحات متجرك.' },
+          { text: 'لتفعيل Conversions API: Events Manager ← بيكسلك ← تبويب "الإعدادات" ← مرر إلى "Conversions API" ← اضغط "إنشاء رمز وصول". انسخ الرمز (يبدأ بـ EAA...).' },
+          { text: 'الصق الرمز في خانة "Conversions API Token" في إعدادات ShopDZ. احفظ.' },
+          { text: 'للتحقق: Events Manager ← "اختبار الأحداث" ← افتح متجرك في تبويب جديد ← يجب أن ترى PageView و ViewContent يظهران خلال ثوانٍ.' },
+          { text: 'المشتريات ترسل مرتين (متصفح + خادم) لدقة قصوى. تحقق من نتائجك في Ads Manager ← "الأعمدة" ← "المشتريات" بعد 24-48 ساعة.' },
+        ],
+        tip: 'مع تفعيل CAPI، ترى جميع التحويلات حتى على iPhone مع Safari الذي يحجب الكوكيز. هذا يحسن نتائج إعلاناتك بشكل كبير.',
+        warning: 'لا تشارك رمز Conversions API مع أي شخص. إنه مفتاح سري — تعامل معه كلمة مرور.',
+      },
+      {
+        id: 'px2',
+        title: 'Google Analytics 4 + API Secret — الإعداد',
+        duration: '8 min',
+        intro: 'Google Analytics 4 يتبع سلوك الزوار ومسار الشراء. مع Measurement Protocol API يرسل ShopDZ بيانات الشراء مباشرة من الخادم.',
+        steps: [
+          { text: 'في analytics.google.com ← اضغط "إنشاء" ← "خاصية" ← أدخل اسم متجرك ← اختر المنطقة الزمنية (الجزائر = Africa/Algiers) ← أنهِ إنشاء الخاصية.' },
+          { text: 'ابحث عن Measurement ID: الخاصية الجديدة ← Admin ← Data Streams ← اضغط على فلوك ← انسخ Measurement ID (يبدأ بـ G-).' },
+          { text: 'في إعدادات ShopDZ ← قسم Google Analytics 4 ← الصق Measurement ID في خانة "Measurement ID". احفظ.', tip: 'هذا يضيف الـ gtag.js تلقائياً على كل صفحات متجرك.' },
+          { text: 'لـ API Secret: نفس صفحة Data Stream ← "Measurement Protocol API secrets" ← "Create" ← أعطه اسماً ← انسخ القيمة.' },
+          { text: 'الصق API Secret في خانة "API Secret (Measurement Protocol)" في إعدادات ShopDZ. احفظ.' },
+          { text: 'للتحقق: analytics.google.com ← Reports ← Realtime ← افتح متجرك في تبويب آخر ← يجب أن ترى مستخدم نشط.' },
+        ],
+        tip: 'GA4 مجاني تماماً. بعد 24-48 ساعة، ستجد تقارير تفصيلية عن مصادر الزوار، الصفحات الأكثر مشاهدة والمنتجات الأكثر مبيعاً.',
+      },
+      {
+        id: 'px3',
+        title: 'TikTok Pixel + Events API — التثبيت خطوة بخطوة',
+        duration: '8 min',
+        intro: 'TikTok Pixel يقيس أداء إعلاناتك على TikTok. Events API يرسل بيانات الشراء من خادمنا مباشرة لتحسين عائد إعلاناتك.',
+        steps: [
+          { text: 'ادخل TikTok Ads Manager على ads.tiktok.com ← Assets ← Events ← "Web Events" ← "Create Pixel". أعطه اسم متجرك.', tip: 'تحتاج حساب TikTok for Business منفصل عن الحساب الشخصي.' },
+          { text: 'اختر "TikTok Pixel" ← اتبع خطوات الإنشاء ← في نهاية التثبيت انسخ Pixel ID (يبدأ بـ C...).' },
+          { text: 'في إعدادات ShopDZ ← قسم TikTok ← الصق Pixel ID في خانة "TikTok Pixel ID". احفظ.' },
+          { text: 'للحصول على Events API Token: Events Manager ← بيكسلك ← "API Access Token" ← اضغط "Generate". انسخ الرمز.' },
+          { text: 'الصق الرمز في "Events API Access Token" في إعدادات ShopDZ. احفظ.' },
+          { text: 'للتحقق: Assets ← Events ← بيكسلك ← "Test Events" ← أدخل رابط متجرك واضغط "Test". يجب أن ترى الأحداث تظهر.', tip: 'TikTok يأخذ عادةً 2-4 ساعات لبدء عرض بيانات الأحداث في الوقت الفعلي.' },
+        ],
+        tip: 'إعلانات TikTok تعمل بشكل ممتاز للمنتجات المرئية (ملابس، أكسسوارات، منتجات منزلية). البيكسل + Events API يحسن استهداف الجمهور تلقائياً.',
+        warning: 'تأكد من موافقة سياسة إعلانات TikTok على منتجك قبل إنشاء الحملة. بعض فئات المنتجات لها قيود خاصة.',
+      },
+    ] : lang === 'en' ? [
+      {
+        id: 'px1',
+        title: 'Meta Pixel + Conversions API — Full Setup',
+        duration: '10 min',
+        intro: 'The Meta Pixel tracks visitors on your store browser-side. The Conversions API (CAPI) sends purchase data directly from our server — it works even when pixels are blocked by ad blockers.',
+        steps: [
+          { text: 'Create a Meta Business Suite account at business.facebook.com if you don\'t have one. Use your business email.', tip: 'Linking your personal Facebook account to Business Suite gives you access to all advertising tools.' },
+          { text: 'In Business Suite → Events Manager → click "Connect a data source" → "Web" → "Meta Pixel". Name it after your store and copy the Pixel ID (15-16 digit number).' },
+          { text: 'In ShopDZ Settings → "Pixels & Tracking" section → paste the Pixel ID in the "Meta Pixel ID" field. Save.', tip: 'The pixel starts working immediately after saving on every page of your store.' },
+          { text: 'To enable Conversions API: Events Manager → your Pixel → "Settings" tab → scroll to "Conversions API" → click "Generate access token". Copy the token (starts with EAA...).' },
+          { text: 'Paste the token in "Conversions API Token" in your ShopDZ Settings. Save.' },
+          { text: 'Verify: Events Manager → "Test events" tab → open your store in a new tab → you should see PageView and ViewContent appear within seconds.' },
+          { text: 'Purchases now send twice (browser + server) for maximum accuracy. Check results in Ads Manager → Columns → "Purchases" after 24-48 hours.' },
+        ],
+        tip: 'With CAPI enabled, you see all conversions even on iPhones with Safari (which blocks third-party cookies). This significantly improves your ad results.',
+        warning: 'Never share your Conversions API token with anyone. It\'s a secret key — treat it like a password.',
+      },
+      {
+        id: 'px2',
+        title: 'Google Analytics 4 + API Secret — Setup',
+        duration: '8 min',
+        intro: 'Google Analytics 4 tracks visitor behavior and the purchase journey. With Measurement Protocol API, ShopDZ sends purchase data directly from the server.',
+        steps: [
+          { text: 'In analytics.google.com → click "Create" → "Property" → enter your store name → select timezone (Algeria = Africa/Algiers) → finish creating the property.' },
+          { text: 'Find your Measurement ID: new property → Admin → Data Streams → click your stream → copy Measurement ID (starts with G-).' },
+          { text: 'In ShopDZ Settings → Google Analytics 4 section → paste Measurement ID in the "Measurement ID" field. Save.', tip: 'This automatically adds gtag.js tracking to every page of your store.' },
+          { text: 'For API Secret: same Data Stream page → "Measurement Protocol API secrets" → "Create" → give it a name → copy the value.' },
+          { text: 'Paste the API Secret in "API Secret (Measurement Protocol)" in ShopDZ Settings. Save.' },
+          { text: 'Verify: analytics.google.com → Reports → Realtime → open your store in another tab → you should see an active user appear.' },
+        ],
+        tip: 'GA4 is completely free. After 24-48 hours, you\'ll find detailed reports on traffic sources, most viewed pages, and top-selling products.',
+      },
+      {
+        id: 'px3',
+        title: 'TikTok Pixel + Events API — Step-by-Step Installation',
+        duration: '8 min',
+        intro: 'TikTok Pixel measures your ad performance on TikTok. The Events API sends purchase data from our server directly to improve your ad return on investment.',
+        steps: [
+          { text: 'Go to TikTok Ads Manager at ads.tiktok.com → Assets → Events → "Web Events" → "Create Pixel". Name it after your store.', tip: 'You need a TikTok for Business account separate from your personal account.' },
+          { text: 'Select "TikTok Pixel" → follow the creation steps → at the end copy the Pixel ID (starts with C...).' },
+          { text: 'In ShopDZ Settings → TikTok section → paste Pixel ID in the "TikTok Pixel ID" field. Save.' },
+          { text: 'To get the Events API Token: Events Manager → your pixel → "API Access Token" → click "Generate". Copy the token.' },
+          { text: 'Paste the token in "Events API Access Token" in ShopDZ Settings. Save.' },
+          { text: 'Verify: Assets → Events → your pixel → "Test Events" → enter your store URL and click "Test". Events should appear.', tip: 'TikTok usually takes 2-4 hours to start showing real-time event data.' },
+        ],
+        tip: 'TikTok ads work great for visual products (clothing, accessories, home products). The pixel + Events API automatically improves audience targeting.',
+        warning: 'Make sure TikTok\'s advertising policy allows your product before creating a campaign. Some product categories have specific restrictions.',
+      },
+    ] : [
+      {
+        id: 'px1',
+        title: 'Meta Pixel + Conversions API — configuration complète',
+        duration: '10 min',
+        intro: 'Le Meta Pixel suit les visiteurs de votre boutique dans le navigateur. La Conversions API (CAPI) envoie les données d\'achat directement depuis notre serveur — elle fonctionne même quand le pixel est bloqué par les bloqueurs de pubs.',
+        steps: [
+          { text: 'Créez un compte Meta Business Suite sur business.facebook.com si vous n\'en avez pas. Utilisez votre email professionnel.', tip: 'Lier votre compte Facebook personnel à Business Suite vous donne accès à tous les outils publicitaires.' },
+          { text: 'Dans Business Suite → Events Manager → cliquez "Connecter une source de données" → "Web" → "Meta Pixel". Nommez-le avec le nom de votre boutique et copiez le Pixel ID (suite de 15-16 chiffres).' },
+          { text: 'Dans Paramètres ShopDZ → section "Pixels & Tracking" → collez le Pixel ID dans "Meta Pixel ID". Sauvegardez.', tip: 'Le pixel commence à fonctionner immédiatement après la sauvegarde, sur toutes les pages de votre boutique.' },
+          { text: 'Pour activer la Conversions API : Events Manager → votre Pixel → onglet "Paramètres" → faites défiler jusqu\'à "Conversions API" → cliquez "Générer un token d\'accès". Copiez le token (commence par EAA...).' },
+          { text: 'Collez le token dans "Conversions API Token" dans vos Paramètres ShopDZ. Sauvegardez.' },
+          { text: 'Vérification : Events Manager → onglet "Test des événements" → ouvrez votre boutique dans un nouvel onglet → PageView et ViewContent doivent apparaître en quelques secondes.' },
+          { text: 'Les achats sont maintenant envoyés en double (navigateur + serveur) pour une précision maximale. Vérifiez dans Ads Manager → Colonnes → "Achats" après 24-48h.' },
+        ],
+        tip: 'Avec la CAPI activée, vous voyez toutes les conversions même sur les iPhones avec Safari (qui bloquent les cookies tiers). Cela améliore significativement vos résultats publicitaires.',
+        warning: 'Ne partagez jamais votre token Conversions API. C\'est une clé secrète — traitez-le comme un mot de passe.',
+      },
+      {
+        id: 'px2',
+        title: 'Google Analytics 4 + API Secret — configuration',
+        duration: '8 min',
+        intro: 'Google Analytics 4 suit le comportement des visiteurs et le parcours d\'achat. Avec le Measurement Protocol API, ShopDZ envoie les données d\'achat directement depuis le serveur.',
+        steps: [
+          { text: 'Dans analytics.google.com → cliquez "Créer" → "Propriété" → entrez le nom de votre boutique → sélectionnez le fuseau horaire (Algérie = Africa/Algiers) → terminez la création.' },
+          { text: 'Trouvez votre Measurement ID : nouvelle propriété → Admin → Flux de données → cliquez sur votre flux → copiez Measurement ID (commence par G-).' },
+          { text: 'Dans Paramètres ShopDZ → section Google Analytics 4 → collez le Measurement ID. Sauvegardez.', tip: 'Cela ajoute automatiquement le tracking gtag.js sur toutes les pages de votre boutique.' },
+          { text: 'Pour l\'API Secret : même page Data Stream → "Measurement Protocol API secrets" → "Créer" → donnez-lui un nom → copiez la valeur.' },
+          { text: 'Collez l\'API Secret dans "API Secret (Measurement Protocol)" dans vos Paramètres ShopDZ. Sauvegardez.' },
+          { text: 'Vérification : analytics.google.com → Rapports → Temps réel → ouvrez votre boutique dans un autre onglet → un utilisateur actif doit apparaître.' },
+        ],
+        tip: 'GA4 est entièrement gratuit. Après 24-48h, vous aurez des rapports détaillés sur les sources de trafic, les pages les plus vues et les produits les plus vendus.',
+      },
+      {
+        id: 'px3',
+        title: 'TikTok Pixel + Events API — installation étape par étape',
+        duration: '8 min',
+        intro: 'TikTok Pixel mesure la performance de vos publicités TikTok. L\'Events API envoie les données d\'achat depuis notre serveur directement à TikTok pour améliorer votre retour sur investissement publicitaire.',
+        steps: [
+          { text: 'Allez dans TikTok Ads Manager sur ads.tiktok.com → Assets → Events → "Web Events" → "Create Pixel". Nommez-le avec le nom de votre boutique.', tip: 'Vous avez besoin d\'un compte TikTok for Business séparé de votre compte personnel.' },
+          { text: 'Sélectionnez "TikTok Pixel" → suivez les étapes de création → à la fin copiez le Pixel ID (commence par C...).' },
+          { text: 'Dans Paramètres ShopDZ → section TikTok → collez le Pixel ID dans "TikTok Pixel ID". Sauvegardez.' },
+          { text: 'Pour obtenir l\'Events API Token : Events Manager → votre pixel → "API Access Token" → cliquez "Generate". Copiez le token.' },
+          { text: 'Collez le token dans "Events API Access Token" dans vos Paramètres ShopDZ. Sauvegardez.' },
+          { text: 'Vérification : Assets → Events → votre pixel → "Test Events" → entrez l\'URL de votre boutique et cliquez "Test". Les événements doivent apparaître.', tip: 'TikTok prend généralement 2-4 heures pour commencer à afficher les données en temps réel.' },
+        ],
+        tip: 'Les publicités TikTok fonctionnent très bien pour les produits visuels (vêtements, accessoires, produits maison). Le pixel + Events API améliore automatiquement le ciblage de l\'audience.',
+        warning: 'Vérifiez que la politique publicitaire TikTok autorise votre produit avant de créer une campagne. Certaines catégories de produits ont des restrictions spécifiques.',
+      },
+    ],
+  }
+
+  // ── DELIVERY API MODULE ──────────────────────────────────────────────────────
+  const deliveryModule: Module = {
+    id:      'delivery-api',
+    title:   lang === 'ar' ? 'API شركات التوصيل — Yalidine، ZR Express، Procolis' : lang === 'en' ? 'Delivery APIs — Yalidine, ZR Express, Procolis' : 'API Transporteurs — Yalidine, ZR Express, Procolis',
+    icon:    Link2,
+    color:   'text-teal-600',
+    bg:      'bg-teal-50',
+    badge:   lang === 'ar' ? 'متقدم' : lang === 'en' ? 'Advanced' : 'Avancé',
+    badgeBg: 'bg-teal-100 text-teal-700',
+    desc:    lang === 'ar'
+      ? 'اربط متجرك بـ API شركات التوصيل لإنشاء بوليصات الشحن بنقرة واحدة وتتبع الطرود تلقائياً.'
+      : lang === 'en'
+      ? 'Connect your store to delivery company APIs to create shipping labels in 1 click and track parcels automatically.'
+      : 'Connectez votre boutique aux APIs des transporteurs pour créer vos bons d\'expédition en 1 clic et suivre les colis automatiquement.',
+    lessons: lang === 'ar' ? [
+      {
+        id: 'del1',
+        title: 'لماذا تستخدم الـ API؟ — الفوائد والمتطلبات',
+        duration: '5 min',
+        intro: 'الـ API (واجهة برمجة التطبيقات) يربط ShopDZ مباشرة بنظام شركة التوصيل. بدلاً من إنشاء كل بوليصة يدوياً على موقع الشركة، يمكنك إنشاؤها بنقرة واحدة من لوحة التحكم.',
+        steps: [
+          { text: 'بدون API: تفتح موقع شركة التوصيل، تملأ بيانات الزبون يدوياً، تطبع البوليصة. كل طرد يأخذ 3-5 دقائق.', tip: 'بدون API مقبول لـ 1-10 طرود يومياً. فوق ذلك، الوقت المهدر كبير جداً.' },
+          { text: 'مع API: تضغط "إنشاء بوليصة" في ShopDZ ← البيانات تنتقل تلقائياً ← تطبع البوليصة مباشرة. كل طرد يأخذ 20 ثانية.' },
+          { text: 'المتطلبات: حساب مهني (تجاري) مفعل عند شركة التوصيل. الحسابات الشخصية عادةً لا تمنح وصول API.', tip: 'افتح حسابك التجاري مبكراً — التفعيل قد يأخذ 1-3 أيام عمل.' },
+          { text: 'بعد تفعيل حسابك التجاري، ابحث في لوحة التحكم الخاصة بك عن قسم "API" أو "إعدادات المطور" للحصول على مفاتيح الوصول.' },
+          { text: 'في ShopDZ: إعدادات ← "التوصيل والـ API" ← اختر شركة التوصيل ← أدخل المفاتيح ← احفظ واختبر الاتصال.' },
+        ],
+        tip: 'ابدأ بشركة توصيل واحدة فقط. أتقن الـ API معها قبل إضافة أخرى. Yalidine مُنصح به للمبتدئين لتوثيق API الجيد.',
+      },
+      {
+        id: 'del2',
+        title: 'Yalidine API — إنشاء الحساب والحصول على المفاتيح',
+        duration: '8 min',
+        intro: 'Yalidine هو أشهر شركة توصيل في الجزائر للتجارة الإلكترونية. API جيد التوثيق وسهل الاستخدام مع تغطية 58 ولاية.',
+        steps: [
+          { text: 'اذهب إلى yalidine.app ← "إنشاء حساب" ← اختر "حساب تجاري". امتلاء نموذج التسجيل كاملاً يسرع التفعيل.', tip: 'أضف رقم السجل التجاري إذا توفر لديك — يساعد في التفعيل السريع.' },
+          { text: 'بعد مراجعة وتفعيل حسابك (1-3 أيام عمل)، سجل الدخول ← انتقل إلى "إعدادات الحساب" ← قسم "API".' },
+          { text: 'ستجد: Centre ID (رقم مركزك) وToken (رمز الوصول). انسخهما بعناية — هذان هما مفتاحا الاتصال.', tip: 'احفظ Token في مكان آمن. إذا فقدته يمكنك إنشاء رمز جديد لكن الرمز القديم سيُلغى.' },
+          { text: 'في ShopDZ: إعدادات ← "التوصيل والـ API" ← Yalidine ← أدخل Centre ID وToken. اضغط "اختبار الاتصال".' },
+          { text: 'اختبار ناجح ← فعّل "الإنشاء التلقائي للبوليصة". الآن عند تأكيد أي طلب، البوليصة تُنشأ تلقائياً.', tip: 'أولاً اختبر بطلب حقيقي منخفض القيمة للتأكد من صحة بيانات الزبون قبل الاعتماد الكامل على الـ API.' },
+          { text: 'لطباعة البوليصة: لوحة التحكم ← الطلب ← "طباعة بوليصة". الملصق يُطبع بحجم A6 أو A4 مقسم.' },
+        ],
+        tip: 'Yalidine يوفر webhook للإشعارات الفورية عند تغيير حالة الطرد. فعّله في إعدادات API لتحديث حالات الطلبات تلقائياً في ShopDZ.',
+        warning: 'تأكد من صحة عنوان الزبون قبل إنشاء البوليصة. التعديل بعد الإنشاء يتطلب الاتصال بخدمة العملاء.',
+      },
+      {
+        id: 'del3',
+        title: 'ZR Express API — سرعة في المدن الكبرى',
+        duration: '8 min',
+        intro: 'ZR Express سريع جداً في المدن الكبرى (الجزائر، وهران، قسنطينة — توصيل J+1). مثالي إذا كان معظم زبائنك في الشمال.',
+        steps: [
+          { text: 'اذهب إلى zrexpress.dz ← "اشتراك" ← "حساب مهني". ستتلقى تأكيداً بالبريد الإلكتروني.' },
+          { text: 'بعد التفعيل، سجل الدخول ← "إعدادات" أو "Mon compte" ← ابحث عن مفاتيح API أو "Intégration".' },
+          { text: 'انسخ: Client ID وAPI Key (أو Token). بعض الحسابات تستخدم نظام اسم المستخدم وكلمة المرور بدلاً من التوكن.', tip: 'إذا لم تجد مفاتيح API مباشرة، تواصل مع فريق ZR Express عبر الواتساب أو البريد — يرسلونها خلال 24 ساعة.' },
+          { text: 'في ShopDZ: إعدادات ← "التوصيل والـ API" ← ZR Express ← أدخل المعرفات. اختبر الاتصال.' },
+          { text: 'فعّل ZR Express كـ "ناقل ثانوي". يمكنك توجيه الطلبات يدوياً بين Yalidine وZR Express حسب الولاية والأولوية.' },
+          { text: 'للمدن الكبرى، استخدم ZR Express للسرعة. للمناطق النائية، استخدم Yalidine للتغطية.' },
+        ],
+        tip: 'ZR Express يتميز بمرونة أوقات التحصيل — يمكنك جدولة التحصيل لنفس اليوم في معظم المدن الكبرى.',
+      },
+      {
+        id: 'del4',
+        title: 'Procolis — أجريغاتور يختار الأرخص تلقائياً',
+        duration: '7 min',
+        intro: 'Procolis ليس شركة توصيل — هو منصة تجمع عدة شركات (Yalidine، ZR Express، وغيرها) وتختار الأرخص والأسرع لكل ولاية تلقائياً.',
+        steps: [
+          { text: 'اذهب إلى procolis.com ← "Créer un compte" ← أدخل بياناتك التجارية. التفعيل عادةً خلال 24-48 ساعة.', tip: 'Procolis يطلب عقد تجاري بسيط. اقرأه جيداً — يوضح الأسعار وشروط التحصيل.' },
+          { text: 'بعد التفعيل: Dashboard ← "Paramètres API" أو "Intégration" ← احصل على API Key الخاص بك.' },
+          { text: 'ربط شركات التوصيل: في لوحة Procolis، أضف حساباتك عند Yalidine وZR Express (إذا كانت لديك). Procolis يربط بينها ويوجه الطلبات تلقائياً.' },
+          { text: 'في ShopDZ: إعدادات ← "التوصيل والـ API" ← Procolis ← أدخل API Key. اختبر الاتصال.' },
+          { text: 'عند إنشاء بوليصة، Procolis يقارن أسعار جميع الشركات لتلك الولاية ويختار الأنسب. توفير 15-25% في التكاليف ممكن عند الحجم العالي.', tip: 'فعّل "اختيار تلقائي للناقل" في إعدادات Procolis. يمكنك وضع أولوية (سعر أم سرعة) لكل منطقة.' },
+          { text: 'متابعة كل الطرود من مكان واحد: Procolis Dashboard يجمع تقارير جميع الشركات في واجهة موحدة.' },
+        ],
+        tip: 'Procolis مثالي عند الوصول لـ 50+ طرد/شهر. عند هذا الحجم، الفارق في التكلفة يصبح كبيراً وإدارة شركة واحدة أسهل بكثير.',
+        warning: 'Procolis يضيف طبقة وسيطة. في حالة مشكلة مع طرد، التواصل مع Procolis أولاً ثم هم يتابعون مع شركة التوصيل.',
+      },
+    ] : lang === 'en' ? [
+      {
+        id: 'del1',
+        title: 'Why use the API? — Benefits and requirements',
+        duration: '5 min',
+        intro: 'The API connects ShopDZ directly to the delivery company\'s system. Instead of creating each shipping label manually on the carrier\'s website, you create it with one click from your dashboard.',
+        steps: [
+          { text: 'Without API: open the carrier\'s website, fill in customer data manually, print the label. Each parcel takes 3-5 minutes.', tip: 'Without API is acceptable for 1-10 parcels per day. Above that, wasted time adds up fast.' },
+          { text: 'With API: press "Create label" in ShopDZ → data transfers automatically → print the label directly. Each parcel takes 20 seconds.' },
+          { text: 'Requirements: an active professional (business) account with the delivery company. Personal accounts usually don\'t grant API access.', tip: 'Open your business account early — activation can take 1-3 business days.' },
+          { text: 'After your business account is activated, look in your carrier dashboard for an "API" or "Developer settings" section to get your access keys.' },
+          { text: 'In ShopDZ: Settings → "Delivery & API" → choose carrier → enter the keys → save and test the connection.' },
+        ],
+        tip: 'Start with one carrier only. Master its API before adding another. Yalidine is recommended for beginners due to good API documentation.',
+      },
+      {
+        id: 'del2',
+        title: 'Yalidine API — Account setup and getting your keys',
+        duration: '8 min',
+        intro: 'Yalidine is the most popular delivery company in Algeria for e-commerce. Well-documented API, easy to use, covers all 58 wilayas.',
+        steps: [
+          { text: 'Go to yalidine.app → "Create account" → choose "Business account". Completing the form fully speeds up activation.', tip: 'Add your business registration number if you have one — it helps with faster activation.' },
+          { text: 'After account review and activation (1-3 business days), log in → go to "Account settings" → "API" section.' },
+          { text: 'You\'ll find: Centre ID (your center number) and Token (access token). Copy both carefully — these are your connection keys.', tip: 'Save the Token in a safe place. If lost, you can generate a new one but the old one will be revoked.' },
+          { text: 'In ShopDZ: Settings → "Delivery & API" → Yalidine → enter Centre ID and Token. Click "Test connection".' },
+          { text: 'Successful test → enable "Automatic label creation". Now when you confirm any order, the label is created automatically.', tip: 'First test with a real low-value order to verify customer data accuracy before fully relying on the API.' },
+          { text: 'To print a label: dashboard → order → "Print label". The sticker prints in A6 or A4 split format.' },
+        ],
+        tip: 'Yalidine provides webhooks for real-time notifications when parcel status changes. Enable it in API settings to automatically update order statuses in ShopDZ.',
+        warning: 'Verify the customer\'s address before creating the label. Editing after creation requires contacting customer service.',
+      },
+      {
+        id: 'del3',
+        title: 'ZR Express API — Fast in major cities',
+        duration: '8 min',
+        intro: 'ZR Express is very fast in major cities (Algiers, Oran, Constantine — J+1 delivery). Ideal if most of your customers are in the north.',
+        steps: [
+          { text: 'Go to zrexpress.dz → "Subscribe" → "Professional account". You\'ll receive email confirmation.' },
+          { text: 'After activation, log in → "Settings" or "Mon compte" → look for API keys or "Integration".' },
+          { text: 'Copy: Client ID and API Key (or Token). Some accounts use username/password instead of a token.', tip: 'If you don\'t find API keys directly, contact the ZR Express team via WhatsApp or email — they send them within 24 hours.' },
+          { text: 'In ShopDZ: Settings → "Delivery & API" → ZR Express → enter credentials. Test connection.' },
+          { text: 'Enable ZR Express as a "secondary carrier". You can manually route orders between Yalidine and ZR Express by wilaya and priority.' },
+          { text: 'For major cities, use ZR Express for speed. For remote areas, use Yalidine for coverage.' },
+        ],
+        tip: 'ZR Express offers flexible pickup times — you can schedule same-day pickup in most major cities.',
+      },
+      {
+        id: 'del4',
+        title: 'Procolis — Aggregator that auto-selects the cheapest carrier',
+        duration: '7 min',
+        intro: 'Procolis is not a delivery company — it\'s a platform that bundles several carriers (Yalidine, ZR Express, and others) and automatically selects the cheapest and fastest for each wilaya.',
+        steps: [
+          { text: 'Go to procolis.com → "Créer un compte" → enter your business details. Activation usually within 24-48 hours.', tip: 'Procolis requires a simple business contract. Read it carefully — it explains pricing and collection terms.' },
+          { text: 'After activation: Dashboard → "API Settings" or "Integration" → get your API Key.' },
+          { text: 'Connect carriers: in the Procolis dashboard, add your Yalidine and ZR Express accounts (if you have them). Procolis links them and routes orders automatically.' },
+          { text: 'In ShopDZ: Settings → "Delivery & API" → Procolis → enter API Key. Test connection.' },
+          { text: 'When creating a label, Procolis compares prices from all carriers for that wilaya and selects the best. Savings of 15-25% are possible at high volume.', tip: 'Enable "Automatic carrier selection" in Procolis settings. You can set priority (price vs speed) per region.' },
+          { text: 'Track all parcels in one place: Procolis Dashboard consolidates reports from all carriers in a unified interface.' },
+        ],
+        tip: 'Procolis is ideal when reaching 50+ parcels/month. At this volume, the cost difference becomes significant and managing one platform is much easier.',
+        warning: 'Procolis adds a middleware layer. In case of a parcel issue, contact Procolis first — they then follow up with the carrier.',
+      },
+    ] : [
+      {
+        id: 'del1',
+        title: 'Pourquoi utiliser l\'API ? — Avantages et prérequis',
+        duration: '5 min',
+        intro: 'L\'API connecte ShopDZ directement au système du transporteur. Au lieu de créer chaque bon d\'expédition manuellement sur le site du transporteur, vous le créez en 1 clic depuis votre tableau de bord.',
+        steps: [
+          { text: 'Sans API : vous ouvrez le site du transporteur, remplissez les données client manuellement, imprimez le bon. Chaque colis prend 3-5 minutes.', tip: 'Sans API c\'est acceptable pour 1-10 colis par jour. Au-delà, le temps perdu devient considérable.' },
+          { text: 'Avec API : vous cliquez "Créer bon d\'expédition" dans ShopDZ → les données se transfèrent automatiquement → vous imprimez directement. Chaque colis prend 20 secondes.' },
+          { text: 'Prérequis : un compte professionnel (commercial) activé chez le transporteur. Les comptes personnels ne donnent généralement pas accès à l\'API.', tip: 'Ouvrez votre compte professionnel en avance — l\'activation peut prendre 1-3 jours ouvrables.' },
+          { text: 'Une fois votre compte professionnel activé, cherchez dans votre espace client la section "API" ou "Paramètres développeur" pour obtenir vos clés d\'accès.' },
+          { text: 'Dans ShopDZ : Paramètres → "Livraison & API" → choisissez le transporteur → entrez les clés → sauvegardez et testez la connexion.' },
+        ],
+        tip: 'Commencez avec un seul transporteur. Maîtrisez son API avant d\'en ajouter un autre. Yalidine est recommandé pour les débutants grâce à une documentation API bien faite.',
+      },
+      {
+        id: 'del2',
+        title: 'Yalidine API — Créer votre compte et obtenir vos clés',
+        duration: '8 min',
+        intro: 'Yalidine est le transporteur le plus populaire en Algérie pour le e-commerce. API bien documentée, facile à utiliser, couverture des 58 wilayas.',
+        steps: [
+          { text: 'Allez sur yalidine.app → "Créer un compte" → choisissez "Compte professionnel". Remplir le formulaire complètement accélère l\'activation.', tip: 'Ajoutez votre numéro de registre de commerce si vous en avez un — ça aide pour une activation plus rapide.' },
+          { text: 'Après validation et activation de votre compte (1-3 jours ouvrables), connectez-vous → allez dans "Paramètres du compte" → section "API".' },
+          { text: 'Vous trouverez : Centre ID (votre numéro de centre) et Token (jeton d\'accès). Copiez-les soigneusement — ce sont vos deux clés de connexion.', tip: 'Conservez le Token en lieu sûr. En cas de perte, vous pouvez en générer un nouveau mais l\'ancien sera révoqué.' },
+          { text: 'Dans ShopDZ : Paramètres → "Livraison & API" → Yalidine → entrez le Centre ID et le Token. Cliquez "Tester la connexion".' },
+          { text: 'Test réussi → activez "Création automatique de bons d\'expédition". Désormais, à chaque confirmation de commande, le bon est créé automatiquement.', tip: 'Testez d\'abord avec une vraie commande de faible valeur pour vérifier la correction des données client avant de vous fier entièrement à l\'API.' },
+          { text: 'Pour imprimer un bon : tableau de bord → commande → "Imprimer le bon". Le bordereau s\'imprime en format A6 ou A4 divisé.' },
+        ],
+        tip: 'Yalidine fournit des webhooks pour des notifications en temps réel lors des changements de statut du colis. Activez-les dans les paramètres API pour mettre à jour automatiquement les statuts des commandes dans ShopDZ.',
+        warning: 'Vérifiez l\'adresse du client avant de créer le bon. Toute modification après création nécessite de contacter le service client.',
+      },
+      {
+        id: 'del3',
+        title: 'ZR Express API — Rapidité sur les grandes villes',
+        duration: '8 min',
+        intro: 'ZR Express est très rapide sur les grandes villes (Alger, Oran, Constantine — livraison J+1). Idéal si la majorité de vos clients est dans le nord.',
+        steps: [
+          { text: 'Allez sur zrexpress.dz → "S\'abonner" → "Compte professionnel". Vous recevrez une confirmation par email.' },
+          { text: 'Après activation, connectez-vous → "Paramètres" ou "Mon compte" → cherchez les clés API ou la section "Intégration".' },
+          { text: 'Copiez : Client ID et API Key (ou Token). Certains comptes utilisent un système nom d\'utilisateur + mot de passe plutôt qu\'un token.', tip: 'Si vous ne trouvez pas les clés API directement, contactez l\'équipe ZR Express via WhatsApp ou email — ils les envoient sous 24 heures.' },
+          { text: 'Dans ShopDZ : Paramètres → "Livraison & API" → ZR Express → entrez les identifiants. Testez la connexion.' },
+          { text: 'Activez ZR Express comme "transporteur secondaire". Vous pouvez router manuellement les commandes entre Yalidine et ZR Express selon la wilaya et l\'urgence.' },
+          { text: 'Pour les grandes villes, utilisez ZR Express pour la rapidité. Pour les zones éloignées, utilisez Yalidine pour la couverture.' },
+        ],
+        tip: 'ZR Express offre une flexibilité sur les horaires d\'enlèvement — vous pouvez planifier un enlèvement le jour même dans la plupart des grandes villes.',
+      },
+      {
+        id: 'del4',
+        title: 'Procolis — Agrégateur qui choisit automatiquement le moins cher',
+        duration: '7 min',
+        intro: 'Procolis n\'est pas un transporteur — c\'est une plateforme qui agrège plusieurs transporteurs (Yalidine, ZR Express, et d\'autres) et sélectionne automatiquement le moins cher et le plus rapide pour chaque wilaya.',
+        steps: [
+          { text: 'Allez sur procolis.com → "Créer un compte" → entrez vos informations professionnelles. Activation généralement sous 24-48 heures.', tip: 'Procolis demande un contrat commercial simple. Lisez-le bien — il détaille les tarifs et les modalités de reversement.' },
+          { text: 'Après activation : Dashboard → "Paramètres API" ou "Intégration" → récupérez votre API Key.' },
+          { text: 'Connexion des transporteurs : dans le dashboard Procolis, ajoutez vos comptes Yalidine et ZR Express (si vous en avez). Procolis les agrège et route les commandes automatiquement.' },
+          { text: 'Dans ShopDZ : Paramètres → "Livraison & API" → Procolis → entrez l\'API Key. Testez la connexion.' },
+          { text: 'À chaque création de bon, Procolis compare les prix de tous les transporteurs pour cette wilaya et choisit le plus avantageux. Économies de 15-25% possibles à volume élevé.', tip: 'Activez "Sélection automatique du transporteur" dans les paramètres Procolis. Vous pouvez définir une priorité (prix ou rapidité) par région.' },
+          { text: 'Suivez tous vos colis depuis un seul endroit : le Dashboard Procolis consolide les rapports de tous les transporteurs dans une interface unifiée.' },
+        ],
+        tip: 'Procolis est idéal à partir de 50+ colis/mois. À ce volume, la différence de coût devient significative et gérer une seule plateforme est bien plus pratique.',
+        warning: 'Procolis ajoute une couche intermédiaire. En cas de problème avec un colis, contactez Procolis d\'abord — ils suivent ensuite avec le transporteur.',
+      },
+    ],
+  }
+
+  return [pixelsModule, deliveryModule]
+}
+
 // ─── Level badge ───────────────────────────────────────────────────────────────
 
 // ─── Lesson content block ──────────────────────────────────────────────────────
@@ -639,6 +1014,7 @@ function LessonContent({ lesson }: { lesson: Lesson }) {
 export default function SellerAcademyPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
+  const lang  = useLang()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [openModule, setOpenModule]   = useState<string>('payments')
   const [openLesson, setOpenLesson]   = useState<string | null>('pay1')
@@ -652,7 +1028,8 @@ export default function SellerAcademyPage() {
     )
   }
 
-  const totalLessons = MODULES.reduce((s, m) => s + m.lessons.length, 0)
+  const allModules   = [...MODULES, ...getExtraModules(lang)]
+  const totalLessons = allModules.reduce((s, m) => s + m.lessons.length, 0)
   const doneLessons  = doneSet.size
   const progressPct  = Math.round((doneLessons / totalLessons) * 100)
 
@@ -713,7 +1090,7 @@ export default function SellerAcademyPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { label: `${MODULES.length} modules`, sub: 'de formation',       icon: BookOpen,  color: 'bg-blue-50 text-blue-600' },
+            { label: `${allModules.length} modules`, sub: 'de formation',       icon: BookOpen,  color: 'bg-blue-50 text-blue-600' },
             { label: `${totalLessons} leçons`,    sub: 'guides complets',    icon: Play,      color: 'bg-violet-50 text-violet-600' },
             { label: '100% gratuit',              sub: 'tout le contenu',    icon: Award,     color: 'bg-emerald-50 text-emerald-600' },
           ].map(({ label, sub, icon: Icon, color }) => (
@@ -731,7 +1108,7 @@ export default function SellerAcademyPage() {
 
         {/* Modules */}
         <div className="space-y-3">
-          {MODULES.map((mod) => {
+          {allModules.map((mod) => {
             const isModOpen = openModule === mod.id
             const Icon      = mod.icon
             const modDone   = mod.lessons.filter((l) => doneSet.has(l.id)).length
