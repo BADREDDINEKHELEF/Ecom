@@ -17,6 +17,24 @@
     @apply antialiased text-gray-900 bg-gray-50;
   }
 
+  .dark body {
+    background-color: #030712;
+    color: #f1f5f9;
+  }
+  .dark header {
+    background-color: rgba(15, 23, 42, 0.97) !important;
+    border-color: #1e293b !important;
+  }
+  .dark header a,
+  .dark header button {
+    color: #cbd5e1;
+  }
+  .dark header a:hover,
+  .dark header button:hover {
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+
   * {
     @apply box-border;
   }

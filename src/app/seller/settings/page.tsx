@@ -191,9 +191,16 @@ export default function SellerSettingsPage() {
     }
   }
 
+  const RESERVED_SLUGS = ['admin', 'api', 'store', 'auth', 'seller', 'dashboard', 'search', 'deals', 'pricing', 'checkout', 'orders', 'profile', 'wishlist', 'compare', 'track', 'cart', 'offline']
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!vendor) return
+    const slug = slugify(form.store_slug)
+    if (RESERVED_SLUGS.includes(slug)) {
+      setError("Ce nom d'URL est réservé. Choisissez un autre nom.")
+      return
+    }
     setSaving(true)
     setError('')
     try {

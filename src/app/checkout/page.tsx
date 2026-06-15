@@ -266,7 +266,7 @@ export default function CheckoutPage() {
       items: items.map(({ product, quantity }) => ({
         productId:    product.id,
         productName:  product.name,
-        productImage: product.images[0] || '',
+        productImage: product.images?.[0] || '',
         quantity,
       })),
     }
@@ -731,7 +731,7 @@ export default function CheckoutPage() {
               {items.map(({ product, quantity }) => (
                 <div key={product.id} className="flex items-center gap-3">
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="56px" />
+                    {product.images?.[0] && <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="56px" />}
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
                       {quantity}
                     </span>

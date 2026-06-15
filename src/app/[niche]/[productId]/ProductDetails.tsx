@@ -103,7 +103,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
       setReviewSubmitted(true)
       setReviewForm({ author_name: '', rating: 5, comment: '' })
     } catch {
-      setReviewError(t.product.reviewSubmitted)
+      setReviewError("Erreur lors de l'envoi. Réessayez.")
     } finally {
       setSubmitting(false)
     }

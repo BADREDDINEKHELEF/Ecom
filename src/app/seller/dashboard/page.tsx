@@ -686,7 +686,7 @@ export default function SellerDashboardPage() {
                   className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-gray-100" />
               ) : (
                 <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-emerald-600 font-black text-lg">{vendor.store_name[0]}</span>
+                  <span className="text-emerald-600 font-black text-lg">{vendor.store_name?.[0] ?? '?'}</span>
                 </div>
               )}
               <div className="flex-1 min-w-0">
