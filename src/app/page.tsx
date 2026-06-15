@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import {
   Store, ArrowRight, Check, Smartphone, Globe, ShoppingCart,
-  Zap, Shield, MessageCircle, BarChart3, Package, Users,
+  Zap, Shield, MessageCircle, BarChart3, Package, Users, Star,
+  TrendingUp, CreditCard,
 } from 'lucide-react'
 
 export const metadata = {
@@ -38,14 +39,14 @@ const FEATURES = [
     desc: 'Vos clients commandent depuis leur téléphone. Votre boutique est parfaitement optimisée pour mobile.',
   },
   {
-    icon: <Shield className="w-6 h-6" />,
-    title: 'Paiement à la livraison',
-    desc: 'Cash on Delivery vers les 58 wilayas. Vos clients paient à la réception — zéro friction, zéro risque.',
+    icon: <CreditCard className="w-6 h-6" />,
+    title: 'Paiement à la livraison + en ligne',
+    desc: 'Cash on Delivery vers 58 wilayas. Paiement CIB, Edahabia et BaridiMob disponibles sur les plans payants.',
   },
   {
     icon: <BarChart3 className="w-6 h-6" />,
-    title: 'Tableau de bord vendeur',
-    desc: 'Suivez vos commandes, votre chiffre d\'affaires, et gérez votre stock depuis un dashboard simple.',
+    title: 'Analytics vendeur inclus',
+    desc: 'Suivez vos ventes, votre chiffre d\'affaires, vos meilleurs produits et l\'activité de vos clients.',
   },
 ]
 
@@ -70,13 +71,45 @@ const STEPS = [
   },
 ]
 
+const TESTIMONIALS = [
+  {
+    name: 'Meriem B.',
+    location: 'Alger',
+    category: 'Mode & vêtements',
+    avatar: 'M',
+    avatarColor: 'bg-pink-100 text-pink-600',
+    stars: 5,
+    text: "J'ai ouvert ma boutique en 20 minutes. Aujourd'hui je reçois des commandes tous les jours depuis mon Instagram. ShopDZ m'a évité d'investir dans un site web.",
+    revenue: '+45 commandes / mois',
+  },
+  {
+    name: 'Karim D.',
+    location: 'Oran',
+    category: 'Électronique & accessoires',
+    avatar: 'K',
+    avatarColor: 'bg-blue-100 text-blue-600',
+    stars: 5,
+    text: "Le tableau de bord est simple à comprendre. Je vois mes meilleures ventes, mes stocks critiques et mes revenus en un coup d'œil. Exactement ce qu'il me fallait.",
+    revenue: '+120 commandes / mois',
+  },
+  {
+    name: 'Nassima R.',
+    location: 'Constantine',
+    category: 'Produits bio & naturels',
+    avatar: 'N',
+    avatarColor: 'bg-green-100 text-green-600',
+    stars: 5,
+    text: "Ce que j'adore c'est que mes clientes voient UNIQUEMENT ma boutique. Pas de concurrents qui apparaissent à côté de mes produits. C'est ma boutique, rien que ma boutique.",
+    revenue: '+80 commandes / mois',
+  },
+]
+
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white">
 
       {/* ══ HERO ════════════════════════════════════════════════════ */}
       <section className="relative bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 text-white overflow-hidden">
-        {/* Texture */}
         <div
           className="absolute inset-0 opacity-[0.05] pointer-events-none"
           style={{ backgroundImage: 'radial-gradient(circle, white 1.5px, transparent 1.5px)', backgroundSize: '28px 28px' }}
@@ -119,11 +152,15 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Social proof mini */}
-          <div className="flex items-center justify-center gap-6 mt-12 text-white/50 text-sm">
+          {/* Social proof */}
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-12 text-white/50 text-sm">
             <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> 200+ boutiques actives</span>
-            <span className="hidden sm:flex items-center gap-1.5"><Package className="w-4 h-4" /> 10 000+ produits</span>
+            <span className="flex items-center gap-1.5"><Package className="w-4 h-4" /> 10 000+ produits</span>
             <span className="flex items-center gap-1.5"><Zap className="w-4 h-4" /> 0% commission</span>
+            <span className="flex items-center gap-1.5">
+              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+              4.9/5 · 150+ avis vendeurs
+            </span>
           </div>
         </div>
       </section>
@@ -139,7 +176,7 @@ export default function HomePage() {
             <p className="text-indigo-900 font-black text-lg sm:text-xl font-mono">
               shopdz.com/store/<span className="text-indigo-500">votre-nom</span>
             </p>
-            <p className="text-gray-500 text-sm mt-1">Partagez ce lien — vos clients accèdent uniquement à votre boutique</p>
+            <p className="text-gray-500 text-sm mt-1">Vos clients voient uniquement votre boutique — aucun concurrent à côté</p>
           </div>
           <Link
             href="/become-seller"
@@ -156,7 +193,6 @@ export default function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Lancez-vous en 3 étapes</h2>
           <p className="text-gray-500">Pas besoin de coder. Pas besoin d'hébergement. Pas besoin de carte bancaire.</p>
         </div>
-
         <div className="grid sm:grid-cols-3 gap-6">
           {STEPS.map(({ step, icon, title, desc }) => (
             <div key={step} className="relative bg-white rounded-2xl p-7 shadow-sm border border-gray-100 text-center">
@@ -171,76 +207,110 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ FEATURES ═══════════════════════════════════════════════ */}
+      {/* ══ TESTIMONIALS ═══════════════════════════════════════════ */}
       <section className="bg-gray-50 py-16 sm:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Tout ce dont vous avez besoin</h2>
-            <p className="text-gray-500">Une boutique professionnelle sans la complexité technique</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Ce que disent nos vendeurs</h2>
+            <p className="text-gray-500">Des entrepreneurs algériens qui ont lancé leur boutique sur ShopDZ</p>
           </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map(({ icon, title, desc }) => (
-              <div key={title} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
-                  {icon}
+          <div className="grid sm:grid-cols-3 gap-6">
+            {TESTIMONIALS.map((t) => (
+              <div key={t.name} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-lg flex-shrink-0 ${t.avatarColor}`}>
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">{t.name}</p>
+                    <p className="text-xs text-gray-400">{t.location} · {t.category}</p>
+                  </div>
                 </div>
-                <h3 className="font-black text-gray-900 mb-2">{title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+                <div className="flex gap-0.5 mb-3">
+                  {Array.from({ length: t.stars }).map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed flex-1 italic">&ldquo;{t.text}&rdquo;</p>
+                <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                  <span className="text-xs font-bold text-emerald-600">{t.revenue}</span>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ══ WHATSAPP DEMO ══════════════════════════════════════════ */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div className="grid md:grid-cols-2 gap-10 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold mb-5">
-              {WA_SVG} WhatsApp Commerce
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-4 leading-tight">
-              Vos clients commandent<br />directement sur WhatsApp
-            </h2>
-            <p className="text-gray-500 mb-6 leading-relaxed">
-              Un clic sur "Commander via WhatsApp" ouvre une conversation avec un message pré-rempli
-              contenant tous les détails de la commande — le client n'a qu'à envoyer.
-            </p>
-            <ul className="space-y-3">
-              {[
-                'Message automatique avec produit + quantité + total',
-                'Confirmation de livraison Cash on Delivery',
-                'Votre numéro WhatsApp personnel, aucun intermédiaire',
-                'Fonctionne sans compte bancaire ni terminal de paiement',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm text-gray-700">
-                  <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* WhatsApp message mock */}
-          <div className="bg-[#0a1929] rounded-3xl p-6 shadow-2xl">
-            <div className="bg-[#075e54] rounded-t-2xl px-4 py-3 flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg">🛍️</div>
-              <div>
-                <p className="text-white font-bold text-sm">Boutique Ahmed</p>
-                <p className="text-white/60 text-xs">En ligne</p>
+      {/* ══ FEATURES ═══════════════════════════════════════════════ */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Tout ce dont vous avez besoin</h2>
+          <p className="text-gray-500">Une boutique professionnelle sans la complexité technique</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {FEATURES.map(({ icon, title, desc }) => (
+            <div key={title} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+                {icon}
               </div>
+              <h3 className="font-black text-gray-900 mb-2">{title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
             </div>
-            <div className="bg-[#e5ddd5] rounded-b-2xl p-4 min-h-[200px] space-y-3">
-              <div className="bg-white rounded-xl p-3 shadow-sm max-w-[85%] text-xs leading-relaxed text-gray-800 font-mono">
-                <p>🛍️ *COMMANDE — Boutique Ahmed*</p>
-                <p>━━━━━━━━━━━━━━━━━━</p>
-                <p>📦 *Produit:* Robe Kabyle XL</p>
-                <p>🔢 *Quantité:* 1</p>
-                <p>💰 *Total:* 4 500 DA</p>
-                <p>━━━━━━━━━━━━━━━━━━</p>
-                <p>💵 Paiement à la livraison</p>
-                <p className="text-gray-500 text-right mt-2">12:34 ✓✓</p>
+          ))}
+        </div>
+      </section>
+
+      {/* ══ WHATSAPP DEMO ══════════════════════════════════════════ */}
+      <section className="bg-gray-50 py-16 sm:py-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold mb-5">
+                {WA_SVG} WhatsApp Commerce
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-4 leading-tight">
+                Vos clients commandent<br />directement sur WhatsApp
+              </h2>
+              <p className="text-gray-500 mb-6 leading-relaxed">
+                Un clic sur &ldquo;Commander via WhatsApp&rdquo; ouvre une conversation avec un message pré-rempli
+                contenant tous les détails de la commande — le client n&apos;a qu&apos;à envoyer.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Message automatique avec produit + quantité + total',
+                  'Confirmation de livraison Cash on Delivery',
+                  'Votre numéro WhatsApp personnel, aucun intermédiaire',
+                  'Fonctionne sans compte bancaire ni terminal de paiement',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-gray-700">
+                    <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* WhatsApp message mock */}
+            <div className="bg-[#0a1929] rounded-3xl p-6 shadow-2xl">
+              <div className="bg-[#075e54] rounded-t-2xl px-4 py-3 flex items-center gap-3 mb-1">
+                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg">🛍️</div>
+                <div>
+                  <p className="text-white font-bold text-sm">Boutique Ahmed</p>
+                  <p className="text-white/60 text-xs">En ligne</p>
+                </div>
+              </div>
+              <div className="bg-[#e5ddd5] rounded-b-2xl p-4 min-h-[200px] space-y-3">
+                <div className="bg-white rounded-xl p-3 shadow-sm max-w-[85%] text-xs leading-relaxed text-gray-800 font-mono">
+                  <p>🛍️ *COMMANDE — Boutique Ahmed*</p>
+                  <p>━━━━━━━━━━━━━━━━━━</p>
+                  <p>📦 *Produit:* Robe Kabyle XL</p>
+                  <p>🔢 *Quantité:* 1</p>
+                  <p>💰 *Total:* 4 500 DA</p>
+                  <p>━━━━━━━━━━━━━━━━━━</p>
+                  <p>💵 Paiement à la livraison</p>
+                  <p className="text-gray-500 text-right mt-2">12:34 ✓✓</p>
+                </div>
               </div>
             </div>
           </div>
@@ -252,10 +322,10 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto px-4 py-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
             {[
-              { value: '200+', label: 'Boutiques créées' },
+              { value: '200+', label: 'Boutiques actives' },
               { value: '58',   label: 'Wilayas couvertes' },
               { value: '0%',   label: 'Commission ShopDZ' },
-              { value: '5 min', label: 'Pour ouvrir votre boutique' },
+              { value: '4.9★', label: 'Note moyenne vendeurs' },
             ].map(({ value, label }) => (
               <div key={label}>
                 <p className="text-3xl sm:text-4xl font-black">{value}</p>
@@ -266,8 +336,52 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ══ FREE PLAN HIGHLIGHT ════════════════════════════════════ */}
+      {/* ══ PRICING TEASER ═════════════════════════════════════════ */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Des tarifs simples</h2>
+          <p className="text-gray-500">Commencez gratuitement. Évoluez quand vous êtes prêt.</p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-5 mb-8">
+          {/* Free */}
+          <div className="bg-white rounded-2xl border-2 border-gray-200 p-7">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Démarrage</p>
+            <p className="text-4xl font-black text-gray-900 mb-1">Gratuit</p>
+            <p className="text-sm text-gray-400 mb-5">Pour toujours</p>
+            <ul className="space-y-2.5 text-sm text-gray-600">
+              {['Jusqu\'à 10 produits', 'Boutique en ligne personnalisée', 'Commandes WhatsApp', 'Dashboard de base'].map((f) => (
+                <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />{f}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Pro */}
+          <div className="bg-indigo-600 rounded-2xl border-2 border-indigo-600 p-7 text-white relative overflow-hidden">
+            <div className="absolute top-4 right-4 bg-white/20 text-white text-xs font-black px-2.5 py-1 rounded-full">Le plus populaire</div>
+            <p className="text-xs font-bold text-indigo-200 uppercase tracking-wider mb-3">Pro</p>
+            <p className="text-4xl font-black mb-1">1 990 <span className="text-2xl font-semibold text-indigo-200">DA</span></p>
+            <p className="text-sm text-indigo-200 mb-5">/ mois · essai 14 jours gratuit</p>
+            <ul className="space-y-2.5 text-sm text-indigo-100">
+              {['Produits illimités', 'Analytics avancés', 'Paiement CIB + Edahabia', 'API livraison intégrée', 'Support 7j/7 WhatsApp'].map((f) => (
+                <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-white flex-shrink-0" />{f}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="text-center">
+          <Link
+            href="/pricing"
+            className="inline-flex items-center gap-2 text-indigo-600 font-bold hover:text-indigo-800 transition-colors"
+          >
+            Voir tous les plans et comparer <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
+
+      {/* ══ FREE PLAN CTA ═══════════════════════════════════════════ */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 sm:p-12 text-white text-center shadow-2xl">
           <div className="text-5xl mb-5">🎁</div>
           <h2 className="text-2xl sm:text-3xl font-black mb-3">Commencez gratuitement</h2>
@@ -300,7 +414,7 @@ export default function HomePage() {
           </Link>
 
           <p className="text-white/35 text-xs mt-5">
-            Pas de carte bancaire requise · Pas d'engagement · Annulation possible à tout moment
+            Pas de carte bancaire requise · Pas d&apos;engagement · Annulation possible à tout moment
           </p>
         </div>
       </section>
@@ -325,7 +439,7 @@ export default function HomePage() {
               },
               {
                 q: 'Y a-t-il des frais ou commissions ?',
-                a: 'ShopDZ ne prend aucune commission sur vos ventes. Vous gardez 100% de vos revenus.',
+                a: 'ShopDZ ne prend aucune commission sur vos ventes. Vous gardez 100% de vos revenus. Seul l\'abonnement mensuel est facturé (plan gratuit disponible).',
               },
             ].map(({ q, a }) => (
               <div key={q} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -333,6 +447,11 @@ export default function HomePage() {
                 <p className="text-sm text-gray-500 leading-relaxed">{a}</p>
               </div>
             ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link href="/pricing" className="inline-flex items-center gap-2 text-indigo-600 font-semibold text-sm hover:text-indigo-800">
+              <MessageCircle className="w-4 h-4" /> D&apos;autres questions ? Voir les tarifs complets
+            </Link>
           </div>
         </div>
       </section>

@@ -114,6 +114,12 @@ export default function Header() {
             >
               <Tag className="w-3.5 h-3.5" /> {t.nav.deals}
             </Link>
+            <Link
+              href="/pricing"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            >
+              Tarifs
+            </Link>
           </nav>
 
           {/* Right actions */}

@@ -6,7 +6,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock,
   Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
   Users, Award, AlertTriangle, Zap, Bell, Menu, Copy, Check, ExternalLink,
-  Settings, CreditCard, MapPin, Phone, Image, Tag,
+  Settings, CreditCard, MapPin, Phone, Image, Tag, Shield,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/products'
@@ -258,6 +258,83 @@ export default function SellerDashboardPage() {
             {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           </button>
         </div>
+
+        {/* ── ONBOARDING GUIDE (shown until seller adds their first product) ── */}
+        {!fetching && allProducts.length === 0 && (
+          <div className="mb-6 bg-gradient-to-br from-indigo-950 to-indigo-900 rounded-2xl p-6 text-white">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Guide de démarrage</p>
+                <h2 className="text-lg font-black">Votre boutique est prête — lancez-la en 4 étapes</h2>
+                <p className="text-indigo-300 text-sm mt-1">Suivez ces étapes pour recevoir votre première commande</p>
+              </div>
+              <div className="text-4xl flex-shrink-0">🚀</div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[
+                {
+                  step: '1',
+                  done: !!(vendor.logo_url && vendor.description && vendor.phone),
+                  title: 'Complétez votre profil',
+                  desc: 'Logo, description, téléphone WhatsApp — les clients font confiance aux boutiques complètes.',
+                  href: '/seller/settings',
+                  cta: vendor.logo_url ? 'Voir les paramètres →' : 'Compléter maintenant →',
+                },
+                {
+                  step: '2',
+                  done: false,
+                  title: 'Ajoutez votre premier produit',
+                  desc: 'Photos claires + description précise = plus de commandes. Commencez par 3 à 5 produits.',
+                  href: '/seller/products?new=1',
+                  cta: 'Ajouter un produit →',
+                },
+                {
+                  step: '3',
+                  done: false,
+                  title: 'Partagez votre lien',
+                  desc: 'Envoyez votre lien de boutique sur votre WhatsApp, Instagram Bio, et stories TikTok.',
+                  href: '#store-link',
+                  cta: 'Copier le lien ↑',
+                },
+                {
+                  step: '4',
+                  done: false,
+                  title: 'Confirmez votre première commande',
+                  desc: 'Quand une commande arrive, confirmez-la ici et contactez le client pour la livraison.',
+                  href: '/seller/orders',
+                  cta: 'Voir les commandes →',
+                },
+              ].map(({ step, done, title, desc, href, cta }) => (
+                <Link
+                  key={step}
+                  href={href}
+                  className={`flex gap-3 p-4 rounded-xl border transition-colors ${
+                    done
+                      ? 'bg-emerald-900/40 border-emerald-800/50 hover:bg-emerald-900/60'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black mt-0.5 ${
+                    done ? 'bg-emerald-500 text-white' : 'bg-white/20 text-white'
+                  }`}>
+                    {done ? '✓' : step}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-bold mb-0.5 ${done ? 'text-emerald-300' : 'text-white'}`}>{title}</p>
+                    <p className="text-xs text-indigo-300 leading-relaxed mb-2">{desc}</p>
+                    <p className={`text-xs font-bold ${done ? 'text-emerald-400' : 'text-indigo-200'}`}>{cta}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-indigo-400">
+              <Shield className="w-3.5 h-3.5" />
+              Besoin d&apos;aide ? Contactez notre support WhatsApp — réponse en moins d&apos;1h.
+            </div>
+          </div>
+        )}
 
         {/* Urgency strip — orders waiting > 2h */}
         {urgentOrders.length > 0 && (
