@@ -40,7 +40,10 @@ export default function SellerSettingsPage() {
   const [vacationSaving, setVacationSaving] = useState(false)
   const [vacationSaved, setVacationSaved] = useState(false)
   const [vacation, setVacation] = useState({ is_on_vacation: false, vacation_message: '' })
-  const [pixels, setPixels] = useState({ meta_pixel_id: '', gtag_id: '', tiktok_pixel_id: '' })
+  const [pixels, setPixels] = useState({
+    meta_pixel_id: '', gtag_id: '', tiktok_pixel_id: '',
+    meta_capi_token: '', tiktok_capi_token: '', gtag_api_secret: '',
+  })
   const [form, setForm] = useState({
     store_name: '', store_slug: '', phone: '', wilaya: '', description: '',
     logo_url: '', banner_url: '', cover_url: '', accent_color: '#4f46e5',
@@ -59,9 +62,12 @@ export default function SellerSettingsPage() {
       vacation_message: vendor.vacation_message ?? '',
     })
     setPixels({
-      meta_pixel_id:    vendor.meta_pixel_id ?? '',
-      gtag_id:          vendor.gtag_id ?? '',
-      tiktok_pixel_id:  vendor.tiktok_pixel_id ?? '',
+      meta_pixel_id:    vendor.meta_pixel_id    ?? '',
+      gtag_id:          vendor.gtag_id           ?? '',
+      tiktok_pixel_id:  vendor.tiktok_pixel_id   ?? '',
+      meta_capi_token:  vendor.meta_capi_token   ?? '',
+      tiktok_capi_token: vendor.tiktok_capi_token ?? '',
+      gtag_api_secret:  vendor.gtag_api_secret   ?? '',
     })
     setForm({
       store_name:       vendor.store_name,
@@ -154,9 +160,12 @@ export default function SellerSettingsPage() {
           low_stock_threshold: form.low_stock_threshold || null,
           return_policy:   form.return_policy || null,
           shipping_policy: form.shipping_policy || null,
-          meta_pixel_id:    pixels.meta_pixel_id || null,
-          gtag_id:          pixels.gtag_id || null,
-          tiktok_pixel_id:  pixels.tiktok_pixel_id || null,
+          meta_pixel_id:    pixels.meta_pixel_id    || null,
+          gtag_id:          pixels.gtag_id           || null,
+          tiktok_pixel_id:  pixels.tiktok_pixel_id   || null,
+          meta_capi_token:  pixels.meta_capi_token   || null,
+          tiktok_capi_token: pixels.tiktok_capi_token || null,
+          gtag_api_secret:  pixels.gtag_api_secret   || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Save failed')
@@ -531,42 +540,93 @@ export default function SellerSettingsPage() {
             {/* Analytics Pixels */}
             <div className="border-t border-gray-100 pt-5">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Pixels & Tracking</p>
-              <p className="text-xs text-gray-500 mb-4">Ajoutez vos propres pixels sur votre boutique uniquement.</p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Meta Pixel ID</label>
-                  <input
-                    type="text"
-                    value={pixels.meta_pixel_id}
-                    onChange={(e) => setPixels({ ...pixels, meta_pixel_id: e.target.value })}
-                    placeholder="1234567890123456"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-emerald-400"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Trouvez votre Pixel ID dans Meta Business Suite → Events Manager.</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Google Tag ID</label>
-                  <input
-                    type="text"
-                    value={pixels.gtag_id}
-                    onChange={(e) => setPixels({ ...pixels, gtag_id: e.target.value })}
-                    placeholder="G-XXXXXXXXXX ou AW-XXXXXXXXXX"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-emerald-400"
-                  />
+              <p className="text-xs text-gray-500 mb-4">
+                Ajoutez vos pixels côté client (navigateur) et vos tokens API côté serveur pour un tracking fiable même avec les bloqueurs de pubs.
+              </p>
+              <div className="space-y-6">
+
+                {/* Meta */}
+                <div className="bg-[#f0f2ff] rounded-2xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-[#1877F2] uppercase tracking-wider">Meta (Facebook / Instagram)</p>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Pixel ID</label>
+                    <input
+                      type="text"
+                      value={pixels.meta_pixel_id}
+                      onChange={(e) => setPixels({ ...pixels, meta_pixel_id: e.target.value })}
+                      placeholder="1234567890123456"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 bg-white"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">Meta Business Suite → Events Manager → votre pixel → Paramètres</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Conversions API Token <span className="font-normal text-gray-400">(server-side)</span></label>
+                    <input
+                      type="password"
+                      value={pixels.meta_capi_token}
+                      onChange={(e) => setPixels({ ...pixels, meta_capi_token: e.target.value })}
+                      placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 bg-white"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">Events Manager → votre pixel → Paramètres → Conversions API → Générer un token</p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">TikTok Pixel ID</label>
-                  <input
-                    type="text"
-                    value={pixels.tiktok_pixel_id}
-                    onChange={(e) => setPixels({ ...pixels, tiktok_pixel_id: e.target.value })}
-                    placeholder="CXXXXXXXXXXXXXXXXXX"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-emerald-400"
-                  />
+                {/* Google */}
+                <div className="bg-[#f0fdf4] rounded-2xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Google Analytics 4</p>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Measurement ID</label>
+                    <input
+                      type="text"
+                      value={pixels.gtag_id}
+                      onChange={(e) => setPixels({ ...pixels, gtag_id: e.target.value })}
+                      placeholder="G-XXXXXXXXXX"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 bg-white"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">GA4 → Admin → Flux de données → votre flux web → Measurement ID</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">API Secret <span className="font-normal text-gray-400">(Measurement Protocol)</span></label>
+                    <input
+                      type="password"
+                      value={pixels.gtag_api_secret}
+                      onChange={(e) => setPixels({ ...pixels, gtag_api_secret: e.target.value })}
+                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 bg-white"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">GA4 → Admin → Flux de données → votre flux → Measurement Protocol API secrets</p>
+                  </div>
                 </div>
 
-                {/* Custom first-party pixel */}
+                {/* TikTok */}
+                <div className="bg-[#fff0f3] rounded-2xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-[#fe2c55] uppercase tracking-wider">TikTok</p>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Pixel ID</label>
+                    <input
+                      type="text"
+                      value={pixels.tiktok_pixel_id}
+                      onChange={(e) => setPixels({ ...pixels, tiktok_pixel_id: e.target.value })}
+                      placeholder="CXXXXXXXXXXXXXXXXXX"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 bg-white"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">TikTok Ads Manager → Assets → Events → votre pixel → Paramètres</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Events API Access Token <span className="font-normal text-gray-400">(server-side)</span></label>
+                    <input
+                      type="password"
+                      value={pixels.tiktok_capi_token}
+                      onChange={(e) => setPixels({ ...pixels, tiktok_capi_token: e.target.value })}
+                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-emerald-400 bg-white"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">TikTok Ads Manager → Assets → Events → votre pixel → API Access Token</p>
+                  </div>
+                </div>
+
+                {/* ShopDZ first-party pixel */}
                 {vendor.pixel_id && (
                   <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center justify-between">

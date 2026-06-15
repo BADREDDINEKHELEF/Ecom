@@ -32,10 +32,14 @@ const PatchSchema = z.object({
   // Store policies
   return_policy:    z.string().max(2000).nullable().optional(),
   shipping_policy:  z.string().max(2000).nullable().optional(),
-  // Vendor-specific pixels
+  // Vendor-specific pixels (client-side)
   meta_pixel_id:    z.string().max(50).nullable().optional(),
   gtag_id:          z.string().max(50).nullable().optional(),
   tiktok_pixel_id:  z.string().max(50).nullable().optional(),
+  // Vendor CAPI tokens (server-side, stored securely)
+  meta_capi_token:    z.string().max(500).nullable().optional(),
+  tiktok_capi_token:  z.string().max(500).nullable().optional(),
+  gtag_api_secret:    z.string().max(100).nullable().optional(),
 })
 
 export async function PATCH(req: NextRequest) {

@@ -44,11 +44,15 @@ export interface Vendor {
   shipping_policy?:         string | null
   // Referral
   referral_code?:           string | null
-  // Vendor pixels
+  // Vendor pixels (client-side)
   meta_pixel_id?:           string | null
   gtag_id?:                 string | null
   tiktok_pixel_id?:         string | null
   pixel_id?:                string | null
+  // Vendor CAPI tokens (server-side — never exposed to client)
+  meta_capi_token?:         string | null
+  tiktok_capi_token?:       string | null
+  gtag_api_secret?:         string | null
   // Subscription (denormalized cache)
   subscription_status?:     'trial' | 'active' | 'grace_period' | 'expired' | 'none' | null
   subscription_plan_id?:    string | null

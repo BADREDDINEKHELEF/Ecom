@@ -9,6 +9,7 @@ import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { createSellerNotification } from '@/lib/notifications/seller'
 import { awardPoints, redeemPoints } from '@/lib/loyalty'
+import { firePurchaseCAPI } from '@/lib/analytics/server'
 import { logger } from '@/lib/logger'
 
 const OrderItemSchema = z.object({
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
       }).catch((err) => logger.error('[email] order confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
     }
 
-    // Notify each seller whose items are in this order (non-blocking)
+    // Notify sellers + fire vendor-level CAPI (non-blocking)
     ;(async () => {
       try {
         const supabase = createAdminClient()
@@ -152,6 +153,8 @@ export async function POST(req: NextRequest) {
           .eq('order_id', orderId)
           .not('vendor_id', 'is', null)
         const vendorIds = [...new Set((itemRows ?? []).map((r: { vendor_id: string }) => r.vendor_id).filter(Boolean))]
+
+        // Seller in-app notifications
         await Promise.all(
           vendorIds.map((vid) =>
             createSellerNotification({
@@ -163,10 +166,52 @@ export async function POST(req: NextRequest) {
             })
           )
         )
+
+        // Vendor-level CAPI — fire for each vendor that has pixel + CAPI token set
+        if (vendorIds.length > 0) {
+          const { data: vendors } = await supabase
+            .from('vendors')
+            .select('meta_pixel_id, meta_capi_token, tiktok_pixel_id, tiktok_capi_token, gtag_id, gtag_api_secret')
+            .in('id', vendorIds)
+          const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: 0, quantity: i.quantity }))
+          await Promise.all(
+            (vendors ?? []).map((v: Record<string, string | null>) =>
+              firePurchaseCAPI({
+                metaPixelId:     v.meta_pixel_id,
+                metaCAPIToken:   v.meta_capi_token,
+                tiktokPixelId:   v.tiktok_pixel_id,
+                tiktokCAPIToken: v.tiktok_capi_token,
+                gtagId:          v.gtag_id,
+                gtagApiSecret:   v.gtag_api_secret,
+                orderId, total, items: capiItems,
+                email: buyerEmail, phone: input.phone,
+                clientIp: ip,
+                clientUserAgent: req.headers.get('user-agent') ?? undefined,
+              })
+            )
+          )
+        }
       } catch (err) {
-        logger.error('[seller notification] order dispatch failed', { error: err instanceof Error ? err.message : String(err) })
+        logger.error('[seller notification + CAPI] failed', { error: err instanceof Error ? err.message : String(err) })
       }
     })()
+
+    // Platform-level CAPI (non-blocking)
+    ;(async () => {
+      const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: 0, quantity: i.quantity }))
+      await firePurchaseCAPI({
+        metaPixelId:     process.env.NEXT_PUBLIC_META_PIXEL_ID,
+        metaCAPIToken:   process.env.META_CAPI_TOKEN,
+        tiktokPixelId:   process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID,
+        tiktokCAPIToken: process.env.TIKTOK_CAPI_TOKEN,
+        gtagId:          process.env.NEXT_PUBLIC_GTAG_ID,
+        gtagApiSecret:   process.env.GTAG_API_SECRET,
+        orderId, total, items: capiItems,
+        email: buyerEmail, phone: input.phone,
+        clientIp: ip,
+        clientUserAgent: req.headers.get('user-agent') ?? undefined,
+      })
+    })().catch((err) => logger.error('[platform CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
 
     // Award loyalty points for this order (non-blocking)
     createRouteClient(req).auth.getUser()
