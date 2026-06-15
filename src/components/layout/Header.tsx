@@ -11,6 +11,7 @@ import { niches } from '@/lib/data/niches'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import Logo from '@/components/ui/Logo'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { track } from '@/lib/analytics/track'
 
 export default function Header() {
   const { toggleCart, itemCount } = useCartStore()
@@ -41,6 +42,7 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchValue.trim()) {
+      track('search', { query: searchValue.trim() })
       router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`)
       setSearchValue('')
       searchRef.current?.blur()

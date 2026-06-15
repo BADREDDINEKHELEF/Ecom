@@ -16,6 +16,7 @@ import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import WilayaDeliveryEstimate from '@/components/ui/WilayaDeliveryEstimate'
 import RecentlyViewed, { trackRecentlyViewed } from '@/components/ui/RecentlyViewed'
 import { trackViewContent, trackAddToCart } from '@/lib/analytics'
+import { track } from '@/lib/analytics/track'
 import StockAlertButton from '@/components/ui/StockAlertButton'
 import ProductQA from '@/components/shop/ProductQA'
 import CrossSellCarousel from '@/components/shop/CrossSellCarousel'
@@ -67,6 +68,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
       image: product.images[0] ?? '',
     })
     trackViewContent({ id: product.id, name: product.name, price: product.price })
+    track('product_view', { product_id: product.id, price: product.price })
 
     fetch(`/api/reviews/${product.id}`)
       .then((r) => r.json())
@@ -142,6 +144,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
   const handleAddToCart = () => {
     addItem(product, quantity)
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity })
+    track('add_to_cart', { product_id: product.id })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }

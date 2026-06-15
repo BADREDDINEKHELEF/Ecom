@@ -16,6 +16,7 @@ import { getCommunesForWilaya } from '@/lib/data/communes'
 // createOrder is now called via /api/orders (server-side, not client-side)
 import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
 import { trackPurchase } from '@/lib/analytics'
+import { track } from '@/lib/analytics/track'
 
 // Strip accents + "wilaya de/d'" prefix so Nominatim state names match our list
 function normalizeW(s: string) {
@@ -114,6 +115,7 @@ export default function CheckoutPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.balance > 0) setLoyaltyBalance(d.balance) })
       .catch(() => {})
+    track('checkout_start', {})
   }, [])
 
   const handleLocate = () => {
@@ -289,6 +291,7 @@ export default function CheckoutPage() {
         }
         const orderData = await res.json().catch(() => ({}))
         trackPurchase({ transactionId: orderData.id ?? `cod_${Date.now()}`, total: orderTotal, items: cartSnapshot })
+        track('checkout_complete', { order_id: orderData.id, total: orderTotal, payment_method: 'cash', wilaya: form?.wilaya })
 
         markRecovered()
         setSubmitted(true)
