@@ -18,10 +18,45 @@ function friendlyAuthError(msg: string): string {
   if (/too.*many.*requests|rate.*limit/i.test(msg))
     return 'Trop de tentatives. Réessayez dans quelques minutes.'
   if (/weak.*password/i.test(msg))
-    return 'Mot de passe trop faible. Utilisez au moins 6 caractères.'
+    return 'Mot de passe trop faible. Utilisez au moins 8 caractères.'
   if (/network|fetch/i.test(msg))
     return 'Erreur de connexion. Vérifiez votre accès internet.'
   return 'Une erreur est survenue. Veuillez réessayer.'
+}
+
+function passwordScore(pwd: string): number {
+  let score = 0
+  if (pwd.length >= 8)  score++
+  if (pwd.length >= 12) score++
+  if (/[A-Z]/.test(pwd)) score++
+  if (/[0-9]/.test(pwd)) score++
+  if (/[^A-Za-z0-9]/.test(pwd)) score++
+  return score
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  const score = passwordScore(password)
+  const levels = [
+    { label: 'Très faible', color: 'bg-red-500' },
+    { label: 'Faible',      color: 'bg-orange-400' },
+    { label: 'Moyen',       color: 'bg-yellow-400' },
+    { label: 'Fort',        color: 'bg-emerald-400' },
+    { label: 'Très fort',   color: 'bg-emerald-600' },
+  ]
+  const level = levels[Math.min(score, 4)]
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex gap-1">
+        {levels.map((l, i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors ${i < score ? level.color : 'bg-gray-200'}`}
+          />
+        ))}
+      </div>
+      <p className="text-xs text-gray-500">{level.label}</p>
+    </div>
+  )
 }
 
 export default function AuthPage() {
@@ -86,7 +121,7 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <Link href="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-8 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to store
+          <ArrowLeft className="w-4 h-4" /> Retour à la boutique
         </Link>
 
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
@@ -125,11 +160,12 @@ export default function AuthPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nom complet</label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
+                    autoComplete="name"
                     value={form.name}
                     onChange={(e) => f('name', e.target.value)}
                     placeholder="Mohammed Amiri"
@@ -140,28 +176,30 @@ export default function AuthPage() {
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Adresse e-mail</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="email"
                   required
+                  autoComplete={mode === 'login' ? 'username' : 'email'}
                   value={form.email}
                   onChange={(e) => f('email', e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="vous@exemple.com"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mot de passe</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type={showPwd ? 'text' : 'password'}
                   required
-                  minLength={6}
+                  minLength={8}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={form.password}
                   onChange={(e) => f('password', e.target.value)}
                   placeholder="••••••••"
@@ -170,11 +208,15 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPwd(!showPwd)}
+                  aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {mode === 'register' && form.password.length > 0 && (
+                <PasswordStrength password={form.password} />
+              )}
             </div>
 
             {mode === 'login' && (
@@ -184,7 +226,7 @@ export default function AuthPage() {
                   onClick={handleForgotPassword}
                   className="text-xs text-indigo-600 hover:underline font-medium"
                 >
-                  Forgot password?
+                  Mot de passe oublié ?
                 </button>
               </div>
             )}

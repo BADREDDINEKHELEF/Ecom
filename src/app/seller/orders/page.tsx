@@ -8,42 +8,19 @@ import {
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
-import { useT, useRTL } from '@/lib/store/langStore'
+import { useT, useRTL, useLang } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import OrderInvoicePrint from '@/components/ui/OrderInvoicePrint'
 import type { VendorOrderSummary } from '@/lib/supabase/queries'
 
-// ── Status config ─────────────────────────────────────────────────────────────
-const STATUS_CFG: Record<string, { label: string; icon: React.ElementType; badge: string }> = {
-  pending:   { label: 'En attente',  icon: Clock,        badge: 'bg-amber-100 text-amber-700 border-amber-200' },
-  confirmed: { label: 'Confirmée',   icon: CheckCircle2, badge: 'bg-blue-100 text-blue-700 border-blue-200' },
-  shipped:   { label: 'Expédiée',    icon: Truck,        badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
-  delivered: { label: 'Livrée',      icon: CheckCircle2, badge: 'bg-green-100 text-green-700 border-green-200' },
-  cancelled: { label: 'Annulée',     icon: XCircle,      badge: 'bg-red-100 text-red-600 border-red-200' },
-  returned:  { label: 'Retournée',   icon: AlertCircle,  badge: 'bg-orange-100 text-orange-700 border-orange-200' },
-}
-
-const STATUS_TABS = [
-  { key: '',          label: 'Toutes' },
-  { key: 'pending',   label: 'En attente' },
-  { key: 'confirmed', label: 'Confirmées' },
-  { key: 'shipped',   label: 'Expédiées' },
-  { key: 'delivered', label: 'Livrées' },
-  { key: 'cancelled', label: 'Annulées' },
-]
-
-const NEXT_ACTIONS: Record<string, { label: string; status: string; cls: string; icon: React.ElementType }[]> = {
-  pending:   [
-    { label: 'Confirmer', status: 'confirmed', cls: 'bg-emerald-600 hover:bg-emerald-700 text-white', icon: CheckCircle2 },
-    { label: 'Annuler',   status: 'cancelled', cls: 'border border-red-200 text-red-600 hover:bg-red-50', icon: XCircle },
-  ],
-  confirmed: [
-    { label: 'Marquer expédiée', status: 'shipped',   cls: 'bg-indigo-600 hover:bg-indigo-700 text-white', icon: Truck },
-    { label: 'Annuler',          status: 'cancelled', cls: 'border border-red-200 text-red-600 hover:bg-red-50', icon: XCircle },
-  ],
-  shipped: [
-    { label: 'Marquer livrée', status: 'delivered', cls: 'bg-green-600 hover:bg-green-700 text-white', icon: CheckCircle2 },
-  ],
+// ── Status icon/badge config (label computed from t inside component) ─────────
+const STATUS_STYLE: Record<string, { icon: React.ElementType; badge: string }> = {
+  pending:   { icon: Clock,        badge: 'bg-amber-100 text-amber-700 border-amber-200' },
+  confirmed: { icon: CheckCircle2, badge: 'bg-blue-100 text-blue-700 border-blue-200' },
+  shipped:   { icon: Truck,        badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  delivered: { icon: CheckCircle2, badge: 'bg-green-100 text-green-700 border-green-200' },
+  cancelled: { icon: XCircle,      badge: 'bg-red-100 text-red-600 border-red-200' },
+  returned:  { icon: AlertCircle,  badge: 'bg-orange-100 text-orange-700 border-orange-200' },
 }
 
 function urgencyLevel(createdAt: string, status: string): 'none' | 'warn' | 'urgent' {
@@ -54,21 +31,55 @@ function urgencyLevel(createdAt: string, status: string): 'none' | 'warn' | 'urg
   return 'none'
 }
 
-function timeAgo(iso: string) {
-  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
-  if (mins < 60)  return `il y a ${mins}min`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24)   return `il y a ${hrs}h`
-  return `il y a ${Math.floor(hrs / 24)}j`
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SellerOrdersPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const t = useT()
   const isRTL = useRTL()
+  const lang = useLang()
   const sd = t.sellerDash
+  const locale = lang === 'ar' ? 'ar-DZ' : lang === 'en' ? 'en-GB' : 'fr-DZ'
+
+  const os = t.orders.status as Record<string, string>
+  const statusLabel = (status: string) => os[status] ?? status
+
+  const STATUS_CFG: Record<string, { icon: React.ElementType; badge: string; label: string }> = {
+    ...Object.fromEntries(
+      Object.entries(STATUS_STYLE).map(([k, v]) => [k, { ...v, label: k === 'returned' ? sd.statusReturned : statusLabel(k) }])
+    ),
+  }
+
+  const STATUS_TABS = [
+    { key: '',          label: sd.statusAll },
+    { key: 'pending',   label: statusLabel('pending') },
+    { key: 'confirmed', label: statusLabel('confirmed') },
+    { key: 'shipped',   label: statusLabel('shipped') },
+    { key: 'delivered', label: statusLabel('delivered') },
+    { key: 'cancelled', label: statusLabel('cancelled') },
+  ]
+
+  const NEXT_ACTIONS: Record<string, { label: string; status: string; cls: string; icon: React.ElementType }[]> = {
+    pending: [
+      { label: sd.actionConfirm, status: 'confirmed', cls: 'bg-emerald-600 hover:bg-emerald-700 text-white', icon: CheckCircle2 },
+      { label: sd.actionCancel,  status: 'cancelled', cls: 'border border-red-200 text-red-600 hover:bg-red-50', icon: XCircle },
+    ],
+    confirmed: [
+      { label: sd.actionShip,   status: 'shipped',   cls: 'bg-indigo-600 hover:bg-indigo-700 text-white', icon: Truck },
+      { label: sd.actionCancel, status: 'cancelled', cls: 'border border-red-200 text-red-600 hover:bg-red-50', icon: XCircle },
+    ],
+    shipped: [
+      { label: sd.actionDeliver, status: 'delivered', cls: 'bg-green-600 hover:bg-green-700 text-white', icon: CheckCircle2 },
+    ],
+  }
+
+  function timeAgo(iso: string) {
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
+    if (mins < 60)  return sd.agoMin.replace('{n}', String(mins))
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24)   return sd.agoHour.replace('{n}', String(hrs))
+    return sd.agoDay.replace('{n}', String(Math.floor(hrs / 24)))
+  }
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const [orders, setOrders]             = useState<VendorOrderSummary[]>([])
@@ -151,7 +162,7 @@ export default function SellerOrdersPage() {
   // ── CSV export ────────────────────────────────────────────────────────────────
   const exportCSV = () => {
     const rows = filtered.filter((o) => selected.size === 0 || selected.has(o.order.id))
-    const header = ['ID', 'Client', 'Téléphone', 'Wilaya', 'Statut', 'Total vendeur', 'Date']
+    const header = ['ID', sd.colClient, t.checkout.phone, sd.colWilaya, sd.colStatus, sd.orderYourTotal, sd.orderDate]
     const csv = [
       header.join(','),
       ...rows.map(({ order, vendorTotal }) => [
@@ -161,7 +172,7 @@ export default function SellerOrdersPage() {
         order.wilaya,
         order.status,
         vendorTotal,
-        new Date(order.created_at).toLocaleDateString('fr-DZ'),
+        new Date(order.created_at).toLocaleDateString(locale),
       ].join(',')),
     ].join('\n')
     const a = document.createElement('a')
@@ -201,20 +212,20 @@ export default function SellerOrdersPage() {
         <div className="flex items-center justify-between mb-6 gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <ShoppingBag className="w-6 h-6 text-emerald-600 flex-shrink-0" /> Commandes
+              <ShoppingBag className="w-6 h-6 text-emerald-600 flex-shrink-0" /> {sd.ordersTitle}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">{orders.length} commandes au total</p>
+            <p className="text-gray-500 text-sm mt-1">{sd.ordersTotal.replace('{n}', String(orders.length))}</p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button onClick={exportCSV}
               className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Exporter CSV</span>
+              <span className="hidden sm:inline">{sd.exportCsv}</span>
             </button>
             <button onClick={load}
               className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
               <RefreshCw className="w-4 h-4" />
-              <span className="hidden sm:inline">Actualiser</span>
+              <span className="hidden sm:inline">{sd.refreshOrders}</span>
             </button>
           </div>
         </div>
@@ -225,12 +236,12 @@ export default function SellerOrdersPage() {
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
               <p className="text-sm font-semibold text-amber-800">
-                {pendingCount} commande{pendingCount > 1 ? 's' : ''} en attente de confirmation
+                {sd.pendingAlert.replace('{n}', String(pendingCount))}
               </p>
             </div>
             <button onClick={() => setStatusTab('pending')}
               className="text-sm font-bold text-amber-700 hover:text-amber-900 underline">
-              Voir maintenant →
+              {sd.viewNow}
             </button>
           </div>
         )}
@@ -264,23 +275,23 @@ export default function SellerOrdersPage() {
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher client, téléphone, wilaya, ID commande…"
+              placeholder={sd.searchOrders}
               className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white" />
           </div>
           {selected.size > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-600">{selected.size} sélectionnée(s)</span>
+              <span className="text-sm font-semibold text-gray-600">{sd.selectedCount.replace('{n}', String(selected.size))}</span>
               <button onClick={bulkConfirm} disabled={bulkLoading}
                 className="flex items-center gap-1.5 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 text-sm disabled:opacity-60">
                 {bulkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Confirmer sélection
+                {sd.confirmSelection}
               </button>
               <button onClick={exportCSV}
                 className="flex items-center gap-1.5 border border-gray-200 bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm">
                 <Download className="w-4 h-4" /> CSV
               </button>
               <button onClick={() => setSelected(new Set())}
-                className="text-sm text-gray-400 hover:text-gray-600">Désélectionner</button>
+                className="text-sm text-gray-400 hover:text-gray-600">{sd.deselect}</button>
             </div>
           )}
         </div>
@@ -289,7 +300,7 @@ export default function SellerOrdersPage() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {loadingOrders ? (
             <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-              <Loader2 className="w-5 h-5 animate-spin" /> Chargement…
+              <Loader2 className="w-5 h-5 animate-spin" /> {t.common.loading}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
@@ -347,7 +358,7 @@ export default function SellerOrdersPage() {
                                 {maskedPhone}
                                 <button onClick={() => setRevealedPhone((prev) => new Set([...prev, order.id]))}
                                   className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold">
-                                  <Phone className="w-3 h-3 inline" /> Afficher
+                                  <Phone className="w-3 h-3 inline" /> {sd.reveal}
                                 </button>
                               </>
                             )}
@@ -373,7 +384,7 @@ export default function SellerOrdersPage() {
                         <button onClick={() => setExpanded(isExpanded ? null : order.id)}
                           className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 py-1.5 px-2 rounded-lg hover:bg-gray-100">
                           <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                          {isExpanded ? 'Moins' : 'Détails'}
+                          {isExpanded ? sd.lessDetails : sd.moreDetails}
                         </button>
                       </div>
 
@@ -381,7 +392,7 @@ export default function SellerOrdersPage() {
                       {isExpanded && (
                         <div className="mt-3 ml-7 pt-3 border-t border-gray-100 space-y-3">
                           <div>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Articles</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{sd.orderItems}</p>
                             <div className="space-y-2">
                               {items.map((item) => (
                                 <div key={item.id} className="flex items-center justify-between text-sm">
@@ -398,22 +409,22 @@ export default function SellerOrdersPage() {
                             </div>
                           </div>
                           <div className="space-y-1.5 text-sm">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Résumé</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{sd.orderSummary}</p>
                             <div className="flex justify-between">
-                              <span className="text-gray-500">Adresse</span>
+                              <span className="text-gray-500">{sd.orderAddress}</span>
                               <span className="text-gray-900 font-medium text-right max-w-[180px]">{order.address}, {order.city}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-500">Paiement</span>
+                              <span className="text-gray-500">{sd.orderPayment}</span>
                               <span className="text-gray-900 font-medium capitalize">{order.payment_method}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-500">Votre total</span>
+                              <span className="text-gray-500">{sd.orderYourTotal}</span>
                               <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                              <span className="text-gray-400">Date</span>
-                              <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-gray-400">{sd.orderDate}</span>
+                              <span className="text-gray-600">{new Date(order.created_at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                           </div>
                           <div className="pt-2">
@@ -433,11 +444,11 @@ export default function SellerOrdersPage() {
                   <input type="checkbox" checked={allSelected}
                     onChange={(e) => setSelected(e.target.checked ? new Set(filtered.map((o) => o.order.id)) : new Set())}
                     className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide flex-1">Client</span>
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 hidden md:block">Wilaya</span>
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-32 hidden lg:block">Statut</span>
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 text-right">Montant</span>
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-36">Actions</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide flex-1">{sd.colClient}</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 hidden md:block">{sd.colWilaya}</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-32 hidden lg:block">{sd.colStatus}</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-28 text-right">{sd.colAmount}</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide w-36">{sd.colActions}</span>
                 </div>
 
                 <div className="divide-y divide-gray-50">
@@ -485,7 +496,7 @@ export default function SellerOrdersPage() {
                                   {maskedPhone}
                                   <button onClick={(e) => { e.stopPropagation(); setRevealedPhone((prev) => new Set([...prev, order.id])) }}
                                     className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold inline-flex items-center gap-0.5">
-                                    <Phone className="w-3 h-3" /> Afficher
+                                    <Phone className="w-3 h-3" /> {sd.reveal}
                                   </button>
                                 </>
                               )}
@@ -529,7 +540,7 @@ export default function SellerOrdersPage() {
                           <div className="px-4 sm:px-16 pb-4 bg-gray-50/80 border-t border-gray-100">
                             <div className="grid md:grid-cols-2 gap-4 pt-3">
                               <div>
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Articles</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{sd.orderItems}</p>
                                 <div className="space-y-2">
                                   {items.map((item) => (
                                     <div key={item.id} className="flex items-center justify-between text-sm">
@@ -546,23 +557,23 @@ export default function SellerOrdersPage() {
                                 </div>
                               </div>
                               <div>
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Résumé</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{sd.orderSummary}</p>
                                 <div className="space-y-1.5 text-sm">
                                   <div className="flex justify-between">
-                                    <span className="text-gray-500">Adresse</span>
+                                    <span className="text-gray-500">{sd.orderAddress}</span>
                                     <span className="text-gray-900 font-medium text-right max-w-[180px]">{order.address}, {order.city}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-gray-500">Paiement</span>
+                                    <span className="text-gray-500">{sd.orderPayment}</span>
                                     <span className="text-gray-900 font-medium capitalize">{order.payment_method}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-gray-500">Votre total</span>
+                                    <span className="text-gray-500">{sd.orderYourTotal}</span>
                                     <span className="font-black text-emerald-600">{formatPrice(vendorTotal)}</span>
                                   </div>
                                   <div className="flex justify-between text-xs">
-                                    <span className="text-gray-400">Date commande</span>
-                                    <span className="text-gray-600">{new Date(order.created_at).toLocaleString('fr-DZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="text-gray-400">{sd.orderDate}</span>
+                                    <span className="text-gray-600">{new Date(order.created_at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                                   </div>
                                   <div className="pt-2">
                                     <OrderInvoicePrint order={{ ...order, order_items: items }} storeName={vendor.store_name} />

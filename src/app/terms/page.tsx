@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — ShopDZ',
-  description: 'Terms and conditions for using the ShopDZ marketplace.',
+  title: "Conditions d'utilisation — ShopDZ",
+  description: "Conditions générales d'utilisation de la plateforme ShopDZ.",
 }
 
-const LAST_UPDATED = 'June 2025'
+const LAST_UPDATED = 'Juin 2025'
 
 export default function TermsPage() {
   return (
@@ -18,112 +18,116 @@ export default function TermsPage() {
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          Back to ShopDZ
+          Retour à ShopDZ
         </Link>
 
         <div className="bg-white rounded-2xl p-8 shadow-sm">
-          <h1 className="text-3xl font-black text-gray-900 mb-2">Terms of Service</h1>
-          <p className="text-sm text-gray-400 mb-8">Last updated: {LAST_UPDATED}</p>
+          <h1 className="text-3xl font-black text-gray-900 mb-2">{"Conditions générales d'utilisation"}</h1>
+          <p className="text-sm text-gray-400 mb-8">Dernière mise à jour : {LAST_UPDATED}</p>
 
           <div className="prose prose-gray max-w-none space-y-6 text-sm leading-relaxed text-gray-700">
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">1. Acceptance of Terms</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">{"1. Acceptation des conditions"}</h2>
               <p>
-                By accessing or using ShopDZ (&quot;the Platform&quot;), you agree to be bound by these Terms
-                of Service. If you do not agree, you may not use the Platform.
+                En accédant ou en utilisant ShopDZ (&quot;la Plateforme&quot;), vous acceptez d&apos;être lié par les présentes
+                conditions générales d&apos;utilisation. Si vous n&apos;acceptez pas ces conditions, vous ne pouvez pas utiliser
+                la Plateforme.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">2. The Platform</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">2. La Plateforme</h2>
               <p>
-                ShopDZ is an online marketplace that connects buyers with independent sellers based in
-                Algeria. ShopDZ itself is not the seller of the products listed — each product is sold
-                by the individual seller whose store page it appears on.
+                ShopDZ est une place de marché en ligne qui met en relation des acheteurs et des vendeurs indépendants
+                basés en Algérie. ShopDZ n&apos;est pas le vendeur des produits listés — chaque produit est vendu par
+                le vendeur individuel dont la boutique l&apos;héberge.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">3. Buyer Responsibilities</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">3. Obligations de l&apos;acheteur</h2>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Provide accurate delivery information when placing an order</li>
-                <li>Be available to receive your order and make payment on delivery (for COD orders)</li>
-                <li>Contact the seller or ShopDZ support within 7 days of delivery for any issues</li>
-                <li>Not attempt to defraud sellers through false returns or chargebacks</li>
+                <li>Fournir des informations de livraison exactes lors de la passation de commande</li>
+                <li>Être disponible pour réceptionner votre commande et effectuer le paiement à la livraison (pour les commandes en paiement à la livraison)</li>
+                <li>Contacter le vendeur ou le support ShopDZ dans les <strong>7 jours</strong> suivant la livraison pour tout problème</li>
+                <li>Ne pas tenter de frauder les vendeurs par de faux retours ou des réclamations abusives</li>
+                <li>Ne pas passer de commandes fictives ou refuser de manière répétée la réception des colis</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">4. Seller Responsibilities</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">4. Obligations du vendeur</h2>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Only list products that you are legally permitted to sell in Algeria</li>
-                <li>Provide accurate product descriptions, images, and pricing</li>
-                <li>Fulfil orders promptly and as described</li>
-                <li>Not list counterfeit, prohibited, or dangerous goods</li>
-                <li>Pay the agreed platform commission (10% of each sale) as per your seller agreement</li>
+                <li>Ne lister que des produits dont la vente est légalement autorisée en Algérie</li>
+                <li>Fournir des descriptions, images et prix exacts et non trompeurs</li>
+                <li>Honorer les commandes dans les délais et conformément à la description</li>
+                <li>Ne pas lister de produits contrefaits, prohibés ou dangereux</li>
+                <li>S&apos;acquitter de la commission plateforme convenue (10 % de chaque vente) conformément à votre contrat vendeur</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">5. Prohibited Products</h2>
-              <p>The following are strictly prohibited on ShopDZ:</p>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">5. Produits interdits</h2>
+              <p>Les éléments suivants sont strictement interdits sur ShopDZ :</p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Weapons, ammunition, or explosive materials</li>
-                <li>Counterfeit goods or trademark-infringing products</li>
-                <li>Controlled substances or medication requiring a prescription</li>
-                <li>Adult or pornographic content</li>
-                <li>Products that violate any Algerian law</li>
+                <li>Armes, munitions ou matériaux explosifs</li>
+                <li>Produits contrefaits ou portant atteinte à des droits de marque</li>
+                <li>Substances contrôlées ou médicaments nécessitant une ordonnance</li>
+                <li>Contenus pour adultes ou à caractère pornographique</li>
+                <li>Tout produit en violation de la législation algérienne en vigueur</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">6. Returns & Refunds</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">6. Retours et remboursements</h2>
               <p>
-                Buyers may request a return within <strong>7 days</strong> of delivery for defective,
-                damaged, or incorrectly described products. Sellers are responsible for arranging
-                return logistics. ShopDZ may mediate disputes at its discretion.
+                Les acheteurs peuvent demander un retour dans les <strong>7 jours</strong> suivant la livraison pour
+                les produits défectueux, endommagés ou ne correspondant pas à la description. Le vendeur est responsable
+                de l&apos;organisation de la logistique de retour. ShopDZ peut intervenir en tant que médiateur dans les
+                litiges à sa discrétion.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">7. Liability Limitation</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">7. Limitation de responsabilité</h2>
               <p>
-                ShopDZ provides the Platform &quot;as is&quot; and does not warrant uninterrupted or
-                error-free service. To the extent permitted by Algerian law, ShopDZ&apos;s liability for
-                any claim arising from use of the Platform is limited to the value of the order in dispute.
+                ShopDZ fournit la Plateforme &quot;en l&apos;état&quot; et ne garantit pas un service ininterrompu
+                ou sans erreur. Dans les limites autorisées par la loi algérienne, la responsabilité de ShopDZ
+                pour toute réclamation découlant de l&apos;utilisation de la Plateforme est limitée à la valeur
+                de la commande en litige.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">8. Intellectual Property</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">8. Propriété intellectuelle</h2>
               <p>
-                ShopDZ&apos;s brand, logo, and Platform design are the property of ShopDZ. Sellers retain
-                ownership of their product content. By listing on ShopDZ, sellers grant ShopDZ a
-                non-exclusive licence to display and promote their products on the Platform.
+                La marque, le logo et le design de la Plateforme ShopDZ sont la propriété de ShopDZ. Les vendeurs
+                conservent la propriété de leur contenu produit. En listant sur ShopDZ, les vendeurs accordent à
+                ShopDZ une licence non exclusive pour afficher et promouvoir leurs produits sur la Plateforme.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">9. Governing Law</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">9. Droit applicable</h2>
               <p>
-                These Terms are governed by the laws of the People&apos;s Democratic Republic of Algeria.
-                Any disputes will be resolved in the competent courts of Algiers.
+                Les présentes conditions sont régies par les lois de la République Algérienne Démocratique et
+                Populaire. Tout litige sera soumis à la compétence des tribunaux compétents d&apos;Alger.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">10. Changes to Terms</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">10. Modifications des conditions</h2>
               <p>
-                ShopDZ may update these Terms at any time. Continued use of the Platform after changes
-                are posted constitutes acceptance of the updated Terms.
+                ShopDZ peut mettre à jour les présentes conditions à tout moment. La poursuite de l&apos;utilisation
+                de la Plateforme après la publication des modifications vaut acceptation des conditions mises à jour.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-bold text-gray-900 mb-2">11. Contact</h2>
               <p>
-                For questions about these Terms:{' '}
+                Pour toute question relative aux présentes conditions :{' '}
                 <a href="mailto:legal@shopdz.dz" className="text-indigo-600 hover:underline">
                   legal@shopdz.dz
                 </a>

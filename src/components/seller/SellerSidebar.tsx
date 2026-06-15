@@ -7,7 +7,7 @@ import {
   ExternalLink, Truck, BarChart2, MessageSquare, CreditCard,
   Tag, BookOpen, ChevronDown, Zap, Crown, Layers, X,
 } from 'lucide-react'
-import { useT, useRTL } from '@/lib/store/langStore'
+import { useT, useRTL, useLangStore } from '@/lib/store/langStore'
 import { useState } from 'react'
 import NotificationBell from './NotificationBell'
 
@@ -31,6 +31,8 @@ export default function SellerSidebar({
   const pathname = usePathname()
   const t = useT()
   const isRTL = useRTL()
+  const { lang, setLang } = useLangStore()
+  const sd = t.sellerDash
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith('/seller/settings')
   )
@@ -115,7 +117,9 @@ export default function SellerSidebar({
                 subscriptionStatus === 'grace_period' ? 'bg-amber-500/20 text-amber-400' :
                 'bg-red-500/20 text-red-400'
               }`}>
-                {subscriptionStatus === 'active' ? 'PRO' : subscriptionStatus === 'trial' ? 'TRIAL' : 'EXPIRED'}
+                {subscriptionStatus === 'active' ? 'PRO' : subscriptionStatus === 'trial'
+                ? (lang === 'ar' ? 'تجريبي' : 'TRIAL')
+                : (lang === 'ar' ? 'منتهي' : 'EXPIRED')}
               </span>
             )}
           </div>
@@ -123,38 +127,38 @@ export default function SellerSidebar({
 
         <nav className="flex-1 p-3 flex flex-col overflow-y-auto">
           <div className="flex-1 space-y-0.5">
-            <LinkItem href="/seller/dashboard" label={t.sellerDash.dashboard} icon={LayoutDashboard} exact />
+            <LinkItem href="/seller/dashboard" label={sd.dashboard} icon={LayoutDashboard} exact />
 
             <div className="pt-2 pb-1">
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Catalogue</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">{sd.catCatalogue}</p>
             </div>
-            <LinkItem href="/seller/stores"     label="Mes Boutiques"            icon={Layers} />
-            <LinkItem href="/seller/products"   label={t.sellerDash.myProducts}  icon={Package} />
-            <LinkItem href="/seller/promotions" label="Promotions"               icon={Tag} />
+            <LinkItem href="/seller/stores"     label={sd.stores}      icon={Layers} />
+            <LinkItem href="/seller/products"   label={sd.myProducts}  icon={Package} />
+            <LinkItem href="/seller/promotions" label={sd.promotions}  icon={Tag} />
 
             <div className="pt-2 pb-1">
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Ventes</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">{sd.catSales}</p>
             </div>
-            <LinkItem href="/seller/orders"     label={t.sellerDash.myOrders}   icon={ShoppingBag} badge={pendingOrders} />
-            <LinkItem href="/seller/deliveries" label="Livraisons"               icon={Truck} />
-            <LinkItem href="/seller/messages"   label="Messages"                 icon={MessageSquare} badge={unreadMessages} />
-            <LinkItem href="/seller/payouts"    label="Revenus & Paiements"      icon={CreditCard} />
+            <LinkItem href="/seller/orders"     label={sd.myOrders}    icon={ShoppingBag} badge={pendingOrders} />
+            <LinkItem href="/seller/deliveries" label={sd.deliveries}  icon={Truck} />
+            <LinkItem href="/seller/messages"   label={sd.messages}    icon={MessageSquare} badge={unreadMessages} />
+            <LinkItem href="/seller/payouts"    label={sd.payouts}     icon={CreditCard} />
 
             <div className="pt-2 pb-1">
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Croissance</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">{sd.catGrowth}</p>
             </div>
-            <LinkItem href="/seller/sponsored"    label="Produits Sponsorisés" icon={Zap} />
-            <LinkItem href="/seller/subscription" label="Mon Abonnement"       icon={Crown} />
+            <LinkItem href="/seller/sponsored"    label={sd.sponsored}        icon={Zap} />
+            <LinkItem href="/seller/subscription" label={sd.mySubscription}   icon={Crown} />
 
             <div className="pt-2 pb-1">
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Analyse</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">{sd.catAnalytics}</p>
             </div>
-            <LinkItem href="/seller/analytics" label="Analytiques"  icon={BarChart2} />
-            <LinkItem href="/seller/academy"   label="Académie"     icon={BookOpen} />
+            <LinkItem href="/seller/analytics" label={sd.analytics}  icon={BarChart2} />
+            <LinkItem href="/seller/academy"   label={sd.academy}    icon={BookOpen} />
 
             {/* Settings collapsible */}
             <div className="pt-2 pb-1">
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">Paramètres</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">{sd.catSettings}</p>
             </div>
             <button
               onClick={() => setSettingsOpen(!settingsOpen)}
@@ -163,7 +167,7 @@ export default function SellerSidebar({
               }`}
             >
               <Settings className={`w-4 h-4 flex-shrink-0 ${isActive('/seller/settings') ? 'text-emerald-400' : 'text-gray-500'}`} />
-              <span className="flex-1 text-start">{t.sellerDash.storeSettings}</span>
+              <span className="flex-1 text-start">{sd.storeSettings}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
             </button>
             {settingsOpen && (
@@ -175,7 +179,7 @@ export default function SellerSidebar({
                     pathname === '/seller/settings' ? 'text-emerald-400 bg-emerald-600/10' : 'text-gray-400 hover:text-white hover:bg-gray-800'
                   }`}
                 >
-                  Boutique
+                  {sd.settingsStore}
                 </Link>
                 <Link
                   href="/seller/settings/delivery"
@@ -184,7 +188,7 @@ export default function SellerSidebar({
                     pathname === '/seller/settings/delivery' ? 'text-emerald-400 bg-emerald-600/10' : 'text-gray-400 hover:text-white hover:bg-gray-800'
                   }`}
                 >
-                  <Truck className="w-3 h-3" /> Livraison & API
+                  <Truck className="w-3 h-3" /> {sd.settingsDelivery}
                 </Link>
               </div>
             )}
@@ -192,6 +196,23 @@ export default function SellerSidebar({
 
           {/* Bottom actions */}
           <div className="space-y-0.5 pt-2 border-t border-gray-800 flex-shrink-0">
+            {/* Language switcher */}
+            <div className="flex items-center gap-0.5 bg-gray-800 rounded-lg p-0.5 mx-1 mb-1">
+              {(['ar', 'fr', 'en'] as const).map((code) => {
+                const LANG_LABELS: Record<string, string> = { ar: '🇩🇿 عربي', fr: '🇫🇷 FR', en: '🇬🇧 EN' }
+                return (
+                  <button
+                    key={code}
+                    onClick={() => setLang(code)}
+                    className={`flex-1 py-1 rounded-md text-xs font-bold transition-all ${
+                      lang === code ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {LANG_LABELS[code]}
+                  </button>
+                )
+              })}
+            </div>
             <a
               href={`/store/${slug}`}
               target="_blank"
