@@ -26,9 +26,13 @@ function buildCsp(extra: string[] = []): string {
     [
       "connect-src 'self'",
       'https://*.supabase.co',
+      'wss://*.supabase.co',
       'https://nominatim.openstreetmap.org',
       'https://api.yalidine.app',
-      'https://*.sentry.io',      // Sentry error reporting
+      'https://*.sentry.io',
+      'https://graph.facebook.com',
+      'https://business-api.tiktok.com',
+      'https://www.google-analytics.com',
     ].join(' '),
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -39,7 +43,7 @@ function buildCsp(extra: string[] = []): string {
 
 const securityHeaders = [
   { key: 'X-DNS-Prefetch-Control',    value: 'on' },
-  { key: 'X-Frame-Options',           value: 'SAMEORIGIN' },
+  { key: 'X-Frame-Options',           value: 'DENY' },
   { key: 'X-Content-Type-Options',    value: 'nosniff' },
   { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=(self)' },

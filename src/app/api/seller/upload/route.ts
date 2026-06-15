@@ -84,9 +84,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: publicUrl }, { status: 201 })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    logger.error('[POST /api/seller/upload]', { error: msg })
-    // Return the real message in production so mis-configured env vars surface immediately
-    return NextResponse.json({ error: msg }, { status: 500 })
+    logger.error('[POST /api/seller/upload]', { error: err instanceof Error ? err.message : String(err) })
+    return NextResponse.json({ error: 'Upload failed. Please try again.' }, { status: 500 })
   }
 }

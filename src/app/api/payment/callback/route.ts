@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { satimGetOrderStatus, satimConfirmOrder } from '@/lib/payment/satim'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
+  // Rate-limit payment callbacks: 20 per minute per IP (prevents callback flooding/replay attacks)
+  const ip = getClientIp(req)
+  const rl = await checkPublicRateLimit(ip, 'payment_callback')
+  if (!rl.allowed) {
+    logger.warn('[payment/callback] rate limit exceeded', { ip })
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const { searchParams } = new URL(req.url)
   const result  = searchParams.get('result')   // 'success' | 'fail'
   const orderId = searchParams.get('orderId')   // our internal order ID (orderNumber we sent to Satim)

@@ -1,8 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
+
+const ALLOWED_PHOTO_HOSTS = new Set([
+  'supabase.co',
+  'supabase.in',
+])
+
+function isSafePhotoUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false
+  try {
+    const parsed = new URL(url)
+    if (!['https:'].includes(parsed.protocol)) return false
+    // Only allow Supabase storage URLs (where seller photos are actually stored)
+    return [...ALLOWED_PHOTO_HOSTS].some((h) => parsed.hostname.endsWith(h))
+  } catch {
+    return false
+  }
+}
+
+const ReturnSchema = z.object({
+  reason: z.string().min(5).max(1000).transform((v) => v.trim()),
+  phone:  z.string().min(8).max(20),
+  photos: z.array(z.string()).max(5).optional().default([]),
+})
 
 export async function POST(
   req: NextRequest,
@@ -14,14 +38,19 @@ export async function POST(
 
   try {
     const { orderId } = await params
-    const { reason, phone, photos } = await req.json().catch(() => ({}))
 
-    if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
-      return NextResponse.json({ error: 'Raison requise (min 5 caractères)' }, { status: 400 })
+    let rawBody: unknown
+    try { rawBody = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
-    if (!phone || typeof phone !== 'string') {
-      return NextResponse.json({ error: 'Téléphone requis pour vérification' }, { status: 400 })
+
+    const parsed = ReturnSchema.safeParse(rawBody)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Données invalides', details: parsed.error.issues }, { status: 400 })
     }
+
+    const { reason, phone, photos: rawPhotos } = parsed.data
+    const photos = (rawPhotos ?? []).filter(isSafePhotoUrl)
 
     const supabase = createAdminClient()
 
@@ -66,8 +95,8 @@ export async function POST(
       .insert({
         order_id:  orderId,
         vendor_id: vendorId,
-        reason:    reason.trim().slice(0, 1000),
-        photos:    Array.isArray(photos) ? photos.slice(0, 5) : [],
+        reason,
+        photos,
       })
       .select('id')
       .single()

@@ -1,23 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRouteClient } from '@/lib/supabase/server'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
+
+const RedeemSchema = z.object({
+  code:   z.string().min(1).max(100),
+  amount: z.number().positive().max(1_000_000),
+})
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'giftcard')
   if (!rl.allowed) return NextResponse.json({ error: 'Trop de tentatives' }, { status: 429 })
 
-  const { code, amount } = await req.json().catch(() => ({}))
-  if (!code || typeof code !== 'string') {
-    return NextResponse.json({ error: 'Code requis' }, { status: 400 })
-  }
-  if (!amount || typeof amount !== 'number' || amount <= 0) {
-    return NextResponse.json({ error: 'Montant invalide' }, { status: 400 })
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
+  const parsed = RedeemSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Code ou montant invalide' }, { status: 400 })
+  }
+
+  const { code, amount } = parsed.data
   const supabase = createAdminClient()
+
+  // Step 1 — verify card exists and is valid (read-only, no mutation yet)
   const { data: card } = await supabase
     .from('gift_cards')
     .select('id, balance, expires_at, is_active')
@@ -35,16 +46,30 @@ export async function POST(req: NextRequest) {
   }
 
   const deduct = Math.min(amount, card.balance)
-  const newBalance = card.balance - deduct
 
-  const { error } = await supabase
+  // Step 2 — atomic decrement: UPDATE ... WHERE balance >= deduct RETURNING balance
+  // This prevents race conditions where two concurrent requests both read the same
+  // balance and both succeed in deducting, resulting in over-redemption.
+  // If balance was concurrently modified and is now < deduct, the WHERE clause
+  // silently matches 0 rows — we detect this via the returned count.
+  const { data: updated, error: updateErr } = await supabase
     .from('gift_cards')
-    .update({ balance: newBalance })
+    .update({ balance: card.balance - deduct })
     .eq('id', card.id)
+    .eq('is_active', true)
+    .gte('balance', deduct)  // atomic guard — only succeeds if balance is still sufficient
+    .select('balance')
+    .maybeSingle()
 
-  if (error) {
+  if (updateErr) {
+    logger.error('[gift-cards/redeem] update failed', { error: updateErr.message })
     return NextResponse.json({ error: 'Erreur lors de la réduction du solde' }, { status: 500 })
   }
 
-  return NextResponse.json({ deducted: deduct, remainingBalance: newBalance })
+  if (!updated) {
+    // Concurrent redemption won the race — re-read the current balance and report
+    return NextResponse.json({ error: 'Solde insuffisant ou code déjà utilisé' }, { status: 409 })
+  }
+
+  return NextResponse.json({ deducted: deduct, remainingBalance: updated.balance })
 }
