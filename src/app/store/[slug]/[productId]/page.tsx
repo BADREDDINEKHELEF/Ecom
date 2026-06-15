@@ -65,7 +65,7 @@ export default async function StoreProductPage({ params }: PageProps) {
 
   const v              = vendor as typeof vendor & VendorExt
   const accent         = v.accent_color ?? '#4f46e5'
-  const vendorWhatsApp = v.social_whatsapp ?? null
+  const vendorWhatsApp = v.social_whatsapp || v.phone || null
 
   const related = await getRelatedProducts(vendor.id, productId)
 

@@ -30,6 +30,7 @@ interface VendorRow {
   seo_title?: string | null
   seo_description?: string | null
   created_at: string
+  phone?: string | null
   social_instagram?: string | null
   social_facebook?: string | null
   social_whatsapp?: string | null
@@ -110,8 +111,9 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
     ? (ratedProducts.reduce((s, p) => s + p.rating, 0) / ratedProducts.length)
     : 0
 
-  const waHref = vendor.social_whatsapp
-    ? `https://wa.me/${vendor.social_whatsapp.replace(/\D/g, '')}`
+  const rawWA = vendor.social_whatsapp || vendor.phone
+  const waHref = rawWA
+    ? (() => { const d = rawWA.replace(/\D/g, ''); return `https://wa.me/${d.startsWith('213') ? d : d.startsWith('0') ? '213' + d.slice(1) : '213' + d}` })()
     : null
 
   const featuredProduct = products.find(p => p.isFeatured) ?? null
