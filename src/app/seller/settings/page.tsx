@@ -40,7 +40,7 @@ export default function SellerSettingsPage() {
   const [vacationSaving, setVacationSaving] = useState(false)
   const [vacationSaved, setVacationSaved] = useState(false)
   const [vacation, setVacation] = useState({ is_on_vacation: false, vacation_message: '' })
-  const [pixels, setPixels] = useState({ meta_pixel_id: '', gtag_id: '' })
+  const [pixels, setPixels] = useState({ meta_pixel_id: '', gtag_id: '', tiktok_pixel_id: '' })
   const [form, setForm] = useState({
     store_name: '', store_slug: '', phone: '', wilaya: '', description: '',
     logo_url: '', banner_url: '', cover_url: '', accent_color: '#4f46e5',
@@ -59,8 +59,9 @@ export default function SellerSettingsPage() {
       vacation_message: vendor.vacation_message ?? '',
     })
     setPixels({
-      meta_pixel_id: vendor.meta_pixel_id ?? '',
-      gtag_id:       vendor.gtag_id ?? '',
+      meta_pixel_id:    vendor.meta_pixel_id ?? '',
+      gtag_id:          vendor.gtag_id ?? '',
+      tiktok_pixel_id:  vendor.tiktok_pixel_id ?? '',
     })
     setForm({
       store_name:       vendor.store_name,
@@ -153,8 +154,9 @@ export default function SellerSettingsPage() {
           low_stock_threshold: form.low_stock_threshold || null,
           return_policy:   form.return_policy || null,
           shipping_policy: form.shipping_policy || null,
-          meta_pixel_id:   pixels.meta_pixel_id || null,
-          gtag_id:         pixels.gtag_id || null,
+          meta_pixel_id:    pixels.meta_pixel_id || null,
+          gtag_id:          pixels.gtag_id || null,
+          tiktok_pixel_id:  pixels.tiktok_pixel_id || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Save failed')
@@ -549,6 +551,17 @@ export default function SellerSettingsPage() {
                     value={pixels.gtag_id}
                     onChange={(e) => setPixels({ ...pixels, gtag_id: e.target.value })}
                     placeholder="G-XXXXXXXXXX ou AW-XXXXXXXXXX"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">TikTok Pixel ID</label>
+                  <input
+                    type="text"
+                    value={pixels.tiktok_pixel_id}
+                    onChange={(e) => setPixels({ ...pixels, tiktok_pixel_id: e.target.value })}
+                    placeholder="CXXXXXXXXXXXXXXXXXX"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-emerald-400"
                   />
                 </div>

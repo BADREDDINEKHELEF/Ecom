@@ -35,6 +35,7 @@ const PatchSchema = z.object({
   // Vendor-specific pixels
   meta_pixel_id:    z.string().max(50).nullable().optional(),
   gtag_id:          z.string().max(50).nullable().optional(),
+  tiktok_pixel_id:  z.string().max(50).nullable().optional(),
 })
 
 export async function PATCH(req: NextRequest) {

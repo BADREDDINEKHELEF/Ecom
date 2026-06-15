@@ -38,6 +38,7 @@ interface VendorRow {
   shipping_policy?: string | null
   meta_pixel_id?: string | null
   gtag_id?: string | null
+  tiktok_pixel_id?: string | null
   pixel_id?: string | null
 }
 
@@ -120,6 +121,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
       <VendorAnalyticsScripts
         metaPixelId={vendor.meta_pixel_id}
         gtagId={vendor.gtag_id}
+        tiktokPixelId={vendor.tiktok_pixel_id}
         pixelId={vendor.pixel_id}
       />
       <ReferralCapture />

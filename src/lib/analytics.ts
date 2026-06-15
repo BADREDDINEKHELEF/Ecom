@@ -10,6 +10,7 @@ declare global {
     gtag?:     (...args: unknown[]) => void
     dataLayer?: unknown[]
     __pixel?:  (event: string, meta?: Record<string, unknown>) => void
+    ttq?:      { track: (event: string, params?: Record<string, unknown>) => void; page: () => void }
   }
 }
 
@@ -22,6 +23,9 @@ function _gtag(...args: unknown[]) {
 function _pixel(event: string, meta?: Record<string, unknown>) {
   try { if (typeof window !== 'undefined') window.__pixel?.(event, meta) } catch {}
 }
+function _ttq(event: string, params?: Record<string, unknown>) {
+  try { if (typeof window !== 'undefined') window.ttq?.track(event, params) } catch {}
+}
 
 // ── Events ─────────────────────────────────────────────────────────────────
 
@@ -29,6 +33,7 @@ export function trackPageView(url: string) {
   _fbq('track', 'PageView')
   _gtag('event', 'page_view', { page_path: url })
   _pixel('PageView', { url })
+  try { if (typeof window !== 'undefined') window.ttq?.page() } catch {}
 }
 
 export function trackViewContent(product: {
@@ -49,6 +54,7 @@ export function trackViewContent(product: {
     items: [{ item_id: product.id, item_name: product.name, price: product.price }],
   })
   _pixel('ViewContent', { product_id: product.id, name: product.name, price: product.price, currency: 'DZD' })
+  _ttq('ViewContent', { content_id: product.id, content_name: product.name, value: product.price, currency: 'DZD' })
 }
 
 export function trackAddToCart(product: {
@@ -82,6 +88,7 @@ export function trackAddToCart(product: {
     value:      product.price * product.quantity,
     currency:   'DZD',
   })
+  _ttq('AddToCart', { content_id: product.id, content_name: product.name, quantity: product.quantity, value: product.price * product.quantity, currency: 'DZD' })
 }
 
 export function trackPurchase(order: {
@@ -113,5 +120,10 @@ export function trackPurchase(order: {
     currency:       'DZD',
     num_items:      order.items.reduce((s, i) => s + i.quantity, 0),
     product_ids:    order.items.map(i => i.id),
+  })
+  _ttq('PlaceAnOrder', {
+    value:    order.total,
+    currency: 'DZD',
+    contents: order.items.map(i => ({ content_id: i.id, content_name: i.name, quantity: i.quantity, price: i.price })),
   })
 }

@@ -1,18 +1,10 @@
 import type { Metadata } from 'next'
 import { Inter, Cairo } from 'next/font/google'
 import './globals.css'
-import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import AnnouncementBanner from '@/components/ui/AnnouncementBanner'
 import CartSidebar from '@/components/shop/CartSidebar'
 import Toaster from '@/components/ui/Toast'
-import WhatsAppButton from '@/components/ui/WhatsAppButton'
 import RTLWrapper from '@/components/layout/RTLWrapper'
-import LocaleBanner from '@/components/ui/LocaleBanner'
-import MobileCartBar from '@/components/layout/MobileCartBar'
-import ExitIntentPopup from '@/components/ui/ExitIntentPopup'
-import SocialProofTicker from '@/components/ui/SocialProofTicker'
-import CompareBar from '@/components/shop/CompareBar'
 import ScrollToTop from '@/components/ui/ScrollToTop'
 import HideOnStore from '@/components/layout/HideOnStore'
 import AnalyticsScripts from '@/components/analytics/AnalyticsScripts'
@@ -54,17 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <RTLWrapper>
-          <HideOnStore><AnnouncementBanner /></HideOnStore>
-          <HideOnStore><Header /></HideOnStore>
-          <HideOnStore><LocaleBanner /></HideOnStore>
           <CartSidebar />
           <Toaster />
-          <WhatsAppButton />
           <main>{children}</main>
-          <HideOnStore><MobileCartBar /></HideOnStore>
-          <HideOnStore><ExitIntentPopup /></HideOnStore>
-          <HideOnStore><SocialProofTicker /></HideOnStore>
-          <HideOnStore><CompareBar /></HideOnStore>
           <ScrollToTop />
           <HideOnStore><Footer /></HideOnStore>
           <PageViewTracker />

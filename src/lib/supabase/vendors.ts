@@ -47,6 +47,7 @@ export interface Vendor {
   // Vendor pixels
   meta_pixel_id?:           string | null
   gtag_id?:                 string | null
+  tiktok_pixel_id?:         string | null
   pixel_id?:                string | null
   // Subscription (denormalized cache)
   subscription_status?:     'trial' | 'active' | 'grace_period' | 'expired' | 'none' | null

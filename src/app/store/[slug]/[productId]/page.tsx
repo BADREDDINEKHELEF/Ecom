@@ -81,6 +81,7 @@ export default async function StoreProductPage({ params }: PageProps) {
       <VendorAnalyticsScripts
         metaPixelId={v.meta_pixel_id}
         gtagId={v.gtag_id}
+        tiktokPixelId={v.tiktok_pixel_id}
         pixelId={v.pixel_id}
       />
 
