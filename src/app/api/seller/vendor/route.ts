@@ -59,7 +59,19 @@ export async function PATCH(req: NextRequest) {
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
 
-    await updateVendor(vendor.id, parsed.data)
+    try {
+      await updateVendor(vendor.id, parsed.data)
+    } catch (dbErr) {
+      // If migration_033 hasn't been applied yet, retry without the new pixel/CAPI columns
+      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr)
+      if (msg.includes('column') && msg.includes('does not exist')) {
+        const { tiktok_pixel_id, meta_capi_token, tiktok_capi_token, gtag_api_secret, ...safe } = parsed.data
+        void tiktok_pixel_id; void meta_capi_token; void tiktok_capi_token; void gtag_api_secret
+        await updateVendor(vendor.id, safe)
+      } else {
+        throw dbErr
+      }
+    }
     return NextResponse.json({ ok: true })
   } catch (err) {
     logger.error('[PATCH /api/seller/vendor]', { error: err instanceof Error ? err.message : String(err) })
