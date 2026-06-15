@@ -382,7 +382,7 @@ export default function SellerSettingsPage() {
                     className={`${INPUT} flex-1`} />
                   {form.phone && (
                     <a
-                      href={`https://wa.me/${form.phone.replace(/\D/g, '')}`}
+                      href={(() => { const d = form.phone.replace(/\D/g, ''); return `https://wa.me/${d.startsWith('213') ? d : d.startsWith('0') ? '213' + d.slice(1) : '213' + d}` })()}
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Tester le lien WhatsApp"
@@ -514,7 +514,7 @@ export default function SellerSettingsPage() {
                     className={`${INPUT} flex-1`} />
                   {form.social_whatsapp && (
                     <a
-                      href={`https://wa.me/${form.social_whatsapp.replace(/\D/g, '')}`}
+                      href={(() => { const d = form.social_whatsapp.replace(/\D/g, ''); return `https://wa.me/${d.startsWith('213') ? d : d.startsWith('0') ? '213' + d.slice(1) : '213' + d}` })()}
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Tester le lien WhatsApp"

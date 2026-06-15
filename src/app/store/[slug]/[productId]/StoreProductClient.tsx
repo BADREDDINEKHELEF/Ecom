@@ -69,7 +69,8 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
 
   const buildWaHref = () => {
     if (!vendorWhatsApp) return null
-    const number = vendorWhatsApp.replace(/\D/g, '')
+    const digits = vendorWhatsApp.replace(/\D/g, '')
+    const number = digits.startsWith('213') ? digits : digits.startsWith('0') ? '213' + digits.slice(1) : '213' + digits
     const total  = formatPrice(product.price * qty)
     const colorLine = selectedColor ? `🎨 *Couleur:* ${selectedColor}\n` : ''
     const msg = encodeURIComponent(

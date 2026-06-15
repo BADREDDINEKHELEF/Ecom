@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
           description:  row['description'] || '',
           price,
           comparePrice: parseFloat(row['compare_price'] || row['prix_compare'] || '0') || undefined,
-          stock:        parseInt(row['stock'] || '1', 10) || 1,
+          stock:        (() => { const s = parseInt(row['stock'] ?? '', 10); return isNaN(s) ? 1 : Math.max(0, s) })(),
           images:       (row['images'] || row['image'] || '').split('|').filter(Boolean),
           tags:         (row['tags'] || '').split('|').filter(Boolean),
           isNew:        false,
