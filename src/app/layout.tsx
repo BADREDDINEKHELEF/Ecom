@@ -7,6 +7,7 @@ import Toaster from '@/components/ui/Toast'
 import RTLWrapper from '@/components/layout/RTLWrapper'
 import ScrollToTop from '@/components/ui/ScrollToTop'
 import HideOnStore from '@/components/layout/HideOnStore'
+import BottomNav from '@/components/layout/BottomNav'
 import AnalyticsScripts from '@/components/analytics/AnalyticsScripts'
 import PageViewTracker from '@/components/analytics/PageViewTracker'
 import PixelLoadingBar from '@/components/effects/PixelLoadingBar'
@@ -25,6 +26,12 @@ export const metadata: Metadata = {
     locale: 'fr_DZ',
     type: 'website',
   },
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5, // never 1 — blocks accessibility zoom
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -48,9 +55,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <RTLWrapper>
           <CartSidebar />
           <Toaster />
-          <main>{children}</main>
+          <main className="pb-16 md:pb-0">{children}</main>
           <ScrollToTop />
           <HideOnStore><Footer /></HideOnStore>
+          <BottomNav />
           <PageViewTracker />
           <PixelLoadingBar />
           <NavigationEvents />

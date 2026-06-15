@@ -11,7 +11,7 @@ export default function CompareBar() {
   if (items.length === 0) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-2xl px-4 py-3">
+    <div className="fixed left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-2xl px-4 py-3" style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }} >
       <div className="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
           {items.map((product) => (

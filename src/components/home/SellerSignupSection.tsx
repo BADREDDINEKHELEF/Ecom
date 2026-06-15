@@ -112,7 +112,7 @@ export default function SellerSignupSection() {
               </div>
             ))}
 
-            <div className="grid grid-cols-3 gap-4 pt-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-4">
               {[
                 { value: '58',       label: t.seller.wilayasCovered },
                 { value: '2 000 DA', label: t.seller.commissionOnly },

@@ -165,7 +165,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
         }`}
       >
         {/* Frosted glass bar */}
-        <div className="bg-white/90 backdrop-blur-xl border-t border-black/[0.08] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-3">
+        <div className="bg-white/90 backdrop-blur-xl border-t border-black/[0.08] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-4 pt-3 pb-safe-4 flex items-center gap-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="flex-shrink-0 min-w-0">
             <p className="text-base font-black text-[#1d1d1f] tabular-nums leading-tight">
               {formatPrice(product.price * qty)}

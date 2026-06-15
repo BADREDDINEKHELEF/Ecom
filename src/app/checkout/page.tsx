@@ -486,6 +486,8 @@ export default function CheckoutPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.fullName}</label>
                 <input required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
                   placeholder="Mohammed Amiri"
+                  autoComplete="name"
+                  inputMode="text"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
               <div>
@@ -536,6 +538,8 @@ export default function CheckoutPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.address}</label>
                 <input required type="text" value={form.address} onChange={(e) => f('address', e.target.value)}
                   placeholder="123 Rue Didouche Mourad"
+                  autoComplete="street-address"
+                  inputMode="text"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
               <div className="sm:col-span-2">

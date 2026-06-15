@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Store, Plus, ExternalLink, CheckCircle2, XCircle, Clock,
   Settings, AlertCircle, RefreshCw, Crown, Zap, ChevronRight, Menu,
@@ -218,7 +219,7 @@ export default function SellerStoresPage() {
                         isCurrentStore ? 'bg-emerald-100' : 'bg-gray-100'
                       }`}>
                         {store.logo_url
-                          ? <img src={store.logo_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                          ? <Image src={store.logo_url} alt={store.store_name} width={48} height={48} className="w-full h-full rounded-xl object-cover" />
                           : <Store className={`w-6 h-6 ${isCurrentStore ? 'text-emerald-600' : 'text-gray-400'}`} />
                         }
                       </div>

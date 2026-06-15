@@ -600,7 +600,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
 
       {/* Mobile sticky CTA bar */}
       {product.stock > 0 && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 pt-3 pb-4 shadow-[0_-8px_30px_rgba(0,0,0,0.10)]">
+        <div className="md:hidden fixed left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.10)]" style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', paddingBottom: 'calc(0.75rem)' }}>
           {/* Price line */}
           <div className="flex items-baseline gap-2 mb-2.5">
             <span className="text-lg font-black text-gray-900">{formatPrice(product.price * quantity)}</span>

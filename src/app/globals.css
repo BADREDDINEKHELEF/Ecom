@@ -3,18 +3,33 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Mobile-first resets ─────────────────────────────────── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   html {
     scroll-behavior: smooth;
     font-family: var(--font-inter), system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
-  /* Switch to Cairo for Arabic — applies automatically when RTLWrapper sets dir="rtl" */
   html[dir="rtl"] {
     font-family: var(--font-cairo), 'Cairo', sans-serif;
   }
 
   body {
     @apply antialiased text-gray-900 bg-gray-50;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Prevent iOS zoom on input focus — never go below 16px */
+  input, select, textarea {
+    font-size: 16px;
   }
 
   .dark body {
@@ -34,27 +49,21 @@
     background-color: #1e293b !important;
     color: #f1f5f9 !important;
   }
-
-  * {
-    @apply box-border;
-  }
 }
 
 /* ── RTL layout helpers ─────────────────────────────────────────── */
 
-/* Flip left/right positioned elements in RTL */
 [dir="rtl"] .rtl-flip {
   transform: scaleX(-1);
 }
 
-/* Ensure inputs and textareas align correctly in Arabic */
 [dir="rtl"] input,
 [dir="rtl"] textarea,
 [dir="rtl"] select {
   text-align: right;
 }
 
-/* Keep numbers and phone inputs LTR even in RTL mode */
+/* Keep numbers/phone LTR even in RTL */
 [dir="rtl"] input[type="tel"],
 [dir="rtl"] input[type="number"],
 [dir="rtl"] input[type="email"] {
@@ -69,6 +78,18 @@
   }
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe-4 {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Hide scrollbar cross-browser */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   .line-clamp-2 {

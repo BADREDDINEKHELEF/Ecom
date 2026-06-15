@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Image from 'next/image'
 import { ImagePlus, X, Loader2 } from 'lucide-react'
 
 interface Props {
@@ -52,8 +53,7 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
             <Loader2 className="w-6 h-6 text-emerald-500 animate-spin" />
           </div>
         ) : value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt="Logo" className="w-full h-full object-cover" />
+          <Image src={value} alt="Logo" width={120} height={120} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 group-hover:text-emerald-500 transition-colors">
             <ImagePlus className="w-6 h-6" />
