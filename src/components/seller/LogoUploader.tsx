@@ -16,7 +16,7 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) { setError('Image uniquement'); return }
+    if (file.type && !file.type.startsWith('image/')) { setError('Image uniquement'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Max 5 Mo'); return }
     setError('')
     setUploading(true)

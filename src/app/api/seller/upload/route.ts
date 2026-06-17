@@ -3,7 +3,6 @@ import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 
 export async function POST(req: NextRequest) {
@@ -35,10 +34,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // Validate type
-    if (!ALLOWED_TYPES.has(file.type)) {
+    // Validate type — client always uploads as image/webp after compression
+    if (file.type && !file.type.startsWith('image/')) {
       return NextResponse.json(
-        { error: `Format non supporté. Utilisez JPG, PNG ou WebP.` },
+        { error: `Format non supporté. Utilisez une image.` },
         { status: 400 }
       )
     }

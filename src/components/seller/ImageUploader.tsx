@@ -57,7 +57,7 @@ async function compressToWebP(file: File, maxPx = 1400, quality = 0.85): Promise
   })
 }
 
-const ALLOWED = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'])
+function isAllowedImage(type: string) { return type.startsWith('image/') || type === '' }
 const MAX_MB  = 10
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ export default function ImageUploader({ value, onChange, maxImages = 8 }: Props)
 
   const processFiles = useCallback((files: File[]) => {
     const valid = files.filter((f) => {
-      if (!ALLOWED.has(f.type)) return false
+      if (!isAllowedImage(f.type)) return false
       if (f.size > MAX_MB * 1024 * 1024) return false
       return true
     })
