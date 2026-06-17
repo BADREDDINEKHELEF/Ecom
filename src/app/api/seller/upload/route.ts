@@ -10,16 +10,26 @@ export async function POST(req: NextRequest) {
     // Auth — verify session via route client (reads cookies from request)
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) {
+      logger.warn('[upload] auth failed', { error: authErr?.message })
+      return NextResponse.json({ error: 'Non connecté. Reconnectez-vous.' }, { status: 401 })
+    }
 
-    // Vendor lookup via admin client — avoids relying on browser-client RLS in a server context
+    // Vendor lookup via admin client
     const admin = createAdminClient()
-    const { data: vendorRow } = await admin
+    const { data: vendorRow, error: vendorErr } = await admin
       .from('vendors')
       .select('id')
       .eq('user_id', user.id)
-      .single()
-    if (!vendorRow) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      .maybeSingle()
+    if (vendorErr) {
+      logger.error('[upload] vendor lookup error', { error: vendorErr.message, userId: user.id })
+      return NextResponse.json({ error: 'Erreur serveur. Réessayez.' }, { status: 500 })
+    }
+    if (!vendorRow) {
+      logger.warn('[upload] no vendor for user', { userId: user.id })
+      return NextResponse.json({ error: 'Compte vendeur introuvable.' }, { status: 403 })
+    }
 
     // Parse multipart
     let formData: FormData
