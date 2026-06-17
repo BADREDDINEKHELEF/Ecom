@@ -25,6 +25,7 @@ export interface Product {
   price: number
   comparePrice?: number
   images: string[]
+  imageColors?: string[]
   stock: number
   rating: number
   reviewCount: number

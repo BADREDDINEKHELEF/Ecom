@@ -20,6 +20,7 @@ export async function upsertProduct(
     price:         product.price,
     compare_price: product.comparePrice ?? null,
     images:        product.images,
+    image_colors:  product.imageColors ?? [],
     stock:         product.stock,
     tags:          product.tags,
     is_new:        product.isNew ?? false,

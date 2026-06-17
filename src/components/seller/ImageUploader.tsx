@@ -10,17 +10,35 @@ import { ImagePlus, X, Loader2, AlertCircle, GripVertical, CheckCircle2 } from '
 
 interface ImageItem {
   id:         string
-  previewUrl: string   // blob URL (local) or remote URL (already uploaded)
-  finalUrl:   string | null  // null while uploading
+  previewUrl: string
+  finalUrl:   string | null
   uploading:  boolean
   error?:     string
+  color?:     string
 }
 
 interface Props {
-  value:       string[]
-  onChange:    (urls: string[]) => void
-  maxImages?:  number
+  value:             string[]
+  onChange:          (urls: string[]) => void
+  colors?:           string[]
+  onColorsChange?:   (colors: string[]) => void
+  maxImages?:        number
 }
+
+const COLOR_PRESETS = [
+  { label: 'Blanc',   hex: '#F9FAFB', border: true  },
+  { label: 'Noir',    hex: '#111827', border: false  },
+  { label: 'Gris',    hex: '#9CA3AF', border: false  },
+  { label: 'Beige',   hex: '#D4B896', border: false  },
+  { label: 'Marron',  hex: '#92400E', border: false  },
+  { label: 'Rouge',   hex: '#EF4444', border: false  },
+  { label: 'Rose',    hex: '#EC4899', border: false  },
+  { label: 'Orange',  hex: '#F97316', border: false  },
+  { label: 'Jaune',   hex: '#EAB308', border: false  },
+  { label: 'Vert',    hex: '#22C55E', border: false  },
+  { label: 'Bleu',    hex: '#3B82F6', border: false  },
+  { label: 'Violet',  hex: '#8B5CF6', border: false  },
+]
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -62,9 +80,9 @@ const MAX_MB  = 10
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function ImageUploader({ value, onChange, maxImages = 8 }: Props) {
+export default function ImageUploader({ value, onChange, colors, onColorsChange, maxImages = 8 }: Props) {
   const [items, setItems] = useState<ImageItem[]>(() =>
-    value.map((url) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false }))
+    value.map((url, i) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false, color: colors?.[i] ?? '' }))
   )
   const [isDragOver,  setIsDragOver]  = useState(false)
   const [dropTarget,  setDropTarget]  = useState<number | null>(null)
@@ -73,8 +91,10 @@ export default function ImageUploader({ value, onChange, maxImages = 8 }: Props)
 
   // Sync finalUrl list → parent whenever items change
   const syncParent = useCallback((next: ImageItem[]) => {
-    onChange(next.filter((i) => i.finalUrl).map((i) => i.finalUrl!))
-  }, [onChange])
+    const uploaded = next.filter(i => i.finalUrl)
+    onChange(uploaded.map(i => i.finalUrl!))
+    if (onColorsChange) onColorsChange(uploaded.map(i => i.color ?? ''))
+  }, [onChange, onColorsChange])
 
   // Re-init when `value` array identity changes AND we're not mid-upload
   // (parent uses key=editing?.id to force remount instead, but this is a safety net)
@@ -203,9 +223,16 @@ export default function ImageUploader({ value, onChange, maxImages = 8 }: Props)
   }
 
   const retryItem = (id: string, idx: number) => {
-    // Can't retry without the original File; just remove so user can re-add
     removeItem(id)
-    void idx // lint
+    void idx
+  }
+
+  const setItemColor = (id: string, color: string) => {
+    setItems(prev => {
+      const next = prev.map(it => it.id === id ? { ...it, color: it.color === color ? '' : color } : it)
+      syncParent(next)
+      return next
+    })
   }
 
   const canAdd = items.length < maxImages
@@ -263,8 +290,8 @@ export default function ImageUploader({ value, onChange, maxImages = 8 }: Props)
       {items.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {items.map((item, idx) => (
+            <div key={item.id} className="flex flex-col gap-1.5">
             <div
-              key={item.id}
               draggable={!item.uploading}
               onDragStart={(e) => handleItemDragStart(e, idx)}
               onDragOver={(e) => handleItemDragOver(e, idx)}
@@ -346,6 +373,36 @@ export default function ImageUploader({ value, onChange, maxImages = 8 }: Props)
                   <X className="w-3 h-3" />
                 </button>
               )}
+
+              {/* Selected color badge on image */}
+              {item.color && !item.uploading && !item.error && (
+                <span className="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-sm">
+                  {item.color}
+                </span>
+              )}
+            </div>
+
+            {/* Color swatch picker — only when multiple images & uploaded */}
+            {onColorsChange && items.length > 1 && !item.uploading && !item.error && (
+              <div className="flex flex-wrap gap-1 justify-center px-0.5">
+                {COLOR_PRESETS.map(c => (
+                  <button
+                    key={c.label}
+                    type="button"
+                    title={c.label}
+                    onClick={() => setItemColor(item.id, c.label)}
+                    className={[
+                      'w-4 h-4 rounded-full transition-all duration-150',
+                      c.border ? 'border border-gray-300' : '',
+                      item.color === c.label
+                        ? 'ring-2 ring-offset-1 ring-gray-700 scale-125'
+                        : 'hover:scale-110',
+                    ].join(' ')}
+                    style={{ background: c.hex }}
+                  />
+                ))}
+              </div>
+            )}
             </div>
           ))}
 

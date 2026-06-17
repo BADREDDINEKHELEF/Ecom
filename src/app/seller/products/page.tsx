@@ -20,7 +20,7 @@ import type { Product, ColorVariant } from '@/types'
 
 const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',
-  price: 0, comparePrice: 0, stock: 1, tags: '', images: [] as string[],
+  price: 0, comparePrice: 0, stock: 1, tags: '', images: [] as string[], imageColors: [] as string[],
   isNew: false, isFeatured: false, hasVariants: false,
   condition: 'new' as 'new' | 'used' | 'refurbished',
   metaTitle: '', metaDescription: '',
@@ -64,7 +64,7 @@ export default function SellerProductsPage() {
     setForm({
       id: p.id, nicheId: p.nicheId, category: p.category, name: p.name,
       description: p.description, price: p.price, comparePrice: p.comparePrice || 0,
-      stock: p.stock, tags: p.tags.join(', '), images: p.images,
+      stock: p.stock, tags: p.tags.join(', '), images: p.images, imageColors: p.imageColors ?? [],
       isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false, hasVariants: false,
       condition: p.condition ?? 'new',
       metaTitle: p.metaTitle ?? '',
@@ -110,6 +110,7 @@ export default function SellerProductsPage() {
         price: form.price,
         comparePrice: form.comparePrice || undefined,
         images: form.images,
+        imageColors: form.imageColors.length ? form.imageColors : undefined,
         stock: form.stock,
         tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean),
         isNew: form.isNew,
@@ -217,6 +218,8 @@ export default function SellerProductsPage() {
                   key={editing?.id ?? 'new'}
                   value={form.images}
                   onChange={(urls) => setForm((prev) => ({ ...prev, images: urls }))}
+                  colors={form.imageColors}
+                  onColorsChange={(c) => setForm((prev) => ({ ...prev, imageColors: c }))}
                   maxImages={8}
                 />
               </div>

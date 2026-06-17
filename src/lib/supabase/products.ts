@@ -13,6 +13,7 @@ export function dbToProduct(row: Record<string, unknown>): Product {
     price:           Number(row.price),
     comparePrice:    row.compare_price != null ? Number(row.compare_price) : undefined,
     images:          (row.images as string[]) ?? [],
+    imageColors:     (row.image_colors as string[] | null)?.length ? (row.image_colors as string[]) : undefined,
     stock:           Number(row.stock ?? 0),
     rating:          Number(row.rating ?? 0),
     reviewCount:     Number(row.review_count ?? 0),
