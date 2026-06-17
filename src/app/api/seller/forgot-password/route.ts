@@ -1,42 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendPasswordResetEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
+
+function normalizePhone(raw: string): string {
+  const d = raw.replace(/\D/g, '')
+  if (d.startsWith('213')) return d
+  if (d.startsWith('0'))   return '213' + d.slice(1)
+  return '213' + d
+}
+
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+async function sendWhatsAppOTP(phone: string, otp: string): Promise<void> {
+  const sid   = process.env.TWILIO_ACCOUNT_SID
+  const token = process.env.TWILIO_AUTH_TOKEN
+  const from  = process.env.TWILIO_WHATSAPP_FROM // e.g. +14155238886
+
+  if (!sid || !token || !from) throw new Error('Twilio not configured')
+
+  const body = `🔐 *ShopDZ* — Code de réinitialisation : *${otp}*\n\nValide 5 minutes. Ne partagez jamais ce code.`
+
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        From: `whatsapp:+${from.replace(/\D/g, '')}`,
+        To:   `whatsapp:+${phone}`,
+        Body: body,
+      }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(`Twilio error ${res.status}: ${err.message ?? 'unknown'}`)
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json() as { email?: string }
-    if (!email || !email.includes('@')) {
-      return NextResponse.json({ error: 'Adresse e-mail invalide.' }, { status: 400 })
-    }
+    const { phone } = await req.json() as { phone?: string }
+    if (!phone) return NextResponse.json({ error: 'Numéro de téléphone requis.' }, { status: 400 })
 
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const redirectTo = `${origin}/seller/reset-password`
+    const normalized = normalizePhone(phone)
+    if (normalized.length < 11) {
+      return NextResponse.json({ error: 'Numéro de téléphone invalide.' }, { status: 400 })
+    }
 
     const supabase = createAdminClient()
 
-    // Generate a Supabase recovery link without sending an email
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo },
-    })
+    // Check vendor exists with this phone
+    const { data: vendor } = await supabase
+      .from('vendors')
+      .select('id, phone')
+      .eq('phone', phone)
+      .maybeSingle()
 
-    if (error) {
-      // Don't reveal whether the email exists — always return success
-      logger.warn('[forgot-password] generateLink failed', { error: error.message })
+    // Also try normalized format
+    const { data: vendorNorm } = !vendor ? await supabase
+      .from('vendors')
+      .select('id, phone')
+      .ilike('phone', `%${normalized.slice(-9)}`)
+      .maybeSingle() : { data: null }
+
+    // Always return success — don't leak which phones are registered
+    if (!vendor && !vendorNorm) {
+      logger.warn('[forgot-password] phone not found', { phone: normalized })
       return NextResponse.json({ success: true })
     }
 
-    const resetLink = data?.properties?.action_link
-    if (resetLink) {
-      await sendPasswordResetEmail({ to: email, resetLink })
-    }
+    // Delete old unused OTPs for this phone
+    await supabase
+      .from('password_reset_otps')
+      .delete()
+      .eq('phone', normalized)
+
+    // Generate and store OTP
+    const otp = generateOTP()
+    await supabase.from('password_reset_otps').insert({
+      phone:      normalized,
+      otp,
+      expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    })
+
+    // Send via WhatsApp
+    await sendWhatsAppOTP(normalized, otp)
+    logger.info('[forgot-password] OTP sent', { phone: normalized })
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    logger.error('[POST /api/seller/forgot-password]', { error: err instanceof Error ? err.message : String(err) })
-    // Always return success to avoid leaking info about which emails exist
-    return NextResponse.json({ success: true })
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error('[POST /api/seller/forgot-password]', { error: msg })
+    if (process.env.NODE_ENV === 'development') {
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
+    return NextResponse.json({ error: 'Impossible d\'envoyer le code. Réessayez.' }, { status: 500 })
   }
 }
