@@ -74,13 +74,23 @@ export default function SellerLoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.auth.resetPasswordForEmail(form.email, {
-      redirectTo: `${window.location.origin}/seller/reset-password`,
-    })
-    setLoading(false)
-    if (err) { setError(friendlyAuthError(err.message)); return }
-    setForgotSent(true)
+    try {
+      const res = await fetch('/api/seller/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError(body.error ?? 'Une erreur est survenue. Réessayez.')
+        return
+      }
+      setForgotSent(true)
+    } catch {
+      setError('Erreur de connexion. Vérifiez votre accès internet.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const switchView = (v: View) => { setView(v); setError(''); setForgotSent(false) }

@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 
 const RESEND_API = 'https://api.resend.com/emails'
-const FROM = 'ShopDZ <noreply@shopdz.dz>'
+const FROM = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const key = process.env.RESEND_API_KEY
@@ -16,6 +16,36 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
     const text = await res.text().catch(() => '')
     throw new Error(`Resend ${res.status}: ${text}`)
   }
+}
+
+export async function sendPasswordResetEmail(opts: {
+  to: string
+  resetLink: string
+}): Promise<void> {
+  await sendEmail(
+    opts.to,
+    'Réinitialisation de votre mot de passe ShopDZ',
+    `
+    <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px;background:#fff">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="display:inline-block;background:#059669;border-radius:12px;padding:12px 20px">
+          <span style="color:#fff;font-size:20px;font-weight:900">ShopDZ</span>
+        </div>
+      </div>
+      <h2 style="color:#111827;font-size:22px;margin:0 0 8px">Réinitialiser votre mot de passe</h2>
+      <p style="color:#6b7280;margin:0 0 24px">Vous avez demandé à réinitialiser votre mot de passe vendeur. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.</p>
+      <div style="text-align:center;margin:32px 0">
+        <a href="${opts.resetLink}"
+           style="display:inline-block;background:#059669;color:#ffffff;font-weight:700;font-size:16px;padding:14px 32px;border-radius:12px;text-decoration:none">
+          Réinitialiser mon mot de passe
+        </a>
+      </div>
+      <p style="color:#9ca3af;font-size:13px;margin:24px 0 0">Ce lien expire dans 1 heure. Si vous n'avez pas demandé de réinitialisation, ignorez cet e-mail — votre compte est en sécurité.</p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+      <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0">ShopDZ — La marketplace algérienne</p>
+    </div>
+    `,
+  )
 }
 
 export async function sendOrderConfirmationEmail(opts: {
