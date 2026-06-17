@@ -36,19 +36,38 @@ export default function ProductDetails({ product, niche, related }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [added, setAdded] = useState(false)
-  const productColors = useMemo(
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
+
+  // colorVariants (full system: name + hex + images[]) takes priority over imageColors (simple parallel array)
+  const colorVariants = product.colorVariants ?? []
+  const hasColorVariants = colorVariants.length > 0
+
+  // simple imageColors fallback: parallel array with main images
+  const simpleColors = useMemo(
     () => [...new Set((product.imageColors ?? []).filter(Boolean))],
     [product.imageColors]
   )
-  const needsColor = productColors.length > 0
-  const [selectedColor, setSelectedColor] = useState<string | null>(null)
+
+  const needsColor = hasColorVariants || simpleColors.length > 0
+
+  // The active variant (when using full colorVariants system)
+  const activeVariant = useMemo(
+    () => colorVariants.find(v => v.name === selectedColor) ?? null,
+    [colorVariants, selectedColor]
+  )
+
+  // Images to display: use active variant's images if available, else product.images
+  const displayImages = useMemo(() => {
+    if (activeVariant && activeVariant.images.length > 0) return activeVariant.images
+    return product.images
+  }, [activeVariant, product.images])
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
 
   const openLightbox = (i: number) => { setLightboxIndex(i); setLightboxOpen(true) }
   const closeLightbox = () => setLightboxOpen(false)
-  const prevImage = () => setLightboxIndex((i) => (i - 1 + product.images.length) % product.images.length)
-  const nextImage = () => setLightboxIndex((i) => (i + 1) % product.images.length)
+  const prevImage = () => setLightboxIndex((i) => (i - 1 + displayImages.length) % displayImages.length)
+  const nextImage = () => setLightboxIndex((i) => (i + 1) % displayImages.length)
 
   const [zoomed, setZoomed] = useState(false)
   const [zoomOrigin, setZoomOrigin] = useState('center center')
@@ -189,7 +208,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
             }}
           >
             <Image
-              src={product.images[selectedImage]}
+              src={displayImages[selectedImage]}
               alt={product.name}
               fill
               className={`object-cover transition-transform duration-150 ${zoomed ? 'scale-[2]' : 'scale-100'}`}
@@ -211,7 +230,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
           {/* Mobile image — tap to open lightbox */}
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 md:hidden" onClick={() => openLightbox(selectedImage)}>
             <Image
-              src={product.images[selectedImage]}
+              src={displayImages[selectedImage]}
               alt={product.name}
               fill
               className="object-cover"
@@ -226,9 +245,9 @@ export default function ProductDetails({ product, niche, related }: Props) {
             )}
           </div>
 
-          {product.images.length > 1 && (
+          {displayImages.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {product.images.map((img, i) => (
+              {displayImages.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
@@ -308,53 +327,79 @@ export default function ProductDetails({ product, niche, related }: Props) {
           })()}
 
           {/* Color swatches — auto-switch main image */}
-          {/* Color selector — required when product has color variants */}
-          {needsColor && (() => {
-            const COLOR_HEX: Record<string, string> = {
-              Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
-              Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
-              Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
-            }
-            const ic = product.imageColors ?? []
-            return (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-800">Couleur :</span>
-                  {selectedColor
-                    ? <span className="text-sm font-bold text-gray-900">{selectedColor}</span>
-                    : <span className="text-sm text-red-500 font-medium">Choisissez une couleur</span>
-                  }
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {productColors.map(color => {
-                    const idx = ic.indexOf(color)
-                    const isActive = selectedColor === color
-                    return (
-                      <button
-                        key={color}
-                        type="button"
-                        title={color}
-                        onClick={() => {
-                          if (!isActive) {
-                            setSelectedColor(color)
-                            if (idx !== -1) setSelectedImage(idx)
-                          }
-                        }}
-                        className={[
-                          'w-9 h-9 rounded-full transition-all duration-150',
-                          color === 'Blanc' ? 'border border-gray-300' : '',
-                          isActive
-                            ? 'ring-2 ring-offset-2 ring-gray-800 scale-110'
-                            : 'hover:scale-110 opacity-70 hover:opacity-100',
-                        ].join(' ')}
-                        style={{ background: COLOR_HEX[color] ?? '#9CA3AF' }}
-                      />
-                    )
-                  })}
-                </div>
+          {/* Color selector — required before buying */}
+          {needsColor && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-800">Couleur :</span>
+                {selectedColor
+                  ? <span className="text-sm font-bold text-gray-900">{selectedColor}</span>
+                  : <span className="text-sm text-red-500 font-medium">Choisissez une couleur</span>
+                }
               </div>
-            )
-          })()}
+              <div className="flex flex-wrap gap-3">
+                {hasColorVariants
+                  /* Full color variant system: name + hex + own images */
+                  ? colorVariants.map(v => {
+                      const isActive = selectedColor === v.name
+                      return (
+                        <button
+                          key={v.name}
+                          type="button"
+                          title={v.name}
+                          onClick={() => {
+                            if (!isActive) {
+                              setSelectedColor(v.name)
+                              setSelectedImage(0)
+                            }
+                          }}
+                          className={[
+                            'w-9 h-9 rounded-full transition-all duration-150 border-2',
+                            isActive
+                              ? 'ring-2 ring-offset-2 ring-gray-800 scale-110 border-transparent'
+                              : 'border-gray-200 hover:scale-110 opacity-80 hover:opacity-100',
+                          ].join(' ')}
+                          style={{ background: v.hex }}
+                        />
+                      )
+                    })
+                  /* Simple imageColors system: parallel array */
+                  : (() => {
+                      const COLOR_HEX: Record<string, string> = {
+                        Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
+                        Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
+                        Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
+                      }
+                      const ic = product.imageColors ?? []
+                      return simpleColors.map(color => {
+                        const idx = ic.indexOf(color)
+                        const isActive = selectedColor === color
+                        return (
+                          <button
+                            key={color}
+                            type="button"
+                            title={color}
+                            onClick={() => {
+                              if (!isActive) {
+                                setSelectedColor(color)
+                                if (idx !== -1) setSelectedImage(idx)
+                              }
+                            }}
+                            className={[
+                              'w-9 h-9 rounded-full transition-all duration-150 border-2',
+                              isActive
+                                ? 'ring-2 ring-offset-2 ring-gray-800 scale-110 border-transparent'
+                                : 'border-gray-200 hover:scale-110 opacity-80 hover:opacity-100',
+                            ].join(' ')}
+                            style={{ background: COLOR_HEX[color] ?? '#9CA3AF' }}
+                          />
+                        )
+                      })
+                    })()
+                }
+              </div>
+            </div>
+          )}
 
           {/* Viewing now */}
           <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -513,7 +558,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
       {/* Lightbox */}
       {lightboxOpen && (
         <ImageLightbox
-          images={product.images}
+          images={displayImages}
           index={lightboxIndex}
           onClose={closeLightbox}
           onPrev={prevImage}
