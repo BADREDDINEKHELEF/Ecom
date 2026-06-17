@@ -20,8 +20,6 @@ async function sendWhatsAppOTP(phone: string, otp: string): Promise<void> {
 
   if (!sid || !token || !from) throw new Error('Twilio not configured')
 
-  const body = `🔐 *ShopDZ* — Code de réinitialisation : *${otp}*\n\nValide 5 minutes. Ne partagez jamais ce code.`
-
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
     {
@@ -31,9 +29,10 @@ async function sendWhatsAppOTP(phone: string, otp: string): Promise<void> {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        From: `whatsapp:+${from.replace(/\D/g, '')}`,
-        To:   `whatsapp:+${phone}`,
-        Body: body,
+        From:             `whatsapp:+${from.replace(/\D/g, '')}`,
+        To:               `whatsapp:+${phone}`,
+        ContentSid:       'HX229f5a04fd0510ce1b071852155d3e75',
+        ContentVariables: JSON.stringify({ '1': otp }),
       }),
     }
   )
