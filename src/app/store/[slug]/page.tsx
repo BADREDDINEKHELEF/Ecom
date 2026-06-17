@@ -10,9 +10,12 @@ import { getVendorBySlug } from '@/lib/supabase/vendors'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbToProduct } from '@/lib/supabase/products'
 import { Product } from '@/types'
+import { niches as staticNiches } from '@/lib/data/niches'
 import ReferralCapture from '@/components/ui/ReferralCapture'
 import StoreProductsGrid from './StoreProductsGrid'
 import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
+
+export type StoreNiche = { id: string; name: string; emoji: string }
 
 interface VendorRow {
   id: string
@@ -43,7 +46,11 @@ interface VendorRow {
   pixel_id?: string | null
 }
 
-async function getStoreProducts(vendorId: string): Promise<{ products: Product[]; totalOrders: number }> {
+async function getStoreProducts(vendorId: string): Promise<{
+  products: Product[]
+  totalOrders: number
+  storeNiches: StoreNiche[]
+}> {
   const supabase = createAdminClient()
   const [{ data: products }, { count }] = await Promise.all([
     supabase
@@ -59,10 +66,29 @@ async function getStoreProducts(vendorId: string): Promise<{ products: Product[]
       .eq('vendor_id', vendorId)
       .eq('status', 'delivered'),
   ])
-  return {
-    products:    (products ?? []).map(dbToProduct),
-    totalOrders: count ?? 0,
+
+  const mapped = (products ?? []).map(dbToProduct)
+
+  // Collect unique niche IDs used by this store
+  const nicheIds = [...new Set(mapped.map(p => p.nicheId).filter(Boolean))]
+
+  let storeNiches: StoreNiche[] = []
+  if (nicheIds.length > 1) {
+    // Try DB niches first, fall back to static config
+    const { data: dbNiches } = await supabase
+      .from('niches')
+      .select('id, name, emoji')
+      .in('id', nicheIds)
+
+    storeNiches = nicheIds.map(id => {
+      const db = (dbNiches ?? []).find(n => n.id === id)
+      if (db) return { id: db.id, name: db.name, emoji: db.emoji ?? '🛒' }
+      const stat = staticNiches.find(n => n.id === id)
+      return stat ? { id: stat.id, name: stat.name, emoji: stat.emoji } : { id, name: id, emoji: '🛒' }
+    })
   }
+
+  return { products: mapped, totalOrders: count ?? 0, storeNiches }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -103,7 +129,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
   const vendor = await getVendorBySlug(slug) as VendorRow | null
   if (!vendor) notFound()
 
-  const { products, totalOrders } = await getStoreProducts(vendor.id)
+  const { products, totalOrders, storeNiches } = await getStoreProducts(vendor.id)
   const accent = vendor.accent_color ?? '#4f46e5'
 
   const ratedProducts = products.filter(p => p.rating > 0)
@@ -402,6 +428,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
               products={products}
               accent={accent}
               storeSlug={vendor.store_slug}
+              storeNiches={storeNiches}
             />
           </>
         )}

@@ -6,49 +6,54 @@ import Image from 'next/image'
 import { Package } from 'lucide-react'
 import { Product } from '@/types'
 import { formatPrice } from '@/lib/utils'
+import type { StoreNiche } from './page'
 
 interface Props {
   products: Product[]
   accent: string
   storeSlug: string
+  storeNiches?: StoreNiche[]
 }
 
-type Tab = 'all' | 'new' | 'sale'
-
-export default function StoreProductsGrid({ products, accent, storeSlug }: Props) {
-  const [tab, setTab] = useState<Tab>('all')
+export default function StoreProductsGrid({ products, accent, storeSlug, storeNiches = [] }: Props) {
+  const [tab, setTab] = useState('all')
 
   const newProducts  = products.filter(p => p.isNew)
   const saleProducts = products.filter(p => p.comparePrice && p.comparePrice > p.price)
 
-  const visible =
-    tab === 'new'  ? newProducts  :
-    tab === 'sale' ? saleProducts :
-    products
+  const visible = (() => {
+    if (tab === 'new')  return newProducts
+    if (tab === 'sale') return saleProducts
+    const niche = storeNiches.find(n => n.id === tab)
+    if (niche) return products.filter(p => p.nicheId === tab)
+    return products
+  })()
 
-  const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: 'all',  label: 'Tout',       count: products.length },
-    ...(newProducts.length  > 0 ? [{ id: 'new'  as Tab, label: 'Nouveautés', count: newProducts.length  }] : []),
-    ...(saleProducts.length > 0 ? [{ id: 'sale' as Tab, label: 'Promotions',  count: saleProducts.length }] : []),
+  const tabs = [
+    { id: 'all', label: 'Tout', count: products.length, emoji: '' },
+    ...storeNiches.map(n => ({ id: n.id, label: n.name, count: products.filter(p => p.nicheId === n.id).length, emoji: n.emoji })),
+    ...(newProducts.length  > 0 ? [{ id: 'new',  label: 'Nouveautés', count: newProducts.length,  emoji: '✨' }] : []),
+    ...(saleProducts.length > 0 ? [{ id: 'sale', label: 'Promotions',  count: saleProducts.length, emoji: '🏷️' }] : []),
   ]
 
   return (
     <div>
-      {/* Apple-style pill tabs */}
+      {/* Pill tabs — niches + filters */}
       {tabs.length > 1 && (
-        <div className="flex gap-2 mb-8 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-shrink-0 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                 tab === t.id
-                  ? 'bg-[#1d1d1f] text-white'
+                  ? 'bg-[#1d1d1f] text-white shadow-sm'
                   : 'bg-[#f5f5f7] text-[#6e6e73] hover:bg-[#e8e8ed]'
               }`}
             >
+              {t.emoji && <span>{t.emoji}</span>}
               {t.label}
-              {t.id !== 'all' && ` (${t.count})`}
+              {t.id !== 'all' && <span className={`text-xs ${tab === t.id ? 'text-white/60' : 'text-[#aeaeb2]'}`}>{t.count}</span>}
             </button>
           ))}
         </div>
