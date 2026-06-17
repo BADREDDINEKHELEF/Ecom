@@ -267,6 +267,14 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
 
   const retryItem = (id: string) => removeItem(id)
 
+  const setItemColor = (id: string, color: string) => {
+    setItems(prev => {
+      const next = prev.map(it => it.id === id ? { ...it, color: it.color === color ? '' : color } : it)
+      syncParent(next)
+      return next
+    })
+  }
+
   const canAdd    = items.length < maxImages
   const uploading = items.some((i) => i.uploading)
 
@@ -323,83 +331,109 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
       {items.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {items.map((item, idx) => (
-            <div
-              key={item.id}
-              draggable={!item.uploading}
-              onDragStart={(e) => handleItemDragStart(e, idx)}
-              onDragOver={(e) => handleItemDragOver(e, idx)}
-              onDrop={(e) => handleItemDrop(e, idx)}
-              onDragEnd={() => { dragItemIdx.current = null; setDropTarget(null) }}
-              className={[
-                'relative aspect-square rounded-xl overflow-hidden bg-gray-100 group',
-                'transition-all duration-150',
-                !item.uploading ? 'cursor-grab active:cursor-grabbing' : 'cursor-wait',
-                dropTarget === idx && dragItemIdx.current !== idx
-                  ? 'ring-2 ring-emerald-400 ring-offset-1 scale-[0.96]'
-                  : '',
-              ].join(' ')}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={item.previewUrl} alt={`Image ${idx + 1}`} className="w-full h-full object-cover" draggable={false} />
+            <div key={item.id} className="flex flex-col gap-1.5">
 
-              {idx === 0 && !item.uploading && !item.error && (
-                <span className="absolute bottom-1.5 left-1.5 text-[9px] font-black tracking-wider bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-md uppercase">
-                  Principale
-                </span>
-              )}
+              {/* Image thumbnail (draggable) */}
+              <div
+                draggable={!item.uploading}
+                onDragStart={(e) => handleItemDragStart(e, idx)}
+                onDragOver={(e) => handleItemDragOver(e, idx)}
+                onDrop={(e) => handleItemDrop(e, idx)}
+                onDragEnd={() => { dragItemIdx.current = null; setDropTarget(null) }}
+                className={[
+                  'relative aspect-square rounded-xl overflow-hidden bg-gray-100 group',
+                  'transition-all duration-150',
+                  !item.uploading ? 'cursor-grab active:cursor-grabbing' : 'cursor-wait',
+                  dropTarget === idx && dragItemIdx.current !== idx
+                    ? 'ring-2 ring-emerald-400 ring-offset-1 scale-[0.96]'
+                    : '',
+                ].join(' ')}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.previewUrl} alt={`Image ${idx + 1}`} className="w-full h-full object-cover" draggable={false} />
 
-              {item.uploading && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5">
-                  <Loader2 className="w-5 h-5 text-white animate-spin" />
-                  <span className="text-[10px] text-white/80 font-medium">Upload…</span>
+                {idx === 0 && !item.uploading && !item.error && (
+                  <span className="absolute bottom-1.5 left-1.5 text-[9px] font-black tracking-wider bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-md uppercase">
+                    Principale
+                  </span>
+                )}
+
+                {item.uploading && (
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5">
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    <span className="text-[10px] text-white/80 font-medium">Upload…</span>
+                  </div>
+                )}
+
+                {item.error && (
+                  <div
+                    role="button"
+                    onClick={() => retryItem(item.id)}
+                    className="absolute inset-0 bg-red-500/85 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 cursor-pointer"
+                    title="Cliquer pour supprimer"
+                  >
+                    <AlertCircle className="w-5 h-5 text-white" />
+                    <span className="text-[9px] text-white font-bold px-1 text-center leading-tight">{item.error}</span>
+                    <span className="text-[9px] text-white/70">Cliquer pour retirer</span>
+                  </div>
+                )}
+
+                {!item.uploading && !item.error && item.finalUrl && (
+                  <div className="absolute inset-0 group-hover:bg-black/10 transition-colors duration-150" />
+                )}
+
+                {!item.uploading && !item.error && (
+                  <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-4 h-4 text-white drop-shadow" />
+                  </div>
+                )}
+
+                {!item.uploading && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removeItem(item.id) }}
+                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center bg-black/50 hover:bg-red-500 text-white transition-all duration-150 opacity-0 group-hover:opacity-100"
+                    aria-label="Supprimer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+
+                {/* Color dot badge */}
+                {item.color && !item.uploading && !item.error && (
+                  <div
+                    className="absolute bottom-1.5 right-1.5 w-4 h-4 rounded-full border-2 border-white shadow"
+                    style={{ background: COLOR_PRESETS.find(c => c.label === item.color)?.hex ?? '#9CA3AF' }}
+                    title={item.color}
+                  />
+                )}
+              </div>
+
+              {/* Inline color swatches — always visible when color feature enabled */}
+              {onColorsChange && !item.uploading && !item.error && (
+                <div className="flex flex-wrap gap-1 justify-center px-0.5">
+                  {COLOR_PRESETS.map(c => (
+                    <button
+                      key={c.label}
+                      type="button"
+                      title={c.label}
+                      onClick={() => setItemColor(item.id, c.label)}
+                      className={[
+                        'w-4 h-4 rounded-full transition-all duration-150 flex-shrink-0',
+                        c.border ? 'border border-gray-300' : '',
+                        item.color === c.label
+                          ? 'ring-2 ring-offset-1 ring-gray-700 scale-125'
+                          : 'hover:scale-110',
+                      ].join(' ')}
+                      style={{ background: c.hex }}
+                    />
+                  ))}
                 </div>
               )}
 
-              {item.error && (
-                <div
-                  role="button"
-                  onClick={() => retryItem(item.id)}
-                  className="absolute inset-0 bg-red-500/85 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 cursor-pointer"
-                  title="Cliquer pour supprimer"
-                >
-                  <AlertCircle className="w-5 h-5 text-white" />
-                  <span className="text-[9px] text-white font-bold px-1 text-center leading-tight">{item.error}</span>
-                  <span className="text-[9px] text-white/70">Cliquer pour retirer</span>
-                </div>
-              )}
-
-              {!item.uploading && !item.error && item.finalUrl && (
-                <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-black/10 transition-colors duration-150" />
-              )}
-
-              {!item.uploading && !item.error && (
-                <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <GripVertical className="w-4 h-4 text-white drop-shadow" />
-                </div>
-              )}
-
-              {!item.uploading && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); removeItem(item.id) }}
-                  className={[
-                    'absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center',
-                    'bg-black/50 hover:bg-red-500 text-white transition-all duration-150',
-                    'opacity-0 group-hover:opacity-100',
-                  ].join(' ')}
-                  aria-label="Supprimer"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-
-              {/* Color badge */}
-              {item.color && !item.uploading && !item.error && (
-                <div
-                  className="absolute bottom-1.5 right-1.5 w-4 h-4 rounded-full border-2 border-white shadow"
-                  style={{ background: COLOR_PRESETS.find(c => c.label === item.color)?.hex ?? '#9CA3AF' }}
-                  title={item.color}
-                />
+              {/* Color label */}
+              {onColorsChange && item.color && !item.uploading && !item.error && (
+                <p className="text-[10px] text-center text-gray-500 font-medium -mt-0.5">{item.color}</p>
               )}
             </div>
           ))}
