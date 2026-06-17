@@ -15,9 +15,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non connecté. Reconnectez-vous.' }, { status: 401 })
     }
 
-    // Vendor lookup via admin client
-    const admin = createAdminClient()
-    const { data: vendorRow, error: vendorErr } = await admin
+    // Vendor lookup — use the authenticated session (RLS lets users read their own vendor row)
+    const { data: vendorRow, error: vendorErr } = await supabase
       .from('vendors')
       .select('id')
       .eq('user_id', user.id)
@@ -30,6 +29,8 @@ export async function POST(req: NextRequest) {
       logger.warn('[upload] no vendor for user', { userId: user.id })
       return NextResponse.json({ error: 'Compte vendeur introuvable.' }, { status: 403 })
     }
+
+    const admin = createAdminClient()
 
     // Parse multipart
     let formData: FormData
