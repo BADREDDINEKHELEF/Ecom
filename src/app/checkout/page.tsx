@@ -263,11 +263,12 @@ export default function CheckoutPage() {
       nif:            b2b.isB2B ? b2b.nif || null : null,
       nis:            b2b.isB2B ? b2b.nis || null : null,
       rc:             b2b.isB2B ? b2b.rc  || null : null,
-      items: items.map(({ product, quantity }) => ({
-        productId:    product.id,
-        productName:  product.name,
-        productImage: product.images?.[0] || '',
+      items: items.map(({ product, quantity, selectedColor }) => ({
+        productId:     product.id,
+        productName:   product.name,
+        productImage:  product.images?.[0] || '',
         quantity,
+        selectedColor: selectedColor || null,
       })),
     }
 
@@ -732,20 +733,38 @@ export default function CheckoutPage() {
             )}
 
             <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
-              {items.map(({ product, quantity }) => (
-                <div key={product.id} className="flex items-center gap-3">
+              {items.map(({ product, quantity, selectedColor }) => {
+                const colorIdx = selectedColor
+                  ? (product.imageColors ?? []).indexOf(selectedColor)
+                  : -1
+                const displayImg = colorIdx !== -1 ? product.images[colorIdx] : product.images?.[0]
+                const COLOR_HEX: Record<string, string> = {
+                  Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
+                  Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
+                  Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
+                }
+                return (
+                <div key={`${product.id}-${selectedColor ?? ''}`} className="flex items-center gap-3">
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    {product.images?.[0] && <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="56px" />}
+                    {displayImg && <Image src={displayImg} alt={product.name} fill className="object-cover" sizes="56px" />}
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
                       {quantity}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-gray-900 truncate">{product.name}</p>
+                    {selectedColor && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="w-2.5 h-2.5 rounded-full border border-gray-200 flex-shrink-0"
+                          style={{ background: COLOR_HEX[selectedColor] ?? '#9CA3AF' }} />
+                        <span className="text-[10px] text-gray-500">{selectedColor}</span>
+                      </div>
+                    )}
                   </div>
                   <p className="text-sm font-bold text-gray-900">{formatPrice(product.price * quantity)}</p>
                 </div>
-              ))}
+                )
+              })}
             </div>
             <div className="border-t pt-4 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">

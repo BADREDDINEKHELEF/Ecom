@@ -402,7 +402,12 @@ export default function SellerOrdersPage() {
                                       ? <Image src={item.product_image} alt="" width={32} height={32} className="w-8 h-8 rounded object-cover flex-shrink-0" />
                                       : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                     }
-                                    <span className="text-gray-700 truncate">{item.product_name} × {item.quantity}</span>
+                                    <div className="min-w-0">
+                                      <span className="text-gray-700 truncate block">{item.product_name} × {item.quantity}</span>
+                                      {item.selected_color && (
+                                        <span className="text-xs text-gray-400">Couleur : {item.selected_color}</span>
+                                      )}
+                                    </div>
                                   </div>
                                   <span className="font-semibold text-gray-900 flex-shrink-0 ml-2">{formatPrice(item.subtotal)}</span>
                                 </div>
@@ -550,7 +555,12 @@ export default function SellerOrdersPage() {
                                           ? <img src={item.product_image} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
                                           : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                         }
-                                        <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
+                                        <div>
+                                          <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
+                                          {item.selected_color && (
+                                            <p className="text-xs text-gray-400">Couleur : {item.selected_color}</p>
+                                          )}
+                                        </div>
                                       </div>
                                       <span className="font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
                                     </div>

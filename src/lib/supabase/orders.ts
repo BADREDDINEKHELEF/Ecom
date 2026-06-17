@@ -2,14 +2,15 @@ import { createAdminClient } from './admin'
 import { incrementPromoUses } from './promo'
 
 export interface OrderItemRow {
-  id:            string
-  product_id:    string
-  product_name:  string
-  product_image: string | null
-  product_price: number
-  quantity:      number
-  subtotal:      number
-  vendor_id?:    string | null
+  id:             string
+  product_id:     string
+  product_name:   string
+  product_image:  string | null
+  product_price:  number
+  quantity:       number
+  subtotal:       number
+  vendor_id?:     string | null
+  selected_color?: string | null
 }
 
 export interface OrderRow {
@@ -56,6 +57,7 @@ export interface CreateOrderInput {
     productImage:  string
     quantity:      number
     vendorId?:     string | null
+    selectedColor?: string | null
   }[]
 }
 
@@ -181,13 +183,14 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const { error: itemsErr } = await supabase.from('order_items').insert(
     validatedItems.map((item) => ({
       order_id:      order.id,
-      product_id:    item.productId,
+      product_id:     item.productId,
       product_name:  item.productName,
       product_image: item.productImage || null,
       product_price: item.productPrice,
       quantity:      item.quantity,
       subtotal:      item.subtotal,
       vendor_id:     item.vendorId ?? priceMap.get(item.productId)?.vendorId ?? null,
+      selected_color: item.selectedColor || null,
     }))
   )
   if (itemsErr) throw itemsErr
