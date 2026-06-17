@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Lock, User, Store, Phone, MapPin, FileText, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, User, Store, Phone, MapPin, FileText, Eye, EyeOff, Loader2, CheckCircle, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useT } from '@/lib/store/langStore'
@@ -14,13 +14,17 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
 }
 
+type View = 'form' | 'otp'
+
 export default function SellerRegisterPage() {
   const router = useRouter()
   const t = useT()
+  const [view, setView]       = useState<View>('form')
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [done, setDone] = useState(false)
+  const [error, setError]     = useState('')
+  const [otp, setOtp]         = useState('')
+  const [done, setDone]       = useState(false)
   const [form, setForm] = useState({
     fullName: '', email: '', password: '',
     storeName: '', storeSlug: '', phone: '', wilaya: '', description: '',
@@ -32,24 +36,54 @@ export default function SellerRegisterPage() {
     setForm(next)
   }
 
+  // Step 1 — validate form + send OTP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
     if (RESERVED_SLUGS.has(form.storeSlug)) { setError(t.seller.urlTaken); return }
-    setLoading(true)
-    setError('')
-
-    const supabase = createClient()
-
-    const { data: authData, error: signUpErr } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: { data: { full_name: form.fullName } },
-    })
-    if (signUpErr) { setError(signUpErr.message); setLoading(false); return }
-    if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
-
+    if (!form.phone) { setError('Numéro WhatsApp requis pour vérifier votre compte.'); return }
+    setLoading(true); setError('')
     try {
+      const res = await fetch('/api/seller/send-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: form.phone }),
+      })
+      const body = await res.json()
+      if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
+      setView('otp')
+    } catch {
+      setError('Erreur de connexion. Vérifiez votre accès internet.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Step 2 — verify OTP then create account
+  const handleVerifyAndCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true); setError('')
+    try {
+      // Verify OTP
+      const verifyRes = await fetch('/api/seller/verify-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: form.phone, otp }),
+      })
+      const verifyBody = await verifyRes.json()
+      if (!verifyRes.ok) { setError(verifyBody.error ?? 'Code incorrect.'); setLoading(false); return }
+
+      // Create auth account
+      const supabase = createClient()
+      const { data: authData, error: signUpErr } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { data: { full_name: form.fullName } },
+      })
+      if (signUpErr) { setError(signUpErr.message); setLoading(false); return }
+      if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
+
+      // Create vendor record
       const res = await fetch('/api/seller/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,18 +98,26 @@ export default function SellerRegisterPage() {
       })
       if (!res.ok) {
         const { error: msg } = await res.json()
-        if (res.status === 409) {
-          setError(t.seller.urlTaken)
-        } else {
-          setError(msg ?? t.seller.registrationFailed)
-        }
+        setError(res.status === 409 ? t.seller.urlTaken : (msg ?? t.seller.registrationFailed))
         await supabase.auth.signOut()
       } else {
         setDone(true)
       }
     } catch {
       setError(t.seller.registrationFailed)
-      await supabase.auth.signOut()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    setError(''); setLoading(true)
+    try {
+      await fetch('/api/seller/send-phone-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: form.phone }),
+      })
     } finally {
       setLoading(false)
     }
@@ -109,17 +151,50 @@ export default function SellerRegisterPage() {
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
             <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Store className="w-6 h-6 text-white" />
+              {view === 'otp' ? <KeyRound className="w-6 h-6 text-white" /> : <Store className="w-6 h-6 text-white" />}
             </div>
-            <h1 className="text-2xl font-black text-gray-900">{t.seller.registerTitle}</h1>
-            <p className="text-gray-500 text-sm mt-1">{t.seller.registerSub}</p>
+            <h1 className="text-2xl font-black text-gray-900">
+              {view === 'otp' ? 'Vérifiez votre WhatsApp' : t.seller.registerTitle}
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              {view === 'otp' ? `Code envoyé au ${form.phone} via WhatsApp` : t.seller.registerSub}
+            </p>
           </div>
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">{error}</div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ── OTP verification step ── */}
+          {view === 'otp' && (
+            <form onSubmit={handleVerifyAndCreate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Code WhatsApp (6 chiffres)</label>
+                <input type="text" required maxLength={6} value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456" autoFocus
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-center tracking-[0.5em] font-bold text-lg focus:outline-none focus:border-emerald-400" />
+              </div>
+              <button type="submit" disabled={loading || otp.length !== 6}
+                className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none">
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Vérifier et créer mon compte
+              </button>
+              <div className="flex items-center justify-between text-sm">
+                <button type="button" onClick={() => { setView('form'); setOtp(''); setError('') }}
+                  className="text-gray-500 hover:text-gray-700">
+                  ← Modifier mes infos
+                </button>
+                <button type="button" onClick={handleResend} disabled={loading}
+                  className="text-emerald-600 hover:underline font-medium disabled:opacity-50">
+                  Renvoyer le code
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ── Registration form ── */}
+          {view === 'form' && <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t.seller.accountInfo}</p>
 
             <div>
@@ -185,7 +260,7 @@ export default function SellerRegisterPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.phoneLabel}</label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="tel" value={form.phone} onChange={(e) => f('phone', e.target.value)}
+                  <input type="tel" required value={form.phone} onChange={(e) => f('phone', e.target.value)}
                     placeholder={t.seller.phonePHRegister}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
                 </div>
@@ -220,7 +295,7 @@ export default function SellerRegisterPage() {
             </button>
 
             <p className="text-xs text-gray-400 text-center">{t.seller.terms}</p>
-          </form>
+          </form>}
         </div>
       </div>
     </div>
