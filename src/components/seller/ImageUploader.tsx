@@ -17,6 +17,13 @@ interface ImageItem {
   color?:     string
 }
 
+interface PendingItem {
+  id:         string
+  file:       File
+  previewUrl: string
+  color:      string
+}
+
 interface Props {
   value:             string[]
   onChange:          (urls: string[]) => void
@@ -46,7 +53,6 @@ function uid() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-/** Compress + convert to WebP using Canvas API. Falls back to original on failure. */
 async function compressToWebP(file: File, maxPx = 1400, quality = 0.85): Promise<Blob> {
   return new Promise((resolve) => {
     const img = new window.Image()
@@ -67,7 +73,7 @@ async function compressToWebP(file: File, maxPx = 1400, quality = 0.85): Promise
           quality,
         )
       } catch {
-        resolve(file) // fallback: send original
+        resolve(file)
       }
     }
     img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file) }
@@ -76,7 +82,7 @@ async function compressToWebP(file: File, maxPx = 1400, quality = 0.85): Promise
 }
 
 function isAllowedImage(type: string) { return type.startsWith('image/') || type === '' }
-const MAX_MB  = 10
+const MAX_MB = 10
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -84,26 +90,24 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
   const [items, setItems] = useState<ImageItem[]>(() =>
     value.map((url, i) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false, color: colors?.[i] ?? '' }))
   )
-  const [isDragOver,  setIsDragOver]  = useState(false)
-  const [dropTarget,  setDropTarget]  = useState<number | null>(null)
+  const [isDragOver,    setIsDragOver]    = useState(false)
+  const [dropTarget,    setDropTarget]    = useState<number | null>(null)
+  const [pendingItems,  setPendingItems]  = useState<PendingItem[]>([])
   const fileInputRef  = useRef<HTMLInputElement>(null)
   const dragItemIdx   = useRef<number | null>(null)
 
-  // Sync finalUrl list → parent whenever items change
   const syncParent = useCallback((next: ImageItem[]) => {
     const uploaded = next.filter(i => i.finalUrl)
     onChange(uploaded.map(i => i.finalUrl!))
     if (onColorsChange) onColorsChange(uploaded.map(i => i.color ?? ''))
   }, [onChange, onColorsChange])
 
-  // Re-init when `value` array identity changes AND we're not mid-upload
-  // (parent uses key=editing?.id to force remount instead, but this is a safety net)
   const prevValue = useRef(value)
   useEffect(() => {
     if (prevValue.current === value) return
     prevValue.current = value
     setItems((prev) => {
-      if (prev.some((i) => i.uploading)) return prev // don't clobber ongoing uploads
+      if (prev.some((i) => i.uploading)) return prev
       return value.map((url) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false }))
     })
   }, [value])
@@ -139,32 +143,66 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     }
   }, [syncParent])
 
-  // ── Process dropped/selected files ──────────────────────────────────────
+  // ── Add confirmed files (with their chosen colors) ────────────────────────
 
-  const processFiles = useCallback((files: File[]) => {
-    const valid = files.filter((f) => {
-      if (!isAllowedImage(f.type)) return false
-      if (f.size > MAX_MB * 1024 * 1024) return false
-      return true
-    })
-
+  const addFiles = useCallback((files: File[], initialColors?: string[]) => {
     setItems((prev) => {
       const available = maxImages - prev.length
-      const toAdd     = valid.slice(0, Math.max(0, available))
+      const toAdd     = files.slice(0, Math.max(0, available))
       if (!toAdd.length) return prev
 
-      const newItems: ImageItem[] = toAdd.map((f) => ({
+      const newItems: ImageItem[] = toAdd.map((f, i) => ({
         id:         uid(),
         previewUrl: URL.createObjectURL(f),
         finalUrl:   null,
         uploading:  true,
+        color:      initialColors?.[i] ?? '',
       }))
       const next = [...prev, ...newItems]
-      // Kick off uploads (async, outside state setter)
       toAdd.forEach((f, i) => uploadOne(newItems[i].id, f))
       return next
     })
   }, [maxImages, uploadOne])
+
+  // ── Handle incoming files: show color picker first if enabled ────────────
+
+  const handleFilesSelected = useCallback((files: File[]) => {
+    const valid = files.filter(
+      f => isAllowedImage(f.type) && f.size <= MAX_MB * 1024 * 1024
+    )
+    if (!valid.length) return
+
+    if (onColorsChange) {
+      // Show color-picker modal before uploading
+      setPendingItems(valid.map(f => ({
+        id:         uid(),
+        file:       f,
+        previewUrl: URL.createObjectURL(f),
+        color:      '',
+      })))
+    } else {
+      addFiles(valid)
+    }
+  }, [onColorsChange, addFiles])
+
+  const setPendingColor = (id: string, color: string) => {
+    setPendingItems(prev =>
+      prev.map(p => p.id === id ? { ...p, color: p.color === color ? '' : color } : p)
+    )
+  }
+
+  const confirmPending = () => {
+    const files  = pendingItems.map(p => p.file)
+    const cols   = pendingItems.map(p => p.color)
+    pendingItems.forEach(p => URL.revokeObjectURL(p.previewUrl))
+    setPendingItems([])
+    addFiles(files, cols)
+  }
+
+  const cancelPending = () => {
+    pendingItems.forEach(p => URL.revokeObjectURL(p.previewUrl))
+    setPendingItems([])
+  }
 
   // ── Drop zone handlers ───────────────────────────────────────────────────
 
@@ -177,11 +215,11 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
   const handleZoneDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragOver(false)
-    processFiles(Array.from(e.dataTransfer.files))
+    handleFilesSelected(Array.from(e.dataTransfer.files))
   }
 
   const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) processFiles(Array.from(e.target.files))
+    if (e.target.files) handleFilesSelected(Array.from(e.target.files))
     e.target.value = ''
   }
 
@@ -190,7 +228,6 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
   const handleItemDragStart = (e: DragEvent<HTMLDivElement>, idx: number) => {
     dragItemIdx.current = idx
     e.dataTransfer.effectAllowed = 'move'
-    // ghost image = the thumbnail itself (browser default) — looks great
   }
 
   const handleItemDragOver = (e: DragEvent<HTMLDivElement>, idx: number) => {
@@ -222,28 +259,18 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     })
   }
 
-  const retryItem = (id: string, idx: number) => {
-    removeItem(id)
-    void idx
-  }
+  const retryItem = (id: string) => removeItem(id)
 
-  const setItemColor = (id: string, color: string) => {
-    setItems(prev => {
-      const next = prev.map(it => it.id === id ? { ...it, color: it.color === color ? '' : color } : it)
-      syncParent(next)
-      return next
-    })
-  }
-
-  const canAdd = items.length < maxImages
+  const canAdd    = items.length < maxImages
   const uploading = items.some((i) => i.uploading)
 
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="space-y-3">
 
-      {/* ── Drop zone (hidden once at max) ── */}
+      {/* ── Drop zone ── */}
       {canAdd && (
         <div
           onDragOver={handleZoneDragOver}
@@ -290,8 +317,8 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
       {items.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {items.map((item, idx) => (
-            <div key={item.id} className="flex flex-col gap-1.5">
             <div
+              key={item.id}
               draggable={!item.uploading}
               onDragStart={(e) => handleItemDragStart(e, idx)}
               onDragOver={(e) => handleItemDragOver(e, idx)}
@@ -306,23 +333,15 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
                   : '',
               ].join(' ')}
             >
-              {/* Image */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.previewUrl}
-                alt={`Image ${idx + 1}`}
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
+              <img src={item.previewUrl} alt={`Image ${idx + 1}`} className="w-full h-full object-cover" draggable={false} />
 
-              {/* Primary badge */}
               {idx === 0 && !item.uploading && !item.error && (
                 <span className="absolute bottom-1.5 left-1.5 text-[9px] font-black tracking-wider bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-md uppercase">
                   Principale
                 </span>
               )}
 
-              {/* Upload spinner overlay */}
               {item.uploading && (
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5">
                   <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -330,35 +349,29 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
                 </div>
               )}
 
-              {/* Error overlay */}
               {item.error && (
                 <div
                   role="button"
-                  onClick={() => retryItem(item.id, idx)}
+                  onClick={() => retryItem(item.id)}
                   className="absolute inset-0 bg-red-500/85 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 cursor-pointer"
                   title="Cliquer pour supprimer"
                 >
                   <AlertCircle className="w-5 h-5 text-white" />
-                  <span className="text-[9px] text-white font-bold px-1 text-center leading-tight">
-                    {item.error}
-                  </span>
+                  <span className="text-[9px] text-white font-bold px-1 text-center leading-tight">{item.error}</span>
                   <span className="text-[9px] text-white/70">Cliquer pour retirer</span>
                 </div>
               )}
 
-              {/* Success flash (show for finalUrl images) */}
               {!item.uploading && !item.error && item.finalUrl && (
                 <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-black/10 transition-colors duration-150" />
               )}
 
-              {/* Drag handle — top-left */}
               {!item.uploading && !item.error && (
                 <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <GripVertical className="w-4 h-4 text-white drop-shadow" />
                 </div>
               )}
 
-              {/* Delete button — top-right */}
               {!item.uploading && (
                 <button
                   type="button"
@@ -374,39 +387,17 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
                 </button>
               )}
 
-              {/* Selected color badge on image */}
+              {/* Color badge */}
               {item.color && !item.uploading && !item.error && (
-                <span className="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-sm">
-                  {item.color}
-                </span>
+                <div
+                  className="absolute bottom-1.5 right-1.5 w-4 h-4 rounded-full border-2 border-white shadow"
+                  style={{ background: COLOR_PRESETS.find(c => c.label === item.color)?.hex ?? '#9CA3AF' }}
+                  title={item.color}
+                />
               )}
-            </div>
-
-            {/* Color swatch picker — only when multiple images & uploaded */}
-            {onColorsChange && items.length > 1 && !item.uploading && !item.error && (
-              <div className="flex flex-wrap gap-1 justify-center px-0.5">
-                {COLOR_PRESETS.map(c => (
-                  <button
-                    key={c.label}
-                    type="button"
-                    title={c.label}
-                    onClick={() => setItemColor(item.id, c.label)}
-                    className={[
-                      'w-4 h-4 rounded-full transition-all duration-150',
-                      c.border ? 'border border-gray-300' : '',
-                      item.color === c.label
-                        ? 'ring-2 ring-offset-1 ring-gray-700 scale-125'
-                        : 'hover:scale-110',
-                    ].join(' ')}
-                    style={{ background: c.hex }}
-                  />
-                ))}
-              </div>
-            )}
             </div>
           ))}
 
-          {/* Inline "add more" tile when there are already images */}
           {canAdd && (
             <button
               type="button"
@@ -436,5 +427,79 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
         <span>Glissez pour réorganiser</span>
       </div>
     </div>
+
+    {/* ── Color-picker modal (appears before upload) ── */}
+    {pendingItems.length > 0 && (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden">
+
+          {/* Header */}
+          <div className="px-5 pt-5 pb-3">
+            <p className="font-bold text-gray-900 text-base">Choisir une couleur</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Associez une couleur à chaque photo (optionnel)
+            </p>
+          </div>
+
+          {/* Image list */}
+          <div className="px-5 space-y-4 max-h-[55vh] overflow-y-auto pb-1">
+            {pendingItems.map((p) => (
+              <div key={p.id} className="flex gap-3 items-start">
+                {/* Thumbnail */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.previewUrl}
+                  alt=""
+                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-gray-100"
+                />
+
+                {/* Color swatches */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {COLOR_PRESETS.map(c => (
+                    <button
+                      key={c.label}
+                      type="button"
+                      title={c.label}
+                      onClick={() => setPendingColor(p.id, c.label)}
+                      className={[
+                        'w-6 h-6 rounded-full transition-all duration-150 flex-shrink-0',
+                        c.border ? 'border border-gray-300' : '',
+                        p.color === c.label
+                          ? 'ring-2 ring-offset-2 ring-gray-700 scale-110'
+                          : 'hover:scale-110',
+                      ].join(' ')}
+                      style={{ background: c.hex }}
+                    />
+                  ))}
+                  {/* Selected label */}
+                  {p.color && (
+                    <span className="self-center text-xs font-medium text-gray-500">{p.color}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 px-5 py-4 border-t border-gray-100 mt-3">
+            <button
+              type="button"
+              onClick={cancelPending}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={confirmPending}
+              className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold transition-colors"
+            >
+              Ajouter {pendingItems.length > 1 ? `(${pendingItems.length})` : ''}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
