@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     if (uploadErr) {
       logger.error('[POST /api/seller/upload] storage error', { error: uploadErr.message })
-      return NextResponse.json({ error: uploadErr.message }, { status: 500 })
+      return NextResponse.json({ error: 'Échec de l\'upload. Réessayez.' }, { status: 500 })
     }
 
     const { data: { publicUrl } } = admin.storage
