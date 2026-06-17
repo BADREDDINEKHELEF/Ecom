@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useT } from '@/lib/store/langStore'
 
+const RESERVED_SLUGS = new Set(['admin', 'api', 'store', 'auth', 'seller', 'dashboard', 'search', 'deals', 'pricing', 'checkout', 'orders', 'profile', 'wishlist', 'compare', 'track', 'cart', 'offline', 'register', 'login'])
+
 function slugify(s: string) {
   return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
 }
@@ -33,6 +35,7 @@ export default function SellerRegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
+    if (RESERVED_SLUGS.has(form.storeSlug)) { setError(t.seller.urlTaken); return }
     setLoading(true)
     setError('')
 
@@ -143,7 +146,7 @@ export default function SellerRegisterPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.passwordLabel}</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input required type={showPwd ? 'text' : 'password'} minLength={6}
+                <input required type={showPwd ? 'text' : 'password'} minLength={8}
                   value={form.password} onChange={(e) => f('password', e.target.value)}
                   placeholder={t.seller.passwordMin}
                   className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
