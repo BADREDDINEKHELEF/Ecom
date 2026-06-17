@@ -72,7 +72,7 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         className="sr-only"
         onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = '' }}
       />

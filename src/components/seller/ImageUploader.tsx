@@ -235,7 +235,7 @@ export default function ImageUploader({ value, onChange, maxImages = 8 }: Props)
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/*"
             onChange={handleFileInput}
             className="sr-only"
             aria-label="Sélectionner des images"
