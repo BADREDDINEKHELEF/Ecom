@@ -224,7 +224,21 @@ export default function SellerProductsPage() {
                 />
               </div>
 
-              {/* ── Section 2: Essential info ── */}
+              {/* ── Section 2: Color variants ── */}
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-base">🎨</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm leading-tight">Couleurs du produit</p>
+                    <p className="text-xs text-gray-400">Ajoutez une couleur et uploadez les photos correspondantes</p>
+                  </div>
+                </div>
+                <ColorVariantBuilder variants={colorVariants} onChange={setColorVariants} />
+              </div>
+
+              {/* ── Section 3: Essential info ── */}
               <div className="px-6 py-5 space-y-4">
                 <div className="flex items-center gap-2.5 mb-1">
                   <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -331,7 +345,7 @@ export default function SellerProductsPage() {
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
                   <span>Plus d&apos;options</span>
                   {!showAdvanced && (
-                    <span className="text-xs font-normal text-gray-400 ml-1">variantes · état · SEO · tags…</span>
+                    <span className="text-xs font-normal text-gray-400 ml-1">état · SEO · tags · MOQ…</span>
                   )}
                 </button>
 
@@ -395,11 +409,6 @@ export default function SellerProductsPage() {
                         onChange={(e) => setForm({ ...form, tags: e.target.value })}
                         placeholder={sp.tagsPH}
                         className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-                    </div>
-
-                    {/* Color variants */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-4">
-                      <ColorVariantBuilder variants={colorVariants} onChange={setColorVariants} />
                     </div>
 
                     {/* Size/price variants */}
