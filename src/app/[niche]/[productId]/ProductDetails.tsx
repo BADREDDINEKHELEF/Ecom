@@ -36,6 +36,12 @@ export default function ProductDetails({ product, niche, related }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [added, setAdded] = useState(false)
+  const productColors = useMemo(
+    () => [...new Set((product.imageColors ?? []).filter(Boolean))],
+    [product.imageColors]
+  )
+  const needsColor = productColors.length > 0
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
 
@@ -119,7 +125,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
   }, [moq])
   const nicheId = niche.id
 
-  const whatsappMessage = `مرحباً، أريد طلب: ${product.name} (x${quantity}) — ${formatPrice(product.price * quantity)}`
+  const whatsappMessage = `مرحباً، أريد طلب: ${product.name}${selectedColor ? ` (${selectedColor})` : ''} (x${quantity}) — ${formatPrice(product.price * quantity)}`
 
   const buildWhatsAppOrder = () => {
     const ref = `DZ-${Math.random().toString(36).slice(2, 7).toUpperCase()}`
@@ -127,6 +133,7 @@ export default function ProductDetails({ product, niche, related }: Props) {
       `🛍️ *COMMANDE SHOPDZ*\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\n` +
       `📦 *Produit:* ${product.name}\n` +
+      (selectedColor ? `🎨 *Couleur:* ${selectedColor}\n` : '') +
       `🔢 *Quantité:* ${quantity}\n` +
       `💰 *Prix unitaire:* ${formatPrice(product.price)}\n` +
       `💵 *Total:* ${formatPrice(product.price * quantity)}\n` +
@@ -142,7 +149,8 @@ export default function ProductDetails({ product, niche, related }: Props) {
   }
 
   const handleAddToCart = () => {
-    addItem(product, quantity)
+    if (needsColor && !selectedColor) return
+    addItem(product, quantity, selectedColor ?? undefined)
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity })
     track('add_to_cart', { product_id: product.id })
     setAdded(true)
@@ -300,40 +308,48 @@ export default function ProductDetails({ product, niche, related }: Props) {
           })()}
 
           {/* Color swatches — auto-switch main image */}
-          {(() => {
+          {/* Color selector — required when product has color variants */}
+          {needsColor && (() => {
             const COLOR_HEX: Record<string, string> = {
               Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
               Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
               Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
             }
             const ic = product.imageColors ?? []
-            const uniqueColors = [...new Set(ic.filter(Boolean))]
-            if (!uniqueColors.length) return null
-            const activeColor = ic[selectedImage] ?? ''
             return (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-gray-700 mr-1">
-                  {activeColor || 'Couleur'}
-                  {activeColor && <span className="font-normal text-gray-400"> · {activeColor}</span>}
-                </span>
-                {uniqueColors.map(color => {
-                  const idx = ic.indexOf(color)
-                  const isActive = activeColor === color
-                  return (
-                    <button
-                      key={color}
-                      type="button"
-                      title={color}
-                      onClick={() => idx !== -1 && setSelectedImage(idx)}
-                      className={[
-                        'w-8 h-8 rounded-full transition-all duration-150',
-                        color === 'Blanc' ? 'border border-gray-300' : '',
-                        isActive ? 'ring-2 ring-offset-2 ring-gray-800 scale-110' : 'hover:scale-110',
-                      ].join(' ')}
-                      style={{ background: COLOR_HEX[color] ?? '#9CA3AF' }}
-                    />
-                  )
-                })}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-800">Couleur :</span>
+                  {selectedColor
+                    ? <span className="text-sm font-bold text-gray-900">{selectedColor}</span>
+                    : <span className="text-sm text-red-500 font-medium">Choisissez une couleur</span>
+                  }
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {productColors.map(color => {
+                    const idx = ic.indexOf(color)
+                    const isActive = selectedColor === color
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        title={color}
+                        onClick={() => {
+                          setSelectedColor(isActive ? null : color)
+                          if (!isActive && idx !== -1) setSelectedImage(idx)
+                        }}
+                        className={[
+                          'w-9 h-9 rounded-full transition-all duration-150',
+                          color === 'Blanc' ? 'border border-gray-300' : '',
+                          isActive
+                            ? 'ring-2 ring-offset-2 ring-gray-800 scale-110'
+                            : 'hover:scale-110 opacity-70 hover:opacity-100',
+                        ].join(' ')}
+                        style={{ background: COLOR_HEX[color] ?? '#9CA3AF' }}
+                      />
+                    )
+                  })}
+                </div>
               </div>
             )
           })()}
@@ -411,12 +427,21 @@ export default function ProductDetails({ product, niche, related }: Props) {
                 </div>
                 <button
                   onClick={handleAddToCart}
+                  disabled={needsColor && !selectedColor}
                   className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-white transition-all ${
-                    added ? 'bg-green-600' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+                    needsColor && !selectedColor
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : added
+                      ? 'bg-green-600'
+                      : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
                   }`}
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  {added ? t.product.added : t.product.addToCart}
+                  {needsColor && !selectedColor
+                    ? 'Choisissez une couleur'
+                    : added
+                    ? t.product.added
+                    : t.product.addToCart}
                 </button>
               </div>
 
@@ -428,10 +453,15 @@ export default function ProductDetails({ product, niche, related }: Props) {
           {/* ── SPECIAL: 1-tap WhatsApp order ───────────────────────────── */}
           {product.stock > 0 && (
             <a
-              href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '213555000000'}?text=${buildWhatsAppOrder()}`}
-              target="_blank"
+              href={needsColor && !selectedColor ? '#' : `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '213555000000'}?text=${buildWhatsAppOrder()}`}
+              target={needsColor && !selectedColor ? '_self' : '_blank'}
               rel="noopener noreferrer"
-              className="flex items-center gap-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white rounded-2xl px-5 py-4 transition-all active:scale-95 shadow-md shadow-green-200"
+              onClick={needsColor && !selectedColor ? (e) => e.preventDefault() : undefined}
+              className={`flex items-center gap-3 rounded-2xl px-5 py-4 transition-all shadow-md ${
+                needsColor && !selectedColor
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                  : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white active:scale-95 shadow-green-200'
+              }`}
             >
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">

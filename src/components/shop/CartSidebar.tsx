@@ -65,12 +65,25 @@ export default function CartSidebar() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {items.map(({ product, quantity }) => (
-                <div key={product.id} className="flex gap-3">
+              {items.map(({ product, quantity, selectedColor }) => {
+                const COLOR_HEX: Record<string, string> = {
+                  Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
+                  Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
+                  Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
+                }
+                // Show the image matching the selected color if possible
+                const colorIdx = selectedColor
+                  ? (product.imageColors ?? []).indexOf(selectedColor)
+                  : -1
+                const displayImg = colorIdx !== -1
+                  ? product.images[colorIdx]
+                  : product.images?.[0]
+                return (
+                <div key={`${product.id}-${selectedColor ?? ''}`} className="flex gap-3">
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
-                    {product.images?.[0] ? (
+                    {displayImg ? (
                       <Image
-                        src={product.images[0]}
+                        src={displayImg}
                         alt={product.name}
                         fill
                         className="object-cover"
@@ -90,12 +103,21 @@ export default function CartSidebar() {
                     >
                       {product.name}
                     </Link>
+                    {selectedColor && (
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span
+                          className="w-3 h-3 rounded-full border border-gray-200 flex-shrink-0"
+                          style={{ background: COLOR_HEX[selectedColor] ?? '#9CA3AF' }}
+                        />
+                        <span className="text-xs text-gray-500">{selectedColor}</span>
+                      </div>
+                    )}
                     <p className="text-indigo-600 font-bold text-sm mt-0.5">
                       {formatPrice(product.price)}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
-                        onClick={() => updateQuantity(product.id, quantity - 1)}
+                        onClick={() => updateQuantity(product.id, quantity - 1, selectedColor)}
                         className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
                         aria-label="Decrease quantity"
                       >
@@ -103,7 +125,7 @@ export default function CartSidebar() {
                       </button>
                       <span className="text-sm font-semibold w-6 text-center">{quantity}</span>
                       <button
-                        onClick={() => updateQuantity(product.id, Math.min(product.stock, quantity + 1))}
+                        onClick={() => updateQuantity(product.id, Math.min(product.stock, quantity + 1), selectedColor)}
                         disabled={quantity >= product.stock}
                         className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
                         aria-label="Increase quantity"
@@ -111,7 +133,7 @@ export default function CartSidebar() {
                         <Plus className="w-3 h-3" />
                       </button>
                       <button
-                        onClick={() => removeItem(product.id)}
+                        onClick={() => removeItem(product.id, selectedColor)}
                         className="ms-auto w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         aria-label="Remove item"
                       >
@@ -120,7 +142,8 @@ export default function CartSidebar() {
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="border-t px-5 py-5 space-y-4">
