@@ -204,6 +204,12 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     setPendingItems([])
   }
 
+  // Clean up pending blob URLs on unmount
+  useEffect(() => {
+    return () => { pendingItems.forEach(p => URL.revokeObjectURL(p.previewUrl)) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Drop zone handlers ───────────────────────────────────────────────────
 
   const handleZoneDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -437,7 +443,13 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
           <div className="px-5 pt-5 pb-3">
             <p className="font-bold text-gray-900 text-base">Choisir une couleur</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              Associez une couleur à chaque photo (optionnel)
+              {(() => {
+                const available = maxImages - items.length
+                const willAdd = Math.min(pendingItems.length, available)
+                return willAdd < pendingItems.length
+                  ? `${pendingItems.length - willAdd} photo(s) ignorée(s) — seulement ${willAdd} slot(s) disponible(s)`
+                  : 'Associez une couleur à chaque photo (optionnel)'
+              })()}
             </p>
           </div>
 
