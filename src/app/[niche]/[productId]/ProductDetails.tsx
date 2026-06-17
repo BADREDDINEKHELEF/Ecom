@@ -299,6 +299,45 @@ export default function ProductDetails({ product, niche, related }: Props) {
             )
           })()}
 
+          {/* Color swatches — auto-switch main image */}
+          {(() => {
+            const COLOR_HEX: Record<string, string> = {
+              Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
+              Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
+              Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
+            }
+            const ic = product.imageColors ?? []
+            const uniqueColors = [...new Set(ic.filter(Boolean))]
+            if (!uniqueColors.length) return null
+            const activeColor = ic[selectedImage] ?? ''
+            return (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-gray-700 mr-1">
+                  {activeColor || 'Couleur'}
+                  {activeColor && <span className="font-normal text-gray-400"> · {activeColor}</span>}
+                </span>
+                {uniqueColors.map(color => {
+                  const idx = ic.indexOf(color)
+                  const isActive = activeColor === color
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      title={color}
+                      onClick={() => idx !== -1 && setSelectedImage(idx)}
+                      className={[
+                        'w-8 h-8 rounded-full transition-all duration-150',
+                        color === 'Blanc' ? 'border border-gray-300' : '',
+                        isActive ? 'ring-2 ring-offset-2 ring-gray-800 scale-110' : 'hover:scale-110',
+                      ].join(' ')}
+                      style={{ background: COLOR_HEX[color] ?? '#9CA3AF' }}
+                    />
+                  )
+                })}
+              </div>
+            )
+          })()}
+
           {/* Viewing now */}
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <span className="relative flex h-2 w-2">
