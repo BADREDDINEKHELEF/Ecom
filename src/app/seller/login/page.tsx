@@ -21,6 +21,10 @@ function friendlyAuthError(msg: string): string {
     return 'Aucun compte trouvé avec cet e-mail.'
   if (/network|fetch/i.test(msg))
     return 'Erreur de connexion. Vérifiez votre accès internet.'
+  if (/redirect.*not.*allowed|invalid.*redirect/i.test(msg))
+    return 'Configuration requise : ajoutez cette URL dans Supabase → Authentication → URL Configuration → Redirect URLs.'
+  if (/error.*sending.*recovery|sending.*email|email.*send/i.test(msg))
+    return 'Impossible d\'envoyer l\'e-mail. Vérifiez que votre adresse e-mail est correcte et réessayez dans quelques minutes.'
   return msg
 }
 
