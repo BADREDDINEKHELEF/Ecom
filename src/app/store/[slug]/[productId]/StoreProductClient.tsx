@@ -5,16 +5,10 @@ import { ShoppingCart, CheckCircle, Minus, Plus } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { formatPrice } from '@/lib/utils'
 import { trackAddToCart } from '@/lib/analytics'
+import { Product } from '@/types'
 
 interface Props {
-  product: {
-    id: string
-    name: string
-    price: number
-    image: string
-    stock: number
-    nicheId: string
-  }
+  product: Product
   accent: string
   vendorWhatsApp?: string | null
   storeName: string
@@ -55,13 +49,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
   }, [])
 
   const handleAdd = () => {
-    addItem({
-      id:      product.id,
-      name:    product.name,
-      price:   product.price,
-      images:  [product.image],
-      nicheId: product.nicheId,
-    } as Parameters<typeof addItem>[0], qty)
+    addItem(product, qty, selectedColor ?? undefined)
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: qty })
     setAdded(true)
     setTimeout(() => setAdded(false), 2500)

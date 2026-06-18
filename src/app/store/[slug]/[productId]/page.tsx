@@ -240,14 +240,7 @@ export default async function StoreProductPage({ params }: PageProps) {
 
             {/* CTA buttons */}
             <StoreProductClient
-              product={{
-                id:      product.id,
-                name:    product.name,
-                price:   product.price,
-                image:   product.images?.[0] ?? '',
-                stock:   product.stock,
-                nicheId: product.nicheId,
-              }}
+              product={product}
               accent={accent}
               vendorWhatsApp={vendorWhatsApp}
               storeName={vendor.store_name}
