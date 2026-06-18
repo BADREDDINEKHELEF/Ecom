@@ -7,6 +7,20 @@ import { useCartStore } from '@/lib/store/cartStore'
 import { useT } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 
+const COLOR_HEX: Record<string, string> = {
+  Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
+  Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
+  Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
+}
+
+function colorImage(product: { images: string[]; imageColors?: string[]; colorVariants?: { name: string; images: string[] }[] }, color: string | undefined): string {
+  if (!color) return product.images[0]
+  const variant = (product.colorVariants ?? []).find(v => v.name === color)
+  if (variant?.images?.[0]) return variant.images[0]
+  const idx = (product.imageColors ?? []).indexOf(color)
+  return idx !== -1 ? product.images[idx] : product.images[0]
+}
+
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCartStore()
   const t = useT()
@@ -46,61 +60,76 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map(({ product, quantity }) => (
-            <div key={product.id} className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
-              <Link href={`/${product.nicheId}/${product.id}`}>
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                  <Image
-                    src={product.images[0]}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    sizes="112px"
-                  />
-                </div>
-              </Link>
+          {items.map(({ product, quantity, selectedColor }) => {
+            const displayImg = colorImage(product, selectedColor)
+            return (
+              <div key={`${product.id}-${selectedColor ?? ''}`} className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
+                <Link href={`/${product.nicheId}/${product.id}`}>
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                    <Image
+                      src={displayImg}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="112px"
+                    />
+                  </div>
+                </Link>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <Link href={`/${product.nicheId}/${product.id}`}>
-                    <h3 className="font-bold text-gray-900 hover:text-indigo-600 transition-colors leading-snug">
-                      {product.name}
-                    </h3>
-                  </Link>
-                  <button
-                    onClick={() => removeItem(product.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">{product.category}</p>
-                <p className="text-indigo-600 font-bold mt-2">{formatPrice(product.price)}</p>
-
-                <div className="flex items-center gap-3 mt-3">
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link href={`/${product.nicheId}/${product.id}`}>
+                      <h3 className="font-bold text-gray-900 hover:text-indigo-600 transition-colors leading-snug">
+                        {product.name}
+                      </h3>
+                    </Link>
                     <button
-                      onClick={() => updateQuantity(product.id, quantity - 1)}
-                      className="px-3 py-1.5 hover:bg-gray-100 transition-colors"
+                      onClick={() => removeItem(product.id, selectedColor)}
+                      className="p-1.5 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
                     >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <span className="px-3 py-1.5 font-bold text-sm min-w-[2.5rem] text-center">{quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(product.id, Math.min(product.stock, quantity + 1))}
-                      disabled={quantity >= product.stock}
-                      className="px-3 py-1.5 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <span className="text-sm font-semibold text-gray-700">
-                    = {formatPrice(product.price * quantity)}
-                  </span>
+
+                  <p className="text-xs text-gray-500 mt-0.5">{product.category}</p>
+
+                  {selectedColor && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span
+                        className="w-3.5 h-3.5 rounded-full border border-gray-200 flex-shrink-0"
+                        style={{ background: COLOR_HEX[selectedColor] ?? '#9CA3AF' }}
+                      />
+                      <span className="text-xs text-gray-500 font-medium">{selectedColor}</span>
+                    </div>
+                  )}
+
+                  <p className="text-indigo-600 font-bold mt-2">{formatPrice(product.price)}</p>
+
+                  <div className="flex items-center gap-3 mt-3">
+                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => updateQuantity(product.id, quantity - 1, selectedColor)}
+                        className="px-3 py-1.5 hover:bg-gray-100 transition-colors"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="px-3 py-1.5 font-bold text-sm min-w-[2.5rem] text-center">{quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(product.id, Math.min(product.stock, quantity + 1), selectedColor)}
+                        disabled={quantity >= product.stock}
+                        className="px-3 py-1.5 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700">
+                      = {formatPrice(product.price * quantity)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Order Summary */}

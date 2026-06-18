@@ -71,13 +71,9 @@ export default function CartSidebar() {
                   Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
                   Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
                 }
-                // Show the image matching the selected color if possible
-                const colorIdx = selectedColor
-                  ? (product.imageColors ?? []).indexOf(selectedColor)
-                  : -1
-                const displayImg = colorIdx !== -1
-                  ? product.images[colorIdx]
-                  : product.images?.[0]
+                const variant = selectedColor ? (product.colorVariants ?? []).find(v => v.name === selectedColor) : null
+                const colorIdx = !variant && selectedColor ? (product.imageColors ?? []).indexOf(selectedColor) : -1
+                const displayImg = variant?.images?.[0] ?? (colorIdx !== -1 ? product.images[colorIdx] : product.images?.[0])
                 return (
                 <div key={`${product.id}-${selectedColor ?? ''}`} className="flex gap-3">
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
