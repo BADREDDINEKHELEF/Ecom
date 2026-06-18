@@ -36,8 +36,10 @@ export default function DeliverySettingsPage() {
   const [saved, setSaved]           = useState(false)
   const [error, setError]           = useState('')
   const [loadingConfig, setLoadingConfig] = useState(true)
-  const [testing, setTesting]       = useState(false)
-  const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null)
+  const [testing, setTesting]         = useState(false)
+  const [testResult, setTestResult]   = useState<'ok' | 'fail' | null>(null)
+  const [testingApec, setTestingApec] = useState(false)
+  const [testResultApec, setTestResultApec] = useState<'ok' | 'fail' | null>(null)
 
   useEffect(() => {
     if (!vendor) return
@@ -115,11 +117,31 @@ export default function DeliverySettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiId: form.yalidine_api_id, apiToken: form.yalidine_api_token }),
       })
-      setTestResult(res.ok ? 'ok' : 'fail')
+      const data = await res.json()
+      setTestResult(data.ok ? 'ok' : 'fail')
     } catch {
       setTestResult('fail')
     } finally {
       setTesting(false)
+    }
+  }
+
+  const testApecCredentials = async () => {
+    if (!form.apec_api_id || !form.apec_api_token) return
+    setTestingApec(true)
+    setTestResultApec(null)
+    try {
+      const res = await fetch('/api/seller/test-apec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiId: form.apec_api_id, apiToken: form.apec_api_token }),
+      })
+      const data = await res.json()
+      setTestResultApec(data.ok ? 'ok' : 'fail')
+    } catch {
+      setTestResultApec('fail')
+    } finally {
+      setTestingApec(false)
     }
   }
 
@@ -438,6 +460,23 @@ export default function DeliverySettingsPage() {
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                     {encNote}
                   </div>
+                  {form.apec_api_id && form.apec_api_token && (
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={testApecCredentials} disabled={testingApec}
+                        className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm disabled:opacity-60">
+                        {testingApec ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                        {a.testConnection}
+                      </button>
+                      {testResultApec === 'ok' && (
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600">
+                          <Check className="w-4 h-4" /> {a.connectionOk}
+                        </span>
+                      )}
+                      {testResultApec === 'fail' && (
+                        <span className="text-sm font-semibold text-red-500">{a.connectionFail}</span>
+                      )}
+                    </div>
+                  )}
                   {autoShipmentCheckbox}
                 </div>
               </div>
