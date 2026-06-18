@@ -36,6 +36,7 @@ export const translations = {
       soldThisWeek: '{n} sold this week',
       peopleViewing: '{n} people viewing this right now',
       compare: 'Compare', inCompare: 'In comparison',
+      soldCount: '🔥 {n} sold',
     },
     cart: {
       add: 'Add',
@@ -610,6 +611,7 @@ export const translations = {
       soldThisWeek: '{n} vendus cette semaine',
       peopleViewing: '{n} personnes consultent ce produit',
       compare: 'Comparer', inCompare: 'Dans la comparaison',
+      soldCount: '🔥 {n} vendus',
     },
     cart: {
       add: 'Ajouter',
@@ -1184,6 +1186,7 @@ export const translations = {
       soldThisWeek: '{n} تم بيعه هذا الأسبوع',
       peopleViewing: '{n} شخص يشاهد هذا المنتج الآن',
       compare: 'مقارنة', inCompare: 'في المقارنة',
+      soldCount: '🔥 {n} مباع',
     },
     cart: {
       add: 'أضف',

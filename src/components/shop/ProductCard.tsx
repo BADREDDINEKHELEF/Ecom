@@ -167,7 +167,13 @@ function ProductCard({ product }: ProductCardProps) {
           </h3>
         </Link>
 
-        <StarRating rating={product.rating} reviewCount={product.reviewCount} className="mb-3" />
+        <StarRating rating={product.rating} reviewCount={product.reviewCount} className="mb-2" />
+
+        {product.totalOrders && product.totalOrders >= 5 ? (
+          <p className="text-xs text-orange-500 font-semibold mb-2">
+            {t.product.soldCount.replace('{n}', product.totalOrders.toLocaleString('fr-DZ'))}
+          </p>
+        ) : null}
 
         <div className="mb-3">
           <div className="flex items-baseline gap-1.5">
@@ -213,7 +219,7 @@ function ProductCard({ product }: ProductCardProps) {
             className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all font-semibold"
           >
             <ShoppingCart className="w-4 h-4" />
-            Ajouter
+            {t.cart.add}
           </button>
         )}
       </div>

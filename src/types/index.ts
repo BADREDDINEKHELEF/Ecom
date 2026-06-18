@@ -40,6 +40,7 @@ export interface Product {
   minOrderQuantity?: number
   isBundle?: boolean
   colorVariants?: ColorVariant[]
+  totalOrders?: number
 }
 
 export interface CartItem {
