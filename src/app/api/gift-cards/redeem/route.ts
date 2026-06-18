@@ -47,6 +47,9 @@ export async function POST(req: NextRequest) {
     if (msg.includes('zero_balance')) {
       return NextResponse.json({ error: 'Ce code cadeau est épuisé' }, { status: 400 })
     }
+    if (msg.includes('card_locked')) {
+      return NextResponse.json({ error: 'Ressayez dans un instant' }, { status: 409 })
+    }
     logger.error('[gift-cards/redeem] rpc failed', { error: msg })
     return NextResponse.json({ error: 'Erreur lors de la réduction du solde' }, { status: 500 })
   }

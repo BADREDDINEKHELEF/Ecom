@@ -12,8 +12,13 @@ CREATE OR REPLACE FUNCTION award_loyalty_points(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+SET search_path = public
+AS $award$
 BEGIN
+  IF p_delta <= 0 THEN
+    RAISE EXCEPTION 'invalid_delta: p_delta must be positive';
+  END IF;
+
   INSERT INTO public.user_points (user_id, points_balance, lifetime_points, updated_at)
   VALUES (p_user_id, p_delta, p_delta, now())
   ON CONFLICT (user_id) DO UPDATE
@@ -24,7 +29,7 @@ BEGIN
   INSERT INTO public.points_transactions (user_id, order_id, delta, reason)
   VALUES (p_user_id, p_order_id, p_delta, p_reason);
 END;
-$$;
+$award$;
 
 -- Redeem points atomically: UPDATE WHERE balance >= amount (row-level guard, no separate read)
 -- Returns TRUE if successful, FALSE if balance insufficient
@@ -36,10 +41,15 @@ CREATE OR REPLACE FUNCTION redeem_loyalty_points(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+SET search_path = public
+AS $redeem$
 DECLARE
   v_rows INT;
 BEGIN
+  IF p_points <= 0 THEN
+    RAISE EXCEPTION 'invalid_points: p_points must be positive';
+  END IF;
+
   UPDATE public.user_points
   SET    points_balance = points_balance - p_points,
          updated_at     = now()
@@ -56,7 +66,7 @@ BEGIN
 
   RETURN TRUE;
 END;
-$$;
+$redeem$;
 
 GRANT EXECUTE ON FUNCTION award_loyalty_points(UUID, UUID, INTEGER, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION redeem_loyalty_points(UUID, INTEGER, TEXT) TO service_role;

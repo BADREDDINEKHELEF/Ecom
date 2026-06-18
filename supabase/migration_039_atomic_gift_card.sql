@@ -5,7 +5,8 @@
 -- the other writes 700 (using stale 1000 base). Final balance 700 instead of 100.
 -- The .gte() guard only prevented going negative, not the stale-base overwrite.
 --
--- Fix: SELECT FOR UPDATE (row lock) + relative SET balance = balance - deduct inside one function.
+-- Fix: SELECT FOR UPDATE NOWAIT (row lock, fails immediately if contended) + relative
+--      SET balance = balance - deduct inside one function.
 
 CREATE OR REPLACE FUNCTION redeem_gift_card(
   p_code   TEXT,
@@ -14,7 +15,8 @@ CREATE OR REPLACE FUNCTION redeem_gift_card(
 RETURNS TABLE(deducted NUMERIC, remaining_balance NUMERIC)
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+SET search_path = public
+AS $redeem_gc$
 DECLARE
   v_id      UUID;
   v_balance NUMERIC;
@@ -22,12 +24,22 @@ DECLARE
   v_expires TIMESTAMPTZ;
   v_deduct  NUMERIC;
 BEGIN
-  -- Lock the row so concurrent calls serialize
-  SELECT id, balance, is_active, expires_at
-  INTO   v_id, v_balance, v_active, v_expires
-  FROM   public.gift_cards
-  WHERE  code = upper(trim(p_code))
-  FOR UPDATE;
+  IF p_amount <= 0 THEN
+    RAISE EXCEPTION 'invalid_amount: p_amount must be positive';
+  END IF;
+
+  -- Lock the row so concurrent calls serialize; NOWAIT returns error immediately
+  -- instead of blocking serverless request indefinitely
+  BEGIN
+    SELECT id, balance, is_active, expires_at
+    INTO   v_id, v_balance, v_active, v_expires
+    FROM   public.gift_cards
+    WHERE  code = upper(trim(p_code))
+    FOR UPDATE NOWAIT;
+  EXCEPTION
+    WHEN lock_not_available THEN
+      RAISE EXCEPTION 'card_locked';
+  END;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'invalid_card';
@@ -53,6 +65,6 @@ BEGIN
 
   RETURN QUERY SELECT v_deduct, v_balance - v_deduct;
 END;
-$$;
+$redeem_gc$;
 
 GRANT EXECUTE ON FUNCTION redeem_gift_card(TEXT, NUMERIC) TO service_role;
