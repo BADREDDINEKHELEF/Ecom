@@ -190,7 +190,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       quantity:      item.quantity,
       subtotal:      item.subtotal,
       vendor_id:     item.vendorId ?? priceMap.get(item.productId)?.vendorId ?? null,
-      selected_color: item.selectedColor || null,
+      // Only set selected_color when a color was chosen — avoids failing if migration_036 not yet run
+      ...(item.selectedColor ? { selected_color: item.selectedColor } : {}),
     }))
   )
   if (itemsErr) throw itemsErr

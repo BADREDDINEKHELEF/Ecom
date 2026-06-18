@@ -13,11 +13,12 @@ import { firePurchaseCAPI } from '@/lib/analytics/server'
 import { logger } from '@/lib/logger'
 
 const OrderItemSchema = z.object({
-  productId:    z.string().min(1),
-  productName:  z.string().min(1).max(500),
-  productImage: z.string().max(1000).default(''),
-  quantity:     z.number().int().min(1).max(100),
-  vendorId:     z.string().uuid().nullable().optional(),
+  productId:     z.string().min(1),
+  productName:   z.string().min(1).max(500),
+  productImage:  z.string().max(1000).default(''),
+  quantity:      z.number().int().min(1).max(100),
+  vendorId:      z.string().uuid().nullable().optional(),
+  selectedColor: z.string().max(100).nullable().optional(),
 })
 
 const CreateOrderSchema = z.object({
