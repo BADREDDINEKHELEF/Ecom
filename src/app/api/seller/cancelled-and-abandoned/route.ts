@@ -53,17 +53,33 @@ export async function GET(req: NextRequest) {
         cancelledAt: r.orders!.cancelled_at,
       }))
 
-    // 2. Abandoned checkouts — filtered by vendor's store_slug when available
-    const abandonedBase = admin
-      .from('abandoned_checkouts')
-      .select('session_id, name, phone, email, wilaya, cart_total, status, updated_at, store_slug')
-      .eq('status', 'abandoned')
-      .gte('updated_at', since.toISOString())
+    // 2. Abandoned checkouts — filtered by vendor's store_slug when column exists
+    // Try vendor-scoped query first; fall back to all if column missing (pre-migration)
+    let abandonedRows: { session_id: string; name: string | null; phone: string | null; email: string | null; wilaya: string | null; cart_total: number; updated_at: string }[] | null = null
 
-    const { data: abandonedRows } = await (vendor.store_slug
-      ? abandonedBase.eq('store_slug', vendor.store_slug)
-      : abandonedBase
-    ).order('updated_at', { ascending: false }).limit(100)
+    if (vendor.store_slug) {
+      const { data, error } = await admin
+        .from('abandoned_checkouts')
+        .select('session_id, name, phone, email, wilaya, cart_total, status, updated_at')
+        .eq('status', 'abandoned')
+        .eq('store_slug', vendor.store_slug)
+        .gte('updated_at', since.toISOString())
+        .order('updated_at', { ascending: false })
+        .limit(100)
+
+      if (!error) abandonedRows = data
+    }
+
+    if (abandonedRows === null) {
+      const { data } = await admin
+        .from('abandoned_checkouts')
+        .select('session_id, name, phone, email, wilaya, cart_total, status, updated_at')
+        .eq('status', 'abandoned')
+        .gte('updated_at', since.toISOString())
+        .order('updated_at', { ascending: false })
+        .limit(100)
+      abandonedRows = data
+    }
 
     return NextResponse.json({
       cancelled: cancelled ?? [],
@@ -73,7 +89,6 @@ export async function GET(req: NextRequest) {
         phone:     r.phone,
         email:     r.email,
         wilaya:    r.wilaya,
-        storeSlug: r.store_slug,
         cartTotal: r.cart_total,
         updatedAt: r.updated_at,
       })),

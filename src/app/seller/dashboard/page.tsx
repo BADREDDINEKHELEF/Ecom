@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import {
-  TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock,
+  TrendingUp, TrendingDown, Clock,
   Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
   Users, Award, AlertTriangle, Zap, Bell, Menu, Copy, Check, ExternalLink,
-  Settings, CreditCard, MapPin, Phone, Image, Tag, Shield,
+  Settings, MapPin, Phone, Image, Tag, Shield,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { getVendorProducts } from '@/lib/supabase/products'
@@ -237,7 +237,6 @@ export default function SellerDashboardPage() {
 
   const analytics    = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])
   const grossRevenue = orders.reduce((s, o) => s + o.vendorTotal, 0)
-  const netEarnings  = grossRevenue
   const maxMonthly   = Math.max(...analytics.monthly.map((m) => m.revenue), 1)
   const hour         = new Date().getHours()
   const greeting     = hour < 12 ? sd.goodMorning : hour < 18 ? sd.goodAfternoon : sd.goodEvening

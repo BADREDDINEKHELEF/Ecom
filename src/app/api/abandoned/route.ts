@@ -21,22 +21,27 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createAdminClient()
-    await supabase.from('abandoned_checkouts').upsert(
-      {
-        session_id: sessionId,
-        name: typeof name === 'string' ? name.slice(0, 200) : null,
-        email: typeof email === 'string' && email.includes('@') ? email.slice(0, 320) : null,
-        phone: typeof phone === 'string' ? phone.slice(0, 20) : null,
-        wilaya: typeof wilaya === 'string' ? wilaya.slice(0, 100) : null,
-        address: typeof address === 'string' ? address.slice(0, 500) : null,
-        store_slug: typeof storeSlug === 'string' ? storeSlug.slice(0, 100) : null,
-        cart_snapshot: cartSnapshot ?? null,
-        cart_total: typeof cartTotal === 'number' ? cartTotal : 0,
-        status: 'abandoned',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'session_id' }
-    )
+    const payload = {
+      session_id: sessionId,
+      name: typeof name === 'string' ? name.slice(0, 200) : null,
+      email: typeof email === 'string' && email.includes('@') ? email.slice(0, 320) : null,
+      phone: typeof phone === 'string' ? phone.slice(0, 20) : null,
+      wilaya: typeof wilaya === 'string' ? wilaya.slice(0, 100) : null,
+      address: typeof address === 'string' ? address.slice(0, 500) : null,
+      cart_snapshot: cartSnapshot ?? null,
+      cart_total: typeof cartTotal === 'number' ? cartTotal : 0,
+      status: 'abandoned',
+      updated_at: new Date().toISOString(),
+    }
+    const payloadWithSlug = typeof storeSlug === 'string'
+      ? { ...payload, store_slug: storeSlug.slice(0, 100) }
+      : payload
+
+    // Try with store_slug first; fall back without if column not yet migrated
+    const { error } = await supabase.from('abandoned_checkouts').upsert(payloadWithSlug, { onConflict: 'session_id' })
+    if (error && typeof storeSlug === 'string') {
+      await supabase.from('abandoned_checkouts').upsert(payload, { onConflict: 'session_id' })
+    }
 
     // Send abandoned cart email immediately if email provided (degrade gracefully)
     if (typeof email === 'string' && email.includes('@') && typeof cartTotal === 'number' && cartTotal > 0) {
