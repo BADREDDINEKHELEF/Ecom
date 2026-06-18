@@ -52,6 +52,16 @@ export async function colivraisonCreateShipment(input: ShipmentInput): Promise<S
   return colivraisonCreateShipmentWithToken(input, process.env.COLIVRAISON_TOKEN!)
 }
 
+export async function colivraisonListParcels(token: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/orders?page=1&per_page=${pageSize}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function colivraisonTrack(trackingCode: string, token: string) {
   const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
     headers: { 'Authorization': `Bearer ${token}` },

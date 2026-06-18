@@ -50,6 +50,16 @@ export async function rexCreateShipment(input: ShipmentInput): Promise<ShipmentR
   return rexCreateShipmentWithToken(input, process.env.REX_TOKEN!)
 }
 
+export async function rexListParcels(token: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function rexTrack(trackingCode: string, token: string) {
   const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingCode)}`, {
     headers: { 'Authorization': `Bearer ${token}` },

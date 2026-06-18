@@ -88,6 +88,16 @@ export async function yalidineTrack(trackingNumber: string, apiId: string, apiTo
   }
 }
 
+export async function yalidineListParcels(apiId: string, apiToken: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
+      headers: buildHeaders(apiId, apiToken),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function yalidineGetRates(wilayaName: string) {
   if (!yalidineConfigured()) return null
   try {

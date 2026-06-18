@@ -52,6 +52,16 @@ export async function zrCreateShipment(input: ShipmentInput): Promise<ShipmentRe
   return zrCreateShipmentWithToken(input, process.env.ZR_TOKEN!)
 }
 
+export async function zrListParcels(token: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/parcel?page=1&page_size=${pageSize}`, {
+      headers: { Authorization: `Token ${token}` },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function zrTrack(trackingNumber: string, token: string) {
   try {
     const res = await fetch(`${BASE_URL}/parcel/${encodeURIComponent(trackingNumber)}`, {

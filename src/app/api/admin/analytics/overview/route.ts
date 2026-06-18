@@ -37,12 +37,12 @@ export async function GET(req: NextRequest) {
     const vendors    = totalVendors.data ?? []
     const recent     = recentOrders.data ?? []
 
-    // Revenue = delivered orders only (COD market — only confirmed when delivered)
-    const deliveredToday = orders.filter((o) => o.status === 'delivered')
-    const todayGMV   = deliveredToday.reduce((s, o) => s + (o.total ?? 0), 0)
+    // Revenue = transmitted orders (shipped to courier or confirmed delivered)
+    const transmittedToday = orders.filter((o) => ['shipped', 'delivered'].includes(o.status))
+    const todayGMV   = transmittedToday.reduce((s, o) => s + (o.total ?? 0), 0)
     const codOrders  = orders.filter((o) => o.payment_method === 'cash').length
     const codRate    = orders.length > 0 ? Math.round((codOrders / orders.length) * 100) : 0
-    const avgBasket  = deliveredToday.length > 0 ? Math.round(todayGMV / deliveredToday.length) : 0
+    const avgBasket  = transmittedToday.length > 0 ? Math.round(todayGMV / transmittedToday.length) : 0
 
     const newVendorsToday = vendors.filter(
       (v) => new Date(v.created_at) >= todayUTC

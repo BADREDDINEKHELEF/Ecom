@@ -53,6 +53,16 @@ export async function procolisCreateShipment(input: ShipmentInput): Promise<Ship
   return procolisCreateShipmentWithToken(input, process.env.PROCOLIS_TOKEN!)
 }
 
+export async function procolisListParcels(token: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/colis?page=1&per_page=${pageSize}`, {
+      headers: { 'Content-Type': 'application/json', token },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function procolisTrack(trackingNumber: string, token: string) {
   const res = await fetch(
     `${BASE_URL}/traking?token=${encodeURIComponent(token)}&code_suivi=${encodeURIComponent(trackingNumber)}`

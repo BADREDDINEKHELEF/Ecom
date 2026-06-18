@@ -67,6 +67,16 @@ export async function apecCreateShipment(input: ShipmentInput): Promise<Shipment
   return apecCreateShipmentWithCreds(input, process.env.APEC_API_ID!, process.env.APEC_API_TOKEN!)
 }
 
+export async function apecListParcels(apiId: string, apiToken: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
+      headers: buildHeaders(apiId, apiToken),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function apecTrack(trackingNumber: string, apiId: string, apiToken: string) {
   const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
     headers: buildHeaders(apiId, apiToken),

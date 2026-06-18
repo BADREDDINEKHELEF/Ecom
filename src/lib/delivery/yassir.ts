@@ -58,6 +58,16 @@ export async function yassirCreateShipment(input: ShipmentInput): Promise<Shipme
   return yassirCreateShipmentWithKey(input, process.env.YASSIR_API_KEY!)
 }
 
+export async function yassirListParcels(apiKey: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/deliveries?page=1&limit=${pageSize}`, {
+      headers: { 'x-api-key': apiKey },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function yassirTrack(trackingNumber: string, apiKey: string) {
   const res = await fetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
     headers: { 'x-api-key': apiKey },

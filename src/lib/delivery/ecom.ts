@@ -68,6 +68,16 @@ export async function ecomCreateShipment(input: ShipmentInput): Promise<Shipment
   return ecomCreateShipmentWithToken(input, process.env.ECOM_TOKEN!)
 }
 
+export async function ecomListParcels(token: string, pageSize = 100) {
+  try {
+    const res = await fetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
+}
+
 export async function ecomTrack(trackingNumber: string, token: string) {
   const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
     headers: {

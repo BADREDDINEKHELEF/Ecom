@@ -5,6 +5,7 @@ import {
   Truck, Plus, Search, Download, RefreshCw, ExternalLink,
   X, Check, Loader2, Package, AlertTriangle,
   CheckCircle2, XCircle, RotateCcw, Menu, RotateCw, Ban, ShoppingCart,
+  TrendingUp, TrendingDown, Activity,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useT, useRTL } from '@/lib/store/langStore'
@@ -64,6 +65,16 @@ export default function SellerDeliveriesPage() {
   const [abandonedCheckouts, setAbandonedCheckouts] = useState<AbandonedCheckout[]>([])
   const [loadingCA, setLoadingCA] = useState(false)
 
+  // ── Dashboard stats ────────────────────────────────────────────────────────
+  interface DashStats {
+    total: number; pending: number; inTransit: number
+    delivered: number; returned: number; failed: number
+    deliveryRate: number; returnRate: number
+  }
+  const [dbStats, setDbStats] = useState<DashStats | null>(null)
+  const [providerStats, setProviderStats] = useState<DashStats | null>(null)
+  const [loadingStats, setLoadingStats] = useState(true)
+
   // ── Filters ────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -88,6 +99,19 @@ export default function SellerDeliveriesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   // ── Data fetchers ──────────────────────────────────────────────────────────
+  const loadDashboardStats = useCallback(async () => {
+    if (!vendor) return
+    setLoadingStats(true)
+    try {
+      const res = await fetch('/api/seller/delivery-dashboard')
+      const data = await res.json()
+      setDbStats(data.dbStats ?? null)
+      setProviderStats(data.providerStats ?? null)
+    } catch { /* silent */ } finally {
+      setLoadingStats(false)
+    }
+  }, [vendor])
+
   const loadShipments = useCallback(async () => {
     if (!vendor) return
     setLoadingShips(true)
@@ -133,6 +157,7 @@ export default function SellerDeliveriesPage() {
   }, [vendor])
 
   useEffect(() => { loadShipments() }, [loadShipments])
+  useEffect(() => { loadDashboardStats() }, [loadDashboardStats])
   useEffect(() => { if (tab === 'pending_orders') loadPendingOrders() }, [tab, loadPendingOrders])
   useEffect(() => { if (tab === 'cancelled_abandoned') loadCancelledAndAbandoned() }, [tab, loadCancelledAndAbandoned])
 
@@ -145,7 +170,7 @@ export default function SellerDeliveriesPage() {
       const res = await fetch('/api/seller/shipments/sync', { method: 'POST' })
       const data = await res.json()
       setSyncMsg(a.syncDone.replace('{n}', String(data.synced ?? 0)))
-      await loadShipments()
+      await Promise.all([loadShipments(), loadDashboardStats()])
       setTimeout(() => setSyncMsg(''), 4000)
     } catch {
       setSyncMsg('Error')
@@ -300,6 +325,64 @@ export default function SellerDeliveriesPage() {
           </div>
         </div>
 
+        {/* ── Stats Card ────────────────────────────────────────────────────── */}
+        {(() => {
+          const stats = providerStats ?? dbStats
+          const source = providerStats ? a.statsFromProvider : a.statsFromDb
+          if (!stats && !loadingStats) return null
+          return (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-600" />
+                  <span className="font-bold text-gray-800 text-sm">{a.dashboardStats}</span>
+                </div>
+                {!loadingStats && (
+                  <span className="text-xs text-gray-400 font-medium">{source}</span>
+                )}
+              </div>
+              {loadingStats ? (
+                <div className="flex items-center gap-2 text-gray-400 text-sm py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> {a.syncing}
+                </div>
+              ) : stats ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-black text-gray-900">{stats.total}</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{a.statsTotal}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-black text-green-600">{stats.delivered}</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{a.statsDelivered}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-black text-blue-600">{stats.inTransit}</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{a.statsInTransit}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-black text-orange-500">{stats.returned}</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{a.statsReturned}</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                      <p className="text-2xl font-black text-green-600">{stats.deliveryRate}%</p>
+                    </div>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{a.statsDeliveryRate}</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <TrendingDown className="w-4 h-4 text-red-400" />
+                      <p className="text-2xl font-black text-red-500">{stats.returnRate}%</p>
+                    </div>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{a.statsReturnRate}</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )
+        })()}
+
         {/* Tabs */}
         <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
           {(['shipments', 'pending_orders', 'cancelled_abandoned'] as const).map((key) => {
@@ -426,7 +509,7 @@ export default function SellerDeliveriesPage() {
                             <td className="px-4 py-3.5">
                               {s.label_url && (
                                 <a href={s.label_url} target="_blank" rel="noopener noreferrer"
-                                  className="text-indigo-500 hover:text-indigo-700 text-xs font-semibold">Label</a>
+                                  className="text-indigo-500 hover:text-indigo-700 text-xs font-semibold">{a.labelPrint}</a>
                               )}
                             </td>
                           </tr>
@@ -510,7 +593,7 @@ export default function SellerDeliveriesPage() {
                   <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
                     <Ban className="w-4 h-4 text-red-500" />
                     <h2 className="font-bold text-gray-900 text-sm">{a.cancelledOrders}</h2>
-                    <span className="ml-auto text-xs text-gray-400 font-medium">30 {a.colDate?.toLowerCase()}</span>
+                    <span className="ml-auto text-xs text-gray-400 font-medium">{a.last30Days}</span>
                   </div>
                   {cancelledOrders.length === 0 ? (
                     <div className="text-center py-10 text-gray-400">
@@ -557,7 +640,7 @@ export default function SellerDeliveriesPage() {
                   <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
                     <ShoppingCart className="w-4 h-4 text-amber-500" />
                     <h2 className="font-bold text-gray-900 text-sm">{a.abandonedCheckouts}</h2>
-                    <span className="ml-auto text-xs text-gray-400 font-medium">30 {a.colDate?.toLowerCase()}</span>
+                    <span className="ml-auto text-xs text-gray-400 font-medium">{a.last30Days}</span>
                   </div>
                   {abandonedCheckouts.length === 0 ? (
                     <div className="text-center py-10 text-gray-400">
@@ -625,7 +708,7 @@ export default function SellerDeliveriesPage() {
               <div className="bg-gray-50 rounded-xl p-3 text-sm">
                 <p className="font-semibold text-gray-900">{modalOrder.order.full_name}</p>
                 <p className="text-gray-500">{modalOrder.order.phone} · {modalOrder.order.wilaya}, {modalOrder.order.city}</p>
-                <p className="text-gray-500 mt-1">{modalOrder.items.length} item(s) · {formatPrice(modalOrder.vendorTotal)}</p>
+                <p className="text-gray-500 mt-1">{a.itemsInOrder.replace('{n}', String(modalOrder.items.length))} · {formatPrice(modalOrder.vendorTotal)}</p>
               </div>
 
               <div>
