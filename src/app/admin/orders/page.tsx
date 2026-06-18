@@ -9,22 +9,18 @@ import { formatPrice } from '@/lib/utils'
 import { type OrderRow } from '@/lib/supabase/orders'
 import { buildWhatsAppLink } from '@/lib/whatsapp/messages'
 import { DELIVERY_PROVIDERS, getProvider } from '@/lib/delivery/providers'
+import { useT } from '@/lib/store/langStore'
 
 type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
 
 function codFraudScore(order: OrderRow): { level: 'low' | 'medium' | 'high'; score: number } {
   let score = 0
-  // High value COD increases risk
   if (order.total > 20000) score += 2
   else if (order.total > 10000) score += 1
-  // Round number amounts are suspicious (potential fake orders)
   if (order.total % 1000 === 0 && order.total > 0) score += 1
-  // Night-time orders (23:00 - 05:00 local)
   const hour = new Date(order.created_at).getHours()
   if (hour >= 23 || hour < 5) score += 1
-  // Very new phone number format (just 10 zeros type patterns) — basic check
   if (/^0{5}/.test(order.phone)) score += 2
-
   const level = score >= 4 ? 'high' : score >= 2 ? 'medium' : 'low'
   return { level, score }
 }
@@ -42,24 +38,14 @@ function FraudBadge({ order }: { order: OrderRow }) {
   )
 }
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; style: string; next?: OrderStatus }> = {
-  pending:   { label: 'Pending',   style: 'bg-amber-100 text-amber-700',   next: 'confirmed' },
-  confirmed: { label: 'Confirmed', style: 'bg-blue-100 text-blue-700',     next: 'shipped' },
-  shipped:   { label: 'Shipped',   style: 'bg-indigo-100 text-indigo-700', next: 'delivered' },
-  delivered: { label: 'Delivered', style: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelled', style: 'bg-red-100 text-red-700' },
-}
-
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('fr-DZ', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function itemsString(order: OrderRow): string {
   if (!order.order_items || order.order_items.length === 0) return 'Colis'
   return order.order_items.map((i) => `${i.product_name} x${i.quantity}`).join(', ')
 }
-
-// ─── Ship Modal ────────────────────────────────────────────────────────────────
 
 interface ShipModalProps {
   order: OrderRow
@@ -68,6 +54,8 @@ interface ShipModalProps {
 }
 
 function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
+  const t = useT()
+  const a = t.admin
   const [provider, setProvider] = useState('yalidine')
   const [tracking, setTracking] = useState('')
   const [autoCreate, setAutoCreate] = useState(false)
@@ -79,7 +67,7 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
 
   const handleShip = async () => {
     if (!autoCreate && !tracking.trim()) {
-      setError('Enter a tracking number or use auto-create')
+      setError(a.trackingNumber)
       return
     }
     setSaving(true)
@@ -138,7 +126,7 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
       <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="font-black text-gray-900">Ship Order</h2>
+            <h2 className="font-black text-gray-900">{a.shipModal}</h2>
             <p className="text-sm text-gray-500 font-mono">{order.id.slice(0, 8).toUpperCase()} — {order.full_name}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -146,9 +134,8 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
           </button>
         </div>
 
-        {/* Provider Select */}
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Delivery Provider</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">{a.provider}</label>
           <div className="grid grid-cols-2 gap-2">
             {DELIVERY_PROVIDERS.map((p) => (
               <button
@@ -168,7 +155,6 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
           </div>
         </div>
 
-        {/* Yalidine auto-create */}
         {provider === 'yalidine' && (
           <div className="mb-4">
             <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-orange-50 border border-orange-200">
@@ -179,23 +165,22 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
                 className="w-4 h-4 accent-orange-500"
               />
               <div>
-                <p className="text-sm font-semibold text-orange-800">Auto-create shipment via API</p>
+                <p className="text-sm font-semibold text-orange-800">{a.autoCreate}</p>
                 <p className="text-xs text-orange-600">Requires YALIDINE_API_ID + YALIDINE_API_TOKEN env vars</p>
               </div>
             </label>
           </div>
         )}
 
-        {/* Tracking input */}
         {!autoCreate && (
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Tracking Number</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{a.trackingNumber}</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={tracking}
                 onChange={(e) => setTracking(e.target.value)}
-                placeholder="Enter tracking number…"
+                placeholder={a.trackingNumber + '…'}
                 className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
               />
               {selectedProvider?.dashboardUrl && (
@@ -204,19 +189,15 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-                  title={`Open ${selectedProvider.name} dashboard`}
                 >
                   <ExternalLink className="w-4 h-4 text-gray-400" />
                 </a>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Create the shipment on {selectedProvider?.name} first, then paste the tracking number here.
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{a.manualTracking}</p>
           </div>
         )}
 
-        {/* WhatsApp notification */}
         <label className="flex items-center gap-3 cursor-pointer mb-5">
           <input
             type="checkbox"
@@ -224,9 +205,7 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
             onChange={(e) => setSendWA(e.target.checked)}
             className="w-4 h-4 accent-green-500"
           />
-          <span className="text-sm font-medium text-gray-700">
-            Open WhatsApp to notify customer after shipping
-          </span>
+          <span className="text-sm font-medium text-gray-700">{a.notifyWhatsapp}</span>
         </label>
 
         {error && (
@@ -240,13 +219,13 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
             className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
-            {autoCreate ? 'Create & Ship' : 'Mark as Shipped'}
+            {autoCreate ? a.autoCreate : a.ship}
           </button>
           <button
             onClick={onClose}
             className="px-5 border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {a.cancelAction}
           </button>
         </div>
       </div>
@@ -254,17 +233,26 @@ function ShipModal({ order, onClose, onShipped }: ShipModalProps) {
   )
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
-
 type OrderSource = 'all' | 'admin' | 'vendor'
 
-const SOURCE_CONFIG: Record<OrderSource, { label: string; icon: React.ReactNode; description: string }> = {
-  all:    { label: 'Toutes',      icon: <LayoutGrid className="w-4 h-4" />, description: 'Toutes les commandes' },
-  admin:  { label: 'Ma Boutique', icon: <Store className="w-4 h-4" />,      description: 'Vos produits uniquement' },
-  vendor: { label: 'Vendeurs',    icon: <ShoppingBag className="w-4 h-4" />, description: 'Produits des vendeurs' },
-}
-
 export default function AdminOrdersPage() {
+  const t = useT()
+  const a = t.admin
+
+  const STATUS_CONFIG: Record<OrderStatus, { label: string; style: string; next?: OrderStatus }> = {
+    pending:   { label: a.statusPending,   style: 'bg-amber-100 text-amber-700',   next: 'confirmed' },
+    confirmed: { label: a.statusConfirmed, style: 'bg-blue-100 text-blue-700',     next: 'shipped' },
+    shipped:   { label: a.statusShipped,   style: 'bg-indigo-100 text-indigo-700', next: 'delivered' },
+    delivered: { label: a.statusDelivered, style: 'bg-green-100 text-green-700' },
+    cancelled: { label: a.statusCancelled, style: 'bg-red-100 text-red-700' },
+  }
+
+  const SOURCE_CONFIG: Record<OrderSource, { label: string; icon: React.ReactNode; description: string }> = {
+    all:    { label: a.sourceAll,    icon: <LayoutGrid className="w-4 h-4" />, description: a.sourceAll },
+    admin:  { label: a.sourceStore,  icon: <Store className="w-4 h-4" />,      description: a.sourceStore },
+    vendor: { label: a.sourceVendors, icon: <ShoppingBag className="w-4 h-4" />, description: a.sourceVendorItems },
+  }
+
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -386,9 +374,9 @@ export default function AdminOrdersPage() {
     <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Commandes</h1>
+          <h1 className="text-2xl font-black text-gray-900">{a.ordersTitle}</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {filtered.length} commandes · {formatPrice(totalRevenue)} chiffre d&apos;affaires
+            {filtered.length} {a.orders.toLowerCase()} · {formatPrice(totalRevenue)}
           </p>
         </div>
         <button
@@ -397,7 +385,7 @@ export default function AdminOrdersPage() {
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
+          {a.refresh}
         </button>
       </div>
 
@@ -429,7 +417,7 @@ export default function AdminOrdersPage() {
           onClick={() => setFilterStatus('')}
           className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${!filterStatus ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 shadow-sm hover:bg-gray-50'}`}
         >
-          Tout ({orders.length})
+          {a.filterAll} ({orders.length})
         </button>
         {(Object.entries(STATUS_CONFIG) as [OrderStatus, typeof STATUS_CONFIG[OrderStatus]][]).map(([status, { label }]) => (
           <button
@@ -448,7 +436,7 @@ export default function AdminOrdersPage() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by ID, name, phone, or wilaya…"
+            placeholder={a.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
@@ -460,11 +448,11 @@ export default function AdminOrdersPage() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 flex items-center justify-center text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Chargement…
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> {t.common.loading}
           </div>
         ) : (
           <>
-            {/* ── Mobile cards (< sm) ── */}
+            {/* Mobile cards */}
             <div className="sm:hidden divide-y divide-gray-100">
               {filtered.map((order) => {
                 const status = (order.status as OrderStatus) in STATUS_CONFIG ? order.status as OrderStatus : 'pending'
@@ -513,12 +501,12 @@ export default function AdminOrdersPage() {
               })}
             </div>
 
-            {/* ── Desktop table (≥ sm) ── */}
+            {/* Desktop table */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Order ID', 'Customer', 'Wilaya', 'Items', 'Total', 'Payment', 'Status', 'Tracking', 'Date', ''].map((h) => (
+                    {[a.colOrder, a.colCustomer, a.colWilaya, a.colItems, a.colTotal, a.colPayment, a.colStatus, a.colTracking, a.colDate, ''].map((h) => (
                       <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-4 py-4">{h}</th>
                     ))}
                   </tr>
@@ -563,7 +551,7 @@ export default function AdminOrdersPage() {
                               <button
                                 onClick={() => advanceStatus(order.id, status)}
                                 disabled={isAdvancing}
-                                title={`Mark as ${STATUS_CONFIG[statusCfg.next!].label}`}
+                                title={`→ ${STATUS_CONFIG[statusCfg.next!].label}`}
                                 className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
                               >
                                 {isAdvancing
@@ -601,12 +589,12 @@ export default function AdminOrdersPage() {
                               <MessageCircle className="w-4 h-4" />
                             </button>
                             {(status === 'confirmed' || status === 'pending') && (
-                              <button onClick={() => setShipOrder(order)} title="Expédier"
+                              <button onClick={() => setShipOrder(order)} title={a.ship}
                                 className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                                 <Truck className="w-4 h-4" />
                               </button>
                             )}
-                            <button onClick={() => setSelectedOrder(order)} title="Détails"
+                            <button onClick={() => setSelectedOrder(order)}
                               className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                               <Eye className="w-4 h-4" />
                             </button>
@@ -621,7 +609,7 @@ export default function AdminOrdersPage() {
           </>
         )}
         {!loading && filtered.length === 0 && (
-          <div className="py-16 text-center text-gray-500">Aucune commande trouvée</div>
+          <div className="py-16 text-center text-gray-500">{a.noOrdersFound}</div>
         )}
         {!loading && hasMore && !search && !filterStatus && (
           <div className="px-6 py-4 border-t border-gray-100 text-center">
@@ -630,7 +618,7 @@ export default function AdminOrdersPage() {
               disabled={loadingMore}
               className="text-sm text-indigo-600 font-semibold hover:underline disabled:opacity-50"
             >
-              {loadingMore ? 'Chargement…' : 'Charger plus'}
+              {loadingMore ? t.common.loading : a.loadMore}
             </button>
           </div>
         )}
@@ -648,14 +636,14 @@ export default function AdminOrdersPage() {
             </div>
             <div className="space-y-3 text-sm">
               {[
-                { label: 'Customer', value: selectedOrder.full_name },
-                { label: 'Phone',    value: selectedOrder.phone },
-                { label: 'Address',  value: `${selectedOrder.address}, ${selectedOrder.city}, ${selectedOrder.wilaya}` },
-                { label: 'Payment',  value: selectedOrder.payment_method === 'cash' ? '💵 Cash on Delivery' : `💳 ${selectedOrder.payment_method}` },
-                { label: 'Subtotal', value: formatPrice(selectedOrder.subtotal) },
-                { label: 'Shipping', value: formatPrice(selectedOrder.shipping_cost) },
-                { label: 'Total',    value: formatPrice(selectedOrder.total) },
-                { label: 'Date',     value: formatDate(selectedOrder.created_at) },
+                { label: a.detailCustomer, value: selectedOrder.full_name },
+                { label: a.detailPhone,    value: selectedOrder.phone },
+                { label: a.detailAddress,  value: `${selectedOrder.address}, ${selectedOrder.city}, ${selectedOrder.wilaya}` },
+                { label: a.detailPayment,  value: selectedOrder.payment_method === 'cash' ? '💵 Cash' : `💳 ${selectedOrder.payment_method}` },
+                { label: a.detailSubtotal, value: formatPrice(selectedOrder.subtotal) },
+                { label: a.detailShipping, value: formatPrice(selectedOrder.shipping_cost) },
+                { label: a.detailTotal,    value: formatPrice(selectedOrder.total) },
+                { label: a.detailDate,     value: formatDate(selectedOrder.created_at) },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-gray-500">{label}</span>
@@ -664,7 +652,7 @@ export default function AdminOrdersPage() {
               ))}
               {selectedOrder.yalidine_tracking && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Tracking</span>
+                  <span className="text-gray-500">{a.colTracking}</span>
                   <div className="flex items-center gap-1.5">
                     {selectedOrder.delivery_provider && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white"
@@ -679,7 +667,7 @@ export default function AdminOrdersPage() {
             </div>
             {selectedOrder.order_items && selectedOrder.order_items.length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs font-bold text-gray-500 uppercase mb-2">Items</p>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-2">{a.detailItems}</p>
                 <div className="space-y-1.5">
                   {selectedOrder.order_items.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
@@ -704,7 +692,7 @@ export default function AdminOrdersPage() {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors"
                 >
                   <Truck className="w-4 h-4" />
-                  Ship
+                  {a.ship}
                 </button>
               )}
               {STATUS_CONFIG[selectedOrder.status as OrderStatus]?.next &&
@@ -715,14 +703,14 @@ export default function AdminOrdersPage() {
                   className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {advancing === selectedOrder.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Mark {STATUS_CONFIG[STATUS_CONFIG[selectedOrder.status as OrderStatus]?.next as OrderStatus]?.label ?? ''}
+                  {STATUS_CONFIG[STATUS_CONFIG[selectedOrder.status as OrderStatus]?.next as OrderStatus]?.label ?? ''}
                 </button>
               )}
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
               >
-                Close
+                {a.close}
               </button>
             </div>
           </div>

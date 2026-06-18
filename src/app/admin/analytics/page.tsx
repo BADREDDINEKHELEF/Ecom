@@ -13,8 +13,8 @@ import {
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import type { AdminStats } from '@/lib/supabase/analytics'
+import { useT } from '@/lib/store/langStore'
 
-// ── Colour constants ───────────────────────────────────────────
 const PALETTE = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#EC4899', '#14B8A6']
 
 const PERIOD_OPTIONS = [
@@ -25,8 +25,6 @@ const PERIOD_OPTIONS = [
 ]
 
 type Tab = 'overview' | 'vendors' | 'geography'
-
-// ── Helpers ────────────────────────────────────────────────────
 
 function GrowthBadge({ pct }: { pct: number }) {
   if (pct === 0) return null
@@ -84,14 +82,16 @@ function RevTooltip({ active, payload, label }: { active?: boolean; payload?: { 
     <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg space-y-1">
       <p className="font-bold">{label}</p>
       {payload.map((p, i) => (
-        <p key={i}>{i === 0 ? formatPrice(p.value) : `${p.value} cmd`}</p>
+        <p key={i}>{i === 0 ? formatPrice(p.value) : `${p.value}`}</p>
       ))}
     </div>
   )
 }
 
-// ── Page ───────────────────────────────────────────────────────
 export default function AdminAnalyticsPage() {
+  const t = useT()
+  const a = t.admin
+
   const [days, setDays]   = useState(30)
   const [tab, setTab]     = useState<Tab>('overview')
   const [data, setData]   = useState<AdminStats | null>(null)
@@ -111,7 +111,6 @@ export default function AdminAnalyticsPage() {
 
   useEffect(() => { load() }, [load])
 
-  // ── Loading skeleton ─────────────────────────────────────────
   if (loading && !data) {
     return (
       <div className="p-4 sm:p-8">
@@ -131,13 +130,13 @@ export default function AdminAnalyticsPage() {
   return (
     <div className="p-4 sm:p-8">
 
-      {/* ── Header ─────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-            <BarChart2 className="w-6 h-6 text-indigo-600" /> Analytics Plateforme
+            <BarChart2 className="w-6 h-6 text-indigo-600" /> {a.analyticsTitle}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Données en temps réel — toutes boutiques confondues</p>
+          <p className="text-gray-500 text-sm mt-1">{a.analyticsSubtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
@@ -153,17 +152,17 @@ export default function AdminAnalyticsPage() {
           </button>
           <a href="/api/admin/analytics/export"
             className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
-            <Download className="w-4 h-4" /> Exporter CSV
+            <Download className="w-4 h-4" /> {a.exportCsv}
           </a>
         </div>
       </div>
 
-      {/* ── Tabs ───────────────────────────────────────────────── */}
+      {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
         {([
-          ['overview',   BarChart2, 'Vue d\'ensemble'],
-          ['vendors',    Store,     'Vendeurs'],
-          ['geography',  MapPin,    'Géographie'],
+          ['overview',   BarChart2, a.tabOverview],
+          ['vendors',    Store,     a.tabVendors],
+          ['geography',  MapPin,    a.tabGeography],
         ] as const).map(([key, Icon, label]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -175,50 +174,45 @@ export default function AdminAnalyticsPage() {
       {!d ? (
         <div className="text-center py-24 text-gray-400">
           <BarChart2 className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p className="font-medium">Impossible de charger les données</p>
-          <button onClick={load} className="mt-4 text-indigo-600 text-sm font-semibold hover:underline">Réessayer</button>
+          <p className="font-medium">{a.cannotLoad}</p>
+          <button onClick={load} className="mt-4 text-indigo-600 text-sm font-semibold hover:underline">{a.retryAction}</button>
         </div>
       ) : (
         <>
-
-          {/* ══ OVERVIEW TAB ═════════════════════════════════════ */}
+          {/* OVERVIEW TAB */}
           {tab === 'overview' && (
             <>
-              {/* KPI grid — row 1: revenue metrics */}
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-                <KpiCard icon={DollarSign} label="Chiffre d'affaires" color="indigo"
+                <KpiCard icon={DollarSign} label={a.revenue} color="indigo"
                   value={formatPrice(d.totalRevenue)} growth={d.revenueGrowth}
-                  sub={`moy. ${formatPrice(d.avgOrderValue)} / commande`} />
-                <KpiCard icon={ShoppingBag} label="Commandes" color="blue"
+                  sub={`moy. ${formatPrice(d.avgOrderValue)} / ${a.orders.toLowerCase()}`} />
+                <KpiCard icon={ShoppingBag} label={a.orders} color="blue"
                   value={d.totalOrders.toLocaleString('fr-DZ')} growth={d.ordersGrowth} />
-                <KpiCard icon={Truck} label="Taux de livraison" color="green"
-                  value={`${d.deliveryRate}%`}
-                  sub={`Retours : ${d.returnRate}%`} />
-                <KpiCard icon={CreditCard} label="MRR Abonnements" color="violet"
+                <KpiCard icon={Truck} label={a.colDelivRate} color="green"
+                  value={`${d.deliveryRate}%`} />
+                <KpiCard icon={CreditCard} label="MRR" color="violet"
                   value={formatPrice(d.mrr)}
-                  sub={`${d.activeSubscriptions} abonnements actifs`} />
+                  sub={`${d.activeSubscriptions} ${a.subActive.toLowerCase()}`} />
               </div>
 
-              {/* KPI grid — row 2: platform health */}
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <KpiCard icon={Users} label="Vendeurs actifs" color="emerald"
+                <KpiCard icon={Users} label={a.activeVendors} color="emerald"
                   value={d.activeVendors.toLocaleString()}
-                  sub={`+${d.newVendorsThisMonth} ce mois · ${d.totalVendors} total`} />
-                <KpiCard icon={Package} label="Produits publiés" color="amber"
+                  sub={`+${d.newVendorsThisMonth} · ${d.totalVendors} ${a.vendors.toLowerCase()}`} />
+                <KpiCard icon={Package} label={a.publishedProducts} color="amber"
                   value={d.totalProducts.toLocaleString()} />
-                <KpiCard icon={Star} label="Vendeurs vérifiés" color="pink"
-                  value="—" sub="Gérer dans Vendeurs → Vérifier" />
-                <KpiCard icon={TrendingUp} label="Croissance CA" color={d.revenueGrowth >= 0 ? 'green' : 'red'}
+                <KpiCard icon={Star} label={a.verifiedVendors} color="pink"
+                  value="—" />
+                <KpiCard icon={TrendingUp} label={a.analytics} color={d.revenueGrowth >= 0 ? 'green' : 'red'}
                   value={`${d.revenueGrowth > 0 ? '+' : ''}${d.revenueGrowth}%`}
-                  sub={`vs ${days} j précédents`} />
+                  sub={`vs ${days} j`} />
               </div>
 
-              {/* Revenue chart */}
               <div className="bg-white rounded-2xl p-6 shadow-sm mb-5">
-                <h2 className="font-bold text-gray-900 mb-4">Chiffre d'affaires dans le temps</h2>
+                <h2 className="font-bold text-gray-900 mb-4">{a.revenue6m}</h2>
                 {d.monthly.every((m) => m.revenue === 0) ? (
                   <div className="h-52 flex items-center justify-center text-gray-400 text-sm">
-                    Aucune commande sur cette période
+                    {a.noDataPeriod}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={240}>
@@ -240,11 +234,10 @@ export default function AdminAnalyticsPage() {
                 )}
               </div>
 
-              {/* Orders volume chart */}
               <div className="bg-white rounded-2xl p-6 shadow-sm mb-5">
-                <h2 className="font-bold text-gray-900 mb-4">Volume de commandes</h2>
+                <h2 className="font-bold text-gray-900 mb-4">{a.ordersByWilaya}</h2>
                 {d.monthly.every((m) => m.orders === 0) ? (
-                  <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Aucune donnée</div>
+                  <div className="h-40 flex items-center justify-center text-gray-400 text-sm">{a.noData}</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={d.monthly} margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
@@ -252,7 +245,7 @@ export default function AdminAnalyticsPage() {
                       <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                       <Tooltip
-                        formatter={(v) => [v, 'Commandes']}
+                        formatter={(v) => [v, a.orders]}
                         contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                       />
                       <Bar dataKey="orders" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -261,13 +254,12 @@ export default function AdminAnalyticsPage() {
                 )}
               </div>
 
-              {/* COD deep-dive link */}
               <Link href="/admin/analytics/cod"
                 className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-2xl p-5 hover:bg-indigo-100 transition-colors group mb-5">
                 <div>
-                  <p className="font-bold text-indigo-900">Analytiques COD détaillées →</p>
+                  <p className="font-bold text-indigo-900">{a.analytics} COD →</p>
                   <p className="text-sm text-indigo-600 mt-0.5">
-                    Taux de collecte par wilaya et transporteur · Export CSV
+                    {a.colDelivRate} · {a.exportCsv}
                   </p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-indigo-500 group-hover:translate-x-1 transition-transform" />
@@ -275,35 +267,33 @@ export default function AdminAnalyticsPage() {
             </>
           )}
 
-          {/* ══ VENDORS TAB ══════════════════════════════════════ */}
+          {/* VENDORS TAB */}
           {tab === 'vendors' && (
             <>
-              {/* Vendor summary KPIs */}
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <KpiCard icon={Users}    label="Total vendeurs"    color="indigo" value={d.totalVendors.toLocaleString()} />
-                <KpiCard icon={Store}    label="Vendeurs actifs"   color="green"  value={d.activeVendors.toLocaleString()} />
-                <KpiCard icon={TrendingUp} label="Nouveaux ce mois" color="amber" value={String(d.newVendorsThisMonth)} />
-                <KpiCard icon={CreditCard} label="MRR total"       color="violet" value={formatPrice(d.mrr)}
-                  sub={`${d.activeSubscriptions} plans actifs`} />
+                <KpiCard icon={Users}    label={a.vendors}       color="indigo" value={d.totalVendors.toLocaleString()} />
+                <KpiCard icon={Store}    label={a.activeVendors} color="green"  value={d.activeVendors.toLocaleString()} />
+                <KpiCard icon={TrendingUp} label={a.thisMonth}   color="amber"  value={String(d.newVendorsThisMonth)} />
+                <KpiCard icon={CreditCard} label="MRR"           color="violet" value={formatPrice(d.mrr)}
+                  sub={`${d.activeSubscriptions} ${a.subActive.toLowerCase()}`} />
               </div>
 
-              {/* Top vendors leaderboard */}
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-5">
                 <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
                   <Star className="w-4 h-4 text-amber-500" />
-                  <h2 className="font-bold text-gray-900">Top 10 Vendeurs par Chiffre d'affaires</h2>
-                  <span className="ml-auto text-xs text-gray-400">Période : {days} j</span>
+                  <h2 className="font-bold text-gray-900">{a.topVendors}</h2>
+                  <span className="ml-auto text-xs text-gray-400">{days} j</span>
                 </div>
                 {d.topVendors.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 text-sm">
-                    Aucune donnée de vente sur cette période
+                    {a.noDataPeriod}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          {['#', 'Boutique', 'Commandes', 'CA', 'Part', 'Taux livraison'].map((h) => (
+                          {['#', a.colStore, a.orders, a.revenue, a.colRevShare, a.colDelivRate].map((h) => (
                             <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3 whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
@@ -349,10 +339,9 @@ export default function AdminAnalyticsPage() {
                 )}
               </div>
 
-              {/* Vendor revenue pie chart */}
               {d.topVendors.length > 0 && (
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
-                  <h2 className="font-bold text-gray-900 mb-4">Répartition du CA par boutique (Top 8)</h2>
+                  <h2 className="font-bold text-gray-900 mb-4">{a.topVendors} (Top 8)</h2>
                   <div className="flex items-center gap-8">
                     <ResponsiveContainer width={220} height={220}>
                       <PieChart>
@@ -390,18 +379,17 @@ export default function AdminAnalyticsPage() {
             </>
           )}
 
-          {/* ══ GEOGRAPHY TAB ════════════════════════════════════ */}
+          {/* GEOGRAPHY TAB */}
           {tab === 'geography' && (
             <>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
-                {/* Wilaya bar chart */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm xl:col-span-2">
                   <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-indigo-500" /> Commandes par Wilaya (Top 15)
+                    <MapPin className="w-4 h-4 text-indigo-500" /> {a.ordersByWilaya} (Top 15)
                   </h2>
                   {d.byWilaya.length === 0 ? (
                     <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-                      Aucune donnée géographique
+                      {a.noData}
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height={360}>
@@ -410,7 +398,7 @@ export default function AdminAnalyticsPage() {
                         <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                         <YAxis type="category" dataKey="wilaya" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} width={95} />
                         <Tooltip
-                          formatter={(v, name) => [name === 'orders' ? String(v) : formatPrice(Number(v ?? 0)), name === 'orders' ? 'Commandes' : 'CA']}
+                          formatter={(v, name) => [name === 'orders' ? String(v) : formatPrice(Number(v ?? 0)), name === 'orders' ? a.orders : a.revenue]}
                           contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                         />
                         <Bar dataKey="orders" fill="#6366F1" radius={[0, 4, 4, 0]} />
@@ -420,19 +408,18 @@ export default function AdminAnalyticsPage() {
                 </div>
               </div>
 
-              {/* Wilaya table with revenue */}
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-gray-50">
-                  <h2 className="font-bold text-gray-900">Détail par Wilaya</h2>
+                  <h2 className="font-bold text-gray-900">{a.colWilaya}</h2>
                 </div>
                 {d.byWilaya.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400 text-sm">Aucune donnée</div>
+                  <div className="text-center py-12 text-gray-400 text-sm">{a.noData}</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          {['#', 'Wilaya', 'Commandes', 'CA', 'Part commandes', 'Panier moyen'].map((h) => (
+                          {['#', a.colWilaya, a.orders, a.revenue, a.colRevShare, a.colAvgCart].map((h) => (
                             <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3 whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
@@ -467,7 +454,6 @@ export default function AdminAnalyticsPage() {
               </div>
             </>
           )}
-
         </>
       )}
     </div>

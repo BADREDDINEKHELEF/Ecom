@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Save, Store, Truck, CreditCard, Loader2, CheckCircle, ExternalLink, Zap, Circle, Banknote, Megaphone } from 'lucide-react'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { getStoreSettings, saveStoreSettings, StoreSettings } from '@/lib/supabase/queries'
+import { useT } from '@/lib/store/langStore'
 
 const ANNOUNCEMENT_COLORS = ['amber', 'green', 'red', 'blue', 'indigo'] as const
 
@@ -28,6 +29,9 @@ const DEFAULTS: StoreSettings = {
 }
 
 export default function AdminSettingsPage() {
+  const t = useT()
+  const a = t.admin
+
   const [form, setForm] = useState<StoreSettings>(DEFAULTS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -50,7 +54,7 @@ export default function AdminSettingsPage() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch {
-      setError('Failed to save. Check your connection and try again.')
+      setError(a.settingsError)
     } finally {
       setSaving(false)
     }
@@ -114,7 +118,7 @@ export default function AdminSettingsPage() {
     return (
       <div className="p-8 flex items-center gap-3 text-gray-500">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading settings…
+        {a.loadingSettings}
       </div>
     )
   }
@@ -122,39 +126,39 @@ export default function AdminSettingsPage() {
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900">Settings</h1>
-        <p className="text-gray-500 text-sm mt-1">Changes are saved to your database and apply immediately.</p>
+        <h1 className="text-2xl font-black text-gray-900">{a.settingsTitle}</h1>
+        <p className="text-gray-500 text-sm mt-1">{a.settingsSubtitle}</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
 
         {/* Store Info */}
-        <Section icon={Store} title="Store Information">
+        <Section icon={Store} title={a.storeInfoTitle}>
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Store Name">
+            <Field label={a.storeNameLabel}>
               <Input value={form.storeName} onChange={(v) => set('storeName', v)} />
             </Field>
-            <Field label="Support Email">
+            <Field label={a.storeEmailLabel}>
               <Input value={form.storeEmail} onChange={(v) => set('storeEmail', v)} type="email" />
             </Field>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Phone Number" hint="Shown in footer and contact pages">
+            <Field label={a.phoneLabel} hint={a.phoneHint}>
               <Input value={form.phone} onChange={(v) => set('phone', v)} placeholder="+213 5XX XX XX XX" />
             </Field>
-            <Field label="WhatsApp Number" hint="International format without +, e.g. 213555000000">
+            <Field label={a.whatsappLabel} hint={a.whatsappHint}>
               <Input value={form.whatsappNumber} onChange={(v) => set('whatsappNumber', v)} placeholder="213XXXXXXXXX" />
             </Field>
           </div>
         </Section>
 
         {/* Delivery */}
-        <Section icon={Truck} title="Delivery & Shipping">
-          <Field label="Free Shipping From (DZD)" hint="Orders above this amount get free shipping">
+        <Section icon={Truck} title={a.deliveryShippingTitle}>
+          <Field label={a.freeShippingFromLabel} hint={a.freeShippingHint}>
             <Input value={form.freeShippingThreshold} onChange={(v) => set('freeShippingThreshold', Number(v))} type="number" />
           </Field>
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">Shipping Cost by Zone (DZD)</p>
+            <p className="text-sm font-semibold text-gray-700 mb-3">{a.shippingByZone}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {([
                 { key: 'zone1Cost', label: 'Zone 1', hint: 'Alger region' },
@@ -178,23 +182,20 @@ export default function AdminSettingsPage() {
         </Section>
 
         {/* Payment */}
-        <Section icon={CreditCard} title="Payment Methods">
-          <Toggle value={form.cashOnDelivery} onChange={(v) => set('cashOnDelivery', v)} label="Cash on Delivery (COD)" />
-          <Toggle value={form.cardPayment} onChange={(v) => set('cardPayment', v)} label="Credit / Debit Card" />
+        <Section icon={CreditCard} title={a.paymentMethodsTitle}>
+          <Toggle value={form.cashOnDelivery} onChange={(v) => set('cashOnDelivery', v)} label={t.checkout.cash} />
+          <Toggle value={form.cardPayment} onChange={(v) => set('cardPayment', v)} label={t.checkout.card} />
         </Section>
 
         {/* Payment Accounts */}
-        <Section icon={Banknote} title="Payment Accounts">
-          <p className="text-xs text-gray-500 -mt-2 mb-1">
-            These details are shown to sellers on the subscription page so they know where to send payment.
-          </p>
-          <Field label="CCP Number" hint="CCP / Algérie Poste account number shown to sellers">
+        <Section icon={Banknote} title={a.paymentAccountsTitle}>
+          <Field label={a.ccpLabel} hint={a.ccpHint}>
             <Input value={form.paymentCcp} onChange={(v) => set('paymentCcp', v)} placeholder="Ex: 00012345678 CC" />
           </Field>
-          <Field label="BaridiMob Number" hint="BaridiMob / RIP number for mobile payments">
+          <Field label={a.baridimobLabel} hint={a.baridimobHint}>
             <Input value={form.paymentBaridimob} onChange={(v) => set('paymentBaridimob', v)} placeholder="Ex: 00799999000123456789" />
           </Field>
-          <Field label="Payment Instructions" hint="Optional note shown to sellers (e.g. account name, extra details)">
+          <Field label={a.paymentInstructionsLabel} hint={a.paymentInstructionsHint}>
             <textarea
               value={form.paymentNote}
               onChange={(e) => set('paymentNote', e.target.value)}
@@ -206,20 +207,20 @@ export default function AdminSettingsPage() {
         </Section>
 
         {/* Announcement Banner */}
-        <Section icon={Megaphone} title="Bandeau d'annonce">
+        <Section icon={Megaphone} title={a.announcementBannerTitle}>
           <Toggle
             value={form.announcementActive}
             onChange={(v) => set('announcementActive', v)}
-            label="Afficher le bandeau en haut du site"
+            label={a.showBanner}
           />
-          <Field label="Texte de l'annonce" hint="Max 500 caractères">
+          <Field label={a.announcement}>
             <Input
               value={form.announcementText}
               onChange={(v) => set('announcementText', v)}
-              placeholder="Ex: Livraison gratuite ce weekend ! 🎉"
+              placeholder={a.announcementPlaceholder}
             />
           </Field>
-          <Field label="Couleur">
+          <Field label={a.announcementColor}>
             <div className="flex gap-2">
               {ANNOUNCEMENT_COLORS.map((color) => (
                 <button
@@ -257,7 +258,7 @@ export default function AdminSettingsPage() {
           } disabled:opacity-60`}
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saving ? 'Saving…' : saved ? 'Saved!' : 'Save Settings'}
+          {saving ? a.savingSettingsBtn : saved ? a.savedSettingsBtn : a.saveSettingsBtn}
         </button>
       </form>
 
@@ -265,7 +266,7 @@ export default function AdminSettingsPage() {
       <div className="mt-6 bg-white rounded-2xl p-6 shadow-sm space-y-5">
         <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
           <Zap className="w-5 h-5 text-indigo-600" />
-          <h2 className="font-bold text-gray-900">Delivery Integrations</h2>
+          <h2 className="font-bold text-gray-900">{a.deliveryIntegrations}</h2>
         </div>
 
         <div className="border border-orange-200 rounded-xl p-4 bg-orange-50">
@@ -280,8 +281,8 @@ export default function AdminSettingsPage() {
               Website <ExternalLink className="w-3 h-3" />
             </a>
           </div>
-          <EnvVar name="YALIDINE_API_ID" description="Your Yalidine API ID" />
-          <EnvVar name="YALIDINE_API_TOKEN" description="Your Yalidine API token" />
+          <EnvVar name="YALIDINE_API_ID" description={a.apiId} />
+          <EnvVar name="YALIDINE_API_TOKEN" description={a.apiToken} />
           <p className="text-xs text-orange-700 mt-3 bg-orange-100 px-3 py-2 rounded-lg">
             Set these in Vercel → Settings → Environment Variables, then redeploy.
           </p>
@@ -293,7 +294,7 @@ export default function AdminSettingsPage() {
               <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: provider.color }} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900">{provider.name}</p>
-                <p className="text-xs text-gray-400">Manual tracking</p>
+                <p className="text-xs text-gray-400">{a.manualTracking}</p>
               </div>
               <a href={provider.dashboardUrl} target="_blank" rel="noopener noreferrer"
                 className="text-gray-400 hover:text-gray-700 flex-shrink-0">

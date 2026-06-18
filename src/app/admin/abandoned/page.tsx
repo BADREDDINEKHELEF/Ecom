@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ShoppingCart, RefreshCw, MessageCircle, Check, X, Loader2, TrendingUp, Clock, DollarSign, Users } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { useT } from '@/lib/store/langStore'
 
 interface AbandonedCheckout {
   id: string
@@ -42,6 +43,9 @@ function buildWhatsAppMsg(row: AbandonedCheckout): string {
 }
 
 export default function AbandonedCheckoutsPage() {
+  const t = useT()
+  const a = t.admin
+
   const [rows, setRows] = useState<AbandonedCheckout[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterPeriod>('today')
@@ -59,7 +63,6 @@ export default function AbandonedCheckoutsPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Auto-refresh every 2 minutes
   useEffect(() => {
     const interval = setInterval(load, 120_000)
     return () => clearInterval(interval)
@@ -79,7 +82,6 @@ export default function AbandonedCheckoutsPage() {
     }
   }
 
-  // Stats
   const totalRevAtRisk = rows.reduce((s, r) => s + r.cart_total, 0)
   const withPhone = rows.filter((r) => r.phone).length
 
@@ -87,23 +89,23 @@ export default function AbandonedCheckoutsPage() {
     <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Paniers Abandonnés</h1>
-          <p className="text-gray-500 text-sm mt-1">Récupérez les commandes perdues via WhatsApp</p>
+          <h1 className="text-2xl font-black text-gray-900">{a.abandonedTitle}</h1>
+          <p className="text-gray-500 text-sm mt-1">{a.abandonedSubtitle}</p>
         </div>
         <button onClick={load} disabled={loading}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors disabled:opacity-50">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
+          {a.refresh}
         </button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { icon: ShoppingCart, label: 'Abandonnés', value: rows.length, color: 'text-red-500', bg: 'bg-red-50' },
-          { icon: DollarSign, label: 'Revenus à risque', value: formatPrice(totalRevAtRisk), color: 'text-amber-500', bg: 'bg-amber-50' },
-          { icon: Users, label: 'Avec WhatsApp', value: withPhone, color: 'text-green-500', bg: 'bg-green-50' },
-          { icon: TrendingUp, label: 'Récupérables', value: `${withPhone > 0 ? Math.round((withPhone / rows.length) * 100) : 0}%`, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+          { icon: ShoppingCart, label: a.kpiAbandoned,    value: rows.length, color: 'text-red-500', bg: 'bg-red-50' },
+          { icon: DollarSign,   label: a.kpiRevenueRisk,  value: formatPrice(totalRevAtRisk), color: 'text-amber-500', bg: 'bg-amber-50' },
+          { icon: Users,        label: a.kpiWithWhatsapp, value: withPhone, color: 'text-green-500', bg: 'bg-green-50' },
+          { icon: TrendingUp,   label: a.kpiRecoverable,  value: `${withPhone > 0 ? Math.round((withPhone / rows.length) * 100) : 0}%`, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         ].map(({ icon: Icon, label, value, color, bg }) => (
           <div key={label} className="bg-white rounded-2xl p-5 shadow-sm">
             <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
@@ -117,10 +119,14 @@ export default function AbandonedCheckoutsPage() {
 
       {/* Period filter */}
       <div className="bg-white rounded-2xl p-4 shadow-sm mb-6 flex items-center gap-2">
-        {(['today', 'week', 'all'] as FilterPeriod[]).map((p) => (
-          <button key={p} onClick={() => setFilter(p)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${filter === p ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-            {p === 'today' ? "Aujourd'hui" : p === 'week' ? '7 derniers jours' : 'Tout voir'}
+        {([
+          { key: 'today', label: a.filterToday },
+          { key: 'week',  label: a.filterWeek },
+          { key: 'all',   label: a.filterViewAll },
+        ] as const).map(({ key, label }) => (
+          <button key={key} onClick={() => setFilter(key)}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${filter === key ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            {label}
           </button>
         ))}
       </div>
@@ -129,19 +135,19 @@ export default function AbandonedCheckoutsPage() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 flex items-center justify-center text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Chargement…
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> {t.common.loading}
           </div>
         ) : rows.length === 0 ? (
           <div className="py-16 text-center">
             <ShoppingCart className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-500">Aucun panier abandonné pour cette période.</p>
+            <p className="text-gray-500">{a.noAbandoned}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {['Client', 'Téléphone', 'Wilaya', 'Panier', 'Produits', 'Temps', 'Actions'].map((h) => (
+                  {[a.colClient, a.colPhone, a.colWilaya, a.colCart, a.colProducts, a.colTime, a.colActions].map((h) => (
                     <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-4">{h}</th>
                   ))}
                 </tr>
@@ -178,12 +184,12 @@ export default function AbandonedCheckoutsPage() {
                         )}
                         <button onClick={() => updateStatus(row.id, 'recovered')} disabled={updating === row.id}
                           className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Marquer récupéré">
+                          title={a.kpiRecoverable}>
                           {updating === row.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         </button>
                         <button onClick={() => updateStatus(row.id, 'ignored')} disabled={updating === row.id}
                           className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Ignorer">
+                          title={a.filterViewAll}>
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -196,7 +202,6 @@ export default function AbandonedCheckoutsPage() {
         )}
       </div>
 
-      {/* SQL Setup notice */}
       <details className="mt-6 bg-gray-50 rounded-2xl p-4">
         <summary className="text-sm font-semibold text-gray-600 cursor-pointer">SQL Supabase requis</summary>
         <pre className="text-xs text-gray-500 mt-3 overflow-x-auto whitespace-pre-wrap">{SQL}</pre>

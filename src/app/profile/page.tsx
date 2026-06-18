@@ -6,16 +6,13 @@ import Link from 'next/link'
 import { User, Package, Heart, Lock, MapPin, ChevronRight, LogOut, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
-
-const QUICK_LINKS = [
-  { href: '/orders',            icon: Package, label: 'Mes commandes',     desc: 'Suivi et historique',    color: 'text-indigo-600 bg-indigo-50' },
-  { href: '/profile/addresses', icon: MapPin,  label: 'Mes adresses',      desc: 'Adresses de livraison',  color: 'text-emerald-600 bg-emerald-50' },
-  { href: '/wishlist',          icon: Heart,   label: 'Liste de souhaits', desc: 'Articles sauvegardés',   color: 'text-red-500 bg-red-50' },
-  { href: '/auth',              icon: Lock,    label: 'Sécurité',          desc: 'Mot de passe & accès',   color: 'text-amber-600 bg-amber-50' },
-]
+import { useT } from '@/lib/store/langStore'
 
 export default function ProfilePage() {
   const router = useRouter()
+  const t = useT()
+  const p = t.profile
+
   const [user, setUser]       = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -52,6 +49,13 @@ export default function ProfilePage() {
   const initial     = (displayName[0] ?? 'U').toUpperCase()
   const joinDate    = new Date(user.created_at).toLocaleDateString('fr-DZ', { month: 'long', year: 'numeric' })
 
+  const QUICK_LINKS = [
+    { href: '/orders',            icon: Package, label: p.myOrders,    desc: p.myOrdersDesc,    color: 'text-indigo-600 bg-indigo-50' },
+    { href: '/profile/addresses', icon: MapPin,  label: p.myAddresses, desc: p.myAddressesDesc, color: 'text-emerald-600 bg-emerald-50' },
+    { href: '/wishlist',          icon: Heart,   label: p.myWishlist,  desc: p.myWishlistDesc,  color: 'text-red-500 bg-red-50' },
+    { href: '/auth',              icon: Lock,    label: p.security,    desc: p.securityDesc,    color: 'text-amber-600 bg-amber-50' },
+  ]
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
       {/* Profile card */}
@@ -63,7 +67,7 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-black truncate">{displayName}</h1>
             <p className="text-indigo-200 text-sm truncate">{user.email}</p>
-            <p className="text-indigo-300 text-xs mt-0.5">Membre depuis {joinDate}</p>
+            <p className="text-indigo-300 text-xs mt-0.5">{p.memberSince} {joinDate}</p>
           </div>
         </div>
       </div>
@@ -71,12 +75,12 @@ export default function ProfilePage() {
       {/* Personal info */}
       <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
         <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-indigo-600" /> Informations personnelles
+          <User className="w-4 h-4 text-indigo-600" /> {p.personalInfo}
         </h2>
         <div className="space-y-0">
           {[
-            { label: 'Nom complet', value: displayName },
-            { label: 'Email',       value: user.email ?? '—' },
+            { label: p.fullName, value: displayName },
+            { label: p.email,    value: user.email ?? '—' },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
               <span className="text-sm text-gray-500">{label}</span>
@@ -88,7 +92,7 @@ export default function ProfilePage() {
 
       {/* Quick links */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
-        <h2 className="font-bold text-gray-900 px-5 pt-5 pb-3">Mon compte</h2>
+        <h2 className="font-bold text-gray-900 px-5 pt-5 pb-3">{p.myAccount}</h2>
         {QUICK_LINKS.map(({ href, icon: Icon, label, desc, color }, i) => (
           <Link
             key={i}
@@ -112,7 +116,7 @@ export default function ProfilePage() {
         onClick={handleSignOut}
         className="flex items-center justify-center gap-2 w-full py-3.5 bg-white border border-red-200 text-red-500 font-bold rounded-2xl hover:bg-red-50 transition-colors shadow-sm"
       >
-        <LogOut className="w-4 h-4" /> Se déconnecter
+        <LogOut className="w-4 h-4" /> {p.signOut}
       </button>
     </div>
   )

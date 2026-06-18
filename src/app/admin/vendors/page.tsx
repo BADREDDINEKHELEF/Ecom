@@ -6,6 +6,7 @@ import {
   Users, ToggleLeft, ToggleRight, Clock, AlertTriangle,
   RefreshCw, ChevronDown, ChevronUp, CreditCard, BadgeCheck,
 } from 'lucide-react'
+import { useT } from '@/lib/store/langStore'
 
 interface Vendor {
   id:                    string
@@ -23,15 +24,18 @@ interface Vendor {
   created_at:            string
 }
 
-const SUB_CFG: Record<string, { label: string; color: string }> = {
-  trial:        { label: 'En attente paiement', color: 'bg-amber-100 text-amber-700' },
-  active:       { label: 'Abonné — Payé',       color: 'bg-emerald-100 text-emerald-700' },
-  grace_period: { label: 'Période de grâce',    color: 'bg-orange-100 text-orange-700' },
-  expired:      { label: 'Expiré',              color: 'bg-red-100 text-red-700' },
-  cancelled:    { label: 'Annulé',              color: 'bg-gray-100 text-gray-600' },
-}
-
 export default function AdminVendorsPage() {
+  const t = useT()
+  const a = t.admin
+
+  const SUB_CFG: Record<string, { label: string; color: string }> = {
+    trial:        { label: a.subTrial,   color: 'bg-amber-100 text-amber-700' },
+    active:       { label: a.subActive,  color: 'bg-emerald-100 text-emerald-700' },
+    grace_period: { label: a.subGrace,   color: 'bg-orange-100 text-orange-700' },
+    expired:      { label: a.subExpired, color: 'bg-red-100 text-red-700' },
+    cancelled:    { label: a.statusCancelled, color: 'bg-gray-100 text-gray-600' },
+  }
+
   const [vendors,     setVendors]     = useState<Vendor[]>([])
   const [loading,     setLoading]     = useState(true)
   const [filter,      setFilter]      = useState<'pending' | 'approved' | 'declined' | 'all'>('pending')
@@ -105,7 +109,6 @@ export default function AdminVendorsPage() {
       body: JSON.stringify({ id: v.id, action }),
     })
     if (res.ok) {
-      // Only toggle is_active — is_approved stays unchanged
       setVendors((prev) => prev.map((x) =>
         x.id === v.id ? { ...x, is_active: !x.is_active } : x
       ))
@@ -143,21 +146,21 @@ export default function AdminVendorsPage() {
     <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-8 gap-3">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Boutiques vendeurs</h1>
-          <p className="text-gray-500 text-sm mt-1">Approuvez ou refusez les nouvelles inscriptions</p>
+          <h1 className="text-2xl font-black text-gray-900">{a.vendorsTitle}</h1>
+          <p className="text-gray-500 text-sm mt-1">{a.vendorsSubtitle}</p>
         </div>
         <button onClick={load} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors">
-          <RefreshCw className="w-4 h-4" /> Actualiser
+          <RefreshCw className="w-4 h-4" /> {a.refresh}
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total',              value: stats.total,    icon: Users,         color: 'text-indigo-600 bg-indigo-50',  tab: 'all'      },
-          { label: 'En attente',         value: stats.pending,  icon: Clock,         color: 'text-amber-600 bg-amber-50',    tab: 'pending'  },
-          { label: 'Approuvées',         value: stats.approved, icon: CheckCircle,   color: 'text-emerald-600 bg-emerald-50',tab: 'approved' },
-          { label: 'Refusées',           value: stats.declined, icon: XCircle,       color: 'text-red-600 bg-red-50',        tab: 'declined' },
+          { label: a.statTotal,    value: stats.total,    icon: Users,         color: 'text-indigo-600 bg-indigo-50',  tab: 'all'      },
+          { label: a.statPending,  value: stats.pending,  icon: Clock,         color: 'text-amber-600 bg-amber-50',    tab: 'pending'  },
+          { label: a.statApproved, value: stats.approved, icon: CheckCircle,   color: 'text-emerald-600 bg-emerald-50',tab: 'approved' },
+          { label: a.statDeclined, value: stats.declined, icon: XCircle,       color: 'text-red-600 bg-red-50',        tab: 'declined' },
         ].map(({ label, value, icon: Icon, color, tab }) => (
           <button
             key={label}
@@ -178,7 +181,7 @@ export default function AdminVendorsPage() {
         <div className="mb-5 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5">
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
           <p className="text-sm font-semibold text-amber-800">
-            {stats.pending} boutique{stats.pending > 1 ? 's' : ''} en attente de votre décision
+            {a.pendingNotice.replace('{n}', String(stats.pending))}
           </p>
         </div>
       )}
@@ -186,10 +189,10 @@ export default function AdminVendorsPage() {
       {/* Filter tabs */}
       <div className="flex gap-2 mb-4 flex-wrap">
         {([
-          { key: 'pending',  label: `En attente (${stats.pending})` },
-          { key: 'approved', label: `Approuvées (${stats.approved})` },
-          { key: 'declined', label: `Refusées (${stats.declined})` },
-          { key: 'all',      label: 'Toutes' },
+          { key: 'pending',  label: `${a.statPending} (${stats.pending})` },
+          { key: 'approved', label: `${a.statApproved} (${stats.approved})` },
+          { key: 'declined', label: `${a.statDeclined} (${stats.declined})` },
+          { key: 'all',      label: a.filterAll },
         ] as const).map(({ key, label }) => (
           <button key={key} onClick={() => setFilter(key)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
@@ -203,12 +206,12 @@ export default function AdminVendorsPage() {
       {/* Vendor Cards */}
       {loading ? (
         <div className="flex items-center justify-center py-20 gap-2 text-gray-400">
-          <Loader2 className="w-5 h-5 animate-spin" /> Chargement…
+          <Loader2 className="w-5 h-5 animate-spin" /> {t.common.loading}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
           <Store className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Aucune boutique dans cette catégorie</p>
+          <p className="font-medium">{a.noStoreCategory}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -228,7 +231,6 @@ export default function AdminVendorsPage() {
               }`}>
                 {/* Card header */}
                 <div className="p-5 flex items-start gap-4">
-                  {/* Avatar */}
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-lg ${
                     isPending  ? 'bg-amber-100 text-amber-700' :
                     isDeclined ? 'bg-red-100 text-red-700'     :
@@ -237,16 +239,13 @@ export default function AdminVendorsPage() {
                     {v.store_name[0]?.toUpperCase()}
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <h3 className="font-black text-gray-900 text-base">{v.store_name}</h3>
-                      {/* Approval status */}
-                      {isPending  && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1"><Clock className="w-3 h-3" /> En attente</span>}
-                      {isDeclined && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 flex items-center gap-1"><XCircle className="w-3 h-3" /> Refusée</span>}
-                      {v.is_approved && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Approuvée</span>}
-                      {v.verified_at && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Certifié</span>}
-                      {/* Subscription status */}
+                      {isPending  && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1"><Clock className="w-3 h-3" /> {a.pendingStatus}</span>}
+                      {isDeclined && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 flex items-center gap-1"><XCircle className="w-3 h-3" /> {a.declinedStatus}</span>}
+                      {v.is_approved && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {a.approvedStatus}</span>}
+                      {v.verified_at && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> {a.certifiedStatus}</span>}
                       {subCfg && (
                         <span className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 ${subCfg.color}`}>
                           <CreditCard className="w-3 h-3" /> {subCfg.label}
@@ -264,15 +263,13 @@ export default function AdminVendorsPage() {
                       <span>📅 {new Date(v.created_at).toLocaleDateString('fr-DZ', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                     </div>
 
-                    {/* Decline reason */}
                     {isDeclined && v.admin_note && (
                       <p className="mt-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
-                        <span className="font-bold">Motif :</span> {v.admin_note}
+                        <span className="font-bold">{a.declineReason} :</span> {v.admin_note}
                       </p>
                     )}
                   </div>
 
-                  {/* Expand toggle */}
                   <button
                     onClick={() => setExpanded(isOpen ? null : v.id)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
@@ -285,21 +282,19 @@ export default function AdminVendorsPage() {
                 {/* Expanded: subscription warning + actions */}
                 {isOpen && (
                   <div className="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4">
-                    {/* Subscription warning */}
                     {v.subscription_status !== 'active' && (
                       <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm">
                         <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-semibold text-amber-800">Abonnement non actif</p>
+                          <p className="font-semibold text-amber-800">{a.subNotActive}</p>
                           <p className="text-amber-700 text-xs mt-0.5">
-                            Ce vendeur n&apos;a pas encore payé son abonnement.{' '}
-                            {v.subscription_status === 'trial' ? 'Un paiement est en attente de vérification.' : 'Aucun paiement reçu.'}
+                            {a.subNotActiveDesc}{' '}
+                            {v.subscription_status === 'trial' ? a.subPendingPayment : a.subNoPayment}
                           </p>
                         </div>
                       </div>
                     )}
 
-                    {/* Action buttons */}
                     <div className="flex flex-wrap gap-3">
                       {!v.is_approved && (
                         <button
@@ -308,7 +303,7 @@ export default function AdminVendorsPage() {
                           className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
                         >
                           {isWorking ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                          Approuver la boutique
+                          {a.approveStore}
                         </button>
                       )}
 
@@ -319,7 +314,7 @@ export default function AdminVendorsPage() {
                           className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold px-5 py-2.5 rounded-xl text-sm border border-red-200 transition-colors"
                         >
                           <XCircle className="w-4 h-4" />
-                          {v.is_approved ? 'Révoquer' : 'Refuser'}
+                          {v.is_approved ? a.revokeAction : a.declineAction}
                         </button>
                       )}
 
@@ -330,7 +325,7 @@ export default function AdminVendorsPage() {
                           className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
                         >
                           {isWorking ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                          Réactiver
+                          {a.reactivateAction}
                         </button>
                       )}
 
@@ -338,12 +333,11 @@ export default function AdminVendorsPage() {
                         <button
                           onClick={() => handleToggleActive(v)}
                           disabled={isWorking}
-                          title={v.is_active ? 'Suspendre' : 'Activer'}
                           className="flex items-center gap-2 text-xs text-gray-400 hover:text-indigo-600 transition-colors px-3 py-2 rounded-xl hover:bg-gray-100"
                         >
                           {v.is_active
-                            ? <><ToggleRight className="w-5 h-5 text-indigo-500" /> Suspendre</>
-                            : <><ToggleLeft className="w-5 h-5" /> Activer</>
+                            ? <><ToggleRight className="w-5 h-5 text-indigo-500" /> {a.suspendAction}</>
+                            : <><ToggleLeft className="w-5 h-5" /> {a.activateAction}</>
                           }
                         </button>
                       )}
@@ -355,19 +349,18 @@ export default function AdminVendorsPage() {
                           className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-2 rounded-xl font-bold transition-colors disabled:opacity-50"
                         >
                           {isWorking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
-                          Certifier
+                          {a.certifyAction}
                         </button>
                       )}
                     </div>
 
-                    {/* Decline reason input */}
                     {isDeclining && (
                       <div className="border border-red-200 rounded-xl p-4 bg-red-50 space-y-3">
-                        <p className="text-sm font-bold text-red-700">Motif du refus (visible par le vendeur)</p>
+                        <p className="text-sm font-bold text-red-700">{a.declineReason}</p>
                         <textarea
                           value={declineNote}
                           onChange={(e) => setDeclineNote(e.target.value)}
-                          placeholder="Ex : Paiement non reçu. Veuillez soumettre votre preuve de virement et réessayer."
+                          placeholder={a.declineReasonPlaceholder}
                           rows={3}
                           className="w-full border border-red-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-400 bg-white resize-none"
                         />
@@ -378,13 +371,13 @@ export default function AdminVendorsPage() {
                             className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold px-5 py-2 rounded-xl text-sm transition-colors"
                           >
                             {isWorking ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                            Confirmer le refus
+                            {a.confirmDecline}
                           </button>
                           <button
                             onClick={() => { setDeclineId(null); setDeclineNote('') }}
                             className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-xl hover:bg-gray-100 transition-colors"
                           >
-                            Annuler
+                            {a.cancelAction}
                           </button>
                         </div>
                       </div>
