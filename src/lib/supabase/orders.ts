@@ -35,22 +35,24 @@ export interface OrderRow {
 }
 
 export interface CreateOrderInput {
-  fullName:        string
-  phone:           string
-  wilaya:          string
-  city:            string
-  address:         string
-  paymentMethod:   string
-  shippingCost:    number
-  promoCodeId?:    string
-  discountAmount?: number
-  notes?:          string | null
-  status?:         string
-  isB2B?:          boolean
-  companyName?:    string | null
-  nif?:            string | null
-  nis?:            string | null
-  rc?:             string | null
+  fullName:           string
+  phone:              string
+  wilaya:             string
+  city:               string
+  address:            string
+  paymentMethod:      string
+  shippingCost:       number
+  promoCodeId?:       string
+  discountAmount?:    number
+  giftCardDeduction?: number
+  pointsRedeemed?:    number
+  notes?:             string | null
+  status?:            string
+  isB2B?:             boolean
+  companyName?:       string | null
+  nif?:               string | null
+  nis?:               string | null
+  rc?:                string | null
   items: {
     productId:     string
     productName:   string
@@ -132,8 +134,31 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   })
 
   // ── 3. Compute final total (server-side) ──────────────────────────
-  const discountAmount = input.discountAmount ?? 0
-  const total = computedSubtotal + input.shippingCost - discountAmount
+  // Re-validate promo code against server-computed subtotal to prevent discount manipulation
+  let discountAmount = 0
+  if (input.promoCodeId) {
+    const { data: promo } = await supabase
+      .from('promo_codes')
+      .select('discount_type, discount_value, min_order, max_uses, uses_count, expires_at, is_active')
+      .eq('id', input.promoCodeId)
+      .single()
+    if (
+      promo &&
+      promo.is_active &&
+      !(promo.expires_at && new Date(promo.expires_at) < new Date()) &&
+      !(promo.max_uses !== null && promo.uses_count >= promo.max_uses) &&
+      computedSubtotal >= (promo.min_order ?? 0)
+    ) {
+      discountAmount = promo.discount_type === 'percentage'
+        ? Math.round((computedSubtotal * promo.discount_value) / 100)
+        : Math.min(promo.discount_value, computedSubtotal)
+    }
+  }
+
+  // Subtract gift card and loyalty points deductions (capped to prevent negative total)
+  const giftCardDeduction = Math.max(0, input.giftCardDeduction ?? 0)
+  const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
+  const total = Math.max(0, computedSubtotal + input.shippingCost - discountAmount - giftCardDeduction - pointsDeduction)
 
   // ── 4. Decrement stock atomically via DB RPC ─────────────────────
   // decrement_product_stock uses SELECT … FOR UPDATE (row-level lock)

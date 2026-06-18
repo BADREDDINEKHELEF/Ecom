@@ -96,6 +96,8 @@ export async function POST(req: NextRequest) {
     nif: nif ?? null,
     nis: nis ?? null,
     rc: rc ?? null,
+    giftCardDeduction,
+    pointsRedeemed,
   }
   const buyerEmail = rawEmail ?? null
   const giftCardCode = rawGiftCardCode?.trim().toUpperCase() || null

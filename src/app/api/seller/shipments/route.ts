@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     // Verify the order exists and contains at least one item from this vendor
     const [{ data: order }, { data: vendorItem }] = await Promise.all([
-      admin.from('orders').select('full_name, phone, wilaya, city, address, total').eq('id', orderId).single(),
+      admin.from('orders').select('full_name, phone, wilaya, city, address, total, status').eq('id', orderId).single(),
       admin.from('order_items').select('id').eq('order_id', orderId).eq('vendor_id', vendor.id).limit(1).maybeSingle(),
     ])
 
@@ -119,7 +119,10 @@ export async function POST(req: NextRequest) {
 
     if (finalTracking) {
       await updateShippingInfo(orderId, finalTracking, provider, labelUrl)
-      await updateOrderStatus(orderId, 'shipped')
+      // Only advance to 'shipped' from safe states — never regress a delivered/cancelled order
+      if (order.status && ['pending', 'confirmed'].includes(order.status)) {
+        await updateOrderStatus(orderId, 'shipped')
+      }
     }
 
     return NextResponse.json({ shipment, requiresManual })

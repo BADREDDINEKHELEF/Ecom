@@ -204,7 +204,7 @@ export default function CheckoutContent() {
       })
       const data = await res.json()
       if (res.ok) {
-        const deduction = Math.min(data.balance, cartTotal)
+        const deduction = Math.min(data.balance, Math.max(0, cartTotal - (promoResult?.discountAmount ?? 0)))
         setGiftCardResult({ id: data.id, code: giftCardInput.trim().toUpperCase(), balance: data.balance, deduction })
       } else {
         setGiftCardError(data.error ?? t.checkout.giftCardInvalid)

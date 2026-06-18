@@ -1,4 +1,3 @@
-import { createClient } from './client'
 import { createAdminClient } from './admin'
 
 export interface PromoCode {
@@ -21,7 +20,7 @@ export async function validatePromoCode(
   | { valid: true; promo: PromoCode; discountAmount: number }
   | { valid: false; message: string }
 > {
-  const supabase = createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('promo_codes')
     .select('id,code,discount_type,discount_value,min_order,max_uses,uses_count,expires_at,is_active,created_at')

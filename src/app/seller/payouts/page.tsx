@@ -54,9 +54,7 @@ export default function SellerPayoutsPage() {
   }, [vendor])
 
   const { periods, pendingBalance, totalEarned } = useMemo(() => {
-    const delivered = orders.filter((o) =>
-      o.order.status === 'delivered' || o.order.delivery_outcome === 'delivered'
-    )
+    const delivered = orders.filter((o) => o.order.status === 'delivered')
 
     const periodMap = new Map<string, WeeklyPeriod>()
     const now = new Date()
