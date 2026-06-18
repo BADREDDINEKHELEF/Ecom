@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/utils'
 import { Product } from '@/types'
 import ProductColorGallery from './ProductColorGallery'
 import StoreProductClient from './StoreProductClient'
+import ProductShareButtons from './ProductShareButtons'
 import TrackViewContent from '@/components/analytics/TrackViewContent'
 import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
 
@@ -74,7 +75,10 @@ export default async function StoreProductPage({ params }: PageProps) {
     ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
     : 0
   const savings  = hasDiscount ? product.comparePrice! - product.price : 0
-  const viewers  = Math.floor(Math.random() * 14) + 4   // 4-17
+  // Deterministic per product per day — same value for the same product all day, changes daily
+  const dayOfYear = Math.floor(Date.now() / 86_400_000)
+  const seed      = productId.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xffff, dayOfYear)
+  const viewers   = 4 + (seed % 14)  // 4–17
 
   return (
     <div className="min-h-screen bg-white">
@@ -244,6 +248,7 @@ export default async function StoreProductPage({ params }: PageProps) {
               accent={accent}
               vendorWhatsApp={vendorWhatsApp}
               storeName={vendor.store_name}
+              storeSlug={slug}
             />
 
             {/* Separator */}

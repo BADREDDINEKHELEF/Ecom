@@ -3,17 +3,18 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { X, Minus, Plus, ShoppingBag, Trash2, Shield } from 'lucide-react'
+import { X, Minus, Plus, ShoppingBag, Trash2, Shield, Tag, AlertTriangle } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useRTL } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 
 export default function CartSidebar() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, total, itemCount } = useCartStore()
+  const { items, isOpen, closeCart, removeItem, updateQuantity, total, savings, itemCount, cartStoreSlug, storeConflict, confirmStoreSwitch, cancelStoreSwitch } = useCartStore()
   const t = useT()
   const isRTL = useRTL()
   const count = itemCount()
   const cartTotal = total()
+  const cartSavings = savings()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
@@ -22,6 +23,39 @@ export default function CartSidebar() {
 
   return (
     <>
+      {/* Store-switch conflict modal */}
+      {mounted && storeConflict && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 mb-1">Panier d&apos;une autre boutique</h3>
+                <p className="text-sm text-gray-500">
+                  Votre panier contient des articles d&apos;une autre boutique. Voulez-vous vider le panier et ajouter ce produit ?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={cancelStoreSwitch}
+                className="flex-1 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmStoreSwitch}
+                className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+              >
+                Vider et ajouter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
@@ -39,7 +73,17 @@ export default function CartSidebar() {
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-indigo-600" />
-            <h2 className="font-bold text-gray-900">{t.cart.title}</h2>
+            <div>
+              <h2 className="font-bold text-gray-900 leading-none">{t.cart.title}</h2>
+              {cartStoreSlug && (
+                <a
+                  href={`/store/${cartStoreSlug}`}
+                  className="text-[11px] text-indigo-500 font-medium hover:underline leading-none"
+                >
+                  boutique/{cartStoreSlug}
+                </a>
+              )}
+            </div>
             {count > 0 && (
               <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                 {count}
@@ -143,6 +187,14 @@ export default function CartSidebar() {
             </div>
 
             <div className="border-t px-5 py-5 space-y-4">
+              {cartSavings > 0 && (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
+                  <Tag className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-emerald-800">
+                    Vous économisez {formatPrice(cartSavings)} sur cette commande 🎉
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 font-medium">{t.cart.subtotal}</span>
                 <span className="text-gray-900 font-bold text-lg">{formatPrice(cartTotal)}</span>

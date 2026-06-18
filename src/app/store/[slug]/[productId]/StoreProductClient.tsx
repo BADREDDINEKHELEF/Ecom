@@ -12,6 +12,7 @@ interface Props {
   accent: string
   vendorWhatsApp?: string | null
   storeName: string
+  storeSlug: string
 }
 
 const WA_SVG = (
@@ -26,7 +27,7 @@ const WA_SVG_SM = (
   </svg>
 )
 
-export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName }: Props) {
+export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName, storeSlug }: Props) {
   const addItem = useCartStore(s => s.addItem)
   const [qty,           setQty]           = useState(1)
   const [added,         setAdded]         = useState(false)
@@ -49,7 +50,8 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
   }, [])
 
   const handleAdd = () => {
-    addItem(product, qty, selectedColor ?? undefined)
+    const ok = addItem(product, qty, selectedColor ?? undefined, storeSlug)
+    if (!ok) return // store conflict modal shown by CartSidebar
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: qty })
     setAdded(true)
     setTimeout(() => setAdded(false), 2500)

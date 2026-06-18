@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Package } from 'lucide-react'
+import { Package, ShoppingCart, CheckCircle, Search, X } from 'lucide-react'
 import { Product } from '@/types'
 import { formatPrice } from '@/lib/utils'
+import { useCartStore } from '@/lib/store/cartStore'
 import type { StoreNiche } from './page'
 
 interface Props {
@@ -16,18 +17,28 @@ interface Props {
 }
 
 export default function StoreProductsGrid({ products, accent, storeSlug, storeNiches = [] }: Props) {
-  const [tab, setTab] = useState('all')
+  const [tab, setTab]       = useState('all')
+  const [search, setSearch] = useState('')
 
   const newProducts  = products.filter(p => p.isNew)
   const saleProducts = products.filter(p => p.comparePrice && p.comparePrice > p.price)
 
-  const visible = (() => {
+  const tabFiltered = useMemo(() => {
     if (tab === 'new')  return newProducts
     if (tab === 'sale') return saleProducts
     const niche = storeNiches.find(n => n.id === tab)
     if (niche) return products.filter(p => p.nicheId === tab)
     return products
-  })()
+  }, [tab, products, newProducts, saleProducts, storeNiches])
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return tabFiltered
+    return tabFiltered.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q)
+    )
+  }, [tabFiltered, search])
 
   const tabs = [
     { id: 'all', label: 'Tout', count: products.length, emoji: '' },
@@ -38,6 +49,28 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
 
   return (
     <div>
+      {/* Search bar */}
+      {products.length > 4 && (
+        <div className="relative mb-5">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aeaeb2]" />
+          <input
+            type="search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher un produit…"
+            className="w-full pl-11 pr-10 py-3 bg-[#f5f5f7] rounded-2xl text-sm text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:ring-2 focus:ring-black/10"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[#e8e8ed] transition-colors"
+            >
+              <X className="w-3.5 h-3.5 text-[#86868b]" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Pill tabs — niches + filters */}
       {tabs.length > 1 && (
         <div className="flex gap-2 mb-8 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
@@ -62,12 +95,19 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
       {visible.length === 0 ? (
         <div className="text-center py-20 text-[#86868b]">
           <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p className="font-medium">Aucun produit dans cette catégorie</p>
+          <p className="font-medium">
+            {search ? `Aucun résultat pour « ${search} »` : 'Aucun produit dans cette catégorie'}
+          </p>
+          {search && (
+            <button onClick={() => setSearch('')} className="mt-3 text-sm text-[#1d1d1f] underline underline-offset-2">
+              Effacer la recherche
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10">
           {visible.map(product => (
-            <ProductCard key={product.id} product={product} accent={accent} storeSlug={storeSlug} />
+            <ProductCard key={product.id} product={product} accent={accent} storeSlug={storeSlug} gridStoreSlug={storeSlug} />
           ))}
         </div>
       )}
@@ -79,16 +119,31 @@ function ProductCard({
   product,
   accent,
   storeSlug,
+  gridStoreSlug,
 }: {
   product: Product
   accent: string
   storeSlug: string
+  gridStoreSlug: string
 }) {
+  const addItem = useCartStore(s => s.addItem)
+  const [added, setAdded] = useState(false)
+
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
     ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
     : 0
   const savings = hasDiscount ? product.comparePrice! - product.price : 0
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (product.stock === 0) return
+    const ok = addItem(product, 1, undefined, gridStoreSlug)
+    if (!ok) return // store conflict — CartSidebar shows the modal
+    setAdded(true)
+    setTimeout(() => setAdded(false), 2000)
+  }
 
   return (
     <Link href={`/store/${storeSlug}/${product.id}`} className="group block">
@@ -145,13 +200,22 @@ function ProductCard({
           </div>
         )}
 
-        {/* Hover: subtle dark overlay with "Voir" */}
+        {/* Quick add button — bottom right, appears on hover */}
         {product.stock > 0 && (
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors duration-300 flex items-end justify-center pb-4">
-            <span className="opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-white/95 text-[#1d1d1f] text-xs font-bold px-5 py-2.5 rounded-full shadow-xl">
-              Voir le produit
-            </span>
-          </div>
+          <button
+            onClick={handleQuickAdd}
+            aria-label={added ? 'Ajouté' : 'Ajouter au panier'}
+            className={`absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-95 ${
+              added
+                ? 'bg-emerald-500 text-white opacity-100 scale-100'
+                : 'bg-white text-[#1d1d1f] opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+            }`}
+          >
+            {added
+              ? <CheckCircle className="w-5 h-5" />
+              : <ShoppingCart className="w-4 h-4" />
+            }
+          </button>
         )}
       </div>
 

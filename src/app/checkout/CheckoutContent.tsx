@@ -60,7 +60,7 @@ const PAYMENT_ICONS: Record<PaymentMethod, React.ReactNode> = {
 }
 
 export default function CheckoutContent() {
-  const { items, total, clearCart } = useCartStore()
+  const { items, total, clearCart, cartStoreSlug } = useCartStore()
   const t = useT()
   const lang = useLang()
   const cartTotal = total()
@@ -295,8 +295,9 @@ export default function CheckoutContent() {
           return
         }
         const orderData = await res.json().catch(() => ({}))
-        trackPurchase({ transactionId: orderData.id ?? `cod_${Date.now()}`, total: orderTotal, items: cartSnapshot })
-        track('checkout_complete', { order_id: orderData.id, total: orderTotal, payment_method: 'cash', wilaya: form?.wilaya })
+        const resolvedOrderId = orderData.orderId ?? orderData.id
+        trackPurchase({ transactionId: resolvedOrderId ?? `cod_${Date.now()}`, total: orderTotal, items: cartSnapshot })
+        track('checkout_complete', { order_id: resolvedOrderId, total: orderTotal, payment_method: 'cash', wilaya: form?.wilaya })
 
         markRecovered()
         setSubmitted(true)
@@ -392,7 +393,7 @@ export default function CheckoutContent() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <p className="text-gray-500 mb-6">{t.cart.empty}</p>
-        <Link href="/" className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-700">
+        <Link href={cartStoreSlug ? `/store/${cartStoreSlug}` : '/'} className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-700">
           <ArrowLeft className="w-4 h-4" /> {t.cart.continueShopping}
         </Link>
       </div>
@@ -427,7 +428,7 @@ export default function CheckoutContent() {
           <p><span className="font-semibold">Total:</span> {formatPrice(orderTotal)}</p>
           <p><span className="font-semibold">{t.checkout.estimatedDelivery}</span> {delivery.days}</p>
         </div>
-        <Link href="/" className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-700 transition-colors">
+        <Link href={cartStoreSlug ? `/store/${cartStoreSlug}` : '/'} className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-700 transition-colors">
           {t.cart.continueShopping}
         </Link>
       </div>
