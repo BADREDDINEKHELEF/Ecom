@@ -68,13 +68,6 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     // Monthly chart
     monthlyMap[monthKey] = (monthlyMap[monthKey] ?? 0) + vendorTotal
 
-    // This month vs last month
-    if (monthKey === thisMonthKey) thisMonthRevenue += vendorTotal
-    if (monthKey === lastMonthKey) lastMonthRevenue += vendorTotal
-
-    // Today
-    if (dateStr === todayStr) { todayOrders++; todayRevenue += vendorTotal }
-
     // Pending
     if (order.status === 'pending' || order.status === 'confirmed') pending++
 
@@ -82,8 +75,16 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     if (order.status === 'delivered') { deliveredCount++; finishedCount++ }
     if (order.status === 'returned')  { returnedCount++;  finishedCount++ }
 
-    // Revenue total (delivered only)
-    if (order.status === 'delivered') totalRevenue += vendorTotal
+    // Revenue = delivered orders only (COD money only received at delivery)
+    if (order.status === 'delivered') {
+      totalRevenue += vendorTotal
+      if (monthKey === thisMonthKey) thisMonthRevenue += vendorTotal
+      if (monthKey === lastMonthKey) lastMonthRevenue += vendorTotal
+      if (dateStr === todayStr)      todayRevenue     += vendorTotal
+    }
+
+    // Today order count (all statuses)
+    if (dateStr === todayStr) todayOrders++
 
     // Products
     for (const item of items) {
