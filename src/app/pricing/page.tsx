@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { Check, X, Zap, Star, Crown, ArrowRight, MessageCircle, Shield } from 'lucide-react'
 
 export const metadata = {
-  title: 'Tarifs — ShopDZ',
-  description: 'Plans simples et transparents. Commencez gratuitement, évoluez quand vous voulez.',
+  title: 'Tarifs — StoreDz',
+  description: 'Plans simples et transparents. Lancez votre boutique, évoluez quand vous voulez.',
 }
 
 const PLANS = [
@@ -11,13 +11,13 @@ const PLANS = [
     id: 'starter',
     name: 'Démarrage',
     icon: Zap,
-    price: 0,
-    period: 'Gratuit pour toujours',
+    price: 2000,
+    period: '/ mois',
     color: 'border-gray-200',
     headerColor: 'bg-gray-50',
     badgeColor: 'bg-gray-100 text-gray-700',
     ctaColor: 'bg-gray-900 hover:bg-gray-800 text-white',
-    cta: 'Commencer gratuitement',
+    cta: 'Commencer maintenant',
     ctaHref: '/become-seller',
     highlight: false,
     features: [
@@ -30,7 +30,7 @@ const PLANS = [
       { text: 'Produits illimités', included: false },
       { text: 'Analytics avancés', included: false },
       { text: 'Paiement en ligne (CIB, Edahabia)', included: false },
-      { text: 'Suppression du branding ShopDZ', included: false },
+      { text: 'Suppression du branding StoreDz', included: false },
       { text: 'API livraison intégrée', included: false },
       { text: 'Support prioritaire', included: false },
     ],
@@ -39,7 +39,7 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     icon: Star,
-    price: 1990,
+    price: 4000,
     period: '/ mois',
     color: 'border-indigo-500 ring-2 ring-indigo-500/20',
     headerColor: 'bg-indigo-600',
@@ -59,7 +59,7 @@ const PLANS = [
       { text: 'Paiement en ligne (CIB, Edahabia, BaridiMob)', included: true },
       { text: 'API livraison intégrée (Yalidine, Zaki…)', included: true },
       { text: 'Codes promo & réductions', included: true },
-      { text: 'Suppression du branding ShopDZ', included: false },
+      { text: 'Suppression du branding StoreDz', included: false },
       { text: 'Domaine personnalisé', included: false },
       { text: 'Compte manager dédié', included: false },
     ],
@@ -68,14 +68,14 @@ const PLANS = [
     id: 'business',
     name: 'Business',
     icon: Crown,
-    price: 4990,
+    price: 6000,
     period: '/ mois',
     color: 'border-amber-300',
     headerColor: 'bg-gradient-to-br from-amber-500 to-orange-500',
     badgeColor: 'bg-amber-100 text-amber-700',
     ctaColor: 'bg-amber-500 hover:bg-amber-600 text-white',
     cta: 'Contacter les ventes',
-    ctaHref: 'https://wa.me/213XXXXXXXXX?text=Je+suis+intéressé+par+le+plan+Business+ShopDZ',
+    ctaHref: 'https://wa.me/213779528330?text=Je+suis+intéressé+par+le+plan+Business+StoreDz',
     highlight: false,
     features: [
       { text: 'Produits illimités', included: true },
@@ -87,7 +87,7 @@ const PLANS = [
       { text: 'Paiement en ligne (CIB, Edahabia, BaridiMob)', included: true },
       { text: 'API livraison intégrée', included: true },
       { text: 'Codes promo & réductions', included: true },
-      { text: 'Suppression du branding ShopDZ', included: true },
+      { text: 'Suppression du branding StoreDz', included: true },
       { text: 'Domaine personnalisé', included: true },
       { text: 'Compte manager dédié', included: true },
     ],
@@ -105,7 +105,7 @@ const FAQ = [
   },
   {
     q: "Y a-t-il une commission sur mes ventes ?",
-    a: "Non. ShopDZ ne prend aucune commission sur vos ventes. Vous gardez 100% de ce que vous vendez. Votre seul coût est l'abonnement mensuel.",
+    a: "Non. StoreDz ne prend aucune commission sur vos ventes. Vous gardez 100% de ce que vous vendez. Votre seul coût est l'abonnement mensuel.",
   },
   {
     q: "Que se passe-t-il à la fin de la période d'essai ?",
@@ -164,18 +164,12 @@ export default function PricingPage() {
                   </div>
                   <p className={`font-black text-lg mb-1 ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>{plan.name}</p>
                   <div className="flex items-end gap-1">
-                    {plan.price === 0 ? (
-                      <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>Gratuit</span>
-                    ) : (
-                      <>
-                        <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
-                          {plan.price.toLocaleString('fr')}
-                        </span>
-                        <span className={`text-base font-semibold mb-1 ${plan.highlight ? 'text-white/70' : 'text-gray-500'}`}> DA{plan.period}</span>
-                      </>
-                    )}
+                    <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
+                      {plan.price.toLocaleString('fr')}
+                    </span>
+                    <span className={`text-base font-semibold mb-1 ${plan.highlight ? 'text-white/70' : 'text-gray-500'}`}> DA{plan.period}</span>
                   </div>
-                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-white/70' : 'text-gray-400'}`}>{plan.period === 'Gratuit pour toujours' ? plan.period : 'Facturation mensuelle'}</p>
+                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-white/70' : 'text-gray-400'}`}>Facturation mensuelle</p>
                 </div>
 
                 {/* Features */}
@@ -209,14 +203,14 @@ export default function PricingPage() {
       {/* Comparison note */}
       <section className="bg-indigo-50 py-10 px-4 text-center">
         <p className="text-gray-600 text-sm max-w-2xl mx-auto">
-          <strong className="text-gray-900">Tous les plans incluent :</strong> hébergement inclus, SSL gratuit, sous-domaine shopdz.com/store/votre-nom,
+          <strong className="text-gray-900">Tous les plans incluent :</strong> hébergement inclus, SSL gratuit, sous-domaine ecom-dz.net/store/votre-nom,
           mises à jour automatiques, sauvegarde quotidienne des données, et conformité RGPD.
         </p>
       </section>
 
       {/* Trust signals */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <h2 className="text-2xl font-black text-gray-900 text-center mb-10">Pourquoi choisir ShopDZ ?</h2>
+        <h2 className="text-2xl font-black text-gray-900 text-center mb-10">Pourquoi choisir StoreDz ?</h2>
         <div className="grid sm:grid-cols-3 gap-6">
           {[
             {
@@ -227,7 +221,7 @@ export default function PricingPage() {
             {
               icon: '0%',
               title: 'Zéro commission',
-              desc: 'Vous gardez 100% de vos ventes. ShopDZ se rémunère uniquement sur l\'abonnement mensuel, pas sur vos revenus.',
+              desc: 'Vous gardez 100% de vos ventes. StoreDz se rémunère uniquement sur l\'abonnement mensuel, pas sur vos revenus.',
             },
             {
               icon: '⚡',
@@ -271,7 +265,7 @@ export default function PricingPage() {
             Créer ma boutique gratuite <ArrowRight className="w-5 h-5" />
           </Link>
           <a
-            href="https://wa.me/213XXXXXXXXX?text=Bonjour%2C+je+veux+en+savoir+plus+sur+ShopDZ"
+            href="https://wa.me/213779528330?text=Bonjour%2C+je+veux+en+savoir+plus+sur+StoreDz"
             className="inline-flex items-center justify-center gap-2 bg-white/10 text-white font-semibold px-8 py-4 rounded-2xl hover:bg-white/20 transition-colors border border-white/20"
           >
             <MessageCircle className="w-5 h-5" /> Parler à l&apos;équipe
