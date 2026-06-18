@@ -355,6 +355,7 @@ export default function CheckoutContent() {
       phone: next.phone,
       wilaya: next.wilaya,
       address: next.address,
+      storeSlug: cartStoreSlug ?? undefined,
       cartSnapshot: items.map(({ product, quantity }) => ({ id: product.id, name: product.name, quantity, price: product.price })),
       cartTotal,
     })

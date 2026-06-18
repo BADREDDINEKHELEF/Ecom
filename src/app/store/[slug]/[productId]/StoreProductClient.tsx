@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ShoppingCart, CheckCircle, Minus, Plus } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
+import { useT } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 import { trackAddToCart } from '@/lib/analytics'
 import { Product } from '@/types'
@@ -29,6 +30,9 @@ const WA_SVG_SM = (
 
 export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName, storeSlug }: Props) {
   const addItem = useCartStore(s => s.addItem)
+  const t  = useT()
+  const ts = t.store
+  const tp = t.product
   const [qty,           setQty]           = useState(1)
   const [added,         setAdded]         = useState(false)
   const [visible,       setVisible]       = useState(false)
@@ -87,7 +91,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
         disabled
         className="w-full py-4 rounded-2xl text-sm font-bold bg-[#f5f5f7] text-[#86868b] cursor-not-allowed tracking-wide"
       >
-        Rupture de stock
+        {ts.outOfStockOverlay}
       </button>
     )
   }
@@ -98,7 +102,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
     <>
       {/* Quantity — clean Apple-style */}
       <div className="flex items-center gap-4">
-        <span className="text-sm font-semibold text-[#1d1d1f]">Quantité</span>
+        <span className="text-sm font-semibold text-[#1d1d1f]">{ts.quantity}</span>
         <div className="flex items-center bg-[#f5f5f7] rounded-2xl overflow-hidden">
           <button
             onClick={() => setQty(q => Math.max(1, q - 1))}
@@ -130,7 +134,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-white bg-[#25D366] hover:bg-[#20c35a] active:scale-[.98] transition-all duration-200 shadow-lg shadow-green-600/20 text-[15px]"
         >
           {WA_SVG}
-          Commander via WhatsApp
+          {ts.orderViaWhatsApp}
         </a>
       )}
 
@@ -143,9 +147,9 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
         }`}
       >
         {added ? (
-          <><CheckCircle className="w-4 h-4" /> Ajouté au panier</>
+          <><CheckCircle className="w-4 h-4" /> {ts.addedToCart}</>
         ) : (
-          <><ShoppingCart className="w-4 h-4" /> Ajouter au panier</>
+          <><ShoppingCart className="w-4 h-4" /> {tp.addToCart}</>
         )}
       </button>
 

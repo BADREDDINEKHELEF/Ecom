@@ -43,18 +43,49 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
   const monthlyMap: Record<string, number> = {}
   const productMap: Record<string, { id: string; sales: number; revenue: number }> = {}
   const customerMap: Record<string, { name: string; wilaya: string; orders: number; spend: number }> = {}
-  const deliveryMap: Record<string, number> = {}
+  const deliveryMap: Record<string, { total: number; delivered: number; returned: number; cancelled: number }> = {}
+  const wilayaMap: Record<string, number> = {}
+  const dowMap: Record<number, number> = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 }
   let pending = 0
 
+  // Today / this-month / last-month boundaries (local time)
+  const now = new Date()
+  const todayStr = now.toISOString().slice(0, 10)
+  const thisMonthKey = now.toLocaleString('en', { month: 'short' })
+  const lastMonthDate = new Date(now); lastMonthDate.setMonth(lastMonthDate.getMonth() - 1)
+  const lastMonthKey = lastMonthDate.toLocaleString('en', { month: 'short' })
+
+  let todayOrders = 0, todayRevenue = 0
+  let thisMonthRevenue = 0, lastMonthRevenue = 0
+  let deliveredCount = 0, returnedCount = 0, finishedCount = 0
+  let totalRevenue = 0
+
   for (const { order, items, vendorTotal } of orders) {
-    // Monthly
-    const key = new Date(order.created_at).toLocaleString('en', { month: 'short' })
-    monthlyMap[key] = (monthlyMap[key] ?? 0) + vendorTotal
+    const createdAt = new Date(order.created_at)
+    const monthKey = createdAt.toLocaleString('en', { month: 'short' })
+    const dateStr = order.created_at.slice(0, 10)
+
+    // Monthly chart
+    monthlyMap[monthKey] = (monthlyMap[monthKey] ?? 0) + vendorTotal
+
+    // This month vs last month
+    if (monthKey === thisMonthKey) thisMonthRevenue += vendorTotal
+    if (monthKey === lastMonthKey) lastMonthRevenue += vendorTotal
+
+    // Today
+    if (dateStr === todayStr) { todayOrders++; todayRevenue += vendorTotal }
 
     // Pending
     if (order.status === 'pending' || order.status === 'confirmed') pending++
 
-    // Products (keyed by product_id for worst-seller cross-reference)
+    // Delivery rate (only delivered + returned count; cancelled are admin-side)
+    if (order.status === 'delivered') { deliveredCount++; finishedCount++ }
+    if (order.status === 'returned')  { returnedCount++;  finishedCount++ }
+
+    // Revenue total (delivered only)
+    if (order.status === 'delivered') totalRevenue += vendorTotal
+
+    // Products
     for (const item of items) {
       const pid = item.product_id ?? item.product_name
       if (!productMap[pid]) productMap[pid] = { id: item.product_id ?? '', sales: 0, revenue: 0 }
@@ -62,16 +93,26 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
       productMap[pid].revenue += item.subtotal
     }
 
-    // Customers (group by phone)
+    // Customers
     const phone = order.phone
     if (!customerMap[phone]) customerMap[phone] = { name: order.full_name, wilaya: order.wilaya, orders: 0, spend: 0 }
     customerMap[phone].orders++
     customerMap[phone].spend += vendorTotal
 
-    // Delivery provider
+    // Delivery provider — track per-status
     if (order.delivery_provider) {
-      deliveryMap[order.delivery_provider] = (deliveryMap[order.delivery_provider] ?? 0) + 1
+      if (!deliveryMap[order.delivery_provider]) deliveryMap[order.delivery_provider] = { total: 0, delivered: 0, returned: 0, cancelled: 0 }
+      deliveryMap[order.delivery_provider].total++
+      if (order.status === 'delivered') deliveryMap[order.delivery_provider].delivered++
+      if (order.status === 'returned')  deliveryMap[order.delivery_provider].returned++
+      if (order.status === 'cancelled') deliveryMap[order.delivery_provider].cancelled++
     }
+
+    // Wilaya
+    if (order.wilaya) wilayaMap[order.wilaya] = (wilayaMap[order.wilaya] ?? 0) + 1
+
+    // Day of week
+    dowMap[createdAt.getDay()]++
   }
 
   // Monthly chart — last 6 months
@@ -82,7 +123,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     return { month: key, revenue: monthlyMap[key] ?? 0 }
   })
 
-  // Best sellers — by revenue from orders
+  // Best sellers
   const soldIds = new Set(Object.keys(productMap))
   const bestSellers = Object.entries(productMap)
     .sort((a, b) => b[1].revenue - a[1].revenue)
@@ -93,22 +134,32 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     })
 
   // Worst sellers — products with ZERO sales
-  const worstSellers = allProducts
-    .filter((p) => !soldIds.has(p.id))
-    .slice(0, 4)
+  const worstSellers = allProducts.filter((p) => !soldIds.has(p.id)).slice(0, 4)
 
   // Top customers
   const topCustomers = Object.values(customerMap)
     .sort((a, b) => b.spend - a.spend)
     .slice(0, 5)
 
-  // Delivery breakdown
-  const totalDelivered = Object.values(deliveryMap).reduce((s, n) => s + n, 0)
+  // Repeat buyers
+  const repeatBuyers = Object.values(customerMap).filter(c => c.orders > 1).length
+  const repeatRate = topCustomers.length > 0
+    ? Math.round((repeatBuyers / Object.keys(customerMap).length) * 100)
+    : 0
+
+  // Delivery breakdown — per-company with delivered/returned/rate
+  const totalShipped = Object.values(deliveryMap).reduce((s, n) => s + n.total, 0)
   const deliveryBreakdown = Object.entries(deliveryMap)
-    .sort((a, b) => b[1] - a[1])
-    .map(([id, count]) => {
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([id, d]) => {
       const provider = DELIVERY_PROVIDERS.find((p) => p.id === id)
-      return { id, name: provider?.name ?? id, color: provider?.color ?? '#6b7280', count, pct: Math.round((count / totalDelivered) * 100) }
+      const fin = d.delivered + d.returned
+      return {
+        id, name: provider?.name ?? id, color: provider?.color ?? '#6b7280',
+        count: d.total, delivered: d.delivered, returned: d.returned, cancelled: d.cancelled,
+        pct: totalShipped > 0 ? Math.round((d.total / totalShipped) * 100) : 0,
+        rate: fin > 0 ? Math.round((d.delivered / fin) * 100) : null,
+      }
     })
 
   // Recent 5 orders
@@ -116,7 +167,34 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     .sort((a, b) => new Date(b.order.created_at).getTime() - new Date(a.order.created_at).getTime())
     .slice(0, 5)
 
-  return { monthly, bestSellers, worstSellers, topCustomers, deliveryBreakdown, recent, pending }
+  // Best day of week
+  const DOW_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+  const bestDowIdx = Object.entries(dowMap).sort((a, b) => b[1] - a[1])[0]
+  const bestDay = bestDowIdx && Number(bestDowIdx[1]) > 0 ? DOW_FR[Number(bestDowIdx[0])] : null
+
+  // Top wilaya
+  const topWilaya = Object.entries(wilayaMap).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+
+  // Delivery rate
+  const deliveryRate = finishedCount > 0 ? Math.round((deliveredCount / finishedCount) * 100) : null
+  const returnRate   = finishedCount > 0 ? Math.round((returnedCount  / finishedCount) * 100) : null
+
+  // Average order value (delivered orders only)
+  const avgOrderValue = deliveredCount > 0 ? Math.round(totalRevenue / deliveredCount) : 0
+
+  // Month-over-month growth
+  const momGrowth = lastMonthRevenue > 0
+    ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+    : null
+
+  return {
+    monthly, bestSellers, worstSellers, topCustomers, deliveryBreakdown, recent, pending,
+    todayOrders, todayRevenue,
+    thisMonthRevenue, lastMonthRevenue, momGrowth,
+    deliveryRate, returnRate, avgOrderValue,
+    bestDay, topWilaya, repeatRate,
+    deliveredCount, returnedCount, finishedCount,
+  }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -131,6 +209,8 @@ export default function SellerDashboardPage() {
   const [orders, setOrders] = useState<VendorOrderSummary[]>([])
   const [fetching, setFetching] = useState(true)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [abandonedCount, setAbandonedCount] = useState<number | null>(null)
+  const [cancelledCount, setCancelledCount] = useState<number | null>(null)
 
   useEffect(() => {
     if (!vendor) return
@@ -143,6 +223,16 @@ export default function SellerDashboardPage() {
       .then(([prods, ords]) => { setAllProducts(prods); setOrders(ords) })
       .catch(() => { /* keep empty state, show dashboard with zeros */ })
       .finally(() => setFetching(false))
+
+    fetch('/api/seller/cancelled-and-abandoned')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d) {
+          setAbandonedCount(d.abandoned?.length ?? 0)
+          setCancelledCount(d.cancelled?.length ?? 0)
+        }
+      })
+      .catch(() => {})
   }, [vendor])
 
   const analytics    = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])
@@ -380,23 +470,66 @@ export default function SellerDashboardPage() {
           </div>
         )}
 
-        {/* KPIs */}
+        {/* KPIs — 4 analytical cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
-          {[
-            { label: sd.netEarnings, value: formatPrice(Math.round(netEarnings)), icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', sub: 'Revenu total (abonnement mensuel)' },
-            { label: sd.totalOrders, value: orders.length.toLocaleString(), icon: ShoppingBag, color: 'text-blue-600 bg-blue-50', sub: sd.allTime },
-            { label: sd.pending, value: analytics.pending.toLocaleString(), icon: Clock, color: analytics.pending > 0 ? 'text-amber-600 bg-amber-50' : 'text-gray-400 bg-gray-50', sub: sd.needAttention },
-            { label: sd.products, value: allProducts.length.toLocaleString(), icon: Package, color: 'text-violet-600 bg-violet-50', sub: sd.listedInStore },
-          ].map(({ label, value, icon: Icon, color, sub }) => (
-            <div key={label} className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
-              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-2 sm:mb-3 ${color}`}>
-                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+
+          {/* Today */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Aujourd&apos;hui</p>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900">{analytics.todayOrders}</p>
+            <p className="text-xs sm:text-sm font-semibold text-gray-600 mt-0.5">
+              commande{analytics.todayOrders !== 1 ? 's' : ''}
+            </p>
+            <p className="text-sm font-bold text-emerald-600 mt-1.5">
+              {analytics.todayRevenue > 0 ? formatPrice(analytics.todayRevenue) : <span className="text-gray-300">—</span>}
+            </p>
+          </div>
+
+          {/* Ce mois */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Ce mois</p>
+            <p className="text-xl sm:text-2xl font-black text-gray-900 truncate">
+              {analytics.thisMonthRevenue > 0 ? formatPrice(analytics.thisMonthRevenue) : <span className="text-gray-300">—</span>}
+            </p>
+            {analytics.momGrowth !== null ? (
+              <div className={`flex items-center gap-1 mt-1.5 ${analytics.momGrowth >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                {analytics.momGrowth >= 0
+                  ? <TrendingUp className="w-3 h-3 flex-shrink-0" />
+                  : <TrendingDown className="w-3 h-3 flex-shrink-0" />}
+                <span className="text-xs font-bold truncate">
+                  {analytics.momGrowth > 0 ? '+' : ''}{analytics.momGrowth}% vs mois dernier
+                </span>
               </div>
-              <p className="text-lg sm:text-2xl font-black text-gray-900 truncate">{value}</p>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700 mt-0.5 truncate">{label}</p>
-              <p className="text-xs text-gray-400 mt-0.5 hidden sm:block truncate">{sub}</p>
-            </div>
-          ))}
+            ) : (
+              <p className="text-xs text-gray-400 mt-1.5">Premier mois</p>
+            )}
+          </div>
+
+          {/* Taux de livraison */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Taux de livraison</p>
+            <p className={`text-2xl sm:text-3xl font-black ${
+              analytics.deliveryRate === null        ? 'text-gray-300'
+              : analytics.deliveryRate >= 70         ? 'text-emerald-600'
+              : analytics.deliveryRate >= 50         ? 'text-amber-600'
+              :                                        'text-red-500'
+            }`}>
+              {analytics.deliveryRate !== null ? `${analytics.deliveryRate}%` : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-1.5">
+              {analytics.deliveredCount} livré{analytics.deliveredCount !== 1 ? 's' : ''} · {analytics.returnedCount} retour{analytics.returnedCount !== 1 ? 's' : ''}
+            </p>
+          </div>
+
+          {/* Panier moyen */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Panier moyen</p>
+            <p className="text-xl sm:text-2xl font-black text-gray-900 truncate">
+              {analytics.avgOrderValue > 0 ? formatPrice(analytics.avgOrderValue) : <span className="text-gray-300">—</span>}
+            </p>
+            <p className="text-xs text-gray-400 mt-1.5">sur {analytics.deliveredCount} livrée{analytics.deliveredCount !== 1 ? 's' : ''}</p>
+          </div>
+
         </div>
 
         {/* Revenue Chart */}
@@ -444,6 +577,37 @@ export default function SellerDashboardPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {/* Insight pills — auto-generated from computed metrics */}
+          {!fetching && orders.length > 0 && (analytics.bestDay || analytics.topWilaya || analytics.repeatRate > 0 || (analytics.returnRate !== null && analytics.returnRate >= 20) || analytics.worstSellers.length > 0) && (
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-50">
+              {analytics.bestDay && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full">
+                  📅 Meilleur jour : {analytics.bestDay}
+                </span>
+              )}
+              {analytics.topWilaya && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full">
+                  📍 Top wilaya : {analytics.topWilaya}
+                </span>
+              )}
+              {analytics.repeatRate > 0 && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold bg-violet-50 text-violet-700 px-3 py-1.5 rounded-full">
+                  🔁 {analytics.repeatRate}% clients fidèles
+                </span>
+              )}
+              {analytics.returnRate !== null && analytics.returnRate >= 20 && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold bg-red-50 text-red-700 px-3 py-1.5 rounded-full">
+                  ⚠️ Taux de retour élevé : {analytics.returnRate}%
+                </span>
+              )}
+              {analytics.worstSellers.length > 0 && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full">
+                  💤 {analytics.worstSellers.length} produit{analytics.worstSellers.length !== 1 ? 's' : ''} sans ventes
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -584,85 +748,91 @@ export default function SellerDashboardPage() {
           </div>
         </div>
 
-        {/* Delivery Breakdown + Earnings */}
-        <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
-
-          {/* Delivery Company Breakdown */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-5">
-              <Truck className="w-5 h-5 text-indigo-600" />
-              <h2 className="font-bold text-gray-900">{sd.deliveryBreakdown}</h2>
-            </div>
-            {fetching ? (
-              <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
-            ) : analytics.deliveryBreakdown.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">{sd.noDeliveryData}</p>
-            ) : (
-              <div className="space-y-4">
-                {analytics.deliveryBreakdown.map((d) => (
-                  <div key={d.id}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                        <span className="text-sm font-medium text-gray-800">{d.name}</span>
-                      </div>
-                      <span className="text-xs text-gray-500 font-medium">
-                        {sd.deliveryOrders.replace('{n}', String(d.count))} · {d.pct}%
-                      </span>
+        {/* Delivery Performance — full width, per company */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-5">
+            <Truck className="w-5 h-5 text-indigo-600" />
+            <h2 className="font-bold text-gray-900">Performance par livreur</h2>
+          </div>
+          {fetching ? (
+            <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+          ) : analytics.deliveryBreakdown.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">{sd.noDeliveryData}</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {analytics.deliveryBreakdown.map((d) => (
+                <div key={d.id} className="rounded-xl bg-gray-50 p-4">
+                  {/* Company header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                      <span className="text-sm font-bold text-gray-800">{d.name}</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${d.pct}%`, backgroundColor: d.color }} />
+                    <span className="text-xs font-semibold text-gray-400">{d.count} cmd · {d.pct}%</span>
+                  </div>
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                    <div className="bg-emerald-50 rounded-lg px-1 py-2">
+                      <p className="text-sm font-black text-emerald-700">{d.delivered}</p>
+                      <p className="text-[10px] text-emerald-600 font-medium">Livré</p>
+                    </div>
+                    <div className="bg-red-50 rounded-lg px-1 py-2">
+                      <p className="text-sm font-black text-red-600">{d.returned}</p>
+                      <p className="text-[10px] text-red-500 font-medium">Retour</p>
+                    </div>
+                    <div className={`rounded-lg px-1 py-2 ${
+                      d.rate === null       ? 'bg-gray-100'
+                      : d.rate >= 70        ? 'bg-emerald-100'
+                      : d.rate >= 50        ? 'bg-amber-100'
+                      :                       'bg-red-100'
+                    }`}>
+                      <p className={`text-sm font-black ${
+                        d.rate === null ? 'text-gray-400' : d.rate >= 70 ? 'text-emerald-700' : d.rate >= 50 ? 'text-amber-700' : 'text-red-600'
+                      }`}>{d.rate !== null ? `${d.rate}%` : '—'}</p>
+                      <p className="text-[10px] text-gray-500 font-medium">Taux</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Subscription Status */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-5">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-              <h2 className="font-bold text-gray-900">Abonnement & Revenus</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Ventes totales</p>
-                  <p className="text-lg font-black text-gray-900">{formatPrice(grossRevenue)}</p>
+                  {/* Usage bar */}
+                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${d.pct}%`, backgroundColor: d.color }} />
+                  </div>
                 </div>
-                <DollarSign className="w-8 h-8 text-gray-200" />
-              </div>
-              <div className={`rounded-xl p-4 flex items-center justify-between ${
-                vendor.subscription_status === 'active'       ? 'bg-emerald-50'
-                : vendor.subscription_status === 'trial'      ? 'bg-blue-50'
-                : vendor.subscription_status === 'grace_period' ? 'bg-amber-50'
-                : 'bg-red-50'
-              }`}>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Abonnement mensuel</p>
-                  <p className={`text-lg font-black ${
-                    vendor.subscription_status === 'active'       ? 'text-emerald-700'
-                    : vendor.subscription_status === 'trial'      ? 'text-blue-700'
-                    : vendor.subscription_status === 'grace_period' ? 'text-amber-700'
-                    : 'text-red-600'
-                  }`}>
-                    {vendor.subscription_status === 'active'       ? 'Actif'
-                     : vendor.subscription_status === 'trial'      ? 'Période d\'essai'
-                     : vendor.subscription_status === 'grace_period' ? 'Période de grâce'
-                     : 'Expiré'}
-                  </p>
-                  {vendor.subscription_expires_at && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Expire le {new Date(vendor.subscription_expires_at).toLocaleDateString('fr-DZ', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
-                  )}
-                </div>
-                <Link href="/seller/subscription" className="text-xs font-bold text-gray-500 hover:text-emerald-600 underline">Gérer →</Link>
-              </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
+
+        {/* Abandoned & Cancelled — 30 days */}
+        {(abandonedCount !== null || cancelledCount !== null) && (
+          <div className="mt-4 grid sm:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Paniers abandonnés (30j)</p>
+                <p className="text-2xl font-black text-gray-900">{abandonedCount ?? '—'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Personnes qui ont commencé à commander sans finaliser</p>
+              </div>
+              <Link href="/seller/orders?tab=abandoned" className="text-xs font-bold text-amber-600 hover:underline flex-shrink-0">
+                Voir →
+              </Link>
+            </div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Commandes annulées (30j)</p>
+                <p className="text-2xl font-black text-gray-900">{cancelledCount ?? '—'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Commandes annulées avant livraison</p>
+              </div>
+              <Link href="/seller/orders?status=cancelled" className="text-xs font-bold text-red-400 hover:underline flex-shrink-0">
+                Voir →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Store Settings Summary */}
         <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">

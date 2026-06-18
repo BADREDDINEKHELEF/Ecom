@@ -19,6 +19,7 @@ interface AbandonedPayload {
   address?: string
   cartSnapshot?: unknown
   cartTotal?: number
+  storeSlug?: string
 }
 
 export function useAbandonedCheckout() {

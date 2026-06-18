@@ -282,6 +282,9 @@ export default async function StoreProductPage({ params }: PageProps) {
               </>
             )}
 
+            {/* Share */}
+            <ProductShareButtons productName={product.name} />
+
             {/* COD guarantee */}
             <div className="flex items-center gap-3 bg-[#f0faf4] border border-[#d1fae5] rounded-2xl px-4 py-3.5">
               <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">

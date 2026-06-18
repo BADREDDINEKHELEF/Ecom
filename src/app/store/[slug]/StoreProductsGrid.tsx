@@ -7,6 +7,7 @@ import { Package, ShoppingCart, CheckCircle, Search, X } from 'lucide-react'
 import { Product } from '@/types'
 import { formatPrice } from '@/lib/utils'
 import { useCartStore } from '@/lib/store/cartStore'
+import { useT } from '@/lib/store/langStore'
 import type { StoreNiche } from './page'
 
 interface Props {
@@ -19,6 +20,9 @@ interface Props {
 export default function StoreProductsGrid({ products, accent, storeSlug, storeNiches = [] }: Props) {
   const [tab, setTab]       = useState('all')
   const [search, setSearch] = useState('')
+  const t  = useT()
+  const ts = t.store
+  const tc = t.common
 
   const newProducts  = products.filter(p => p.isNew)
   const saleProducts = products.filter(p => p.comparePrice && p.comparePrice > p.price)
@@ -41,10 +45,10 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
   }, [tabFiltered, search])
 
   const tabs = [
-    { id: 'all', label: 'Tout', count: products.length, emoji: '' },
+    { id: 'all', label: ts.tabAll, count: products.length, emoji: '' },
     ...storeNiches.map(n => ({ id: n.id, label: n.name, count: products.filter(p => p.nicheId === n.id).length, emoji: n.emoji })),
-    ...(newProducts.length  > 0 ? [{ id: 'new',  label: 'Nouveautés', count: newProducts.length,  emoji: '✨' }] : []),
-    ...(saleProducts.length > 0 ? [{ id: 'sale', label: 'Promotions',  count: saleProducts.length, emoji: '🏷️' }] : []),
+    ...(newProducts.length  > 0 ? [{ id: 'new',  label: ts.tabNew,  count: newProducts.length,  emoji: '✨' }] : []),
+    ...(saleProducts.length > 0 ? [{ id: 'sale', label: ts.tabSale, count: saleProducts.length, emoji: '🏷️' }] : []),
   ]
 
   return (
@@ -57,7 +61,7 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
             type="search"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher un produit…"
+            placeholder={ts.searchPlaceholder}
             className="w-full pl-11 pr-10 py-3 bg-[#f5f5f7] rounded-2xl text-sm text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:ring-2 focus:ring-black/10"
           />
           {search && (
@@ -96,11 +100,11 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
         <div className="text-center py-20 text-[#86868b]">
           <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
           <p className="font-medium">
-            {search ? `Aucun résultat pour « ${search} »` : 'Aucun produit dans cette catégorie'}
+            {search ? ts.noResults.replace('{q}', search) : ts.noCategory}
           </p>
           {search && (
             <button onClick={() => setSearch('')} className="mt-3 text-sm text-[#1d1d1f] underline underline-offset-2">
-              Effacer la recherche
+              {ts.clearSearch}
             </button>
           )}
         </div>
@@ -127,6 +131,9 @@ function ProductCard({
   gridStoreSlug: string
 }) {
   const addItem = useCartStore(s => s.addItem)
+  const t  = useT()
+  const ts = t.store
+  const tc = t.common
   const [added, setAdded] = useState(false)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
@@ -169,7 +176,7 @@ function ProductCard({
         {product.stock === 0 && (
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
             <span className="text-white text-xs font-semibold tracking-wide bg-black/50 px-4 py-2 rounded-full">
-              Épuisé
+              {ts.soldOut}
             </span>
           </div>
         )}
@@ -181,7 +188,7 @@ function ProductCard({
               className="text-[11px] font-bold text-white px-2.5 py-1 rounded-full shadow-sm"
               style={{ background: accent }}
             >
-              Nouveau
+              {tc.new}
             </span>
           )}
           {hasDiscount && (
@@ -195,7 +202,7 @@ function ProductCard({
         {product.stock > 0 && product.stock <= 3 && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-3 pt-8 pb-3">
             <p className="text-white text-[11px] font-bold tracking-wide">
-              ⚡ Plus que {product.stock} en stock
+              {ts.lowStock.replace('{n}', String(product.stock))}
             </p>
           </div>
         )}
@@ -246,7 +253,7 @@ function ProductCard({
         </div>
 
         {hasDiscount && savings > 0 && (
-          <p className="text-xs text-emerald-600 font-medium mt-0.5">Économie {formatPrice(savings)}</p>
+          <p className="text-xs text-emerald-600 font-medium mt-0.5">{ts.savings.replace('{n}', formatPrice(savings))}</p>
         )}
       </div>
     </Link>

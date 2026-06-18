@@ -53,14 +53,17 @@ export async function GET(req: NextRequest) {
         cancelledAt: r.orders!.cancelled_at,
       }))
 
-    // 2. Abandoned checkouts — store-wide last 30 days, status=abandoned
-    const { data: abandonedRows } = await admin
+    // 2. Abandoned checkouts — filtered by vendor's store_slug when available
+    const abandonedBase = admin
       .from('abandoned_checkouts')
-      .select('session_id, name, phone, email, wilaya, cart_total, status, updated_at')
+      .select('session_id, name, phone, email, wilaya, cart_total, status, updated_at, store_slug')
       .eq('status', 'abandoned')
       .gte('updated_at', since.toISOString())
-      .order('updated_at', { ascending: false })
-      .limit(100)
+
+    const { data: abandonedRows } = await (vendor.store_slug
+      ? abandonedBase.eq('store_slug', vendor.store_slug)
+      : abandonedBase
+    ).order('updated_at', { ascending: false }).limit(100)
 
     return NextResponse.json({
       cancelled: cancelled ?? [],
@@ -70,6 +73,7 @@ export async function GET(req: NextRequest) {
         phone:     r.phone,
         email:     r.email,
         wilaya:    r.wilaya,
+        storeSlug: r.store_slug,
         cartTotal: r.cart_total,
         updatedAt: r.updated_at,
       })),

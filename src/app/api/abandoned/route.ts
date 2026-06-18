@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null)
     if (!body?.sessionId) return NextResponse.json({ ok: false }, { status: 400 })
 
-    const { sessionId, name, email, phone, wilaya, address, cartSnapshot, cartTotal } = body
+    const { sessionId, name, email, phone, wilaya, address, cartSnapshot, cartTotal, storeSlug } = body
 
     if (typeof sessionId !== 'string' || sessionId.length > 64) {
       return NextResponse.json({ ok: false }, { status: 400 })
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         phone: typeof phone === 'string' ? phone.slice(0, 20) : null,
         wilaya: typeof wilaya === 'string' ? wilaya.slice(0, 100) : null,
         address: typeof address === 'string' ? address.slice(0, 500) : null,
+        store_slug: typeof storeSlug === 'string' ? storeSlug.slice(0, 100) : null,
         cart_snapshot: cartSnapshot ?? null,
         cart_total: typeof cartTotal === 'number' ? cartTotal : 0,
         status: 'abandoned',
