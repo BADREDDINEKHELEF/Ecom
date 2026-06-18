@@ -1,4 +1,5 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { DELIVERY_PROVIDERS } from './providers'
 import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfigured, yalidineTrack, yalidineListParcels } from './yalidine'
 import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured, procolisTrack, procolisListParcels } from './procolis'
 import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured, zrTrack, zrListParcels } from './zrexpress'
@@ -381,16 +382,7 @@ export async function dispatchGetStats(
 }
 
 export function getTrackingUrl(provider: string, trackingNumber: string): string {
-  const urls: Record<string, string> = {
-    yalidine:    `https://yalidine.app/tracking?id=${trackingNumber}`,
-    zr:          `https://zrexpress.dz/tracking?code=${trackingNumber}`,
-    maystro:     `https://maystro-delivery.com/tracking?ref=${trackingNumber}`,
-    procolis:    `https://procolis.com/tracking/${trackingNumber}`,
-    colivraison: `https://app.colivraison.com/tracking/${trackingNumber}`,
-    rex:         `https://rexlivraison.com/tracking/${trackingNumber}`,
-    yassir:      `https://yassir.com/tracking/${trackingNumber}`,
-    ecom:        `https://ecomdelivery.dz/tracking?id=${trackingNumber}`,
-    apec:        `https://apec.dz/tracking?id=${trackingNumber}`,
-  }
-  return urls[provider] ?? `#`
+  const p = DELIVERY_PROVIDERS.find((d) => d.id === provider)
+  if (!p?.trackingUrl) return '#'
+  return `${p.trackingUrl}${trackingNumber}`
 }

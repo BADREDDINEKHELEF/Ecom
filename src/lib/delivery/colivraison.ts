@@ -63,9 +63,11 @@ export async function colivraisonListParcels(token: string, pageSize = 100) {
 }
 
 export async function colivraisonTrack(trackingCode: string, token: string) {
-  const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!res.ok) return null
-  return res.json()
+  try {
+    const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
 }

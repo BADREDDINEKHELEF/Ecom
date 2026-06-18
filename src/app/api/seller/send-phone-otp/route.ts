@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
 function normalizePhone(raw: string): string {
@@ -51,6 +53,15 @@ export async function POST(req: NextRequest) {
     const normalized = normalizePhone(phone)
     if (normalized.length < 11) {
       return NextResponse.json({ error: 'Numéro invalide.' }, { status: 400 })
+    }
+
+    const ip = getClientIp(req)
+    const rl = await checkOtpSendRateLimit(ip, normalized)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
     }
 
     const supabase = createAdminClient()

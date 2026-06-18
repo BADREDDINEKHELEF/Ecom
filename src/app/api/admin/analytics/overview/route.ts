@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     todayAlgiers.setHours(0, 0, 0, 0)
     // Convert back to UTC for DB queries
     const todayUTC = new Date(todayAlgiers.getTime() - 60 * 60 * 1000)
+    const fortyEightAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
 
     const [todayOrders, totalVendors, recentOrders] = await Promise.all([
       supabase
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from('orders')
         .select('id, total, wilaya, status, payment_method, created_at')
+        .gte('created_at', fortyEightAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(20),
     ])
@@ -48,8 +50,6 @@ export async function GET(req: NextRequest) {
       (v) => new Date(v.created_at) >= todayUTC
     ).length
 
-    // Last 20 events for live feed (last 48h)
-    const fortyEightAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
     const feed = recent.map((o) => ({
       id:        o.id,
       total:     o.total,

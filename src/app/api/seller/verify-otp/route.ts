@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
+import { timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
+
+function otpEqual(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a.padEnd(8))
+    const bb = Buffer.from(b.padEnd(8))
+    return ba.length === bb.length && timingSafeEqual(ba, bb) && a.length === b.length
+  } catch { return false }
+}
 
 function normalizePhone(raw: string): string {
   const d = raw.replace(/\D/g, '')
@@ -25,7 +35,16 @@ export async function POST(req: NextRequest) {
     }
 
     const normalized = normalizePhone(phone)
-    const supabase   = createAdminClient()
+
+    const rl = await checkOtpVerifyRateLimit(normalized)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
+    }
+
+    const supabase = createAdminClient()
 
     // Verify OTP
     const { data: record } = await supabase
@@ -40,18 +59,18 @@ export async function POST(req: NextRequest) {
     if (!record) {
       return NextResponse.json({ error: 'Code invalide ou expiré. Demandez un nouveau code.' }, { status: 400 })
     }
-    if (record.otp !== otp) {
-      return NextResponse.json({ error: 'Code incorrect. Vérifiez et réessayez.' }, { status: 400 })
-    }
     if (new Date(record.expires_at) < new Date()) {
       return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 })
     }
+    if (!otpEqual(record.otp, otp)) {
+      return NextResponse.json({ error: 'Code incorrect. Vérifiez et réessayez.' }, { status: 400 })
+    }
 
-    // Find vendor by phone
+    // Find vendor by exact phone match (not ilike — avoids ambiguous last-9-digit collisions)
     const { data: vendor } = await supabase
       .from('vendors')
       .select('user_id')
-      .ilike('phone', `%${normalized.slice(-9)}`)
+      .eq('phone', normalized)
       .maybeSingle()
 
     if (!vendor?.user_id) {

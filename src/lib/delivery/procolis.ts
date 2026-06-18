@@ -64,9 +64,12 @@ export async function procolisListParcels(token: string, pageSize = 100) {
 }
 
 export async function procolisTrack(trackingNumber: string, token: string) {
-  const res = await fetch(
-    `${BASE_URL}/traking?token=${encodeURIComponent(token)}&code_suivi=${encodeURIComponent(trackingNumber)}`
-  )
-  if (!res.ok) return null
-  return res.json()
+  try {
+    const res = await fetch(
+      `${BASE_URL}/traking?code_suivi=${encodeURIComponent(trackingNumber)}`,
+      { headers: { 'Content-Type': 'application/json', token } }
+    )
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
 }

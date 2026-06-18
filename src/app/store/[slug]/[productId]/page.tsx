@@ -12,6 +12,7 @@ import ProductColorGallery from './ProductColorGallery'
 import StoreProductClient from './StoreProductClient'
 import ProductShareButtons from './ProductShareButtons'
 import TrackViewContent from '@/components/analytics/TrackViewContent'
+import { getServerT } from '@/lib/i18n/server'
 import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
 
 interface PageProps {
@@ -58,10 +59,12 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function StoreProductPage({ params }: PageProps) {
   const { slug, productId } = await params
-  const [product, vendor] = await Promise.all([
+  const [product, vendor, t] = await Promise.all([
     getProductById(productId),
     getVendorBySlug(slug),
+    getServerT(),
   ])
+  const ts = t.store
   if (!product || !vendor) notFound()
 
   const v              = vendor as typeof vendor & VendorExt
@@ -206,7 +209,7 @@ export default async function StoreProductPage({ params }: PageProps) {
               </span>
               <Eye className="w-4 h-4 text-[#86868b]" />
               <span>
-                <strong className="text-[#1d1d1f] font-semibold">{viewers}</strong> personnes regardent ce produit
+                {ts.viewersCount.replace('{n}', String(viewers))}
               </span>
             </div>
 
@@ -216,8 +219,8 @@ export default async function StoreProductPage({ params }: PageProps) {
                 <div className="flex justify-between text-sm mb-2">
                   <span className={`font-semibold ${product.stock <= 5 ? 'text-red-500' : 'text-orange-500'}`}>
                     {product.stock <= 5
-                      ? `⚡ Seulement ${product.stock} en stock`
-                      : `${product.stock} pièces disponibles`}
+                      ? ts.onlyNLeft.replace('{n}', String(product.stock))
+                      : ts.piecesAvailable.replace('{n}', String(product.stock))}
                   </span>
                 </div>
                 <div className="h-1.5 bg-[#f5f5f7] rounded-full overflow-hidden">
@@ -233,7 +236,7 @@ export default async function StoreProductPage({ params }: PageProps) {
               </div>
             )}
             {product.stock === 0 && (
-              <p className="text-sm font-semibold text-red-500">Rupture de stock</p>
+              <p className="text-sm font-semibold text-red-500">{ts.outOfStockOverlay}</p>
             )}
 
             {/* Separator */}
@@ -257,9 +260,9 @@ export default async function StoreProductPage({ params }: PageProps) {
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
-                { icon: <Truck     className="w-5 h-5 text-blue-500 mx-auto mb-1.5"   />, title: 'Livraison',   sub: '58 wilayas' },
-                { icon: <Shield    className="w-5 h-5 text-green-500 mx-auto mb-1.5"  />, title: 'Paiement',    sub: 'À la livraison' },
-                { icon: <RotateCcw className="w-5 h-5 text-violet-500 mx-auto mb-1.5" />, title: 'Retour',      sub: 'Sous 7 jours' },
+                { icon: <Truck     className="w-5 h-5 text-blue-500 mx-auto mb-1.5"   />, title: ts.deliveryBadge, sub: ts.allWilayas },
+                { icon: <Shield    className="w-5 h-5 text-green-500 mx-auto mb-1.5"  />, title: ts.paymentBadge,  sub: ts.atDelivery },
+                { icon: <RotateCcw className="w-5 h-5 text-violet-500 mx-auto mb-1.5" />, title: ts.returnsBadge,  sub: ts.sevenDays },
               ].map(({ icon, title, sub }) => (
                 <div key={title}>
                   {icon}
@@ -275,7 +278,7 @@ export default async function StoreProductPage({ params }: PageProps) {
                 <div className="h-px bg-[#f5f5f7]" />
                 <div>
                   <h2 className="text-[11px] font-black text-[#86868b] uppercase tracking-widest mb-3">
-                    Description
+                    {t.product.description}
                   </h2>
                   <p className="text-sm text-[#6e6e73] leading-relaxed whitespace-pre-line">{product.description}</p>
                 </div>
@@ -291,8 +294,8 @@ export default async function StoreProductPage({ params }: PageProps) {
                 <Shield className="w-4.5 h-4.5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-sm font-bold text-emerald-800">Paiement à la livraison</p>
-                <p className="text-xs text-emerald-700 mt-0.5">Payez cash uniquement à la réception</p>
+                <p className="text-sm font-bold text-emerald-800">{ts.cod}</p>
+                <p className="text-xs text-emerald-700 mt-0.5">{ts.codDesc}</p>
               </div>
             </div>
 
@@ -303,11 +306,11 @@ export default async function StoreProductPage({ params }: PageProps) {
         {related.length > 0 && (
           <div className="mt-20 pt-12 border-t border-[#f5f5f7]">
             <h2 className="text-2xl font-black text-[#1d1d1f] tracking-tight mb-8">
-              Autres produits de cette boutique
+              {ts.relatedProducts}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-8">
               {related.map(p => (
-                <RelatedCard key={p.id} product={p} storeSlug={slug} accent={accent} />
+                <RelatedCard key={p.id} product={p} storeSlug={slug} accent={accent} newLabel={t.common.new} />
               ))}
             </div>
           </div>
@@ -321,10 +324,12 @@ function RelatedCard({
   product,
   storeSlug,
   accent,
+  newLabel,
 }: {
   product: Product
   storeSlug: string
   accent: string
+  newLabel: string
 }) {
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
@@ -357,7 +362,7 @@ function RelatedCard({
             className="absolute top-2.5 left-2.5 text-[11px] font-bold text-white px-2 py-0.5 rounded-full"
             style={{ background: accent }}
           >
-            Nouveau
+            {newLabel}
           </span>
         )}
       </div>

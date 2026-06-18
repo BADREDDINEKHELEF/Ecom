@@ -14,6 +14,7 @@ import { niches as staticNiches } from '@/lib/data/niches'
 import ReferralCapture from '@/components/ui/ReferralCapture'
 import StoreProductsGrid from './StoreProductsGrid'
 import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
+import { getServerT } from '@/lib/i18n/server'
 
 export type StoreNiche = { id: string; name: string; emoji: string }
 
@@ -126,7 +127,11 @@ const WA_ICON_SM = (
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const vendor = await getVendorBySlug(slug) as VendorRow | null
+  const [vendor, t] = await Promise.all([
+    getVendorBySlug(slug) as Promise<VendorRow | null>,
+    getServerT(),
+  ])
+  const ts = t.store
   if (!vendor) notFound()
 
   const { products, totalOrders, storeNiches } = await getStoreProducts(vendor.id)
@@ -224,12 +229,12 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           <div className="flex flex-wrap items-center justify-center gap-2">
             {vendor.verified_at && (
               <span className="flex items-center gap-1.5 bg-amber-400/20 border border-amber-300/40 text-amber-200 text-xs font-bold px-3.5 py-1.5 rounded-full backdrop-blur-sm">
-                <BadgeCheck className="w-3.5 h-3.5" /> Boutique Certifiée
+                <BadgeCheck className="w-3.5 h-3.5" /> {ts.certified}
               </span>
             )}
             {vendor.is_approved && !vendor.verified_at && (
               <span className="flex items-center gap-1.5 bg-white/15 border border-white/25 text-white/90 text-xs font-semibold px-3.5 py-1.5 rounded-full backdrop-blur-sm">
-                <BadgeCheck className="w-3.5 h-3.5" /> Vérifiée
+                <BadgeCheck className="w-3.5 h-3.5" /> {ts.verified}
               </span>
             )}
             {vendor.wilaya && (
@@ -248,7 +253,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
               className="flex items-center gap-2.5 bg-[#25D366] hover:bg-[#20c35a] active:scale-[.97] text-white font-black text-sm sm:text-base px-8 py-4 rounded-2xl shadow-2xl shadow-black/30 transition-all duration-200 mt-1"
             >
               {WA_ICON}
-              Commander via WhatsApp
+              {ts.orderViaWhatsApp}
             </a>
           )}
         </div>
@@ -297,7 +302,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 bg-[#25D366] text-white text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-[#20c35a] transition-colors"
               >
-                {WA_ICON_SM} Contacter
+                {WA_ICON_SM} {ts.contact}
               </a>
             )}
           </div>
@@ -310,7 +315,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
             <span className="text-2xl flex-shrink-0">✈️</span>
             <div>
-              <p className="font-bold text-amber-800 text-sm">Cette boutique est temporairement en congé</p>
+              <p className="font-bold text-amber-800 text-sm">{ts.onVacation}</p>
               {vendor.vacation_message && (
                 <p className="text-amber-700 text-sm mt-0.5">{vendor.vacation_message}</p>
               )}
@@ -381,7 +386,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                 className="inline-block text-[11px] font-bold text-white px-2.5 py-0.5 rounded-full mb-2.5 w-fit"
                 style={{ background: accent }}
               >
-                ⭐ Coup de cœur
+                {ts.featured}
               </span>
               <h3 className="font-black text-[#1d1d1f] text-base sm:text-xl leading-tight mb-2 line-clamp-2 tracking-tight">
                 {featuredProduct.name}
@@ -398,11 +403,11 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
               </div>
               {featuredProduct.comparePrice && featuredProduct.comparePrice > featuredProduct.price && (
                 <p className="text-sm text-emerald-600 font-semibold">
-                  Économie {formatPrice(featuredProduct.comparePrice - featuredProduct.price)}
+                  {ts.savings.replace('{n}', formatPrice(featuredProduct.comparePrice - featuredProduct.price))}
                 </p>
               )}
               <span className="mt-3 text-sm text-[#86868b] group-hover:text-[#1d1d1f] transition-colors font-medium">
-                Voir le produit →
+                {ts.viewProduct}
               </span>
             </div>
           </Link>
@@ -414,14 +419,14 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
         {products.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-3xl border border-black/[0.06]">
             <Package className="w-12 h-12 text-[#c7c7cc] mx-auto mb-4" />
-            <p className="font-bold text-[#1d1d1f] mb-1">Aucun produit disponible</p>
-            <p className="text-sm text-[#86868b]">Cette boutique n'a pas encore ajouté de produits.</p>
+            <p className="font-bold text-[#1d1d1f] mb-1">{ts.noProducts}</p>
+            <p className="text-sm text-[#86868b]">{ts.noProductsDesc}</p>
           </div>
         ) : (
           <>
             <div className="flex items-baseline justify-between mb-7">
-              <h2 className="text-2xl font-black text-[#1d1d1f] tracking-tight">Catalogue</h2>
-              <span className="text-sm text-[#86868b]">{products.length} produit{products.length !== 1 ? 's' : ''}</span>
+              <h2 className="text-2xl font-black text-[#1d1d1f] tracking-tight">{ts.catalogue}</h2>
+              <span className="text-sm text-[#86868b]">{products.length} {t.common.products}</span>
             </div>
 
             <StoreProductsGrid
@@ -440,7 +445,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           {vendor.shipping_policy && (
             <details className="bg-white rounded-2xl border border-black/[0.06] overflow-hidden group">
               <summary className="flex items-center justify-between px-5 py-4 cursor-pointer select-none font-semibold text-[#1d1d1f] text-sm list-none">
-                Politique de livraison
+                {ts.deliveryPolicy}
                 <ChevronDown className="w-4 h-4 text-[#86868b] group-open:rotate-180 transition-transform" />
               </summary>
               <p className="px-5 pb-4 text-sm text-[#6e6e73] whitespace-pre-line">{vendor.shipping_policy}</p>
@@ -449,7 +454,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           {vendor.return_policy && (
             <details className="bg-white rounded-2xl border border-black/[0.06] overflow-hidden group">
               <summary className="flex items-center justify-between px-5 py-4 cursor-pointer select-none font-semibold text-[#1d1d1f] text-sm list-none">
-                Politique de retour
+                {ts.returnPolicy}
                 <ChevronDown className="w-4 h-4 text-[#86868b] group-open:rotate-180 transition-transform" />
               </summary>
               <p className="px-5 pb-4 text-sm text-[#6e6e73] whitespace-pre-line">{vendor.return_policy}</p>
@@ -468,7 +473,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             className="flex items-center justify-center gap-2.5 w-full sm:w-auto font-black text-sm text-white bg-[#25D366] hover:bg-[#20c35a] px-7 py-4 rounded-2xl shadow-2xl shadow-green-900/30 transition-all active:scale-[.97]"
           >
             {WA_ICON}
-            Commander via WhatsApp
+            {ts.orderViaWhatsApp}
           </a>
         </div>
       )}

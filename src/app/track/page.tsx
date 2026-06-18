@@ -72,7 +72,7 @@ export default function TrackOrderPage() {
     setOrders(null)
 
     try {
-      const res = await fetch(`/api/track?phone=${encodeURIComponent(normalized)}`)
+      const res = await fetch(`/api/orders/track?phone=${encodeURIComponent(normalized)}`)
       if (!res.ok) throw new Error('Erreur de recherche')
       const data = await res.json()
       setOrders(data.orders ?? [])

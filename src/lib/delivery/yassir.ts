@@ -69,9 +69,11 @@ export async function yassirListParcels(apiKey: string, pageSize = 100) {
 }
 
 export async function yassirTrack(trackingNumber: string, apiKey: string) {
-  const res = await fetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
-    headers: { 'x-api-key': apiKey },
-  })
-  if (!res.ok) return null
-  return res.json()
+  try {
+    const res = await fetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
+      headers: { 'x-api-key': apiKey },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
 }

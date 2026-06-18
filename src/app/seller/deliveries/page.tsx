@@ -158,8 +158,9 @@ export default function SellerDeliveriesPage() {
 
   useEffect(() => { loadShipments() }, [loadShipments])
   useEffect(() => { loadDashboardStats() }, [loadDashboardStats])
-  useEffect(() => { if (tab === 'pending_orders') loadPendingOrders() }, [tab, loadPendingOrders])
-  useEffect(() => { if (tab === 'cancelled_abandoned') loadCancelledAndAbandoned() }, [tab, loadCancelledAndAbandoned])
+  // Load all tabs on mount so badge counts are visible immediately
+  useEffect(() => { loadPendingOrders() }, [loadPendingOrders])
+  useEffect(() => { loadCancelledAndAbandoned() }, [loadCancelledAndAbandoned])
 
   // ── Sync status from providers ─────────────────────────────────────────────
   const handleSync = async () => {

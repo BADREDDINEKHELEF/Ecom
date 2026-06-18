@@ -178,7 +178,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
                 rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-2 bg-[#25D366] text-white font-black py-3.5 rounded-2xl text-sm shadow-md shadow-green-600/20 active:scale-[.98] transition-all"
               >
-                {WA_SVG_SM} Commander
+                {WA_SVG_SM} {ts.orderBtn}
               </a>
             ) : (
               <button
@@ -187,7 +187,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
                 className="flex-1 flex items-center justify-center gap-2 text-white font-black py-3.5 rounded-2xl text-sm active:scale-[.98] transition-all"
               >
                 <ShoppingCart className="w-4 h-4" />
-                {added ? 'Ajouté ✓' : 'Ajouter'}
+                {added ? ts.addedShort : ts.addShort}
               </button>
             )}
           </div>

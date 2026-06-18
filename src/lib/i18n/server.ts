@@ -1,12 +1,9 @@
 import { cookies } from 'next/headers'
-import { translations } from './translations'
-import type { Lang } from './translations'
-
-const VALID_LANGS: Lang[] = ['fr', 'en', 'ar']
+import { translations, Lang } from './translations'
 
 export async function getServerT() {
-  const store = await cookies()
-  const raw = store.get('casbah-lang')?.value ?? 'fr'
-  const lang: Lang = VALID_LANGS.includes(raw as Lang) ? (raw as Lang) : 'fr'
-  return translations[lang]
+  const cookieStore = await cookies()
+  const lang = (cookieStore.get('casbah-lang')?.value ?? 'fr') as Lang
+  const validLang: Lang = ['ar', 'fr', 'en'].includes(lang) ? lang : 'fr'
+  return translations[validLang]
 }

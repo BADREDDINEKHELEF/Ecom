@@ -173,3 +173,16 @@ export async function checkCheckoutRateLimit(ip: string): Promise<RateLimitResul
 export async function checkGeocodeRateLimit(ip: string): Promise<RateLimitResult> {
   return check('geocode', ip, 5, 60)
 }
+
+/** OTP send: 5 per 15 min per IP, 3 per hour per phone number */
+export async function checkOtpSendRateLimit(ip: string, phone: string): Promise<RateLimitResult> {
+  const byIp    = await check('otp_send_ip',    ip,    5, 15 * 60)
+  if (!byIp.allowed) return byIp
+  const byPhone = await check('otp_send_phone', phone, 3, 60 * 60)
+  return byPhone
+}
+
+/** OTP verify: 10 attempts per 15 min per phone (brute-force guard) */
+export async function checkOtpVerifyRateLimit(phone: string): Promise<RateLimitResult> {
+  return check('otp_verify', phone, 10, 15 * 60)
+}

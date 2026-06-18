@@ -61,9 +61,11 @@ export async function rexListParcels(token: string, pageSize = 100) {
 }
 
 export async function rexTrack(trackingCode: string, token: string) {
-  const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingCode)}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!res.ok) return null
-  return res.json()
+  try {
+    const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingCode)}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
 }

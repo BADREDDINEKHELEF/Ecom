@@ -4,19 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Search, Tag, ShoppingCart, User } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
+import { useT } from '@/lib/store/langStore'
 import { useState, useEffect } from 'react'
-
-const tabs = [
-  { href: '/',        icon: Home,         label: 'Accueil'   },
-  { href: '/search',  icon: Search,       label: 'Recherche' },
-  { href: '/deals',   icon: Tag,          label: 'Promos'    },
-  { href: '/cart',    icon: ShoppingCart, label: 'Panier',   badge: true },
-  { href: '/profile', icon: User,         label: 'Compte'    },
-]
 
 export default function BottomNav() {
   const pathname = usePathname()
   const { itemCount, toggleCart } = useCartStore()
+  const t = useT()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const cartCount = itemCount()
@@ -28,6 +22,14 @@ export default function BottomNav() {
     pathname.startsWith('/store/') ||
     pathname.startsWith('/shop/')
   ) return null
+
+  const tabs = [
+    { href: '/',        icon: Home,         label: t.nav.home    },
+    { href: '/search',  icon: Search,       label: t.nav.search.split('…')[0].trim() || 'Search' },
+    { href: '/deals',   icon: Tag,          label: t.nav.deals   },
+    { href: '/cart',    icon: ShoppingCart, label: t.nav.cart,   badge: true },
+    { href: '/profile', icon: User,         label: t.nav.account },
+  ]
 
   return (
     <nav

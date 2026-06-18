@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
 
   const parsed = InitiateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+    const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
   }
 
   const { paymentMethod, promoCodeId, ...rest } = parsed.data
@@ -97,8 +98,11 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Payment initiation failed'
     logger.error('[POST /api/payment/initiate]', { error: msg })
-    if (msg.includes('stock') || msg.includes('not found')) {
-      return NextResponse.json({ error: msg }, { status: 409 })
+    if (msg.includes('stock') || msg.includes('Insufficient')) {
+      return NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 })
+    }
+    if (msg.includes('not found') || msg.includes('not available') || msg.includes('no longer')) {
+      return NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 })
     }
     return NextResponse.json({ error: 'Une erreur est survenue.' }, { status: 500 })
   }

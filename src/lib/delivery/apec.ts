@@ -78,9 +78,11 @@ export async function apecListParcels(apiId: string, apiToken: string, pageSize 
 }
 
 export async function apecTrack(trackingNumber: string, apiId: string, apiToken: string) {
-  const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
-    headers: buildHeaders(apiId, apiToken),
-  })
-  if (!res.ok) return null
-  return res.json()
+  try {
+    const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
+      headers: buildHeaders(apiId, apiToken),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch { return null }
 }
