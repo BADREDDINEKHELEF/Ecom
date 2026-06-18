@@ -1,13 +1,13 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfigured } from './yalidine'
-import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured } from './procolis'
-import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured } from './zrexpress'
-import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured } from './colivraison'
-import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured } from './maystro'
-import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured } from './rex'
-import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured } from './yassir'
-import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured } from './ecom'
-import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured } from './apec'
+import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfigured, yalidineTrack } from './yalidine'
+import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured, procolisTrack } from './procolis'
+import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured, zrTrack } from './zrexpress'
+import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured, colivraisonTrack } from './colivraison'
+import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack } from './maystro'
+import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack } from './rex'
+import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack } from './yassir'
+import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack } from './ecom'
+import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack } from './apec'
 
 export interface DispatchResult extends ShipmentResult {
   provider: string
@@ -133,6 +133,127 @@ export async function dispatchShipment(
 
     default:
       return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+  }
+}
+
+// Maps raw provider status strings/codes → our internal status enum
+export function normalizeProviderStatus(raw: unknown): string {
+  const s = String(raw ?? '').toLowerCase().replace(/[- ]/g, '_')
+  if (['delivered', 'livré', 'livre', 'livraison_effectuee', 'success', '4'].includes(s)) return 'delivered'
+  if (['returned', 'retour', 'retourné', 'retourne', 'return', '5', '6'].includes(s)) return 'returned'
+  if (['out_for_delivery', 'en_livraison', 'en_cours_de_livraison', 'dernier_km', '3'].includes(s)) return 'out_for_delivery'
+  if (['in_transit', 'en_transit', 'en_route', 'transit', 'dispatched', 'shipped', '2'].includes(s)) return 'in_transit'
+  if (['picked_up', 'enlevé', 'enleve', 'collected', 'pris_en_charge', 'ramassé', 'ramasse', '1'].includes(s)) return 'picked_up'
+  if (['failed', 'echec', 'échoué', 'failed_delivery'].includes(s)) return 'failed'
+  if (['cancelled', 'annulé', 'annule', 'canceled'].includes(s)) return 'cancelled'
+  if (['pending', 'waiting', 'wait_for_pickup', 'created', '0'].includes(s)) return 'pending'
+  return 'in_transit'
+}
+
+export interface TrackResult {
+  status: string
+  detail?: string
+}
+
+export async function dispatchTrack(
+  provider: string,
+  trackingNumber: string,
+  vendorCreds?: {
+    yalidine_api_id?: string
+    yalidine_api_token?: string
+    procolis_token?: string
+    zr_token?: string
+    colivraison_token?: string
+    maystro_token?: string
+    rex_token?: string
+    yassir_api_key?: string
+    ecom_token?: string
+    apec_api_id?: string
+    apec_api_token?: string
+  }
+): Promise<TrackResult | null> {
+  try {
+    switch (provider) {
+      case 'yalidine': {
+        const id = vendorCreds?.yalidine_api_id ?? process.env.YALIDINE_API_ID ?? ''
+        const tk = vendorCreds?.yalidine_api_token ?? process.env.YALIDINE_API_TOKEN ?? ''
+        if (!id || !tk) return null
+        const data = await yalidineTrack(trackingNumber, id, tk)
+        if (!data) return null
+        const raw = data.status ?? data.etat ?? data.state
+        return { status: normalizeProviderStatus(raw), detail: data.status_detail ?? undefined }
+      }
+      case 'procolis': {
+        const token = vendorCreds?.procolis_token ?? process.env.PROCOLIS_TOKEN ?? ''
+        if (!token) return null
+        const data = await procolisTrack(trackingNumber, token)
+        if (!data) return null
+        const parcel = Array.isArray(data?.Colis) ? data.Colis[0] : data
+        const raw = parcel?.Statut ?? parcel?.status ?? parcel?.etat
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      case 'zr': {
+        const token = vendorCreds?.zr_token ?? process.env.ZR_TOKEN ?? ''
+        if (!token) return null
+        const data = await zrTrack(trackingNumber, token)
+        if (!data) return null
+        const raw = data.Etat ?? data.status ?? data.etat
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      case 'colivraison': {
+        const token = vendorCreds?.colivraison_token ?? process.env.COLIVRAISON_TOKEN ?? ''
+        if (!token) return null
+        const data = await colivraisonTrack(trackingNumber, token)
+        if (!data) return null
+        const raw = data.status ?? data.etat ?? data.state
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      case 'maystro': {
+        const token = vendorCreds?.maystro_token ?? process.env.MAYSTRO_TOKEN ?? ''
+        if (!token) return null
+        const data = await maystroTrack(trackingNumber, token)
+        if (!data) return null
+        const raw = data.status ?? data.etat
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      case 'rex': {
+        const token = vendorCreds?.rex_token ?? process.env.REX_TOKEN ?? ''
+        if (!token) return null
+        const data = await rexTrack(trackingNumber, token)
+        if (!data) return null
+        const raw = data.status ?? data.etat
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      case 'yassir': {
+        const apiKey = vendorCreds?.yassir_api_key ?? process.env.YASSIR_API_KEY ?? ''
+        if (!apiKey) return null
+        const data = await yassirTrack(trackingNumber, apiKey)
+        if (!data) return null
+        const raw = data.status ?? data.state
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      case 'ecom': {
+        const token = vendorCreds?.ecom_token ?? process.env.ECOM_TOKEN ?? ''
+        if (!token) return null
+        const data = await ecomTrack(trackingNumber, token)
+        if (!data) return null
+        const raw = data.status ?? data.etat
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      case 'apec': {
+        const id = vendorCreds?.apec_api_id ?? process.env.APEC_API_ID ?? ''
+        const tk = vendorCreds?.apec_api_token ?? process.env.APEC_API_TOKEN ?? ''
+        if (!id || !tk) return null
+        const data = await apecTrack(trackingNumber, id, tk)
+        if (!data) return null
+        const raw = data.status ?? data.etat
+        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+      }
+      default:
+        return null
+    }
+  } catch {
+    return null
   }
 }
 

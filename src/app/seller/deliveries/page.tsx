@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Truck, Plus, Search, Download, RefreshCw, ExternalLink,
   X, Check, Loader2, Package, AlertTriangle,
-  CheckCircle2, XCircle, RotateCcw, Menu,
+  CheckCircle2, XCircle, RotateCcw, Menu, RotateCw, Ban, ShoppingCart,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useT, useRTL } from '@/lib/store/langStore'
@@ -14,7 +14,16 @@ import { getTrackingUrl } from '@/lib/delivery/dispatch'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { ShipmentRow, OrderRow, VendorOrderSummary } from '@/lib/supabase/queries'
 
-type Tab = 'shipments' | 'pending_orders'
+type Tab = 'shipments' | 'pending_orders' | 'cancelled_abandoned'
+
+interface CancelledOrder {
+  orderId: string; fullName: string; phone: string; wilaya: string | null
+  total: number; createdAt: string; cancelledAt: string | null
+}
+interface AbandonedCheckout {
+  sessionId: string; name: string | null; phone: string | null; email: string | null
+  wilaya: string | null; cartTotal: number; updatedAt: string
+}
 
 export default function SellerDeliveriesPage() {
   const { vendor, loading, signOut } = useSellerAuth()
@@ -24,37 +33,43 @@ export default function SellerDeliveriesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('shipments')
 
-  // Status display config — uses translated labels from a.*
   const getStatusCfg = useCallback((key: string) => {
     const map: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
-      pending:          { label: a.statusPending,         icon: Package,      cls: 'bg-gray-100 text-gray-700' },
-      in_transit:       { label: a.statusInTransit,       icon: Truck,        cls: 'bg-blue-100 text-blue-700' },
-      picked_up:        { label: a.statusPickedUp,        icon: Package,      cls: 'bg-indigo-100 text-indigo-700' },
-      out_for_delivery: { label: a.statusOutForDelivery,  icon: Truck,        cls: 'bg-amber-100 text-amber-700' },
-      delivered:        { label: a.statusDelivered,       icon: CheckCircle2, cls: 'bg-green-100 text-green-700' },
-      returned:         { label: a.statusReturned,        icon: RotateCcw,    cls: 'bg-orange-100 text-orange-700' },
-      failed:           { label: a.statusFailed,          icon: XCircle,      cls: 'bg-red-100 text-red-700' },
-      cancelled:        { label: a.statusCancelled,       icon: X,            cls: 'bg-gray-100 text-gray-500' },
+      pending:          { label: a.statusPending,        icon: Package,      cls: 'bg-gray-100 text-gray-700' },
+      in_transit:       { label: a.statusInTransit,      icon: Truck,        cls: 'bg-blue-100 text-blue-700' },
+      picked_up:        { label: a.statusPickedUp,       icon: Package,      cls: 'bg-indigo-100 text-indigo-700' },
+      out_for_delivery: { label: a.statusOutForDelivery, icon: Truck,        cls: 'bg-amber-100 text-amber-700' },
+      delivered:        { label: a.statusDelivered,      icon: CheckCircle2, cls: 'bg-green-100 text-green-700' },
+      returned:         { label: a.statusReturned,       icon: RotateCcw,    cls: 'bg-orange-100 text-orange-700' },
+      failed:           { label: a.statusFailed,         icon: XCircle,      cls: 'bg-red-100 text-red-700' },
+      cancelled:        { label: a.statusCancelled,      icon: X,            cls: 'bg-gray-100 text-gray-500' },
     }
     return map[key] ?? map.pending
   }, [a])
 
-  // Shipments list
+  // ── Shipments ──────────────────────────────────────────────────────────────
   const [shipments, setShipments] = useState<(ShipmentRow & { orders: OrderRow })[]>([])
   const [hasMore, setHasMore] = useState(false)
   const [page, setPage] = useState(0)
   const [loadingShips, setLoadingShips] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
 
-  // Pending orders (no shipment yet)
+  // ── Pending orders ─────────────────────────────────────────────────────────
   const [pendingOrders, setPendingOrders] = useState<VendorOrderSummary[]>([])
   const [loadingPending, setLoadingPending] = useState(false)
 
-  // Filters
+  // ── Cancelled & Abandoned ──────────────────────────────────────────────────
+  const [cancelledOrders, setCancelledOrders] = useState<CancelledOrder[]>([])
+  const [abandonedCheckouts, setAbandonedCheckouts] = useState<AbandonedCheckout[]>([])
+  const [loadingCA, setLoadingCA] = useState(false)
+
+  // ── Filters ────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [providerFilter, setProviderFilter] = useState('')
 
-  // Create shipment modal
+  // ── Create shipment modal ──────────────────────────────────────────────────
   const [showModal, setShowModal] = useState(false)
   const [modalOrder, setModalOrder] = useState<VendorOrderSummary | null>(null)
   const [modalProvider, setModalProvider] = useState('yalidine')
@@ -64,14 +79,15 @@ export default function SellerDeliveriesPage() {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
 
-  // Edit tracking modal
+  // ── Edit tracking modal ────────────────────────────────────────────────────
   const [editShip, setEditShip] = useState<ShipmentRow | null>(null)
   const [editTracking, setEditTracking] = useState('')
   const [editSaving, setEditSaving] = useState(false)
 
-  // Bulk selection
+  // ── Bulk selection ─────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
+  // ── Data fetchers ──────────────────────────────────────────────────────────
   const loadShipments = useCallback(async () => {
     if (!vendor) return
     setLoadingShips(true)
@@ -86,9 +102,7 @@ export default function SellerDeliveriesPage() {
       const data = await res.json()
       setShipments(data.shipments || [])
       setHasMore(data.hasMore || false)
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setLoadingShips(false)
     }
   }, [vendor, page, statusFilter, providerFilter])
@@ -100,16 +114,47 @@ export default function SellerDeliveriesPage() {
       const res = await fetch(`/api/seller/pending-orders?vendorId=${vendor.id}`)
       const data = await res.json()
       setPendingOrders(data.orders || [])
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setLoadingPending(false)
+    }
+  }, [vendor])
+
+  const loadCancelledAndAbandoned = useCallback(async () => {
+    if (!vendor) return
+    setLoadingCA(true)
+    try {
+      const res = await fetch('/api/seller/cancelled-and-abandoned')
+      const data = await res.json()
+      setCancelledOrders(data.cancelled || [])
+      setAbandonedCheckouts(data.abandoned || [])
+    } catch { /* silent */ } finally {
+      setLoadingCA(false)
     }
   }, [vendor])
 
   useEffect(() => { loadShipments() }, [loadShipments])
   useEffect(() => { if (tab === 'pending_orders') loadPendingOrders() }, [tab, loadPendingOrders])
+  useEffect(() => { if (tab === 'cancelled_abandoned') loadCancelledAndAbandoned() }, [tab, loadCancelledAndAbandoned])
 
+  // ── Sync status from providers ─────────────────────────────────────────────
+  const handleSync = async () => {
+    if (!vendor || syncing) return
+    setSyncing(true)
+    setSyncMsg('')
+    try {
+      const res = await fetch('/api/seller/shipments/sync', { method: 'POST' })
+      const data = await res.json()
+      setSyncMsg(a.syncDone.replace('{n}', String(data.synced ?? 0)))
+      await loadShipments()
+      setTimeout(() => setSyncMsg(''), 4000)
+    } catch {
+      setSyncMsg('Error')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  // ── Ship modal ─────────────────────────────────────────────────────────────
   const openCreateModal = (order: VendorOrderSummary) => {
     setModalOrder(order)
     setModalProvider('yalidine')
@@ -151,6 +196,7 @@ export default function SellerDeliveriesPage() {
     }
   }
 
+  // ── Edit tracking ──────────────────────────────────────────────────────────
   const handleEditTracking = async () => {
     if (!editShip || !editTracking) return
     setEditSaving(true)
@@ -168,6 +214,7 @@ export default function SellerDeliveriesPage() {
     }
   }
 
+  // ── CSV export ─────────────────────────────────────────────────────────────
   const exportCSV = () => {
     const rows = shipments.filter((s) => selected.size === 0 || selected.has(s.id))
     const header = ['ID', 'Order', 'Customer', 'Wilaya', 'Provider', 'Tracking', 'Status', 'Date']
@@ -178,9 +225,8 @@ export default function SellerDeliveriesPage() {
          s.tracking_number || '', s.status, new Date(s.created_at).toLocaleDateString('fr-DZ')].join(',')
       ),
     ].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
     const anchor = document.createElement('a')
-    anchor.href = URL.createObjectURL(blob)
+    anchor.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
     anchor.download = `shipments-${new Date().toISOString().split('T')[0]}.csv`
     anchor.click()
   }
@@ -206,11 +252,7 @@ export default function SellerDeliveriesPage() {
     return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>
   }
 
-  // Status options for the filter dropdown
-  const statusOptions = [
-    'pending', 'in_transit', 'picked_up', 'out_for_delivery',
-    'delivered', 'returned', 'failed', 'cancelled',
-  ]
+  const statusOptions = ['pending','in_transit','picked_up','out_for_delivery','delivered','returned','failed','cancelled']
 
   return (
     <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -227,7 +269,7 @@ export default function SellerDeliveriesPage() {
 
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
               <Truck className="w-6 h-6 text-emerald-600" /> {a.deliveriesTitle}
@@ -236,27 +278,49 @@ export default function SellerDeliveriesPage() {
               {a.deliveriesCount.replace('{n}', String(shipments.length))}
             </p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={exportCSV} className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm transition-colors">
+          <div className="flex gap-2 flex-wrap items-center">
+            {syncMsg && (
+              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
+                {syncMsg}
+              </span>
+            )}
+            <button onClick={handleSync} disabled={syncing}
+              className="flex items-center gap-2 border border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-emerald-100 text-sm transition-colors disabled:opacity-60">
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />}
+              {syncing ? a.syncing : a.syncStatus}
+            </button>
+            <button onClick={exportCSV}
+              className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm transition-colors">
               <Download className="w-4 h-4" /> {a.exportCsv}
             </button>
-            <button onClick={loadShipments} className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm transition-colors">
+            <button onClick={loadShipments}
+              className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm transition-colors">
               <RefreshCw className="w-4 h-4" /> {a.refresh}
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit">
-          {(['shipments', 'pending_orders'] as const).map((key) => (
-            <button key={key} onClick={() => setTab(key)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {key === 'shipments' ? a.shipmentsTab : a.pendingOrdersTab}
-              {key === 'pending_orders' && pendingOrders.length > 0 && (
-                <span className="ml-1.5 bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{pendingOrders.length}</span>
-              )}
-            </button>
-          ))}
+        <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
+          {(['shipments', 'pending_orders', 'cancelled_abandoned'] as const).map((key) => {
+            const label = key === 'shipments' ? a.shipmentsTab
+              : key === 'pending_orders' ? a.pendingOrdersTab
+              : a.cancelledAbandonedTab
+            const badge = key === 'pending_orders' && pendingOrders.length > 0 ? pendingOrders.length
+              : key === 'cancelled_abandoned' && (cancelledOrders.length + abandonedCheckouts.length) > 0
+                ? cancelledOrders.length + abandonedCheckouts.length : 0
+            return (
+              <button key={key} onClick={() => setTab(key)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {label}
+                {badge > 0 && (
+                  <span className={`ml-1.5 text-white text-xs font-bold px-1.5 py-0.5 rounded-full ${key === 'cancelled_abandoned' ? 'bg-red-500' : 'bg-amber-500'}`}>
+                    {badge}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* ── SHIPMENTS TAB ──────────────────────────────────────────────────── */}
@@ -431,6 +495,120 @@ export default function SellerDeliveriesPage() {
             )}
           </div>
         )}
+
+        {/* ── CANCELLED & ABANDONED TAB ──────────────────────────────────────── */}
+        {tab === 'cancelled_abandoned' && (
+          <div className="space-y-6">
+            {loadingCA ? (
+              <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Cancelled orders */}
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+                    <Ban className="w-4 h-4 text-red-500" />
+                    <h2 className="font-bold text-gray-900 text-sm">{a.cancelledOrders}</h2>
+                    <span className="ml-auto text-xs text-gray-400 font-medium">30 {a.colDate?.toLowerCase()}</span>
+                  </div>
+                  {cancelledOrders.length === 0 ? (
+                    <div className="text-center py-10 text-gray-400">
+                      <p className="text-sm">{a.noCancelledOrders}</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            {[a.colOrder, a.colCustomer, a.colWilaya, a.colTotal, a.cancelledAt, ''].map((h) => (
+                              <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {cancelledOrders.map((o) => (
+                            <tr key={o.orderId} className="hover:bg-gray-50">
+                              <td className="px-5 py-3.5 font-mono text-xs text-gray-500">{o.orderId.slice(0, 8)}</td>
+                              <td className="px-5 py-3.5">
+                                <p className="font-semibold text-gray-900">{o.fullName}</p>
+                                <p className="text-xs text-gray-400">{o.phone}</p>
+                              </td>
+                              <td className="px-5 py-3.5 text-gray-600">{o.wilaya ?? '—'}</td>
+                              <td className="px-5 py-3.5 font-bold text-gray-900">{formatPrice(o.total)}</td>
+                              <td className="px-5 py-3.5 text-red-500 text-xs font-medium">
+                                {o.cancelledAt ? new Date(o.cancelledAt).toLocaleDateString('fr-DZ') : new Date(o.createdAt).toLocaleDateString('fr-DZ')}
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                                  <Ban className="w-3 h-3" /> {a.statusCancelled}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Abandoned checkouts */}
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+                    <ShoppingCart className="w-4 h-4 text-amber-500" />
+                    <h2 className="font-bold text-gray-900 text-sm">{a.abandonedCheckouts}</h2>
+                    <span className="ml-auto text-xs text-gray-400 font-medium">30 {a.colDate?.toLowerCase()}</span>
+                  </div>
+                  {abandonedCheckouts.length === 0 ? (
+                    <div className="text-center py-10 text-gray-400">
+                      <p className="text-sm">{a.noAbandonedCheckouts}</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            {[a.colCustomer, a.colWilaya, a.cartTotal, a.abandonedAt, ''].map((h) => (
+                              <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {abandonedCheckouts.map((ab) => (
+                            <tr key={ab.sessionId} className="hover:bg-gray-50">
+                              <td className="px-5 py-3.5">
+                                {ab.name || ab.phone ? (
+                                  <>
+                                    <p className="font-semibold text-gray-900">{ab.name ?? '—'}</p>
+                                    <p className="text-xs text-gray-400">{ab.phone ?? ab.email ?? ''}</p>
+                                  </>
+                                ) : (
+                                  <p className="text-xs text-gray-400 italic">{a.noContact}</p>
+                                )}
+                              </td>
+                              <td className="px-5 py-3.5 text-gray-600">{ab.wilaya ?? '—'}</td>
+                              <td className="px-5 py-3.5 font-bold text-gray-900">
+                                {ab.cartTotal > 0 ? formatPrice(ab.cartTotal) : '—'}
+                              </td>
+                              <td className="px-5 py-3.5 text-amber-600 text-xs font-medium">
+                                {new Date(ab.updatedAt).toLocaleDateString('fr-DZ')}
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                                  <ShoppingCart className="w-3 h-3" /> {a.abandonedAt}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </main>
 
       {/* ── Create Shipment Modal ─────────────────────────────────────────────── */}
@@ -444,25 +622,19 @@ export default function SellerDeliveriesPage() {
               <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
             </div>
             <div className="p-5 space-y-4">
-              {/* Order summary */}
               <div className="bg-gray-50 rounded-xl p-3 text-sm">
                 <p className="font-semibold text-gray-900">{modalOrder.order.full_name}</p>
                 <p className="text-gray-500">{modalOrder.order.phone} · {modalOrder.order.wilaya}, {modalOrder.order.city}</p>
                 <p className="text-gray-500 mt-1">{modalOrder.items.length} item(s) · {formatPrice(modalOrder.vendorTotal)}</p>
               </div>
 
-              {/* Provider — all 9 providers */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
-                  {a.deliveryCompany}
-                </label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{a.deliveryCompany}</label>
                 <div className="grid grid-cols-3 gap-2">
                   {DELIVERY_PROVIDERS.map((p) => (
                     <button key={p.id} type="button" onClick={() => { setModalProvider(p.id); setModalAutoCreate(false) }}
                       className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-semibold transition-colors ${
-                        modalProvider === p.id
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                          : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                        modalProvider === p.id ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-700 hover:border-gray-300'
                       }`}>
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
                       {p.name.split(' ')[0]}
@@ -471,7 +643,6 @@ export default function SellerDeliveriesPage() {
                 </div>
               </div>
 
-              {/* Auto-create toggle — available for any API-enabled provider */}
               <label className="flex items-start gap-3 cursor-pointer bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                 <input type="checkbox" checked={modalAutoCreate} onChange={(e) => setModalAutoCreate(e.target.checked)}
                   className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
@@ -481,12 +652,9 @@ export default function SellerDeliveriesPage() {
                 </div>
               </label>
 
-              {/* Manual tracking */}
               {!modalAutoCreate && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
-                    {a.trackingNumber}
-                  </label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{a.trackingNumber}</label>
                   <input type="text" value={modalTracking} onChange={(e) => setModalTracking(e.target.value)}
                     placeholder="e.g. YLD-2024-001234"
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
@@ -495,9 +663,7 @@ export default function SellerDeliveriesPage() {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
-                  {a.notesOptional}
-                </label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{a.notesOptional}</label>
                 <textarea value={modalNotes} onChange={(e) => setModalNotes(e.target.value)}
                   rows={2} placeholder="Fragile…"
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 resize-none" />

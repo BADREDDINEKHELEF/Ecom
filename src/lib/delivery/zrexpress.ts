@@ -51,3 +51,15 @@ export async function zrCreateShipment(input: ShipmentInput): Promise<ShipmentRe
   if (!zrConfigured()) throw new Error('ZR Express token not configured')
   return zrCreateShipmentWithToken(input, process.env.ZR_TOKEN!)
 }
+
+export async function zrTrack(trackingNumber: string, token: string) {
+  try {
+    const res = await fetch(`${BASE_URL}/parcel/${encodeURIComponent(trackingNumber)}`, {
+      headers: { Authorization: `Token ${token}` },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
