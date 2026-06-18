@@ -84,9 +84,13 @@ export const useCartStore = create<CartStore>()(
       version: 1,
       // Only persist items — not isOpen or transient flags
       partialize: (state) => ({ items: state.items }),
-      // Migrate old cart data (version 0 had isOpen persisted; drop cleanly)
-      migrate: (_old, _version) => ({ items: [] }),
+      // v0→v1: strip isOpen (no longer persisted); keep existing items
+      migrate: (old: unknown) => {
+        const s = old as { items?: CartItem[] } | null
+        return { items: Array.isArray(s?.items) ? s.items : [] }
+      },
       onRehydrateStorage: () => (state) => {
+        // state may be undefined on error — pages have a mounted fallback
         state?.setHasHydrated(true)
       },
     }

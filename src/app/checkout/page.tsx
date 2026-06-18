@@ -67,6 +67,7 @@ export default function CheckoutPage() {
   const lang = useLang()
   const cartTotal = total()
 
+  const [mounted, setMounted] = useState(false)
   const [payment, setPayment] = useState<PaymentMethod>('cash')
   const [submitted, setSubmitted] = useState(false)
   const [confettiDone, setConfettiDone] = useState(false)
@@ -84,6 +85,8 @@ export default function CheckoutPage() {
 
   const [baridimobModal, setBaridimobModal] = useState<{ qrCodeData: string; deepLink: string; expiresAt: string } | null>(null)
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (!baridimobModal?.qrCodeData) { setQrImageUrl(null); return }
@@ -388,7 +391,7 @@ export default function CheckoutPage() {
     )
   }
 
-  if (!_hasHydrated) return (
+  if (!mounted && !_hasHydrated) return (
     <div className="max-w-2xl mx-auto px-4 py-20 flex justify-center">
       <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
     </div>
