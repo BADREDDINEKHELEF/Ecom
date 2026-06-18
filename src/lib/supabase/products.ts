@@ -100,11 +100,29 @@ export async function getVendorProducts(vendorId: string): Promise<Product[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('products')
-    .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')
+    .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,created_at')
     .eq('vendor_id', vendorId)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []).map(dbToProduct)
+  const products = (data ?? []).map(dbToProduct)
+
+  // Fetch color_variants separately so edit form preserves them (migration_029)
+  if (products.length > 0) {
+    const ids = products.map(p => p.id)
+    const { data: cvData } = await supabase
+      .from('products')
+      .select('id,color_variants')
+      .in('id', ids)
+    if (cvData) {
+      const cvMap = new Map(cvData.map((r: Record<string, unknown>) => [r.id as string, r.color_variants]))
+      for (const p of products) {
+        const cv = cvMap.get(p.id)
+        if (Array.isArray(cv)) p.colorVariants = cv as ColorVariant[]
+      }
+    }
+  }
+
+  return products
 }
 
 export async function getVendorPublicProducts(vendorId: string): Promise<Product[]> {

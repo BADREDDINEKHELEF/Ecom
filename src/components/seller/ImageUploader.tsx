@@ -17,13 +17,6 @@ interface ImageItem {
   color?:     string
 }
 
-interface PendingItem {
-  id:         string
-  file:       File
-  previewUrl: string
-  color:      string
-}
-
 interface Props {
   value:             string[]
   onChange:          (urls: string[]) => void
@@ -92,7 +85,6 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
   )
   const [isDragOver,    setIsDragOver]    = useState(false)
   const [dropTarget,    setDropTarget]    = useState<number | null>(null)
-  const [pendingItems,  setPendingItems]  = useState<PendingItem[]>([])
   const fileInputRef  = useRef<HTMLInputElement>(null)
   const dragItemIdx   = useRef<number | null>(null)
 
@@ -108,9 +100,10 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     prevValue.current = value
     setItems((prev) => {
       if (prev.some((i) => i.uploading)) return prev
-      return value.map((url) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false }))
+      return value.map((url, i) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false, color: colors?.[i] ?? '' }))
     })
-  }, [value])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, colors])
 
   // ── Upload a single file ─────────────────────────────────────────────────
 
@@ -164,51 +157,15 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     })
   }, [maxImages, uploadOne])
 
-  // ── Handle incoming files: show color picker first if enabled ────────────
+  // ── Handle incoming files: upload immediately, color chosen inline after ──
 
   const handleFilesSelected = useCallback((files: File[]) => {
     const valid = files.filter(
       f => isAllowedImage(f.type) && f.size <= MAX_MB * 1024 * 1024
     )
     if (!valid.length) return
-
-    if (onColorsChange) {
-      // Show color-picker modal before uploading
-      setPendingItems(valid.map(f => ({
-        id:         uid(),
-        file:       f,
-        previewUrl: URL.createObjectURL(f),
-        color:      '',
-      })))
-    } else {
-      addFiles(valid)
-    }
-  }, [onColorsChange, addFiles])
-
-  const setPendingColor = (id: string, color: string) => {
-    setPendingItems(prev =>
-      prev.map(p => p.id === id ? { ...p, color: p.color === color ? '' : color } : p)
-    )
-  }
-
-  const confirmPending = () => {
-    const files  = pendingItems.map(p => p.file)
-    const cols   = pendingItems.map(p => p.color)
-    pendingItems.forEach(p => URL.revokeObjectURL(p.previewUrl))
-    setPendingItems([])
-    addFiles(files, cols)
-  }
-
-  const cancelPending = () => {
-    pendingItems.forEach(p => URL.revokeObjectURL(p.previewUrl))
-    setPendingItems([])
-  }
-
-  // Clean up pending blob URLs on unmount
-  useEffect(() => {
-    return () => { pendingItems.forEach(p => URL.revokeObjectURL(p.previewUrl)) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    addFiles(valid)
+  }, [addFiles])
 
   // ── Drop zone handlers ───────────────────────────────────────────────────
 
@@ -468,84 +425,6 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
       </div>
     </div>
 
-    {/* ── Color-picker modal (appears before upload) ── */}
-    {pendingItems.length > 0 && (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden">
-
-          {/* Header */}
-          <div className="px-5 pt-5 pb-3">
-            <p className="font-bold text-gray-900 text-base">Choisir une couleur</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {(() => {
-                const available = maxImages - items.length
-                const willAdd = Math.min(pendingItems.length, available)
-                return willAdd < pendingItems.length
-                  ? `${pendingItems.length - willAdd} photo(s) ignorée(s) — seulement ${willAdd} slot(s) disponible(s)`
-                  : 'Associez une couleur à chaque photo (optionnel)'
-              })()}
-            </p>
-          </div>
-
-          {/* Image list */}
-          <div className="px-5 space-y-4 max-h-[55vh] overflow-y-auto pb-1">
-            {pendingItems.map((p) => (
-              <div key={p.id} className="flex gap-3 items-start">
-                {/* Thumbnail */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.previewUrl}
-                  alt=""
-                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-gray-100"
-                />
-
-                {/* Color swatches */}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {COLOR_PRESETS.map(c => (
-                    <button
-                      key={c.label}
-                      type="button"
-                      title={c.label}
-                      onClick={() => setPendingColor(p.id, c.label)}
-                      className={[
-                        'w-6 h-6 rounded-full transition-all duration-150 flex-shrink-0',
-                        c.border ? 'border border-gray-300' : '',
-                        p.color === c.label
-                          ? 'ring-2 ring-offset-2 ring-gray-700 scale-110'
-                          : 'hover:scale-110',
-                      ].join(' ')}
-                      style={{ background: c.hex }}
-                    />
-                  ))}
-                  {/* Selected label */}
-                  {p.color && (
-                    <span className="self-center text-xs font-medium text-gray-500">{p.color}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 px-5 py-4 border-t border-gray-100 mt-3">
-            <button
-              type="button"
-              onClick={cancelPending}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              onClick={confirmPending}
-              className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold transition-colors"
-            >
-              Ajouter {pendingItems.length > 1 ? `(${pendingItems.length})` : ''}
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
     </>
   )
 }

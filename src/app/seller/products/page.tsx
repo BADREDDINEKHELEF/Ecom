@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
@@ -15,7 +15,6 @@ import { niches } from '@/lib/data/niches'
 import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import VariantBuilder, { type ProductVariant } from '@/components/seller/VariantBuilder'
-import ColorVariantBuilder from '@/components/seller/ColorVariantBuilder'
 import type { Product, ColorVariant } from '@/types'
 
 const EMPTY_FORM = {
@@ -46,8 +45,30 @@ export default function SellerProductsPage() {
   const [saving, setSaving]     = useState(false)
   const [formError, setFormError] = useState('')
   const [variants, setVariants] = useState<ProductVariant[]>([])
-  const [colorVariants, setColorVariants] = useState<ColorVariant[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  const COLOR_HEX: Record<string, string> = {
+    Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
+    Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
+    Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
+  }
+
+  // Auto-derive color variants from the imageColors parallel array
+  const colorVariants = useMemo<ColorVariant[]>(() => {
+    const result: ColorVariant[] = []
+    for (let i = 0; i < form.images.length; i++) {
+      const color = (form.imageColors ?? [])[i]
+      if (!color) continue
+      const existing = result.find(v => v.name === color)
+      if (existing) {
+        existing.images.push(form.images[i])
+      } else {
+        result.push({ name: color, hex: COLOR_HEX[color] ?? '#9CA3AF', images: [form.images[i]] })
+      }
+    }
+    return result
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.images, form.imageColors])
 
   const load = useCallback(async () => {
     if (!vendor) return
@@ -61,10 +82,19 @@ export default function SellerProductsPage() {
 
   const openEdit = (p: Product) => {
     setEditing(p)
+    // Populate imageColors from DB; if empty but colorVariants exist, reverse-map them
+    let imageColors = p.imageColors?.filter(Boolean).length ? (p.imageColors ?? []) : []
+    if (!imageColors.filter(Boolean).length && (p.colorVariants?.length ?? 0) > 0) {
+      const colorByUrl = new Map<string, string>()
+      for (const v of p.colorVariants ?? []) {
+        for (const img of v.images) colorByUrl.set(img, v.name)
+      }
+      imageColors = p.images.map(url => colorByUrl.get(url) ?? '')
+    }
     setForm({
       id: p.id, nicheId: p.nicheId, category: p.category, name: p.name,
       description: p.description, price: p.price, comparePrice: p.comparePrice || 0,
-      stock: p.stock, tags: p.tags.join(', '), images: p.images, imageColors: p.imageColors ?? [],
+      stock: p.stock, tags: p.tags.join(', '), images: p.images, imageColors,
       isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false, hasVariants: false,
       condition: p.condition ?? 'new',
       metaTitle: p.metaTitle ?? '',
@@ -74,11 +104,10 @@ export default function SellerProductsPage() {
       minOrderQuantity: p.minOrderQuantity ?? 1,
       isBundle: p.isBundle ?? false,
     })
-    setColorVariants(p.colorVariants ?? [])
     setShowForm(true)
   }
 
-  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); setFormError(''); setVariants([]); setColorVariants([]) }
+  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); setFormError(''); setVariants([]) }
 
   const handleSave = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -110,7 +139,7 @@ export default function SellerProductsPage() {
         price: form.price,
         comparePrice: form.comparePrice || undefined,
         images: form.images,
-        imageColors: form.imageColors.length ? form.imageColors : undefined,
+        imageColors: form.imageColors.filter(Boolean).length ? form.imageColors : undefined,
         stock: form.stock,
         tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean),
         isNew: form.isNew,
@@ -203,7 +232,7 @@ export default function SellerProductsPage() {
 
             <form onSubmit={handleSave} className="divide-y divide-gray-50">
 
-              {/* ── Section 1: Photos ── */}
+              {/* ── Section 1: Photos & Colors ── */}
               <div className="px-6 py-5">
                 <div className="flex items-center gap-2.5 mb-4">
                   <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -211,7 +240,7 @@ export default function SellerProductsPage() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 text-sm leading-tight">Photos du produit</p>
-                    <p className="text-xs text-gray-400">La 1ère photo est la photo principale · max 8</p>
+                    <p className="text-xs text-gray-400">Ajoutez vos photos · sélectionnez une couleur pour chaque photo · max 8</p>
                   </div>
                 </div>
                 <ImageUploader
@@ -222,20 +251,6 @@ export default function SellerProductsPage() {
                   onColorsChange={(c) => setForm((prev) => ({ ...prev, imageColors: c }))}
                   maxImages={8}
                 />
-              </div>
-
-              {/* ── Section 2: Color variants ── */}
-              <div className="px-6 py-5">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-base">🎨</span>
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm leading-tight">Couleurs du produit</p>
-                    <p className="text-xs text-gray-400">Ajoutez une couleur et uploadez les photos correspondantes</p>
-                  </div>
-                </div>
-                <ColorVariantBuilder variants={colorVariants} onChange={setColorVariants} />
               </div>
 
               {/* ── Section 3: Essential info ── */}
