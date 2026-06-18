@@ -1,11 +1,10 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
 import {
-  Truck, Plus, Search, Filter, Download, RefreshCw, ExternalLink,
-  X, Check, Loader2, Package, AlertTriangle, ChevronDown, Clock,
-  CheckCircle2, XCircle, RotateCcw, Eye, Menu,
+  Truck, Plus, Search, Download, RefreshCw, ExternalLink,
+  X, Check, Loader2, Package, AlertTriangle,
+  CheckCircle2, XCircle, RotateCcw, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useT, useRTL } from '@/lib/store/langStore'
@@ -15,27 +14,30 @@ import { getTrackingUrl } from '@/lib/delivery/dispatch'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { ShipmentRow, OrderRow, VendorOrderSummary } from '@/lib/supabase/queries'
 
-// ─── Status config ─────────────────────────────────────────────────────────────
-
-const STATUS_CFG: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
-  pending:          { label: 'Pending',           icon: Clock,        cls: 'bg-gray-100 text-gray-700' },
-  in_transit:       { label: 'In Transit',         icon: Truck,        cls: 'bg-blue-100 text-blue-700' },
-  picked_up:        { label: 'Picked Up',          icon: Package,      cls: 'bg-indigo-100 text-indigo-700' },
-  out_for_delivery: { label: 'Out for Delivery',   icon: Truck,        cls: 'bg-amber-100 text-amber-700' },
-  delivered:        { label: 'Delivered',          icon: CheckCircle2, cls: 'bg-green-100 text-green-700' },
-  returned:         { label: 'Returned',           icon: RotateCcw,    cls: 'bg-orange-100 text-orange-700' },
-  failed:           { label: 'Failed',             icon: XCircle,      cls: 'bg-red-100 text-red-700' },
-  cancelled:        { label: 'Cancelled',          icon: X,            cls: 'bg-gray-100 text-gray-500' },
-}
-
 type Tab = 'shipments' | 'pending_orders'
 
 export default function SellerDeliveriesPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const t = useT()
+  const a = t.admin
   const isRTL = useRTL()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('shipments')
+
+  // Status display config — uses translated labels from a.*
+  const getStatusCfg = useCallback((key: string) => {
+    const map: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
+      pending:          { label: a.statusPending,         icon: Package,      cls: 'bg-gray-100 text-gray-700' },
+      in_transit:       { label: a.statusInTransit,       icon: Truck,        cls: 'bg-blue-100 text-blue-700' },
+      picked_up:        { label: a.statusPickedUp,        icon: Package,      cls: 'bg-indigo-100 text-indigo-700' },
+      out_for_delivery: { label: a.statusOutForDelivery,  icon: Truck,        cls: 'bg-amber-100 text-amber-700' },
+      delivered:        { label: a.statusDelivered,       icon: CheckCircle2, cls: 'bg-green-100 text-green-700' },
+      returned:         { label: a.statusReturned,        icon: RotateCcw,    cls: 'bg-orange-100 text-orange-700' },
+      failed:           { label: a.statusFailed,          icon: XCircle,      cls: 'bg-red-100 text-red-700' },
+      cancelled:        { label: a.statusCancelled,       icon: X,            cls: 'bg-gray-100 text-gray-500' },
+    }
+    return map[key] ?? map.pending
+  }, [a])
 
   // Shipments list
   const [shipments, setShipments] = useState<(ShipmentRow & { orders: OrderRow })[]>([])
@@ -120,7 +122,7 @@ export default function SellerDeliveriesPage() {
 
   const handleCreate = async () => {
     if (!vendor || !modalOrder) return
-    if (!modalTracking && !modalAutoCreate) { setCreateError('Enter a tracking number or enable auto-create'); return }
+    if (!modalTracking && !modalAutoCreate) { setCreateError(a.enterTrackingOrAuto); return }
     setCreating(true)
     setCreateError('')
     try {
@@ -177,10 +179,10 @@ export default function SellerDeliveriesPage() {
       ),
     ].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `shipments-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
+    const anchor = document.createElement('a')
+    anchor.href = URL.createObjectURL(blob)
+    anchor.download = `shipments-${new Date().toISOString().split('T')[0]}.csv`
+    anchor.click()
   }
 
   const toggleSelect = (id: string) => {
@@ -204,40 +206,52 @@ export default function SellerDeliveriesPage() {
     return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>
   }
 
+  // Status options for the filter dropdown
+  const statusOptions = [
+    'pending', 'in_transit', 'picked_up', 'out_for_delivery',
+    'delivered', 'returned', 'failed', 'cancelled',
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
-        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu">
+          <Menu className="w-5 h-5" />
+        </button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
+
       <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <Truck className="w-6 h-6 text-emerald-600" /> Deliveries
+              <Truck className="w-6 h-6 text-emerald-600" /> {a.deliveriesTitle}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">{shipments.length} shipments tracked</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {a.deliveriesCount.replace('{n}', String(shipments.length))}
+            </p>
           </div>
           <div className="flex gap-2">
             <button onClick={exportCSV} className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm transition-colors">
-              <Download className="w-4 h-4" /> Export CSV
+              <Download className="w-4 h-4" /> {a.exportCsv}
             </button>
             <button onClick={loadShipments} className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm transition-colors">
-              <RefreshCw className="w-4 h-4" /> Refresh
+              <RefreshCw className="w-4 h-4" /> {a.refresh}
             </button>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit">
-          {([['shipments', 'Shipments'], ['pending_orders', 'Pending Orders']] as const).map(([key, label]) => (
+          {(['shipments', 'pending_orders'] as const).map((key) => (
             <button key={key} onClick={() => setTab(key)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {label}
+              {key === 'shipments' ? a.shipmentsTab : a.pendingOrdersTab}
               {key === 'pending_orders' && pendingOrders.length > 0 && (
                 <span className="ml-1.5 bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{pendingOrders.length}</span>
               )}
@@ -248,38 +262,39 @@ export default function SellerDeliveriesPage() {
         {/* ── SHIPMENTS TAB ──────────────────────────────────────────────────── */}
         {tab === 'shipments' && (
           <>
-            {/* Filters */}
-            <div className="flex gap-3 mb-4">
-              <div className="relative flex-1 max-w-sm">
+            <div className="flex gap-3 mb-4 flex-wrap">
+              <div className="relative flex-1 min-w-48 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search customer, tracking, wilaya…"
+                  placeholder={a.searchDeliveries}
                   className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white" />
               </div>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
                 className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
-                <option value="">All statuses</option>
-                {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                <option value="">{a.allStatuses}</option>
+                {statusOptions.map((k) => {
+                  const cfg = getStatusCfg(k)
+                  return <option key={k} value={k}>{cfg.label}</option>
+                })}
               </select>
               <select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)}
                 className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
-                <option value="">All couriers</option>
+                <option value="">{a.allCouriers}</option>
                 {DELIVERY_PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
 
-            {/* Table */}
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               {loadingShips ? (
                 <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-                  <Loader2 className="w-5 h-5 animate-spin" /> Loading…
+                  <Loader2 className="w-5 h-5 animate-spin" /> {a.shipping}
                 </div>
               ) : filteredShipments.length === 0 ? (
                 <div className="text-center py-16 text-gray-400">
                   <Truck className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No shipments yet</p>
+                  <p className="font-medium">{a.noShipmentsYet}</p>
                   <button onClick={() => setTab('pending_orders')} className="mt-2 text-emerald-600 font-bold text-sm hover:underline">
-                    Create your first shipment →
+                    {a.createFirstShipment}
                   </button>
                 </div>
               ) : (
@@ -293,14 +308,14 @@ export default function SellerDeliveriesPage() {
                             onChange={(e) => setSelected(e.target.checked ? new Set(filteredShipments.map((s) => s.id)) : new Set())}
                             className="rounded border-gray-300" />
                         </th>
-                        {['Customer', 'Wilaya', 'Courier', 'Tracking #', 'Status', 'Date', ''].map((h) => (
+                        {[a.colCustomer, a.colWilaya, a.courierName, a.trackingNumber, a.colStatus, a.colDate, ''].map((h) => (
                           <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-4 py-3.5">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {filteredShipments.map((s) => {
-                        const cfg = STATUS_CFG[s.status] ?? STATUS_CFG.pending
+                        const cfg = getStatusCfg(s.status)
                         const Icon = cfg.icon
                         const provider = DELIVERY_PROVIDERS.find((p) => p.id === s.provider)
                         return (
@@ -332,7 +347,7 @@ export default function SellerDeliveriesPage() {
                               ) : (
                                 <button onClick={() => { setEditShip(s); setEditTracking('') }}
                                   className="text-amber-600 hover:text-amber-800 text-xs font-semibold flex items-center gap-1">
-                                  <AlertTriangle className="w-3.5 h-3.5" /> Add tracking
+                                  <AlertTriangle className="w-3.5 h-3.5" /> {a.addTracking}
                                 </button>
                               )}
                             </td>
@@ -360,8 +375,9 @@ export default function SellerDeliveriesPage() {
             </div>
 
             {hasMore && (
-              <button onClick={() => setPage((p) => p + 1)} className="mt-4 w-full border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">
-                Load more
+              <button onClick={() => setPage((p) => p + 1)}
+                className="mt-4 w-full border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                {a.loadMore}
               </button>
             )}
           </>
@@ -372,19 +388,19 @@ export default function SellerDeliveriesPage() {
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             {loadingPending ? (
               <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-                <Loader2 className="w-5 h-5 animate-spin" /> Loading…
+                <Loader2 className="w-5 h-5 animate-spin" /> {a.shipping}
               </div>
             ) : pendingOrders.length === 0 ? (
               <div className="text-center py-16 text-gray-400">
                 <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="font-medium">All orders have shipments assigned</p>
+                <p className="font-medium">{a.allOrdersShipped}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      {['Order', 'Customer', 'Wilaya', 'Items', 'Total', 'Date', ''].map((h) => (
+                      {[a.colOrder, a.colCustomer, a.colWilaya, a.colItems, a.colTotal, a.colDate, ''].map((h) => (
                         <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-5 py-3.5">{h}</th>
                       ))}
                     </tr>
@@ -404,7 +420,7 @@ export default function SellerDeliveriesPage() {
                         <td className="px-5 py-3.5">
                           <button onClick={() => openCreateModal({ order, items, vendorTotal })}
                             className="flex items-center gap-1.5 bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors text-xs">
-                            <Plus className="w-3.5 h-3.5" /> Ship
+                            <Plus className="w-3.5 h-3.5" /> {a.ship}
                           </button>
                         </td>
                       </tr>
@@ -420,9 +436,11 @@ export default function SellerDeliveriesPage() {
       {/* ── Create Shipment Modal ─────────────────────────────────────────────── */}
       {showModal && modalOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b">
-              <h2 className="font-bold text-gray-900 flex items-center gap-2"><Truck className="w-5 h-5 text-emerald-600" /> Create Shipment</h2>
+              <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                <Truck className="w-5 h-5 text-emerald-600" /> {a.shipModal}
+              </h2>
               <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
             </div>
             <div className="p-5 space-y-4">
@@ -433,13 +451,19 @@ export default function SellerDeliveriesPage() {
                 <p className="text-gray-500 mt-1">{modalOrder.items.length} item(s) · {formatPrice(modalOrder.vendorTotal)}</p>
               </div>
 
-              {/* Provider */}
+              {/* Provider — all 9 providers */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Delivery Company</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                  {a.deliveryCompany}
+                </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {DELIVERY_PROVIDERS.slice(0, 6).map((p) => (
-                    <button key={p.id} onClick={() => setModalProvider(p.id)}
-                      className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${modalProvider === p.id ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}>
+                  {DELIVERY_PROVIDERS.map((p) => (
+                    <button key={p.id} type="button" onClick={() => { setModalProvider(p.id); setModalAutoCreate(false) }}
+                      className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-semibold transition-colors ${
+                        modalProvider === p.id
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                      }`}>
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
                       {p.name.split(' ')[0]}
                     </button>
@@ -447,33 +471,35 @@ export default function SellerDeliveriesPage() {
                 </div>
               </div>
 
-              {/* Auto-create toggle (Yalidine only) */}
-              {modalProvider === 'yalidine' && (
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={modalAutoCreate} onChange={(e) => setModalAutoCreate(e.target.checked)}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Auto-create via Yalidine API</p>
-                    <p className="text-xs text-gray-500">Requires Yalidine API credentials in delivery settings</p>
-                  </div>
-                </label>
-              )}
+              {/* Auto-create toggle — available for any API-enabled provider */}
+              <label className="flex items-start gap-3 cursor-pointer bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+                <input type="checkbox" checked={modalAutoCreate} onChange={(e) => setModalAutoCreate(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{a.autoCreate}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{a.requiresApiCreds}</p>
+                </div>
+              </label>
 
               {/* Manual tracking */}
               {!modalAutoCreate && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Tracking Number</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                    {a.trackingNumber}
+                  </label>
                   <input type="text" value={modalTracking} onChange={(e) => setModalTracking(e.target.value)}
                     placeholder="e.g. YLD-2024-001234"
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
-                  <p className="text-xs text-gray-400 mt-1">Leave empty to create shipment and add later</p>
+                  <p className="text-xs text-gray-400 mt-1">{a.trackingLater}</p>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Notes (optional)</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                  {a.notesOptional}
+                </label>
                 <textarea value={modalNotes} onChange={(e) => setModalNotes(e.target.value)}
-                  rows={2} placeholder="Fragile, handle with care…"
+                  rows={2} placeholder="Fragile…"
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 resize-none" />
               </div>
 
@@ -483,10 +509,10 @@ export default function SellerDeliveriesPage() {
               <button onClick={handleCreate} disabled={creating}
                 className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors">
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                {creating ? 'Creating…' : 'Create Shipment'}
+                {creating ? a.shipping : a.shipModal}
               </button>
               <button onClick={() => setShowModal(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50">
-                Cancel
+                {a.cancelAction}
               </button>
             </div>
           </div>
@@ -498,20 +524,23 @@ export default function SellerDeliveriesPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Add Tracking Number</h2>
+              <h2 className="font-bold text-gray-900">{a.addTrackingNumber}</h2>
               <button onClick={() => setEditShip(null)}><X className="w-5 h-5 text-gray-400" /></button>
             </div>
-            <p className="text-sm text-gray-500 mb-3">Provider: <strong>{DELIVERY_PROVIDERS.find((p) => p.id === editShip.provider)?.name ?? editShip.provider}</strong></p>
+            <p className="text-sm text-gray-500 mb-3">
+              {a.provider}: <strong>{DELIVERY_PROVIDERS.find((p) => p.id === editShip.provider)?.name ?? editShip.provider}</strong>
+            </p>
             <input type="text" value={editTracking} onChange={(e) => setEditTracking(e.target.value)}
-              placeholder="Enter tracking number"
+              placeholder={a.trackingNumber}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 mb-3" />
             <div className="flex gap-2">
               <button onClick={handleEditTracking} disabled={editSaving || !editTracking}
                 className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-60 text-sm">
-                {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save
+                {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {a.saveBtn}
               </button>
               <button onClick={() => setEditShip(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50">
-                Cancel
+                {a.cancelAction}
               </button>
             </div>
           </div>
