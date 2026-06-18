@@ -239,11 +239,11 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
   }[]
   const subs = (subsRes.data ?? []) as unknown as { subscription_plan_id: string | null; subscription_plans: { price_dzd: number } | null }[]
 
-  // Revenue = transmitted orders (shipped to courier or confirmed delivered) — excludes pending/cancelled/returned
-  const transmitted   = orders.filter((o) => ['shipped', 'delivered'].includes(o.status))
+  // Revenue = confirmed delivered orders only
+  const transmitted   = orders.filter((o) => o.status === 'delivered')
   const totalRevenue  = transmitted.reduce((s, o) => s + (o.total ?? 0), 0)
   const totalOrders   = orders.filter((o) => o.status !== 'cancelled').length
-  const priorTransmit = priorOrds.filter((o) => ['shipped', 'delivered'].includes(o.status))
+  const priorTransmit = priorOrds.filter((o) => o.status === 'delivered')
   const priorRevenue  = priorTransmit.reduce((s, o) => s + (o.total ?? 0), 0)
   const priorOrderCnt = priorOrds.filter((o) => o.status !== 'cancelled').length
   const revenueGrowth = priorRevenue  > 0 ? Math.round(((totalRevenue  - priorRevenue)  / priorRevenue)  * 100) : 0
@@ -268,13 +268,13 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
   const activeSubscriptions = subs.length
   const mrr = subs.reduce((s, sub) => s + (sub.subscription_plans?.price_dzd ?? 0), 0)
 
-  // Wilaya breakdown — revenue from transmitted orders (shipped + delivered)
+  // Wilaya breakdown — revenue from delivered orders only
   const wilayaMap: Record<string, { orders: number; revenue: number }> = {}
   for (const order of orders) {
     if (!order.wilaya || order.status === 'cancelled') continue
     if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0 }
     wilayaMap[order.wilaya].orders++
-    if (['shipped', 'delivered'].includes(order.status)) wilayaMap[order.wilaya].revenue += order.total ?? 0
+    if (order.status === 'delivered') wilayaMap[order.wilaya].revenue += order.total ?? 0
   }
   const byWilaya = Object.entries(wilayaMap)
     .map(([wilaya, d]) => ({ wilaya, ...d }))
@@ -293,7 +293,7 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
         const v = vendorLookup.get(vid)
         vendorMap[vid] = { name: v?.store_name ?? 'Inconnu', slug: v?.store_slug ?? '', orders: 0, revenue: 0, delivered: 0 }
       }
-      if (['shipped', 'delivered'].includes(order.status)) vendorMap[vid].revenue += item.subtotal ?? 0
+      if (order.status === 'delivered') vendorMap[vid].revenue += item.subtotal ?? 0
       if (!seenVendors.has(vid)) {
         seenVendors.add(vid)
         vendorMap[vid].orders++
@@ -316,7 +316,7 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
     if (order.status === 'cancelled') continue
     const key = new Date(order.created_at).toLocaleString('en', { month: 'short', year: '2-digit' })
     if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, orders: 0 }
-    if (['shipped', 'delivered'].includes(order.status)) monthlyMap[key].revenue += order.total ?? 0
+    if (order.status === 'delivered') monthlyMap[key].revenue += order.total ?? 0
     monthlyMap[key].orders++
   }
   const monthly = Array.from({ length: months }, (_, i) => {
@@ -412,8 +412,8 @@ export async function getSellerAnalytics(
   }
 
   const allOrders        = Array.from(orderMap.values())
-  // Revenue = orders transmitted to courier (shipped or delivered), not pending/confirmed/cancelled/returned
-  const transmittedOrds  = allOrders.filter((o) => ['shipped', 'delivered'].includes(o.order?.status ?? ''))
+  // Revenue = confirmed delivered orders only
+  const transmittedOrds  = allOrders.filter((o) => o.order?.status === 'delivered')
   const totalRevenue     = transmittedOrds.reduce((s, o) => s + o.vendorTotal, 0)
   const totalOrders      = allOrders.length
   const deliveredOrders = allOrders.filter((o) => o.order?.delivery_outcome === 'delivered').length
@@ -437,18 +437,17 @@ export async function getSellerAnalytics(
     if (order.wilaya) {
       if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0, delivered: 0, returned: 0 }
       wilayaMap[order.wilaya].orders++
-      // Revenue only from transmitted orders
-      if (['shipped', 'delivered'].includes(order.status)) wilayaMap[order.wilaya].revenue += vendorTotal
+      if (order.status === 'delivered') wilayaMap[order.wilaya].revenue += vendorTotal
       if (order.delivery_outcome === 'delivered') wilayaMap[order.wilaya].delivered++
       if (order.delivery_outcome === 'returned')  wilayaMap[order.wilaya].returned++
     }
   }
 
-  // ── Prior period — only transmitted orders ──────────────────
+  // ── Prior period — delivered orders only ──────────────────
   const priorOrderMap = new Map<string, number>()
   for (const row of priorRows) {
     const order = row.orders
-    if (!order || !['shipped', 'delivered'].includes(order.status)) continue
+    if (!order || order.status !== 'delivered') continue
     priorOrderMap.set(order.id, (priorOrderMap.get(order.id) ?? 0) + row.subtotal)
   }
   const priorRevenue = Array.from(priorOrderMap.values()).reduce((s, v) => s + v, 0)
@@ -466,7 +465,7 @@ export async function getSellerAnalytics(
     if (!order) continue
     const key = new Date(order.created_at).toLocaleString('en', { month: 'short', year: '2-digit' })
     if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, orders: 0 }
-    if (['shipped', 'delivered'].includes(order.status)) monthlyMap[key].revenue += vendorTotal
+    if (order.status === 'delivered') monthlyMap[key].revenue += vendorTotal
     monthlyMap[key].orders++
   }
   const monthly = Array.from({ length: months }, (_, i) => {
@@ -482,7 +481,7 @@ export async function getSellerAnalytics(
     if (!order) continue
     const dateKey = order.created_at.slice(0, 10)
     if (!dayMap[dateKey]) dayMap[dateKey] = { revenue: 0, orderIds: new Set() }
-    if (['shipped', 'delivered'].includes(order.status)) dayMap[dateKey].revenue += vendorTotal
+    if (order.status === 'delivered') dayMap[dateKey].revenue += vendorTotal
     dayMap[dateKey].orderIds.add(order.id)
   }
   const byDay = Array.from({ length: Math.min(daysBack, 90) }, (_, i) => {

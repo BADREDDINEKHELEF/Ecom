@@ -37,8 +37,8 @@ export async function GET(req: NextRequest) {
     const vendors    = totalVendors.data ?? []
     const recent     = recentOrders.data ?? []
 
-    // Revenue = transmitted orders (shipped to courier or confirmed delivered)
-    const transmittedToday = orders.filter((o) => ['shipped', 'delivered'].includes(o.status))
+    // Revenue = confirmed delivered orders only
+    const transmittedToday = orders.filter((o) => o.status === 'delivered')
     const todayGMV   = transmittedToday.reduce((s, o) => s + (o.total ?? 0), 0)
     const codOrders  = orders.filter((o) => o.payment_method === 'cash').length
     const codRate    = orders.length > 0 ? Math.round((codOrders / orders.length) * 100) : 0
