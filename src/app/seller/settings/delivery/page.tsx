@@ -413,8 +413,8 @@ export default function DeliverySettingsPage() {
                   <Zap className="w-5 h-5 text-emerald-500" /> {a.tokenLabel} Ecom Delivery
                 </h2>
                 <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
-                  <span>{a.getCredentials}{' '}<a href="https://ecomdelivery.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">ecomdelivery.dz</a>.</span>
-                  <a href="https://ecomdelivery.dz" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline">
+                  <span>{a.getCredentials}{' '}<a href="https://ecom-dz.net" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">ecomdelivery.dz</a>.</span>
+                  <a href="https://ecom-dz.net" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline">
                     <ExternalLink className="w-3 h-3" /> {a.openDashboard}
                   </a>
                 </p>
