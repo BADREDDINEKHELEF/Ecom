@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Check, Eye, EyeOff, Truck, Bell, Zap, Info, Menu } from 'lucide-react'
+import { Loader2, Check, Eye, EyeOff, Truck, Bell, Zap, Info, Menu, ExternalLink } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { useT, useRTL } from '@/lib/store/langStore'
@@ -196,11 +196,13 @@ export default function DeliverySettingsPage() {
             {form.default_provider === 'yalidine' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-                  <Zap className="w-5 h-5 text-orange-500" /> Clés API Yalidine
+                  <Zap className="w-5 h-5 text-orange-500" /> {a.apiKeysYalidine}
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://yalidine.app" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yalidine.app</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://yalidine.app" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yalidine.app</a>.</span>
+                  <a href="https://yalidine.app/dashboard" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <div className="space-y-4">
                   <div>
@@ -256,9 +258,11 @@ export default function DeliverySettingsPage() {
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-amber-500" /> {a.tokenLabel} Procolis
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://procolis.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">procolis.com</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://procolis.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">procolis.com</a>.</span>
+                  <a href="https://procolis.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.procolis_token}
@@ -276,9 +280,11 @@ export default function DeliverySettingsPage() {
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-blue-500" /> {a.tokenLabel} ZR Express
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://zrexpress.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">zrexpress.dz</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://zrexpress.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">zrexpress.dz</a>.</span>
+                  <a href="https://zrexpress.dz" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.zr_token}
@@ -296,9 +302,11 @@ export default function DeliverySettingsPage() {
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-emerald-500" /> {a.bearerToken} Maystro Delivery
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://maystro-delivery.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">maystro-delivery.com</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://maystro-delivery.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">maystro-delivery.com</a>.</span>
+                  <a href="https://maystro-delivery.com/app" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.bearerToken}</label>
                 <input type="password" value={form.maystro_token}
@@ -316,9 +324,11 @@ export default function DeliverySettingsPage() {
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-violet-500" /> {a.bearerToken} Colivraison
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://app.colivraison.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">app.colivraison.com</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://app.colivraison.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">app.colivraison.com</a>.</span>
+                  <a href="https://app.colivraison.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.bearerToken}</label>
                 <input type="password" value={form.colivraison_token}
@@ -336,9 +346,11 @@ export default function DeliverySettingsPage() {
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-red-500" /> {a.tokenLabel} Rex Livraison
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://rexlivraison.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">rexlivraison.com</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://rexlivraison.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">rexlivraison.com</a>.</span>
+                  <a href="https://rexlivraison.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.rex_token}
@@ -356,9 +368,11 @@ export default function DeliverySettingsPage() {
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-sky-500" /> {a.apiKey} Yassir Express
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://yassir.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yassir.com</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://yassir.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yassir.com</a>.</span>
+                  <a href="https://yassir.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.apiKey}</label>
                 <input type="password" value={form.yassir_api_key}
@@ -376,9 +390,11 @@ export default function DeliverySettingsPage() {
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-emerald-500" /> {a.tokenLabel} Ecom Delivery
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://ecomdelivery.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">ecomdelivery.dz</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://ecomdelivery.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">ecomdelivery.dz</a>.</span>
+                  <a href="https://ecomdelivery.dz" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.ecom_token}
@@ -394,11 +410,13 @@ export default function DeliverySettingsPage() {
             {form.default_provider === 'apec' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-                  <Zap className="w-5 h-5 text-indigo-500" /> Clés API APEC Delivery
+                  <Zap className="w-5 h-5 text-indigo-500" /> {a.apiKeysApec}
                 </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  {a.getCredentials}{' '}
-                  <a href="https://apec.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">apec.dz</a>.
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-3 flex-wrap">
+                  <span>{a.getCredentials}{' '}<a href="https://apec.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">apec.dz</a>.</span>
+                  <a href="https://apec.dz" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:underline">
+                    <ExternalLink className="w-3 h-3" /> {a.openDashboard}
+                  </a>
                 </p>
                 <div className="space-y-4">
                   <div>

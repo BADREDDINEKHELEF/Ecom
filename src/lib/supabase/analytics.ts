@@ -216,7 +216,7 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
         .gte('created_at', since.toISOString()),
       supabase
         .from('orders')
-        .select('id, total')
+        .select('id, total, status')
         .gte('created_at', priorStart.toISOString())
         .lt('created_at', since.toISOString()),
       supabase
@@ -232,21 +232,23 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
     ])
 
   const orders     = (ordersRes.data   ?? []) as unknown as OrderRow[]
-  const priorOrds  = (priorOrdersRes.data ?? []) as { id: string; total: number }[]
+  const priorOrds  = (priorOrdersRes.data ?? []) as { id: string; total: number; status: string }[]
   const vendors    = (vendorsRes.data   ?? []) as {
     id: string; store_name: string; store_slug: string
     is_active: boolean; subscription_status: string | null; created_at: string
   }[]
   const subs = (subsRes.data ?? []) as unknown as { subscription_plan_id: string | null; subscription_plans: { price_dzd: number } | null }[]
 
-  // Revenue & orders
-  const totalRevenue  = orders.reduce((s, o) => s + (o.total ?? 0), 0)
-  const totalOrders   = orders.length
-  const priorRevenue  = priorOrds.reduce((s, o) => s + (o.total ?? 0), 0)
-  const priorOrderCnt = priorOrds.length
+  // Revenue & orders — only count delivered orders as confirmed revenue
+  const delivd        = orders.filter((o) => o.status === 'delivered')
+  const totalRevenue  = delivd.reduce((s, o) => s + (o.total ?? 0), 0)
+  const totalOrders   = orders.filter((o) => o.status !== 'cancelled').length
+  const priorDelivd   = priorOrds.filter((o) => o.status === 'delivered')
+  const priorRevenue  = priorDelivd.reduce((s, o) => s + (o.total ?? 0), 0)
+  const priorOrderCnt = priorOrds.filter((o) => o.status !== 'cancelled').length
   const revenueGrowth = priorRevenue  > 0 ? Math.round(((totalRevenue  - priorRevenue)  / priorRevenue)  * 100) : 0
   const ordersGrowth  = priorOrderCnt > 0 ? Math.round(((totalOrders   - priorOrderCnt) / priorOrderCnt) * 100) : 0
-  const avgOrderValue = totalOrders   > 0 ? Math.round(totalRevenue / totalOrders) : 0
+  const avgOrderValue = delivd.length > 0 ? Math.round(totalRevenue / delivd.length) : 0
 
   // Delivery / return rates
   const delivered   = orders.filter((o) => o.delivery_outcome === 'delivered').length
@@ -266,13 +268,13 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
   const activeSubscriptions = subs.length
   const mrr = subs.reduce((s, sub) => s + (sub.subscription_plans?.price_dzd ?? 0), 0)
 
-  // Wilaya breakdown
+  // Wilaya breakdown — revenue only from delivered orders
   const wilayaMap: Record<string, { orders: number; revenue: number }> = {}
   for (const order of orders) {
-    if (!order.wilaya) continue
+    if (!order.wilaya || order.status === 'cancelled') continue
     if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0 }
     wilayaMap[order.wilaya].orders++
-    wilayaMap[order.wilaya].revenue += order.total ?? 0
+    if (order.status === 'delivered') wilayaMap[order.wilaya].revenue += order.total ?? 0
   }
   const byWilaya = Object.entries(wilayaMap)
     .map(([wilaya, d]) => ({ wilaya, ...d }))
@@ -291,7 +293,7 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
         const v = vendorLookup.get(vid)
         vendorMap[vid] = { name: v?.store_name ?? 'Inconnu', slug: v?.store_slug ?? '', orders: 0, revenue: 0, delivered: 0 }
       }
-      vendorMap[vid].revenue += item.subtotal ?? 0
+      if (order.status === 'delivered') vendorMap[vid].revenue += item.subtotal ?? 0
       if (!seenVendors.has(vid)) {
         seenVendors.add(vid)
         vendorMap[vid].orders++
@@ -311,9 +313,10 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
   const months = daysBack <= 31 ? 1 : daysBack <= 93 ? 3 : daysBack <= 186 ? 6 : 12
   const monthlyMap: Record<string, { revenue: number; orders: number }> = {}
   for (const order of orders) {
+    if (order.status === 'cancelled') continue
     const key = new Date(order.created_at).toLocaleString('en', { month: 'short', year: '2-digit' })
     if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, orders: 0 }
-    monthlyMap[key].revenue += order.total ?? 0
+    if (order.status === 'delivered') monthlyMap[key].revenue += order.total ?? 0
     monthlyMap[key].orders++
   }
   const monthly = Array.from({ length: months }, (_, i) => {

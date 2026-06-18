@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const [todayOrders, totalVendors, recentOrders] = await Promise.all([
       supabase
         .from('orders')
-        .select('id, total, wilaya, payment_method, created_at')
+        .select('id, total, wilaya, status, payment_method, created_at')
         .gte('created_at', todayUTC.toISOString())
         .neq('status', 'cancelled'),
       supabase
@@ -37,10 +37,12 @@ export async function GET(req: NextRequest) {
     const vendors    = totalVendors.data ?? []
     const recent     = recentOrders.data ?? []
 
-    const todayGMV   = orders.reduce((s, o) => s + (o.total ?? 0), 0)
+    // Revenue = delivered orders only (COD market — only confirmed when delivered)
+    const deliveredToday = orders.filter((o) => o.status === 'delivered')
+    const todayGMV   = deliveredToday.reduce((s, o) => s + (o.total ?? 0), 0)
     const codOrders  = orders.filter((o) => o.payment_method === 'cash').length
     const codRate    = orders.length > 0 ? Math.round((codOrders / orders.length) * 100) : 0
-    const avgBasket  = orders.length > 0 ? Math.round(todayGMV / orders.length) : 0
+    const avgBasket  = deliveredToday.length > 0 ? Math.round(todayGMV / deliveredToday.length) : 0
 
     const newVendorsToday = vendors.filter(
       (v) => new Date(v.created_at) >= todayUTC
