@@ -20,7 +20,7 @@ const InitiateSchema = z.object({
   fullName:      z.string().min(2).max(200),
   phone:         z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
   wilaya:        z.string().min(1).max(100),
-  city:          z.string().min(1).max(200),
+  city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
   address:       z.string().min(5).max(500),
   shippingCost:  z.number().min(0).max(10000),
   promoCodeId:   z.string().uuid().optional().nullable(),

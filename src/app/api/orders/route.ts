@@ -26,7 +26,7 @@ const CreateOrderSchema = z.object({
   phone:         z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
   email:         z.string().email().max(320).optional().nullable(),
   wilaya:        z.string().min(1).max(100),
-  city:          z.string().min(1).max(200),
+  city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
   address:       z.string().min(5).max(500),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
   shippingCost:  z.number().min(0).max(10000),

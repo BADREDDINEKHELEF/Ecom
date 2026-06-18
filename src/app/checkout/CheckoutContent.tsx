@@ -245,7 +245,7 @@ export default function CheckoutContent() {
     const resolvedCity = form.city === '__autre__' ? customCommune : form.city
 
     if (!resolvedCity.trim()) {
-      setSaveError(t.checkout.otherCommunePlaceholder)
+      setSaveError(t.checkout.selectCommune)
       setSaving(false)
       return
     }
