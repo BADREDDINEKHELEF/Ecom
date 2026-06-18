@@ -734,15 +734,14 @@ export default function CheckoutPage() {
 
             <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
               {items.map(({ product, quantity, selectedColor }) => {
-                const colorIdx = selectedColor
-                  ? (product.imageColors ?? []).indexOf(selectedColor)
-                  : -1
-                const displayImg = colorIdx !== -1 ? product.images[colorIdx] : product.images?.[0]
                 const COLOR_HEX: Record<string, string> = {
                   Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
                   Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
                   Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
                 }
+                const variant = selectedColor ? (product.colorVariants ?? []).find(v => v.name === selectedColor) : null
+                const colorIdx = !variant && selectedColor ? (product.imageColors ?? []).indexOf(selectedColor) : -1
+                const displayImg = variant?.images?.[0] ?? (colorIdx !== -1 ? product.images[colorIdx] : product.images?.[0])
                 return (
                 <div key={`${product.id}-${selectedColor ?? ''}`} className="flex items-center gap-3">
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
