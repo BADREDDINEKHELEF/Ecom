@@ -1,6 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
-const BASE_URL = 'https://ecomdelivery.dz/api/v1'
+const BASE_URL = 'https://ecom-dz.net/api/v1'
 
 export function ecomConfigured(): boolean {
   return !!process.env.ECOM_TOKEN

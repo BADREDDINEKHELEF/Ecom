@@ -62,8 +62,8 @@ export const DELIVERY_PROVIDERS: DeliveryProvider[] = [
     name: 'Ecom Delivery',
     hasApi: true,
     color: '#10B981',
-    dashboardUrl: 'https://ecomdelivery.dz',
-    trackingUrl: 'https://ecomdelivery.dz/tracking?id=',
+    dashboardUrl: 'https://ecom-dz.net',
+    trackingUrl: 'https://ecom-dz.net/tracking?id=',
   },
   {
     id: 'apec',
