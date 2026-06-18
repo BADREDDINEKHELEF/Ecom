@@ -120,6 +120,20 @@ function resetInMemory(namespace: string, key: string): void {
   getStore(namespace).delete(key)
 }
 
+// Warn once at startup if running in production without Redis (rate limit is per-instance only)
+if (
+  typeof process !== 'undefined' &&
+  process.env.NODE_ENV === 'production' &&
+  !process.env.UPSTASH_REDIS_REST_URL
+) {
+  console.warn(
+    '[rateLimit] WARNING: UPSTASH_REDIS_REST_URL is not set. ' +
+    'Rate limiting is in-memory and per-instance — it will NOT protect against ' +
+    'concurrent requests across Vercel serverless instances. ' +
+    'Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN to enable shared Redis rate limiting.'
+  )
+}
+
 // Evict stale in-memory entries every 10 minutes (prevents unbounded growth)
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {

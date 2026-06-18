@@ -28,48 +28,34 @@ export async function POST(req: NextRequest) {
   const { code, amount } = parsed.data
   const supabase = createAdminClient()
 
-  // Step 1 — verify card exists and is valid (read-only, no mutation yet)
-  const { data: card } = await supabase
-    .from('gift_cards')
-    .select('id, balance, expires_at, is_active')
-    .eq('code', code.trim().toUpperCase())
-    .maybeSingle()
+  // Single atomic RPC: SELECT FOR UPDATE + relative decrement in one DB transaction.
+  // Fixes the stale-read race where two concurrent requests both read the same balance
+  // and then write SET balance = stale_value - deduct, corrupting the final balance.
+  const { data, error } = await supabase.rpc('redeem_gift_card', {
+    p_code:   code.trim(),
+    p_amount: amount,
+  })
 
-  if (!card || !card.is_active) {
-    return NextResponse.json({ error: 'Code cadeau invalide ou désactivé' }, { status: 404 })
-  }
-  if (card.expires_at && new Date(card.expires_at) < new Date()) {
-    return NextResponse.json({ error: 'Ce code cadeau a expiré' }, { status: 400 })
-  }
-  if (card.balance <= 0) {
-    return NextResponse.json({ error: 'Ce code cadeau est épuisé' }, { status: 400 })
-  }
-
-  const deduct = Math.min(amount, card.balance)
-
-  // Step 2 — atomic decrement: UPDATE ... WHERE balance >= deduct RETURNING balance
-  // This prevents race conditions where two concurrent requests both read the same
-  // balance and both succeed in deducting, resulting in over-redemption.
-  // If balance was concurrently modified and is now < deduct, the WHERE clause
-  // silently matches 0 rows — we detect this via the returned count.
-  const { data: updated, error: updateErr } = await supabase
-    .from('gift_cards')
-    .update({ balance: card.balance - deduct })
-    .eq('id', card.id)
-    .eq('is_active', true)
-    .gte('balance', deduct)  // atomic guard — only succeeds if balance is still sufficient
-    .select('balance')
-    .maybeSingle()
-
-  if (updateErr) {
-    logger.error('[gift-cards/redeem] update failed', { error: updateErr.message })
+  if (error) {
+    const msg = error.message ?? ''
+    if (msg.includes('invalid_card') || msg.includes('inactive_card')) {
+      return NextResponse.json({ error: 'Code cadeau invalide ou désactivé' }, { status: 404 })
+    }
+    if (msg.includes('expired_card')) {
+      return NextResponse.json({ error: 'Ce code cadeau a expiré' }, { status: 400 })
+    }
+    if (msg.includes('zero_balance')) {
+      return NextResponse.json({ error: 'Ce code cadeau est épuisé' }, { status: 400 })
+    }
+    logger.error('[gift-cards/redeem] rpc failed', { error: msg })
     return NextResponse.json({ error: 'Erreur lors de la réduction du solde' }, { status: 500 })
   }
 
-  if (!updated) {
-    // Concurrent redemption won the race — re-read the current balance and report
+  // RPC returns a single row: { deducted, remaining_balance }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) {
     return NextResponse.json({ error: 'Solde insuffisant ou code déjà utilisé' }, { status: 409 })
   }
 
-  return NextResponse.json({ deducted: deduct, remainingBalance: updated.balance })
+  return NextResponse.json({ deducted: row.deducted, remainingBalance: row.remaining_balance })
 }

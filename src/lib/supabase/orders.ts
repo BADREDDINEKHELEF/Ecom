@@ -222,8 +222,19 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   if (itemsErr) throw itemsErr
 
   // ── 7. Atomically increment promo usage (with row-level lock) ─────
+  // The RPC returns false if the promo was maxed out by a concurrent order between
+  // our validation (step 3) and this increment. In that race case, correct the
+  // already-inserted order by removing the discount.
   if (input.promoCodeId) {
-    await incrementPromoUses(input.promoCodeId)
+    const promoAccepted = await incrementPromoUses(input.promoCodeId)
+    if (!promoAccepted) {
+      const correctedTotal = Math.max(0, computedSubtotal + input.shippingCost - giftCardDeduction - pointsDeduction)
+      await supabase
+        .from('orders')
+        .update({ discount_amount: 0, promo_code_id: null, total: correctedTotal })
+        .eq('id', order.id)
+      return { id: order.id, total: correctedTotal }
+    }
   }
 
   return { id: order.id, total }
