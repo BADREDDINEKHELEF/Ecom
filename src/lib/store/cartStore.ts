@@ -116,7 +116,7 @@ export const useCartStore = create<CartStore>()(
         }))
       },
 
-      clearCart: () => set({ items: [], cartStoreSlug: null }),
+      clearCart: () => set({ items: [], cartStoreSlug: null, storeConflict: null }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set((s) => ({ isOpen: !s.isOpen })),

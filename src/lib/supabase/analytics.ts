@@ -416,14 +416,15 @@ export async function getSellerAnalytics(
   const transmittedOrds  = allOrders.filter((o) => o.order?.status === 'delivered')
   const totalRevenue     = transmittedOrds.reduce((s, o) => s + o.vendorTotal, 0)
   const totalOrders      = allOrders.length
-  const deliveredOrders = allOrders.filter((o) => o.order?.delivery_outcome === 'delivered').length
-  const returnedOrders  = allOrders.filter((o) => o.order?.delivery_outcome === 'returned').length
+  const deliveredOrders = allOrders.filter((o) => o.order?.status === 'delivered').length
+  const returnedOrders  = allOrders.filter((o) => o.order?.status === 'returned').length
   const cancelledOrders = allOrders.filter((o) => o.order?.status === 'cancelled').length
   const confirmedOrders = allOrders.filter((o) => ['confirmed', 'shipped', 'delivered'].includes(o.order?.status ?? '')).length
   const shippedOrders   = allOrders.filter((o) => ['shipped', 'delivered'].includes(o.order?.status ?? '')).length
   const pendingOrders   = allOrders.filter(
-    (o) => !o.order?.delivery_outcome && o.order?.status !== 'cancelled'
+    (o) => !['delivered', 'returned', 'cancelled'].includes(o.order?.status ?? '')
   ).length
+  const finishedOrders  = deliveredOrders + returnedOrders
 
   // Wilaya + day-of-week tracked at order level to avoid double-counting
   const wilayaMap: Record<string, { orders: number; revenue: number; delivered: number; returned: number }> = {}
@@ -437,9 +438,8 @@ export async function getSellerAnalytics(
     if (order.wilaya) {
       if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0, delivered: 0, returned: 0 }
       wilayaMap[order.wilaya].orders++
-      if (order.status === 'delivered') wilayaMap[order.wilaya].revenue += vendorTotal
-      if (order.delivery_outcome === 'delivered') wilayaMap[order.wilaya].delivered++
-      if (order.delivery_outcome === 'returned')  wilayaMap[order.wilaya].returned++
+      if (order.status === 'delivered') { wilayaMap[order.wilaya].revenue += vendorTotal; wilayaMap[order.wilaya].delivered++ }
+      if (order.status === 'returned')  wilayaMap[order.wilaya].returned++
     }
   }
 
@@ -503,8 +503,8 @@ export async function getSellerAnalytics(
     returnedOrders,
     cancelledOrders,
     avgOrderValue: transmittedOrds.length > 0 ? Math.round(totalRevenue / transmittedOrds.length) : 0,
-    returnRate:    totalOrders ? Math.round((returnedOrders  / totalOrders) * 100) : 0,
-    deliveryRate:  totalOrders ? Math.round((deliveredOrders / totalOrders) * 100) : 0,
+    returnRate:    finishedOrders ? Math.round((returnedOrders  / finishedOrders) * 100) : 0,
+    deliveryRate:  finishedOrders ? Math.round((deliveredOrders / finishedOrders) * 100) : 0,
     priorRevenue,
     priorOrders,
     revenueGrowth,

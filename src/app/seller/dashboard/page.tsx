@@ -195,6 +195,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     deliveryRate, returnRate, avgOrderValue,
     bestDay, topWilaya, repeatRate,
     deliveredCount, returnedCount, finishedCount,
+    totalRevenue,
   }
 }
 
@@ -237,7 +238,6 @@ export default function SellerDashboardPage() {
   }, [vendor])
 
   const analytics    = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])
-  const grossRevenue = orders.reduce((s, o) => s + o.vendorTotal, 0)
   const maxMonthly   = Math.max(...analytics.monthly.map((m) => m.revenue), 1)
   const hour         = new Date().getHours()
   const greeting     = hour < 12 ? sd.goodMorning : hour < 18 ? sd.goodAfternoon : sd.goodEvening
@@ -540,7 +540,7 @@ export default function SellerDashboardPage() {
               <p className="text-xs text-gray-400 mt-0.5">{sd.grossSalesFrom}</p>
             </div>
             <div className="text-right">
-              <p className="text-xl font-black text-gray-900">{formatPrice(grossRevenue)}</p>
+              <p className="text-xl font-black text-gray-900">{formatPrice(analytics.totalRevenue)}</p>
               <p className="text-xs text-gray-400">{sd.grossTotal}</p>
             </div>
           </div>
