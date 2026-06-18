@@ -7,6 +7,8 @@ import { CartItem, Product } from '@/types'
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
+  _hasHydrated: boolean
+  setHasHydrated: (has: boolean) => void
   addItem: (product: Product, quantity?: number, selectedColor?: string) => void
   removeItem: (productId: string, selectedColor?: string) => void
   updateQuantity: (productId: string, quantity: number, selectedColor?: string) => void
@@ -23,6 +25,8 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      _hasHydrated: false,
+      setHasHydrated: (has) => set({ _hasHydrated: has }),
 
       addItem: (product, quantity = 1, selectedColor) => {
         set((state) => {
@@ -75,6 +79,16 @@ export const useCartStore = create<CartStore>()(
       itemCount: () =>
         get().items.reduce((sum, i) => sum + i.quantity, 0),
     }),
-    { name: 'cart-storage' }
+    {
+      name: 'cart-storage',
+      version: 1,
+      // Only persist items — not isOpen or transient flags
+      partialize: (state) => ({ items: state.items }),
+      // Migrate old cart data (version 0 had isOpen persisted; drop cleanly)
+      migrate: (_old, _version) => ({ items: [] }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+    }
   )
 )

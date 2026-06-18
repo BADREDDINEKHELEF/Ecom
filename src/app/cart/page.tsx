@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Truck } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT } from '@/lib/store/langStore'
@@ -23,14 +22,12 @@ function colorImage(product: { images: string[]; imageColors?: string[]; colorVa
 }
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCartStore()
+  const { items, removeItem, updateQuantity, clearCart, total, itemCount, _hasHydrated } = useCartStore()
   const t = useT()
   const cartTotal = total()
   const count = itemCount()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
 
-  if (!mounted) return (
+  if (!_hasHydrated) return (
     <div className="max-w-2xl mx-auto px-4 py-20 flex justify-center">
       <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
     </div>
