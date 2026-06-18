@@ -1,15 +1,17 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { Loader2, Check, Eye, EyeOff, Truck, Bell, Zap, Info, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
-import { useRTL } from '@/lib/store/langStore'
+import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
 export default function DeliverySettingsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
+  const t = useT()
+  const a = t.admin
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const [form, setForm] = useState({
@@ -18,6 +20,10 @@ export default function DeliverySettingsPage() {
     yalidine_api_token:   '',
     procolis_token:       '',
     zr_token:             '',
+    maystro_token:        '',
+    colivraison_token:    '',
+    rex_token:            '',
+    yassir_api_key:       '',
     ecom_token:           '',
     apec_api_id:          '',
     apec_api_token:       '',
@@ -40,17 +46,21 @@ export default function DeliverySettingsPage() {
       .then(({ config: cfg }) => {
         if (cfg) {
           setForm({
-            default_provider:     cfg.default_provider,
+            default_provider:     cfg.default_provider ?? 'yalidine',
             yalidine_api_id:      cfg.yalidine_api_id ?? '',
             yalidine_api_token:   cfg.yalidine_api_token ?? '',
             procolis_token:       cfg.procolis_token ?? '',
             zr_token:             cfg.zr_token ?? '',
+            maystro_token:        cfg.maystro_token ?? '',
+            colivraison_token:    cfg.colivraison_token ?? '',
+            rex_token:            cfg.rex_token ?? '',
+            yassir_api_key:       cfg.yassir_api_key ?? '',
             ecom_token:           cfg.ecom_token ?? '',
             apec_api_id:          cfg.apec_api_id ?? '',
             apec_api_token:       cfg.apec_api_token ?? '',
-            auto_create_shipment: cfg.auto_create_shipment,
-            notify_whatsapp:      cfg.notify_whatsapp,
-            notify_sms:           cfg.notify_sms,
+            auto_create_shipment: cfg.auto_create_shipment ?? false,
+            notify_whatsapp:      cfg.notify_whatsapp ?? true,
+            notify_sms:           cfg.notify_sms ?? false,
           })
         }
         setLoadingConfig(false)
@@ -73,6 +83,10 @@ export default function DeliverySettingsPage() {
           yalidine_api_token:   form.yalidine_api_token || null,
           procolis_token:       form.procolis_token || null,
           zr_token:             form.zr_token || null,
+          maystro_token:        form.maystro_token || null,
+          colivraison_token:    form.colivraison_token || null,
+          rex_token:            form.rex_token || null,
+          yassir_api_key:       form.yassir_api_key || null,
           ecom_token:           form.ecom_token || null,
           apec_api_id:          form.apec_api_id || null,
           apec_api_token:       form.apec_api_token || null,
@@ -81,11 +95,11 @@ export default function DeliverySettingsPage() {
           notify_sms:           form.notify_sms,
         }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Sauvegarde échouée')
+      if (!res.ok) throw new Error((await res.json()).error ?? a.savedBtn)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Sauvegarde échouée')
+      setError(err instanceof Error ? err.message : a.savedBtn)
     } finally {
       setSaving(false)
     }
@@ -99,10 +113,7 @@ export default function DeliverySettingsPage() {
       const res = await fetch('/api/seller/test-yalidine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apiId: form.yalidine_api_id,
-          apiToken: form.yalidine_api_token,
-        }),
+        body: JSON.stringify({ apiId: form.yalidine_api_id, apiToken: form.yalidine_api_token }),
       })
       setTestResult(res.ok ? 'ok' : 'fail')
     } catch {
@@ -120,6 +131,24 @@ export default function DeliverySettingsPage() {
     )
   }
 
+  const encNote = (
+    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+      <Info className="w-3 h-3" /> {a.encryptedNote}
+    </p>
+  )
+
+  const autoShipmentCheckbox = (
+    <label className="flex items-start gap-3 cursor-pointer bg-emerald-50 rounded-xl p-4 border border-emerald-100 mt-4">
+      <input type="checkbox" checked={form.auto_create_shipment}
+        onChange={(e) => setForm({ ...form, auto_create_shipment: e.target.checked })}
+        className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+      <div>
+        <p className="text-sm font-bold text-gray-900">{a.autoShipment}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{a.autoShipmentDesc}</p>
+      </div>
+    </label>
+  )
+
   return (
     <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className={`lg:hidden sticky top-0 z-20 bg-gray-950 flex items-center h-14 px-4 gap-3 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -132,9 +161,9 @@ export default function DeliverySettingsPage() {
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
         <div className="mb-8">
           <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-            <Truck className="w-6 h-6 text-emerald-600" /> Paramètres de livraison
+            <Truck className="w-6 h-6 text-emerald-600" /> {a.deliverySettings}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Configurez vos transporteurs et créez vos expéditions automatiquement.</p>
+          <p className="text-gray-500 text-sm mt-1">{a.deliverySettingsDesc}</p>
         </div>
 
         {loadingConfig ? (
@@ -146,8 +175,8 @@ export default function DeliverySettingsPage() {
 
             {/* Default provider */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="font-bold text-gray-900 mb-1">Transporteur par défaut</h2>
-              <p className="text-sm text-gray-500 mb-4">Pré-sélectionné lors de la création d&apos;une expédition.</p>
+              <h2 className="font-bold text-gray-900 mb-1">{a.defaultProvider}</h2>
+              <p className="text-sm text-gray-500 mb-4">{a.defaultProviderDesc}</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {DELIVERY_PROVIDERS.map((p) => (
                   <button key={p.id} type="button" onClick={() => setForm({ ...form, default_provider: p.id })}
@@ -163,20 +192,20 @@ export default function DeliverySettingsPage() {
               </div>
             </div>
 
-            {/* Provider credentials — only shown for selected provider */}
+            {/* Yalidine */}
             {form.default_provider === 'yalidine' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-orange-500" /> Clés API Yalidine
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  Obtenez vos identifiants sur{' '}
+                  {a.getCredentials}{' '}
                   <a href="https://yalidine.app" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yalidine.app</a>.
                 </p>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      API ID <span className="text-gray-400 font-normal">(identifiant publique)</span>
+                      {a.apiId} <span className="text-gray-400 font-normal">{a.apiIdDesc}</span>
                     </label>
                     <input type="text" value={form.yalidine_api_id}
                       onChange={(e) => setForm({ ...form, yalidine_api_id: e.target.value })}
@@ -185,7 +214,7 @@ export default function DeliverySettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      API Token <span className="text-gray-400 font-normal">(clé secrète — chiffrée)</span>
+                      {a.apiToken} <span className="text-gray-400 font-normal">{a.apiTokenDesc}</span>
                     </label>
                     <div className="relative">
                       <input type={showToken ? 'text' : 'password'} value={form.yalidine_api_token}
@@ -197,115 +226,184 @@ export default function DeliverySettingsPage() {
                         {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                      <Info className="w-3 h-3" /> Chiffré (AES-256) — ShopDZ ne lit jamais votre token en clair.
-                    </p>
+                    {encNote}
                   </div>
                   {form.yalidine_api_id && form.yalidine_api_token && (
                     <div className="flex items-center gap-3">
                       <button type="button" onClick={testYalidineCredentials} disabled={testing}
                         className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm disabled:opacity-60">
                         {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                        Tester la connexion
+                        {a.testConnection}
                       </button>
                       {testResult === 'ok' && (
                         <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600">
-                          <Check className="w-4 h-4" /> Connexion réussie
+                          <Check className="w-4 h-4" /> {a.connectionOk}
                         </span>
                       )}
                       {testResult === 'fail' && (
-                        <span className="text-sm font-semibold text-red-500">Identifiants invalides</span>
+                        <span className="text-sm font-semibold text-red-500">{a.connectionFail}</span>
                       )}
                     </div>
                   )}
-                  <label className="flex items-start gap-3 cursor-pointer bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-                    <input type="checkbox" checked={form.auto_create_shipment}
-                      onChange={(e) => setForm({ ...form, auto_create_shipment: e.target.checked })}
-                      className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">Créer les expéditions automatiquement</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Dès qu&apos;une commande est confirmée, une expédition est créée et un numéro de suivi attribué.
-                      </p>
-                    </div>
-                  </label>
+                  {autoShipmentCheckbox}
                 </div>
               </div>
             )}
 
+            {/* Procolis */}
             {form.default_provider === 'procolis' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-                  <Zap className="w-5 h-5 text-amber-500" /> Clé API Procolis
+                  <Zap className="w-5 h-5 text-amber-500" /> {a.tokenLabel} Procolis
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  Obtenez votre token sur{' '}
+                  {a.getCredentials}{' '}
                   <a href="https://procolis.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">procolis.com</a>.
                 </p>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.procolis_token}
                   onChange={(e) => setForm({ ...form, procolis_token: e.target.value })}
                   placeholder="••••••••••••••••••••"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                  <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
-                </p>
+                {encNote}
+                {autoShipmentCheckbox}
               </div>
             )}
 
+            {/* ZR Express */}
             {form.default_provider === 'zr' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-                  <Zap className="w-5 h-5 text-blue-500" /> Clé API ZR Express
+                  <Zap className="w-5 h-5 text-blue-500" /> {a.tokenLabel} ZR Express
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  Obtenez votre token sur{' '}
+                  {a.getCredentials}{' '}
                   <a href="https://zrexpress.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">zrexpress.dz</a>.
                 </p>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.zr_token}
                   onChange={(e) => setForm({ ...form, zr_token: e.target.value })}
                   placeholder="••••••••••••••••••••"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                  <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
-                </p>
+                {encNote}
+                {autoShipmentCheckbox}
               </div>
             )}
 
+            {/* Maystro */}
+            {form.default_provider === 'maystro' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-emerald-500" /> {a.bearerToken} Maystro Delivery
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  {a.getCredentials}{' '}
+                  <a href="https://maystro-delivery.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">maystro-delivery.com</a>.
+                </p>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.bearerToken}</label>
+                <input type="password" value={form.maystro_token}
+                  onChange={(e) => setForm({ ...form, maystro_token: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                {encNote}
+                {autoShipmentCheckbox}
+              </div>
+            )}
+
+            {/* Colivraison */}
+            {form.default_provider === 'colivraison' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-violet-500" /> {a.bearerToken} Colivraison
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  {a.getCredentials}{' '}
+                  <a href="https://app.colivraison.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">app.colivraison.com</a>.
+                </p>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.bearerToken}</label>
+                <input type="password" value={form.colivraison_token}
+                  onChange={(e) => setForm({ ...form, colivraison_token: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                {encNote}
+                {autoShipmentCheckbox}
+              </div>
+            )}
+
+            {/* Rex Livraison */}
+            {form.default_provider === 'rex' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-red-500" /> {a.tokenLabel} Rex Livraison
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  {a.getCredentials}{' '}
+                  <a href="https://rexlivraison.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">rexlivraison.com</a>.
+                </p>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
+                <input type="password" value={form.rex_token}
+                  onChange={(e) => setForm({ ...form, rex_token: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                {encNote}
+                {autoShipmentCheckbox}
+              </div>
+            )}
+
+            {/* Yassir Express */}
+            {form.default_provider === 'yassir' && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-sky-500" /> {a.apiKey} Yassir Express
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  {a.getCredentials}{' '}
+                  <a href="https://yassir.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">yassir.com</a>.
+                </p>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.apiKey}</label>
+                <input type="password" value={form.yassir_api_key}
+                  onChange={(e) => setForm({ ...form, yassir_api_key: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                {encNote}
+                {autoShipmentCheckbox}
+              </div>
+            )}
+
+            {/* Ecom Delivery */}
             {form.default_provider === 'ecom' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-                  <Zap className="w-5 h-5 text-emerald-500" /> Clé API Ecom Delivery
+                  <Zap className="w-5 h-5 text-emerald-500" /> {a.tokenLabel} Ecom Delivery
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  Obtenez votre token sur{' '}
+                  {a.getCredentials}{' '}
                   <a href="https://ecomdelivery.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">ecomdelivery.dz</a>.
                 </p>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Token API</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.ecom_token}
                   onChange={(e) => setForm({ ...form, ecom_token: e.target.value })}
                   placeholder="••••••••••••••••••••"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                  <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
-                </p>
+                {encNote}
+                {autoShipmentCheckbox}
               </div>
             )}
 
+            {/* APEC Delivery */}
             {form.default_provider === 'apec' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
                   <Zap className="w-5 h-5 text-indigo-500" /> Clés API APEC Delivery
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  Obtenez vos identifiants sur{' '}
+                  {a.getCredentials}{' '}
                   <a href="https://apec.dz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">apec.dz</a>.
                 </p>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      API ID <span className="text-gray-400 font-normal">(identifiant publique)</span>
+                      {a.apiId} <span className="text-gray-400 font-normal">{a.apiIdDesc}</span>
                     </label>
                     <input type="text" value={form.apec_api_id}
                       onChange={(e) => setForm({ ...form, apec_api_id: e.target.value })}
@@ -314,40 +412,25 @@ export default function DeliverySettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      API Token <span className="text-gray-400 font-normal">(clé secrète — chiffrée)</span>
+                      {a.apiToken} <span className="text-gray-400 font-normal">{a.apiTokenDesc}</span>
                     </label>
                     <input type="password" value={form.apec_api_token}
                       onChange={(e) => setForm({ ...form, apec_api_token: e.target.value })}
                       placeholder="••••••••••••••••••••"
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                      <Info className="w-3 h-3" /> Chiffré (AES-256) avant stockage.
-                    </p>
+                    {encNote}
                   </div>
+                  {autoShipmentCheckbox}
                 </div>
               </div>
             )}
 
-            {['maystro', 'colivraison', 'rex', 'yassir'].includes(form.default_provider) && (
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-start gap-3">
-                <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-blue-900">Transporteur manuel</p>
-                  <p className="text-sm text-blue-700 mt-0.5">
-                    Ce transporteur ne dispose pas d&apos;intégration API. Gérez vos expéditions directement
-                    depuis leur tableau de bord, puis collez le numéro de suivi dans chaque commande.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Notifications */}
+            {/* Buyer Notifications */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
               <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-1">
-                <Bell className="w-5 h-5 text-blue-500" /> Notifications acheteur
+                <Bell className="w-5 h-5 text-blue-500" /> {a.notificationsBuyer}
               </h2>
-              <p className="text-sm text-gray-500 mb-4">Comment notifier vos clients lors des mises à jour de livraison.</p>
-
+              <p className="text-sm text-gray-500 mb-4">{a.notificationsDesc}</p>
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" checked={form.notify_whatsapp}
@@ -355,17 +438,16 @@ export default function DeliverySettingsPage() {
                     className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
                   <div>
                     <p className="text-sm font-semibold text-gray-900">WhatsApp</p>
-                    <p className="text-xs text-gray-500">Confirmation de commande + numéro de suivi via WhatsApp</p>
+                    <p className="text-xs text-gray-500">{a.whatsappDesc}</p>
                   </div>
                 </label>
-
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" checked={form.notify_sms}
                     onChange={(e) => setForm({ ...form, notify_sms: e.target.checked })}
                     className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
                   <div>
                     <p className="text-sm font-semibold text-gray-900">SMS</p>
-                    <p className="text-xs text-gray-500">Notification SMS en plus du WhatsApp (coût supplémentaire)</p>
+                    <p className="text-xs text-gray-500">{a.smsDesc}</p>
                   </div>
                 </label>
               </div>
@@ -379,7 +461,7 @@ export default function DeliverySettingsPage() {
               <button type="submit" disabled={saving}
                 className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
-                {saved ? 'Sauvegardé !' : 'Enregistrer'}
+                {saved ? a.savedBtn : a.saveBtn}
               </button>
             </div>
 

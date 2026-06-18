@@ -79,6 +79,7 @@ export default function CheckoutContent() {
   const { save: saveAbandoned, markRecovered } = useAbandonedCheckout()
 
   const [b2b, setB2b] = useState<B2BFields>({ isB2B: false, companyName: '', nif: '', nis: '', rc: '' })
+  const [customCommune, setCustomCommune] = useState('')
 
   const [baridimobModal, setBaridimobModal] = useState<{ qrCodeData: string; deepLink: string; expiresAt: string } | null>(null)
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null)
@@ -206,10 +207,10 @@ export default function CheckoutContent() {
         const deduction = Math.min(data.balance, cartTotal)
         setGiftCardResult({ id: data.id, code: giftCardInput.trim().toUpperCase(), balance: data.balance, deduction })
       } else {
-        setGiftCardError(data.error ?? 'Code cadeau invalide')
+        setGiftCardError(data.error ?? t.checkout.giftCardInvalid)
       }
     } catch {
-      setGiftCardError('Erreur lors de la vérification')
+      setGiftCardError(t.checkout.giftCardError)
     } finally {
       setGiftCardApplying(false)
     }
@@ -219,7 +220,7 @@ export default function CheckoutContent() {
     if (!val) { setPhoneError(''); return }
     const clean = val.replace(/\s+/g, '')
     if (!/^(213[5-7]|0[5-7])\d{8}$/.test(clean)) {
-      setPhoneError('Numéro invalide — commencez par 05, 06, 07 ou 213 (format international)')
+      setPhoneError(t.checkout.phoneInvalid)
     } else {
       setPhoneError('')
     }
@@ -235,17 +236,25 @@ export default function CheckoutContent() {
     for (const { product, quantity } of items) {
       const moq = product.minOrderQuantity ?? 1
       if (quantity < moq) {
-        setSaveError(`Quantité minimale pour "${product.name}" : ${moq} unités`)
+        setSaveError(t.checkout.moqError.replace('{name}', product.name).replace('{n}', String(moq)))
         setSaving(false)
         return
       }
+    }
+
+    const resolvedCity = form.city === '__autre__' ? customCommune : form.city
+
+    if (!resolvedCity.trim()) {
+      setSaveError(t.checkout.otherCommunePlaceholder)
+      setSaving(false)
+      return
     }
 
     const orderPayload = {
       fullName:       form.fullName,
       phone:          form.phone,
       wilaya:         form.wilaya,
-      city:           form.city,
+      city:           resolvedCity,
       address:        form.address,
       paymentMethod:  payment,
       shippingCost:   delivery.cost,
@@ -304,7 +313,7 @@ export default function CheckoutContent() {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
         if (res.status === 503) {
-          setSaveError('Le paiement en ligne n\'est pas encore disponible. Veuillez choisir le paiement à la livraison.')
+          setSaveError(t.checkout.onlinePaymentUnavailable)
         } else if (res.status === 409) {
           setSaveError(errData.error ?? t.checkout.orderFailed)
         } else {
@@ -356,8 +365,8 @@ export default function CheckoutContent() {
         <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-5">
           <CreditCard className="w-8 h-8 text-amber-600" />
         </div>
-        <h1 className="text-xl font-black text-gray-900 mb-2">Payer avec BaridiMob</h1>
-        <p className="text-sm text-gray-500 mb-6">Ouvrez votre application BaridiMob et scannez le code ou cliquez sur le lien ci-dessous.</p>
+        <h1 className="text-xl font-black text-gray-900 mb-2">{t.checkout.payWithBaridimob}</h1>
+        <p className="text-sm text-gray-500 mb-6">{t.checkout.baridimobScanDesc}</p>
         <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6 flex items-center justify-center">
           {qrImageUrl
             ? <img src={qrImageUrl} alt="QR Code BaridiMob" width={280} height={280} className="rounded-xl" />
@@ -369,11 +378,11 @@ export default function CheckoutContent() {
             href={baridimobModal.deepLink}
             className="inline-flex items-center justify-center gap-2 bg-amber-500 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-amber-600 transition-colors mb-4 w-full"
           >
-            Ouvrir BaridiMob
+            {t.checkout.openBaridimob}
           </a>
         )}
         <p className="text-xs text-gray-400">
-          Expire le {new Date(baridimobModal.expiresAt).toLocaleString('fr-DZ')}
+          {t.checkout.baridimobExpires} {new Date(baridimobModal.expiresAt).toLocaleString(lang === 'ar' ? 'ar-DZ' : 'fr-DZ')}
         </p>
       </div>
     )
@@ -408,7 +417,7 @@ export default function CheckoutContent() {
         <div className="bg-gray-50 rounded-2xl p-5 text-left mb-8 space-y-2 text-sm text-gray-700">
           <p><span className="font-semibold">{t.checkout.fullName}:</span> {form.fullName}</p>
           <p><span className="font-semibold">{t.checkout.phone}:</span> {form.phone}</p>
-          <p><span className="font-semibold">{t.checkout.address}:</span> {form.address}, {form.city}, {form.wilaya}</p>
+          <p><span className="font-semibold">{t.checkout.address}:</span> {form.address}, {form.city === '__autre__' ? customCommune : form.city}, {form.wilaya}</p>
           <p><span className="font-semibold">{t.checkout.payment}:</span> {
             payment === 'cash' ? t.checkout.cash :
             payment === 'edahabia' ? t.checkout.edahabia :
@@ -443,7 +452,7 @@ export default function CheckoutContent() {
 
       <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-6 text-sm text-indigo-800">
         <Lock className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-        <span><strong>Commande invité</strong> — Aucun compte requis. Rapide &amp; sécurisé.</span>
+        <span><strong>{t.checkout.guestOrder}</strong> — {t.checkout.guestOrderDesc}</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -492,7 +501,7 @@ export default function CheckoutContent() {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.wilaya}</label>
                 <select required value={form.wilaya}
-                  onChange={(e) => setForm((prev) => ({ ...prev, wilaya: e.target.value, city: '' }))}
+                  onChange={(e) => { setCustomCommune(''); setForm((prev) => ({ ...prev, wilaya: e.target.value, city: '' })) }}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 bg-white">
                   <option value="">{t.checkout.selectWilaya}</option>
                   {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
@@ -500,12 +509,34 @@ export default function CheckoutContent() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.commune}</label>
-                <select required value={form.city} onChange={(e) => f('city', e.target.value)}
+                <select
+                  required={form.city !== '__autre__'}
+                  value={form.city === '__autre__' || !getCommunesForWilaya(form.wilaya).includes(form.city) && form.city ? '__autre__' : form.city}
+                  onChange={(e) => {
+                    if (e.target.value === '__autre__') {
+                      setCustomCommune('')
+                      f('city', '__autre__')
+                    } else {
+                      setCustomCommune('')
+                      f('city', e.target.value)
+                    }
+                  }}
                   disabled={!form.wilaya}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 bg-white disabled:bg-gray-50 disabled:text-gray-400">
                   <option value="">{form.wilaya ? t.checkout.selectCommune : t.checkout.selectWilaya}</option>
                   {getCommunesForWilaya(form.wilaya).map((c) => <option key={c} value={c}>{c}</option>)}
+                  <option value="__autre__">{t.checkout.otherCommune}</option>
                 </select>
+                {form.city === '__autre__' && (
+                  <input
+                    type="text"
+                    required
+                    value={customCommune}
+                    onChange={(e) => { setCustomCommune(e.target.value); f('city', e.target.value || '__autre__') }}
+                    placeholder={t.checkout.otherCommunePlaceholder}
+                    className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                )}
               </div>
               {form.wilaya && (
                 <div className="sm:col-span-2 bg-indigo-50 rounded-xl px-4 py-3 flex items-center gap-3">
@@ -531,14 +562,14 @@ export default function CheckoutContent() {
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Instructions de livraison <span className="text-gray-400 font-normal">(optionnel)</span>
+                  {t.checkout.deliveryNotes} <span className="text-gray-400 font-normal">{t.checkout.deliveryNotesOptional}</span>
                 </label>
                 <textarea
                   value={form.notes}
                   onChange={(e) => f('notes', e.target.value)}
                   rows={2}
                   maxLength={500}
-                  placeholder="Ex: Sonner 2 fois, code portail 1234, laisser à la réception…"
+                  placeholder={t.checkout.deliveryNotesPlaceholder}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 resize-none"
                 />
               </div>
@@ -555,7 +586,7 @@ export default function CheckoutContent() {
                 { id: 'cash'      as PaymentMethod, label: t.checkout.cash,      desc: t.checkout.cashDesc,      recommended: true  },
                 { id: 'edahabia'  as PaymentMethod, label: t.checkout.edahabia,  desc: t.checkout.edahabiaDesc,  recommended: false },
                 { id: 'cib'       as PaymentMethod, label: t.checkout.cib,       desc: t.checkout.cibDesc,       recommended: false },
-                { id: 'baridimob' as PaymentMethod, label: 'BaridiMob',          desc: 'Paiement mobile Algeria Post',  recommended: false },
+                { id: 'baridimob' as PaymentMethod, label: 'BaridiMob',          desc: t.checkout.baridimobDesc,  recommended: false },
                 { id: 'card'      as PaymentMethod, label: t.checkout.card,      desc: t.checkout.cardDesc,      recommended: false },
               ]).map(({ id, label, desc, recommended }) => (
                 <button
@@ -658,7 +689,7 @@ export default function CheckoutContent() {
                     value={giftCardInput}
                     onChange={(e) => { setGiftCardInput(e.target.value.toUpperCase()); setGiftCardError('') }}
                     onKeyDown={(e) => e.key === 'Enter' && handleApplyGiftCard()}
-                    placeholder="Code cadeau"
+                    placeholder={t.checkout.giftCardPlaceholder}
                     className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
                   />
                   <button
@@ -668,7 +699,7 @@ export default function CheckoutContent() {
                     className="flex items-center gap-1.5 bg-gray-900 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors"
                   >
                     {giftCardApplying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
-                    Appliquer
+                    {t.checkout.apply}
                   </button>
                 </div>
                 {giftCardError && <p className="text-xs text-red-500 mt-1.5">{giftCardError}</p>}
@@ -679,7 +710,7 @@ export default function CheckoutContent() {
                   <Gift className="w-4 h-4 text-purple-600" />
                   <div>
                     <p className="text-xs font-bold text-purple-800">{giftCardResult.code}</p>
-                    <p className="text-xs text-purple-600">-{giftCardResult.deduction.toLocaleString('fr-DZ')} DA appliqués</p>
+                    <p className="text-xs text-purple-600">{t.checkout.giftCardDeducted.replace('{n}', giftCardResult.deduction.toLocaleString('fr-DZ'))}</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => { setGiftCardResult(null); setGiftCardInput('') }} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -698,8 +729,8 @@ export default function CheckoutContent() {
                   <div className="flex items-center gap-2">
                     <Star className={`w-4 h-4 ${usePoints ? 'text-amber-500' : 'text-gray-400'}`} />
                     <div className="text-left">
-                      <p className="text-xs font-bold text-gray-800">Utiliser mes points</p>
-                      <p className="text-xs text-gray-500">{loyaltyBalance} points disponibles ({loyaltyBalance} DA)</p>
+                      <p className="text-xs font-bold text-gray-800">{t.checkout.useMyPoints}</p>
+                      <p className="text-xs text-gray-500">{t.checkout.pointsAvailable.replace('{n}', String(loyaltyBalance)).replace('{da}', String(loyaltyBalance))}</p>
                     </div>
                   </div>
                   <div className={`w-9 h-5 rounded-full transition-colors ${usePoints ? 'bg-amber-400' : 'bg-gray-200'} relative`}>
@@ -707,7 +738,7 @@ export default function CheckoutContent() {
                   </div>
                 </button>
                 {usePoints && pointsDeduction > 0 && (
-                  <p className="text-xs text-amber-600 mt-1 pl-1 font-semibold">-{pointsDeduction} DA déduits de votre commande</p>
+                  <p className="text-xs text-amber-600 mt-1 pl-1 font-semibold">{t.checkout.pointsDeducted.replace('{n}', String(pointsDeduction))}</p>
                 )}
               </div>
             )}
@@ -767,13 +798,13 @@ export default function CheckoutContent() {
               )}
               {giftCardDeduction > 0 && (
                 <div className="flex justify-between text-purple-600 font-semibold">
-                  <span>Carte cadeau</span>
+                  <span>{t.checkout.giftCard}</span>
                   <span>-{formatPrice(giftCardDeduction)}</span>
                 </div>
               )}
               {pointsDeduction > 0 && (
                 <div className="flex justify-between text-amber-600 font-semibold">
-                  <span>Points fidélité</span>
+                  <span>{t.checkout.loyaltyPoints}</span>
                   <span>-{formatPrice(pointsDeduction)}</span>
                 </div>
               )}

@@ -11,13 +11,22 @@ interface LangStore {
   isRTL: boolean
 }
 
+function setCookieLang(lang: Lang) {
+  if (typeof document !== 'undefined') {
+    document.cookie = `casbah-lang=${lang}; path=/; max-age=31536000; SameSite=Lax`
+  }
+}
+
 export const useLangStore = create<LangStore>()(
   persist(
     (set) => ({
       lang: 'fr' as Lang,
       isRTL: false,
       t: translations.fr,
-      setLang: (lang: Lang) => set({ lang, t: translations[lang], isRTL: lang === 'ar' }),
+      setLang: (lang: Lang) => {
+        set({ lang, t: translations[lang], isRTL: lang === 'ar' })
+        setCookieLang(lang)
+      },
     }),
     {
       name: 'casbah-lang',
@@ -26,6 +35,7 @@ export const useLangStore = create<LangStore>()(
         if (state) {
           state.t = translations[state.lang]
           state.isRTL = state.lang === 'ar'
+          setCookieLang(state.lang)
         }
       },
     }
