@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 
 export const metadata = {
-  title: 'ShopDZ — Créez votre boutique en ligne en Algérie',
+  title: 'StoreDz — Créez votre boutique en ligne en Algérie',
   description:
     'Lancez votre boutique en ligne en quelques minutes. Lien personnalisé, WhatsApp intégré, paiement à la livraison. 100% gratuit pour démarrer.',
 }
@@ -21,7 +21,7 @@ const FEATURES = [
   {
     icon: <Globe className="w-6 h-6" />,
     title: 'Votre boutique, votre lien',
-    desc: 'Chaque vendeur obtient une URL unique : shopdz.com/store/votre-nom. Partagez-la sur WhatsApp, Instagram, TikTok.',
+    desc: 'Chaque vendeur obtient une URL unique : ecom-dz.net/store/votre-nom. Partagez-la sur WhatsApp, Instagram, TikTok.',
   },
   {
     icon: WA_SVG,
@@ -79,7 +79,7 @@ const TESTIMONIALS = [
     avatar: 'M',
     avatarColor: 'bg-pink-100 text-pink-600',
     stars: 5,
-    text: "J'ai ouvert ma boutique en 20 minutes. Aujourd'hui je reçois des commandes tous les jours depuis mon Instagram. ShopDZ m'a évité d'investir dans un site web.",
+    text: "J'ai ouvert ma boutique en 20 minutes. Aujourd'hui je reçois des commandes tous les jours depuis mon Instagram. StoreDz m'a évité d'investir dans un site web.",
     revenue: '+45 commandes / mois',
   },
   {
@@ -174,7 +174,7 @@ export default function HomePage() {
           <div className="flex-1">
             <p className="text-xs text-indigo-500 font-semibold uppercase tracking-wider mb-1">Votre lien de boutique</p>
             <p className="text-indigo-900 font-black text-lg sm:text-xl font-mono">
-              shopdz.com/store/<span className="text-indigo-500">votre-nom</span>
+              ecom-dz.net/store/<span className="text-indigo-500">votre-nom</span>
             </p>
             <p className="text-gray-500 text-sm mt-1">Vos clients voient uniquement votre boutique — aucun concurrent à côté</p>
           </div>
@@ -212,7 +212,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Ce que disent nos vendeurs</h2>
-            <p className="text-gray-500">Des entrepreneurs algériens qui ont lancé leur boutique sur ShopDZ</p>
+            <p className="text-gray-500">Des entrepreneurs algériens qui ont lancé leur boutique sur StoreDz</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-6">
             {TESTIMONIALS.map((t) => (
@@ -324,7 +324,7 @@ export default function HomePage() {
             {[
               { value: '200+', label: 'Boutiques actives' },
               { value: '58',   label: 'Wilayas couvertes' },
-              { value: '0%',   label: 'Commission ShopDZ' },
+              { value: '0%',   label: 'Commission StoreDz' },
               { value: '4.9★', label: 'Note moyenne vendeurs' },
             ].map(({ value, label }) => (
               <div key={label}>
@@ -439,7 +439,7 @@ export default function HomePage() {
               },
               {
                 q: 'Y a-t-il des frais ou commissions ?',
-                a: 'ShopDZ ne prend aucune commission sur vos ventes. Vous gardez 100% de vos revenus. Seul l\'abonnement mensuel est facturé (plan gratuit disponible).',
+                a: 'StoreDz ne prend aucune commission sur vos ventes. Vous gardez 100% de vos revenus. Seul l\'abonnement mensuel est facturé (plan gratuit disponible).',
               },
             ].map(({ q, a }) => (
               <div key={q} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -459,7 +459,7 @@ export default function HomePage() {
       {/* ══ FINAL CTA ══════════════════════════════════════════════ */}
       <section className="bg-gradient-to-br from-indigo-600 to-violet-700 py-16 px-4 text-center text-white">
         <h2 className="text-2xl sm:text-3xl font-black mb-3">Prêt à lancer votre boutique ?</h2>
-        <p className="text-white/65 mb-8 text-base">Rejoignez les 200+ vendeurs qui utilisent ShopDZ</p>
+        <p className="text-white/65 mb-8 text-base">Rejoignez les 200+ vendeurs qui utilisent StoreDz</p>
         <Link
           href="/become-seller"
           className="inline-flex items-center justify-center gap-2 bg-white text-indigo-800 font-black px-10 py-4 rounded-2xl hover:bg-indigo-50 transition-colors text-base shadow-xl"

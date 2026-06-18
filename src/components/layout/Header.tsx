@@ -1,13 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, Search, Menu, X, ChevronDown, Heart, Tag, User } from 'lucide-react'
+import { ShoppingCart, Search, Menu, X, Heart, Store, User } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
 import { useT, useRTL } from '@/lib/store/langStore'
-import { niches } from '@/lib/data/niches'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import Logo from '@/components/ui/Logo'
 import ThemeToggle from '@/components/ui/ThemeToggle'
@@ -22,22 +21,11 @@ export default function Header() {
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-
-  useEffect(() => { setMounted(true) }, [])
-  const [nichesOpen, setNichesOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const router = useRouter()
   const searchRef = useRef<HTMLInputElement>(null)
-  const nichesButtonRef = useRef<HTMLButtonElement>(null)
 
-  const closeNiches = useCallback(() => setNichesOpen(false), [])
-
-  const handleNichesKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      closeNiches()
-      nichesButtonRef.current?.focus()
-    }
-  }
+  useEffect(() => { setMounted(true) }, [])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,73 +48,23 @@ export default function Header() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-0.5 ml-3">
-            <div className="relative" onKeyDown={handleNichesKeyDown}>
-              <button
-                ref={nichesButtonRef}
-                onClick={() => setNichesOpen(!nichesOpen)}
-                onBlur={() => setTimeout(() => setNichesOpen(false), 150)}
-                aria-haspopup="menu"
-                aria-expanded={nichesOpen}
-                aria-controls="niches-menu"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                {t.nav.shop}
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${nichesOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {nichesOpen && (
-                <div
-                  id="niches-menu"
-                  role="menu"
-                  aria-label={t.nav.shop}
-                  className={`absolute top-full ${isRTL ? 'right-0' : 'left-0'} mt-1 w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-2 animate-fade-in`}
-                >
-                  {niches.map((niche) => (
-                    <Link
-                      key={niche.id}
-                      href={`/${niche.id}`}
-                      role="menuitem"
-                      onClick={closeNiches}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
-                    >
-                      <span className="text-xl">{niche.emoji}</span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</p>
-                        <p className="text-xs text-gray-500">{niche.categories.length} {t.home.categories}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-            {niches.map((niche) => (
-              <Link
-                key={niche.id}
-                href={`/${niche.id}`}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-              >
-                <span>{niche.emoji}</span>
-                {niche.name.split(' ')[0]}
-              </Link>
-            ))}
-            <Link
-              href="/deals"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
-            >
-              <Tag className="w-3.5 h-3.5" /> {t.nav.deals}
-            </Link>
             <Link
               href="/pricing"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             >
               Tarifs
+            </Link>
+            <Link
+              href="/become-seller"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+            >
+              <Store className="w-3.5 h-3.5" /> Créer ma boutique
             </Link>
           </nav>
 
           {/* Right actions */}
           <div className="ml-auto flex items-center gap-1.5">
-            {/* Theme toggle */}
             <ThemeToggle />
-            {/* Language switcher */}
             <div className="hidden sm:block">
               <LanguageSwitcher />
             </div>
@@ -220,28 +158,23 @@ export default function Header() {
         {/* Mobile menu */}
         {menuOpen && (
           <div id="mobile-menu" className="md:hidden border-t border-gray-100 py-3 space-y-1 animate-fade-in">
-            {niches.map((niche) => (
-              <Link
-                key={niche.id}
-                href={`/${niche.id}`}
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <span className="text-2xl">{niche.emoji}</span>
-                <div>
-                  <p className="font-semibold text-gray-900">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.name ?? niche.name}</p>
-                  <p className="text-xs text-gray-500">{t.niches[niche.id as 'cars'|'animals'|'kids'|'deco']?.description ?? niche.description}</p>
-                </div>
-              </Link>
-            ))}
             <Link
-              href="/deals"
+              href="/pricing"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <span className="text-2xl">🏷️</span>
-              <p className="font-semibold text-red-600">{t.nav.deals}</p>
+              <span className="text-2xl">💎</span>
+              <p className="font-semibold text-gray-900">Tarifs</p>
             </Link>
+            <Link
+              href="/become-seller"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-indigo-50 transition-colors"
+            >
+              <span className="text-2xl">🏪</span>
+              <p className="font-semibold text-indigo-600">Créer ma boutique</p>
+            </Link>
+
             {/* Mobile search */}
             <form onSubmit={(e) => { handleSearch(e); setMenuOpen(false) }} className="px-4 pt-2 pb-1">
               <div className="relative">
@@ -255,7 +188,6 @@ export default function Header() {
                 />
               </div>
             </form>
-            {/* Language switcher mobile */}
             <div className="px-4 py-2">
               <LanguageSwitcher />
             </div>
