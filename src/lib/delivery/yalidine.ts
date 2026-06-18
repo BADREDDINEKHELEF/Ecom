@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://api.yalidine.app/v1'
+const TIMEOUT  = 15_000
 
 function buildHeaders(apiId: string, apiToken: string) {
   return {
@@ -47,6 +48,7 @@ async function createShipmentWithHeaders(
     method: 'POST',
     headers: buildHeaders(apiId, apiToken),
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
   if (!res.ok) {
     const text = await res.text()
@@ -80,6 +82,7 @@ export async function yalidineTrack(trackingNumber: string, apiId: string, apiTo
   try {
     const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}/`, {
       headers: buildHeaders(apiId, apiToken),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -92,6 +95,7 @@ export async function yalidineListParcels(apiId: string, apiToken: string, pageS
   try {
     const res = await fetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
       headers: buildHeaders(apiId, apiToken),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -103,6 +107,7 @@ export async function yalidineGetRates(wilayaName: string) {
   try {
     const res = await fetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
       headers: buildHeaders(process.env.YALIDINE_API_ID!, process.env.YALIDINE_API_TOKEN!),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return await res.json()

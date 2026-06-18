@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://ecom-dz.net/api/v1'
+const TIMEOUT  = 15_000
 
 export function ecomConfigured(): boolean {
   return !!process.env.ECOM_TOKEN
@@ -11,7 +12,6 @@ export async function ecomCreateShipmentWithToken(
   token: string
 ): Promise<ShipmentResult> {
   const body = {
-    // Common Ecom Delivery field names — adjust based on actual API docs
     name:         input.fullName,
     phone:        input.phone,
     address:      input.address,
@@ -21,10 +21,6 @@ export async function ecomCreateShipmentWithToken(
     product:      input.items || 'Colis',
     note:         '',
     can_open:     false,
-    // Also send alternate field name patterns in case API changed
-    client_name:  input.fullName,
-    client_phone: input.phone,
-    product_list: input.items || 'Colis',
   }
 
   let res: Response
@@ -37,6 +33,7 @@ export async function ecomCreateShipmentWithToken(
         'Accept':        'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
   } catch (networkErr) {
     throw new Error(`Ecom Delivery network error: ${networkErr instanceof Error ? networkErr.message : String(networkErr)}`)
@@ -72,6 +69,7 @@ export async function ecomListParcels(token: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -85,6 +83,7 @@ export async function ecomTrack(trackingNumber: string, token: string) {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
       },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

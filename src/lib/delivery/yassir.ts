@@ -2,6 +2,7 @@ import { ShipmentInput, ShipmentResult } from './types'
 
 // Yassir Express Business API — package delivery
 const BASE_URL = 'https://api.yassir.com/v1'
+const TIMEOUT  = 15_000
 
 export function yassirConfigured(): boolean {
   return !!process.env.YASSIR_API_KEY
@@ -13,9 +14,9 @@ export async function yassirCreateShipmentWithKey(
 ): Promise<ShipmentResult> {
   const body = {
     sender: {
-      name:    'ShopDZ',
-      phone:   '',
-      address: 'Alger',
+      name:    process.env.YASSIR_SENDER_NAME ?? 'ShopDZ',
+      phone:   process.env.YASSIR_SENDER_PHONE ?? '',
+      address: process.env.YASSIR_SENDER_ADDRESS ?? 'Alger',
     },
     recipient: {
       name:    input.fullName,
@@ -37,6 +38,7 @@ export async function yassirCreateShipmentWithKey(
       'x-api-key':     apiKey,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -62,6 +64,7 @@ export async function yassirListParcels(apiKey: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/deliveries?page=1&limit=${pageSize}`, {
       headers: { 'x-api-key': apiKey },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -72,6 +75,7 @@ export async function yassirTrack(trackingNumber: string, apiKey: string) {
   try {
     const res = await fetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
       headers: { 'x-api-key': apiKey },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

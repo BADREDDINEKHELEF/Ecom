@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://maystro-delivery.com/api/v1'
+const TIMEOUT  = 15_000
 
 export function maystroConfigured(): boolean {
   return !!process.env.MAYSTRO_TOKEN
@@ -30,6 +31,7 @@ export async function maystroCreateShipmentWithToken(
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -55,6 +57,7 @@ export async function maystroListParcels(token: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/orders/?page=1&page_size=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -65,6 +68,7 @@ export async function maystroTrack(trackingCode: string, token: string) {
   try {
     const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}/`, {
       headers: { 'Authorization': `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

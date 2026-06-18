@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://www.zrexpress.dz/api'
+const TIMEOUT  = 15_000
 
 // ZR Express uses numeric wilaya IDs (1–58) matching the official DZ order
 const WILAYA_NAME_TO_ZR_ID: Record<string, number> = {
@@ -54,6 +55,7 @@ export async function zrCreateShipmentWithToken(
       Authorization: `Token ${token}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -76,6 +78,7 @@ export async function zrListParcels(token: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/parcel?page=1&page_size=${pageSize}`, {
       headers: { Authorization: `Token ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -86,6 +89,7 @@ export async function zrTrack(trackingNumber: string, token: string) {
   try {
     const res = await fetch(`${BASE_URL}/parcel/${encodeURIComponent(trackingNumber)}`, {
       headers: { Authorization: `Token ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

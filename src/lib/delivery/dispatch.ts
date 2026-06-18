@@ -148,6 +148,8 @@ export function normalizeProviderStatus(raw: unknown): string {
   if (['failed', 'echec', 'échoué', 'failed_delivery'].includes(s)) return 'failed'
   if (['cancelled', 'annulé', 'annule', 'canceled'].includes(s)) return 'cancelled'
   if (['pending', 'waiting', 'wait_for_pickup', 'created', '0'].includes(s)) return 'pending'
+  // Unknown status — log so new provider status codes can be added above
+  console.warn(`[normalizeProviderStatus] unrecognized status: "${raw}" — treating as in_transit`)
   return 'in_transit'
 }
 

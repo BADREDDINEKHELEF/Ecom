@@ -3,6 +3,7 @@ import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer, getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { updateShipmentStatus } from '@/lib/supabase/shipments'
+import { updateOrderStatus } from '@/lib/supabase/orders'
 import { dispatchTrack } from '@/lib/delivery/dispatch'
 import { logger } from '@/lib/logger'
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   // Only sync shipments that are not yet in a terminal state
   const { data: activeShipments, error: fetchErr } = await admin
     .from('shipments')
-    .select('id, provider, tracking_number, status')
+    .select('id, provider, tracking_number, status, order_id')
     .eq('vendor_id', vendor.id)
     .not('tracking_number', 'is', null)
     .not('status', 'in', '("delivered","returned","cancelled","failed")')
@@ -64,6 +65,12 @@ export async function POST(req: NextRequest) {
         // Only write to DB if status actually changed
         if (result.status !== shipment.status) {
           await updateShipmentStatus(shipment.id, result.status, result.detail)
+          // Mirror terminal statuses to the parent order so revenue/stats stay accurate
+          if (result.status === 'delivered') {
+            await updateOrderStatus(shipment.order_id, 'delivered')
+          } else if (result.status === 'returned') {
+            await updateOrderStatus(shipment.order_id, 'returned')
+          }
           synced++
         } else {
           skipped++

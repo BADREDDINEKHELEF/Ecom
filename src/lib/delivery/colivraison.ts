@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://api.colivraison.com/api'
+const TIMEOUT  = 15_000
 
 export function colivraisonConfigured(): boolean {
   return !!process.env.COLIVRAISON_TOKEN
@@ -30,6 +31,7 @@ export async function colivraisonCreateShipmentWithToken(
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -56,6 +58,7 @@ export async function colivraisonListParcels(token: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/orders?page=1&per_page=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -66,6 +69,7 @@ export async function colivraisonTrack(trackingCode: string, token: string) {
   try {
     const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
       headers: { 'Authorization': `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

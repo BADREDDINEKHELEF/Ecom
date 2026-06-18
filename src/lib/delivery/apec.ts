@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://api.apec.dz/v1'
+const TIMEOUT  = 15_000
 
 export function apecConfigured(): boolean {
   return !!(process.env.APEC_API_ID && process.env.APEC_API_TOKEN)
@@ -48,6 +49,7 @@ export async function apecCreateShipmentWithCreds(
     method: 'POST',
     headers: buildHeaders(apiId, apiToken),
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -71,6 +73,7 @@ export async function apecListParcels(apiId: string, apiToken: string, pageSize 
   try {
     const res = await fetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
       headers: buildHeaders(apiId, apiToken),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -81,6 +84,7 @@ export async function apecTrack(trackingNumber: string, apiId: string, apiToken:
   try {
     const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
       headers: buildHeaders(apiId, apiToken),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

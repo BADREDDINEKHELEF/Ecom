@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://procolis.com/api_v2'
+const TIMEOUT  = 15_000
 
 export function procolisConfigured(): boolean {
   return !!process.env.PROCOLIS_TOKEN
@@ -34,6 +35,7 @@ export async function procolisCreateShipmentWithToken(
       token,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -57,6 +59,7 @@ export async function procolisListParcels(token: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/colis?page=1&per_page=${pageSize}`, {
       headers: { 'Content-Type': 'application/json', token },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -65,9 +68,13 @@ export async function procolisListParcels(token: string, pageSize = 100) {
 
 export async function procolisTrack(trackingNumber: string, token: string) {
   try {
+    // Note: Procolis API uses '/traking' (their spelling) not '/tracking'
     const res = await fetch(
       `${BASE_URL}/traking?code_suivi=${encodeURIComponent(trackingNumber)}`,
-      { headers: { 'Content-Type': 'application/json', token } }
+      {
+        headers: { 'Content-Type': 'application/json', token },
+        signal: AbortSignal.timeout(TIMEOUT),
+      }
     )
     if (!res.ok) return null
     return res.json()

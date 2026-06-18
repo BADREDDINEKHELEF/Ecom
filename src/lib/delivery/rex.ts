@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 
 const BASE_URL = 'https://rexlivraison.com/api/v1'
+const TIMEOUT  = 15_000
 
 export function rexConfigured(): boolean {
   return !!process.env.REX_TOKEN
@@ -29,6 +30,7 @@ export async function rexCreateShipmentWithToken(
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -54,6 +56,7 @@ export async function rexListParcels(token: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -64,6 +67,7 @@ export async function rexTrack(trackingCode: string, token: string) {
   try {
     const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingCode)}`, {
       headers: { 'Authorization': `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
