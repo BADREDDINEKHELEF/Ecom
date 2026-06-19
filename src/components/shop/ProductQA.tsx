@@ -137,7 +137,7 @@ export default function ProductQA({ productId }: Props) {
                 className="w-full flex items-start gap-3 p-4 text-left"
               >
                 <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-indigo-600 font-bold text-sm">{q.author_name[0].toUpperCase()}</span>
+                  <span className="text-indigo-600 font-bold text-sm">{(q.author_name?.[0] ?? 'U').toUpperCase()}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 text-sm">{q.author_name}</p>

@@ -42,9 +42,14 @@ export function decryptField(ciphertext: string): string {
   const tag     = Buffer.from(tagHex, 'hex')
   const enc     = Buffer.from(encHex, 'hex')
   if (iv.length !== IV_BYTES || tag.length !== TAG_BYTES) return ciphertext
-  const decipher = createDecipheriv(ALGORITHM, key, iv)
-  decipher.setAuthTag(tag)
-  return decipher.update(enc).toString('utf8') + decipher.final('utf8')
+  try {
+    const decipher = createDecipheriv(ALGORITHM, key, iv)
+    decipher.setAuthTag(tag)
+    return decipher.update(enc).toString('utf8') + decipher.final('utf8')
+  } catch {
+    // GCM auth tag mismatch — ciphertext is tampered or corrupted
+    return ''
+  }
 }
 
 /**

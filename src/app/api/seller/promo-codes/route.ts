@@ -14,6 +14,14 @@ const CreatePromoSchema = z.object({
   expires_at:     z.iso.datetime().optional().nullable(),
   free_shipping:  z.boolean().optional().default(false),
   one_per_buyer:  z.boolean().optional().default(false),
+}).superRefine((data, ctx) => {
+  if (data.discount_type === 'percentage' && data.discount_value > 100) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Percentage discount cannot exceed 100%',
+      path: ['discount_value'],
+    })
+  }
 })
 
 const PatchPromoSchema = z.object({

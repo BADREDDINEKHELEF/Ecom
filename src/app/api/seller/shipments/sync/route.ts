@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
     .select('id, provider, tracking_number, status, order_id')
     .eq('vendor_id', vendor.id)
     .not('tracking_number', 'is', null)
-    .not('status', 'in', '("delivered","returned","cancelled","failed")')
+    .neq('status', 'delivered')
+    .neq('status', 'returned')
+    .neq('status', 'cancelled')
+    .neq('status', 'failed')
     .order('updated_at', { ascending: true })
     .limit(50)
 

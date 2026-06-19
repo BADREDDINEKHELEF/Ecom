@@ -51,12 +51,17 @@ export async function POST(req: NextRequest) {
       .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
 
     // Default limit is 1 store for basic/trial; check subscription
+    // Fetch vendor IDs first to avoid raw SQL subquery interpolation
+    const { data: vendorRows } = await admin
+      .from('vendors')
+      .select('id')
+      .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
+    const vendorIds = (vendorRows ?? []).map((v: { id: string }) => v.id)
+
     const { data: subData } = await admin
       .from('vendor_subscriptions')
       .select('plan_id, status')
-      .or(
-        `vendor_id.in.(select id from vendors where user_id='${user.id}' or owner_id='${user.id}')`
-      )
+      .in('vendor_id', vendorIds.length > 0 ? vendorIds : ['00000000-0000-0000-0000-000000000000'])
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)

@@ -5,12 +5,32 @@ import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { upsertProduct } from '@/lib/supabase/mutations'
 import { logger } from '@/lib/logger'
 
+function parseCSVLine(line: string): string[] {
+  const values: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }
+      else { inQuotes = !inQuotes }
+    } else if (ch === ',' && !inQuotes) {
+      values.push(current.trim())
+      current = ''
+    } else {
+      current += ch
+    }
+  }
+  values.push(current.trim())
+  return values
+}
+
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim())
   if (lines.length < 2) return []
-  const headers = lines[0].split(',').map((h) => h.trim().toLowerCase().replace(/^"|"$/g, ''))
+  const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase())
   return lines.slice(1).map((line) => {
-    const values = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''))
+    const values = parseCSVLine(line)
     const row: Record<string, string> = {}
     headers.forEach((h, i) => { row[h] = values[i] ?? '' })
     return row

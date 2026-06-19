@@ -79,7 +79,13 @@ export default function ComparePage() {
                 <th key={p.id} className="p-3 text-center align-top">
                   <Link href={`/${p.nicheId}/${p.id}`} className="block group">
                     <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-2xl overflow-hidden bg-gray-100 mb-2">
-                      <Image src={p.images[0] ?? ''} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform" sizes="128px" />
+                      {p.images[0] ? (
+                        <Image src={p.images[0]} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform" sizes="128px" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-8 h-8 text-gray-300" />
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2">{p.name}</p>
                   </Link>

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const payload = {
       session_id: sessionId,
       name: typeof name === 'string' ? name.slice(0, 200) : null,
-      email: typeof email === 'string' && email.includes('@') ? email.slice(0, 320) : null,
+      email: typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email.slice(0, 320) : null,
       phone: typeof phone === 'string' ? phone.slice(0, 20) : null,
       wilaya: typeof wilaya === 'string' ? wilaya.slice(0, 100) : null,
       address: typeof address === 'string' ? address.slice(0, 500) : null,
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Send abandoned cart email immediately if email provided (degrade gracefully)
-    if (typeof email === 'string' && email.includes('@') && typeof cartTotal === 'number' && cartTotal > 0) {
+    if (typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && typeof cartTotal === 'number' && cartTotal > 0) {
       sendAbandonedCartEmail({
         to:        email,
         name:      typeof name === 'string' ? name : '',
