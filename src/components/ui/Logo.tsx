@@ -62,8 +62,8 @@ export default function Logo({ size = 'md', variant = 'full', dark = false }: Lo
     <span className="flex items-center gap-2 select-none">
       {icon}
       <span className={`font-black tracking-tight leading-none ${textSize}`}>
-        <span className={dark ? 'text-white' : 'text-gray-900'}>Casbah</span>
-        <span className="text-indigo-500"> Store</span>
+        <span className={dark ? 'text-white' : 'text-gray-900'}>Store</span>
+        <span className="text-indigo-500">Dz</span>
       </span>
     </span>
   )

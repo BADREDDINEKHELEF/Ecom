@@ -46,7 +46,7 @@ export default function ContactPage() {
         </a>
 
         <a
-          href="mailto:support@casbahstore.dz"
+          href="mailto:storedz321123@gmail.com"
           className="flex items-center gap-4 bg-indigo-50 border border-indigo-200 rounded-2xl p-5 hover:bg-indigo-100 transition-colors"
         >
           <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -54,7 +54,7 @@ export default function ContactPage() {
           </div>
           <div>
             <p className="font-bold text-gray-900">{c.emailLabel}</p>
-            <p className="text-sm text-gray-600">support@casbahstore.dz</p>
+            <p className="text-sm text-gray-600">storedz321123@gmail.com</p>
           </div>
         </a>
 

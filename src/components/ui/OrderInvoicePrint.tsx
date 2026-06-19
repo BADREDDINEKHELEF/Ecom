@@ -9,7 +9,7 @@ interface Props {
   storeName?: string
 }
 
-export default function OrderInvoicePrint({ order, storeName = 'Casbah Store' }: Props) {
+export default function OrderInvoicePrint({ order, storeName = 'StoreDz' }: Props) {
   const handlePrint = () => window.print()
 
   const items = order.order_items ?? []

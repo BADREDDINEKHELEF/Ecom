@@ -22,8 +22,8 @@ export interface StoreSettings {
 }
 
 const SETTINGS_DEFAULTS: StoreSettings = {
-  storeName:             'Casbah Store',
-  storeEmail:            'support@casbahstore.dz',
+  storeName:             'StoreDz',
+  storeEmail:            'storedz321123@gmail.com',
   phone:                 '+213 555 000 000',
   whatsappNumber:        '213555000000',
   freeShippingThreshold: 5000,

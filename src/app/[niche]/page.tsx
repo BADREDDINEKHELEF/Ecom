@@ -21,10 +21,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!isValidNiche(nicheId)) return {}
   const niche = getNiche(nicheId)!
   return {
-    title: `${niche.name} — Casbah Store`,
+    title: `${niche.name} — StoreDz`,
     description: `${niche.description} Livraison rapide dans toute l'Algérie.`,
     openGraph: {
-      title: `${niche.name} | Casbah Store`,
+      title: `${niche.name} | StoreDz`,
       description: niche.description,
       images: [{ url: niche.banner, width: 1200, height: 630 }],
     },

@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       `https://nominatim.openstreetmap.org/reverse?lat=${latNum}&lon=${lonNum}&format=json&accept-language=fr`,
       {
         headers: {
-          'User-Agent':      'CasbahStore/1.0 (support@casbahstore.dz)',
+          'User-Agent':      'StoreDz/1.0 (storedz321123@gmail.com)',
           'Accept-Language': 'fr',
         },
         next: { revalidate: 0 },

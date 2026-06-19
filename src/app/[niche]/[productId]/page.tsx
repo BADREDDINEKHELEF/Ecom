@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const product = await getProductById(productId)
   if (!product || product.nicheId !== nicheId) return {}
   const niche = getNiche(nicheId)
-  const title = product.metaTitle || `${product.name} | ${niche?.name ?? 'Casbah Store'}`
+  const title = product.metaTitle || `${product.name} | ${niche?.name ?? 'StoreDz'}`
   const desc  = product.metaDescription || product.description || `${product.name} — ${niche?.name ?? ''} — Livraison dans toute l'Algérie.`
   return {
     title,
@@ -70,7 +70,7 @@ export default async function ProductPage({ params }: PageProps) {
         : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
       url: `${SITE_URL}/${nicheId}/${productId}`,
-      seller: { '@type': 'Organization', name: 'Casbah Store' },
+      seller: { '@type': 'Organization', name: 'StoreDz' },
     },
     ...(product.rating > 0 && {
       aggregateRating: {

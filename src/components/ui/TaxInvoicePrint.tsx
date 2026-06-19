@@ -50,7 +50,7 @@ export default function TaxInvoicePrint(props: TaxInvoiceProps) {
       <hr style="margin:12px 0"/>
       <div style="display:flex;justify-content:space-between;gap:20px">
         <div>
-          <strong>Vendeur</strong><br/>Casbah Store<br/>commerce@storedz.dz
+          <strong>Vendeur</strong><br/>StoreDz<br/>storedz321123@gmail.com
         </div>
         <div>
           <strong>Client</strong><br/>${props.buyerName}<br/>${props.buyerPhone}<br/>${props.buyerAddress}
@@ -72,7 +72,7 @@ export default function TaxInvoicePrint(props: TaxInvoiceProps) {
           <tr class="total-row"><td colspan="3">TOTAL TTC</td><td>${props.total.toLocaleString('fr-DZ')} DA</td></tr>
         </tfoot>
       </table>
-      <div class="footer">Casbah Store — facture générée le ${new Date().toLocaleDateString('fr-DZ')}</div>
+      <div class="footer">StoreDz — facture générée le ${new Date().toLocaleDateString('fr-DZ')}</div>
     </body></html>`)
     w.document.close()
     w.focus()

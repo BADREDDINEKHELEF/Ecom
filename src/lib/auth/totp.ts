@@ -53,7 +53,7 @@ export function verifyTotp(token: string, secret: string, window = 1): boolean {
   return false
 }
 
-export async function generateQrCode(secret: string, issuer = 'Casbah Store'): Promise<string> {
+export async function generateQrCode(secret: string, issuer = 'StoreDz'): Promise<string> {
   const otpauth = `otpauth://totp/${encodeURIComponent(issuer)}:admin?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`
   return QRCode.toDataURL(otpauth)
 }
