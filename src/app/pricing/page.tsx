@@ -9,15 +9,15 @@ export const metadata = {
 const PLANS = [
   {
     id: 'starter',
-    name: 'Démarrage',
+    name: 'Gratuit',
     icon: Zap,
-    price: 2000,
-    period: '/ mois',
+    price: 0,
+    period: 'Gratuit pour toujours',
     color: 'border-gray-200',
     headerColor: 'bg-gray-50',
     badgeColor: 'bg-gray-100 text-gray-700',
     ctaColor: 'bg-gray-900 hover:bg-gray-800 text-white',
-    cta: 'Commencer maintenant',
+    cta: 'Commencer gratuitement',
     ctaHref: '/become-seller',
     highlight: false,
     features: [
@@ -39,7 +39,7 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     icon: Star,
-    price: 4000,
+    price: 1990,
     period: '/ mois',
     color: 'border-indigo-500 ring-2 ring-indigo-500/20',
     headerColor: 'bg-indigo-600',
@@ -68,7 +68,7 @@ const PLANS = [
     id: 'business',
     name: 'Business',
     icon: Crown,
-    price: 6000,
+    price: 3990,
     period: '/ mois',
     color: 'border-amber-300',
     headerColor: 'bg-gradient-to-br from-amber-500 to-orange-500',
@@ -164,12 +164,18 @@ export default function PricingPage() {
                   </div>
                   <p className={`font-black text-lg mb-1 ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>{plan.name}</p>
                   <div className="flex items-end gap-1">
-                    <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
-                      {plan.price.toLocaleString('fr')}
-                    </span>
-                    <span className={`text-base font-semibold mb-1 ${plan.highlight ? 'text-white/70' : 'text-gray-500'}`}> DA{plan.period}</span>
+                    {plan.price === 0 ? (
+                      <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>Gratuit</span>
+                    ) : (
+                      <>
+                        <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
+                          {plan.price.toLocaleString('fr')}
+                        </span>
+                        <span className={`text-base font-semibold mb-1 ${plan.highlight ? 'text-white/70' : 'text-gray-500'}`}> DA{plan.period}</span>
+                      </>
+                    )}
                   </div>
-                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-white/70' : 'text-gray-400'}`}>Facturation mensuelle</p>
+                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-white/70' : 'text-gray-400'}`}>{plan.price === 0 ? 'Pour toujours · 10 produits max' : 'Facturation mensuelle'}</p>
                 </div>
 
                 {/* Features */}
