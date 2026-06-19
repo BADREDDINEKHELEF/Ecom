@@ -25,11 +25,14 @@ export async function GET(req: NextRequest) {
       const date = new Date(order.created_at).toLocaleDateString('fr-DZ')
       const ref  = order.id.slice(0, 8).toUpperCase()
       const items = (order.order_items as { product_name: string; quantity: number; product_price: number; subtotal: number }[]) ?? []
+      // Prefix user-supplied text with tab to neutralise CSV formula injection (=,+,-,@)
+      const safeName    = '\t' + order.full_name.replace(/"/g, '""')
       if (items.length === 0) {
-        rows.push(`"${date}","${ref}","${order.full_name}","${order.wilaya}","","0","0","0","${order.total}","${order.shipping_cost}","${order.status}","${order.payment_method}"`)
+        rows.push(`"${date}","${ref}","${safeName}","${order.wilaya}","","0","0","0","${order.total}","${order.shipping_cost}","${order.status}","${order.payment_method}"`)
       } else {
         for (const item of items) {
-          rows.push(`"${date}","${ref}","${order.full_name}","${order.wilaya}","${item.product_name.replace(/"/g, '""')}","${item.quantity}","${item.product_price}","${item.subtotal}","${order.total}","${order.shipping_cost}","${order.status}","${order.payment_method}"`)
+          const safeProduct = '\t' + item.product_name.replace(/"/g, '""')
+          rows.push(`"${date}","${ref}","${safeName}","${order.wilaya}","${safeProduct}","${item.quantity}","${item.product_price}","${item.subtotal}","${order.total}","${order.shipping_cost}","${order.status}","${order.payment_method}"`)
         }
       }
     }

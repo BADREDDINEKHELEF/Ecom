@@ -29,6 +29,7 @@ export async function GET() {
   }
 
   // ── 2. Environment configuration ───────────────────────────────
+  // Check presence without exposing which variable names are required
   const requiredEnvVars = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -37,20 +38,18 @@ export async function GET() {
     'ADMIN_JWT_SECRET',
     'FIELD_ENCRYPTION_KEY',
   ]
-  checks.config = requiredEnvVars.every((v) => Boolean(process.env[v])) ? 'ok' : 'fail'
+  const configOk = requiredEnvVars.every((v) => Boolean(process.env[v]))
 
   // ── Determine overall status ────────────────────────────────────
-  const allOk      = Object.values(checks).every((v) => v === 'ok')
-  const anyFail    = Object.values(checks).some((v) => v === 'fail')
-  const status     = allOk ? 'ok' : anyFail ? 'degraded' : 'ok'
-  const httpStatus = status === 'ok' ? 200 : 503
+  const dbOk       = checks.database === 'ok'
+  const allOk      = dbOk && configOk
+  const status     = allOk ? 'ok' : 'degraded'
+  const httpStatus = allOk ? 200 : 503
 
   return NextResponse.json(
     {
       status,
-      checks,
       latencyMs: Date.now() - start,
-      version:   process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown',
     },
     {
       status: httpStatus,

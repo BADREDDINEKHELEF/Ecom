@@ -58,10 +58,12 @@ export async function GET(req: NextRequest) {
     if (!order) continue
     const date     = new Date(order.created_at).toLocaleDateString('fr-DZ')
     const subtotal = item.quantity * item.unit_price
+    // Prefix product name with tab to neutralise CSV formula injection (=,+,-,@)
+    const safeProduct = `"\t${String(item.product_name ?? '').replace(/"/g, '""')}"`
     rows.push([
       date,
       String(order.id).slice(0, 8).toUpperCase(),
-      `"${String(item.product_name ?? '').replace(/"/g, '""')}"`,
+      safeProduct,
       item.quantity,
       item.unit_price,
       subtotal,

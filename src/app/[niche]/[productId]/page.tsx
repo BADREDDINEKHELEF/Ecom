@@ -88,7 +88,7 @@ export default async function ProductPage({ params }: PageProps) {
       <Script
         id="product-jsonld"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <ProductDetails product={product} niche={niche} related={related} />
     </>

@@ -13,7 +13,7 @@ const PatchSchema = z.object({
   logo_url:         z.string().url().nullable().optional(),
   banner_url:       z.string().url().nullable().optional(),
   cover_url:        z.string().url().nullable().optional(),
-  accent_color:     z.string().max(20).nullable().optional(),
+  accent_color:     z.string().regex(/^#[0-9a-fA-F]{3,8}$/).nullable().optional(),
   seo_title:        z.string().max(200).nullable().optional(),
   seo_description:  z.string().max(500).nullable().optional(),
   social_instagram: z.string().max(100).nullable().optional(),
@@ -32,10 +32,10 @@ const PatchSchema = z.object({
   // Store policies
   return_policy:    z.string().max(2000).nullable().optional(),
   shipping_policy:  z.string().max(2000).nullable().optional(),
-  // Vendor-specific pixels (client-side)
-  meta_pixel_id:    z.string().max(50).nullable().optional(),
-  gtag_id:          z.string().max(50).nullable().optional(),
-  tiktok_pixel_id:  z.string().max(50).nullable().optional(),
+  // Vendor-specific pixels (client-side) — strict format validation prevents script injection
+  meta_pixel_id:    z.string().regex(/^\d{10,20}$/).nullable().optional(),
+  gtag_id:          z.string().regex(/^(G|GTM|AW)-[A-Z0-9]{4,20}$/).nullable().optional(),
+  tiktok_pixel_id:  z.string().regex(/^[A-Z0-9]{10,30}$/).nullable().optional(),
   // Vendor CAPI tokens (server-side, stored securely)
   meta_capi_token:    z.string().max(500).nullable().optional(),
   tiktok_capi_token:  z.string().max(500).nullable().optional(),

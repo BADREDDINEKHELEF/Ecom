@@ -32,7 +32,23 @@ export async function GET(req: NextRequest) {
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
     const config = await getVendorDeliveryConfig(vendor.id)
-    return NextResponse.json({ config })
+    // Never send raw API credentials to the browser — only expose presence flags.
+    const redacted = config ? {
+      default_provider:     config.default_provider,
+      auto_create_shipment: config.auto_create_shipment,
+      notify_whatsapp:      config.notify_whatsapp,
+      notify_sms:           config.notify_sms,
+      has_yalidine:         !!(config.yalidine_api_id && config.yalidine_api_token),
+      has_procolis:         !!config.procolis_token,
+      has_zr:               !!config.zr_token,
+      has_colivraison:      !!config.colivraison_token,
+      has_maystro:          !!config.maystro_token,
+      has_rex:              !!config.rex_token,
+      has_yassir:           !!config.yassir_api_key,
+      has_ecom:             !!config.ecom_token,
+      has_apec:             !!(config.apec_api_id && config.apec_api_token),
+    } : null
+    return NextResponse.json({ config: redacted })
   } catch (err) {
     logger.error('[GET /api/seller/delivery-config]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

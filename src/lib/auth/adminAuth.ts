@@ -25,8 +25,10 @@ export async function requireAdmin(req: NextRequest): Promise<NextResponse | nul
         .maybeSingle()
       if (data !== null) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     } catch {
-      // Fail open on DB error — log but allow the request through to avoid lockout
-      console.error('[requireAdmin] Revocation check failed')
+      // Fail-closed: if revocation check fails, deny the request — a stolen token
+      // must not be usable just because the DB is momentarily unavailable.
+      console.error('[requireAdmin] Revocation check failed — denying request')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
 
