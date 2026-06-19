@@ -351,7 +351,7 @@ export default function HomePage() {
             <p className="text-sm text-gray-400 mb-1">/ mois</p>
             <span className="inline-block mb-4 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">✓ 10 jours d&apos;essai gratuit</span>
             <ul className="space-y-2.5 text-sm text-gray-600">
-              {['Jusqu\'à 10 produits', 'Boutique en ligne personnalisée', 'Commandes WhatsApp', 'Dashboard de base'].map((f) => (
+              {["Jusqu'à 10 produits", 'Boutique + URL personnalisée', 'Commandes WhatsApp', 'Gestion commandes & statuts', 'Variantes couleur & taille'].map((f) => (
                 <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />{f}</li>
               ))}
             </ul>
@@ -365,7 +365,7 @@ export default function HomePage() {
             <p className="text-sm text-indigo-200 mb-1">/ mois</p>
             <span className="inline-block mb-4 text-xs font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">✓ 10 jours d&apos;essai gratuit</span>
             <ul className="space-y-2.5 text-sm text-indigo-100">
-              {['Produits illimités', 'Analytics avancés', 'Paiement CIB + Edahabia', 'API livraison intégrée', 'Support 7j/7 WhatsApp'].map((f) => (
+              {['Produits illimités', 'Analytics avancés (ventes, géo, entonnoir)', 'API livraison (Yalidine, Maystro, ZR…)', 'Codes promo & ventes flash', 'Pixels Meta, TikTok, Google Analytics', 'Support 7j/7 WhatsApp'].map((f) => (
                 <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-white flex-shrink-0" />{f}</li>
               ))}
             </ul>
@@ -378,7 +378,7 @@ export default function HomePage() {
             <p className="text-sm text-amber-100 mb-1">/ mois</p>
             <span className="inline-block mb-4 text-xs font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">✓ 10 jours d&apos;essai gratuit</span>
             <ul className="space-y-2.5 text-sm text-amber-50">
-              {['Produits illimités', 'Domaine personnalisé', 'Suppression du branding', 'Support prioritaire 24/7'].map((f) => (
+              {["Jusqu'à 10 boutiques", 'Tout le plan Pro inclus', 'Domaine personnalisé', 'Suppression du branding StoreDz', 'Facture fiscale B2B', 'Manager dédié + support 24/7'].map((f) => (
                 <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-white flex-shrink-0" />{f}</li>
               ))}
             </ul>
