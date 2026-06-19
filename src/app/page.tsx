@@ -378,7 +378,7 @@ export default function HomePage() {
             <p className="text-sm text-amber-100 mb-1">/ mois</p>
             <span className="inline-block mb-4 text-xs font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">✓ 10 jours d&apos;essai gratuit</span>
             <ul className="space-y-2.5 text-sm text-amber-50">
-              {["Jusqu'à 10 boutiques", 'Tout le plan Pro inclus', 'Domaine personnalisé', 'Suppression du branding StoreDz', 'Facture fiscale B2B', 'Manager dédié + support 24/7'].map((f) => (
+              {["Jusqu'à 3 boutiques", 'Tout le plan Pro inclus', 'Suppression du branding StoreDz', 'Facture fiscale B2B (NIF, NIS, RC)', 'Badge vendeur vérifié', 'Manager dédié + support 24/7'].map((f) => (
                 <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-white flex-shrink-0" />{f}</li>
               ))}
             </ul>
