@@ -340,15 +340,16 @@ export default function HomePage() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div className="text-center mb-10">
           <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Des tarifs simples</h2>
-          <p className="text-gray-500">Commencez gratuitement. Passez au Pro quand vous êtes prêt.</p>
+          <p className="text-gray-500">10 jours d&apos;essai gratuit sur tous les plans. Sans carte bancaire.</p>
         </div>
 
         <div className="grid sm:grid-cols-3 gap-5 mb-8">
-          {/* Gratuit */}
+          {/* Démarrage */}
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-7">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Gratuit</p>
-            <p className="text-4xl font-black text-gray-900 mb-1">Gratuit</p>
-            <p className="text-sm text-gray-400 mb-5">Pour toujours · 10 produits max</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Démarrage</p>
+            <p className="text-4xl font-black text-gray-900 mb-1">2 000 <span className="text-2xl font-semibold text-gray-400">DA</span></p>
+            <p className="text-sm text-gray-400 mb-1">/ mois</p>
+            <span className="inline-block mb-4 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">✓ 10 jours d&apos;essai gratuit</span>
             <ul className="space-y-2.5 text-sm text-gray-600">
               {['Jusqu\'à 10 produits', 'Boutique en ligne personnalisée', 'Commandes WhatsApp', 'Dashboard de base'].map((f) => (
                 <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />{f}</li>
@@ -360,8 +361,9 @@ export default function HomePage() {
           <div className="bg-indigo-600 rounded-2xl border-2 border-indigo-600 p-7 text-white relative overflow-hidden">
             <div className="absolute top-4 right-4 bg-white/20 text-white text-xs font-black px-2.5 py-1 rounded-full">Le plus populaire</div>
             <p className="text-xs font-bold text-indigo-200 uppercase tracking-wider mb-3">Pro</p>
-            <p className="text-4xl font-black mb-1">1 990 <span className="text-2xl font-semibold text-indigo-200">DA</span></p>
-            <p className="text-sm text-indigo-200 mb-5">/ mois · essai 14 jours</p>
+            <p className="text-4xl font-black mb-1">4 000 <span className="text-2xl font-semibold text-indigo-200">DA</span></p>
+            <p className="text-sm text-indigo-200 mb-1">/ mois</p>
+            <span className="inline-block mb-4 text-xs font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">✓ 10 jours d&apos;essai gratuit</span>
             <ul className="space-y-2.5 text-sm text-indigo-100">
               {['Produits illimités', 'Analytics avancés', 'Paiement CIB + Edahabia', 'API livraison intégrée', 'Support 7j/7 WhatsApp'].map((f) => (
                 <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-white flex-shrink-0" />{f}</li>
@@ -372,8 +374,9 @@ export default function HomePage() {
           {/* Business */}
           <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl border-2 border-amber-400 p-7 text-white">
             <p className="text-xs font-bold text-amber-100 uppercase tracking-wider mb-3">Business</p>
-            <p className="text-4xl font-black mb-1">3 990 <span className="text-2xl font-semibold text-amber-100">DA</span></p>
-            <p className="text-sm text-amber-100 mb-5">/ mois · manager dédié</p>
+            <p className="text-4xl font-black mb-1">6 000 <span className="text-2xl font-semibold text-amber-100">DA</span></p>
+            <p className="text-sm text-amber-100 mb-1">/ mois</p>
+            <span className="inline-block mb-4 text-xs font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">✓ 10 jours d&apos;essai gratuit</span>
             <ul className="space-y-2.5 text-sm text-amber-50">
               {['Produits illimités', 'Domaine personnalisé', 'Suppression du branding', 'Support prioritaire 24/7'].map((f) => (
                 <li key={f} className="flex items-center gap-2"><Check className="w-4 h-4 text-white flex-shrink-0" />{f}</li>
@@ -396,9 +399,9 @@ export default function HomePage() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 sm:p-12 text-white text-center shadow-2xl">
           <div className="text-5xl mb-5">🎁</div>
-          <h2 className="text-2xl sm:text-3xl font-black mb-3">Commencez gratuitement</h2>
+          <h2 className="text-2xl sm:text-3xl font-black mb-3">10 jours d&apos;essai gratuit</h2>
           <p className="text-white/60 mb-8 text-base sm:text-lg max-w-xl mx-auto">
-            Créez votre boutique, ajoutez vos produits et commencez à vendre — sans frais de démarrage.
+            Testez votre boutique pendant 10 jours — sans engagement, sans carte bancaire. Payez seulement si vous aimez.
           </p>
 
           <div className="grid sm:grid-cols-3 gap-4 mb-10 text-left">

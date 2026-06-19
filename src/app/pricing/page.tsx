@@ -9,17 +9,18 @@ export const metadata = {
 const PLANS = [
   {
     id: 'starter',
-    name: 'Gratuit',
+    name: 'Démarrage',
     icon: Zap,
-    price: 0,
-    period: 'Gratuit pour toujours',
+    price: 2000,
+    period: '/ mois',
     color: 'border-gray-200',
     headerColor: 'bg-gray-50',
     badgeColor: 'bg-gray-100 text-gray-700',
     ctaColor: 'bg-gray-900 hover:bg-gray-800 text-white',
-    cta: 'Commencer gratuitement',
+    cta: 'Essayer 10 jours gratuit',
     ctaHref: '/become-seller',
     highlight: false,
+    trial: '10 jours d\'essai gratuit',
     features: [
       { text: "Jusqu'à 10 produits", included: true },
       { text: 'Boutique en ligne personnalisée', included: true },
@@ -39,16 +40,17 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     icon: Star,
-    price: 1990,
+    price: 4000,
     period: '/ mois',
     color: 'border-indigo-500 ring-2 ring-indigo-500/20',
     headerColor: 'bg-indigo-600',
     badgeColor: 'bg-indigo-100 text-indigo-700',
     ctaColor: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200',
-    cta: 'Commencer l\'essai 14 jours',
+    cta: 'Essayer 10 jours gratuit',
     ctaHref: '/become-seller',
     highlight: true,
     badge: 'Le plus populaire',
+    trial: '10 jours d\'essai gratuit',
     features: [
       { text: 'Produits illimités', included: true },
       { text: 'Boutique en ligne personnalisée', included: true },
@@ -68,15 +70,16 @@ const PLANS = [
     id: 'business',
     name: 'Business',
     icon: Crown,
-    price: 3990,
+    price: 6000,
     period: '/ mois',
     color: 'border-amber-300',
     headerColor: 'bg-gradient-to-br from-amber-500 to-orange-500',
     badgeColor: 'bg-amber-100 text-amber-700',
     ctaColor: 'bg-amber-500 hover:bg-amber-600 text-white',
-    cta: 'Contacter les ventes',
-    ctaHref: 'https://wa.me/213779528330?text=Je+suis+intéressé+par+le+plan+Business+StoreDz',
+    cta: 'Essayer 10 jours gratuit',
+    ctaHref: '/become-seller',
     highlight: false,
+    trial: '10 jours d\'essai gratuit',
     features: [
       { text: 'Produits illimités', included: true },
       { text: 'Boutique en ligne personnalisée', included: true },
@@ -164,18 +167,17 @@ export default function PricingPage() {
                   </div>
                   <p className={`font-black text-lg mb-1 ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>{plan.name}</p>
                   <div className="flex items-end gap-1">
-                    {plan.price === 0 ? (
-                      <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>Gratuit</span>
-                    ) : (
-                      <>
-                        <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
-                          {plan.price.toLocaleString('fr')}
-                        </span>
-                        <span className={`text-base font-semibold mb-1 ${plan.highlight ? 'text-white/70' : 'text-gray-500'}`}> DA{plan.period}</span>
-                      </>
-                    )}
+                    <span className={`text-4xl font-black ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
+                      {plan.price.toLocaleString('fr')}
+                    </span>
+                    <span className={`text-base font-semibold mb-1 ${plan.highlight ? 'text-white/70' : 'text-gray-500'}`}> DA{plan.period}</span>
                   </div>
-                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-white/70' : 'text-gray-400'}`}>{plan.price === 0 ? 'Pour toujours · 10 produits max' : 'Facturation mensuelle'}</p>
+                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-white/70' : 'text-gray-400'}`}>Facturation mensuelle</p>
+                  {'trial' in plan && (
+                    <span className={`inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-full ${plan.highlight ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                      ✓ 10 jours d&apos;essai gratuit
+                    </span>
+                  )}
                 </div>
 
                 {/* Features */}
