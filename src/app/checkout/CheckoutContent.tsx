@@ -327,8 +327,15 @@ export default function CheckoutContent() {
       markRecovered()
 
       if (data.method === 'satim' && data.formUrl) {
-        clearCart()
-        window.location.href = data.formUrl
+        // Validate Satim URL is an absolute HTTPS URL before redirecting
+        try {
+          const parsed = new URL(data.formUrl)
+          if (parsed.protocol !== 'https:') throw new Error('non-https')
+          clearCart()
+          window.location.href = data.formUrl
+        } catch {
+          setSaveError('Erreur lors de la redirection vers le paiement. Réessayez.')
+        }
         return
       }
 

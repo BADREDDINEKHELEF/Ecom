@@ -25,8 +25,8 @@ function SuccessContent() {
       </div>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         {orderId && (
-          <Link href={`/track?phone=`} className="inline-flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-700 font-bold px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors">
-            <Package className="w-4 h-4" /> Suivre ma commande
+          <Link href="/orders" className="inline-flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-700 font-bold px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors">
+            <Package className="w-4 h-4" /> Mes commandes
           </Link>
         )}
         <Link href="/" className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-indigo-700 transition-colors">

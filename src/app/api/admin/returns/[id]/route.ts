@@ -25,7 +25,7 @@ export async function PATCH(
     if (status)      update.status       = status
     if (adminNote !== undefined) update.admin_note = adminNote
     if (refundAmount !== undefined && !isNaN(Number(refundAmount))) {
-      update.refund_amount = Number(refundAmount)
+      update.refund_amount = Math.max(0, Number(refundAmount))
     }
 
     const { error } = await supabase

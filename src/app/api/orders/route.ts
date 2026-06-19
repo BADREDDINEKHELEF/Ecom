@@ -10,7 +10,13 @@ import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { createSellerNotification } from '@/lib/notifications/seller'
 import { awardPoints, redeemPoints } from '@/lib/loyalty'
 import { firePurchaseCAPI } from '@/lib/analytics/server'
+import { decryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
+
+function decryptCred(v: string | null | undefined): string | null {
+  if (!v) return null
+  return isEncrypted(v) ? decryptField(v) : v
+}
 
 const OrderItemSchema = z.object({
   productId:     z.string().min(1),
@@ -181,11 +187,11 @@ export async function POST(req: NextRequest) {
             (vendors ?? []).map((v: Record<string, string | null>) =>
               firePurchaseCAPI({
                 metaPixelId:     v.meta_pixel_id,
-                metaCAPIToken:   v.meta_capi_token,
+                metaCAPIToken:   decryptCred(v.meta_capi_token),
                 tiktokPixelId:   v.tiktok_pixel_id,
-                tiktokCAPIToken: v.tiktok_capi_token,
+                tiktokCAPIToken: decryptCred(v.tiktok_capi_token),
                 gtagId:          v.gtag_id,
-                gtagApiSecret:   v.gtag_api_secret,
+                gtagApiSecret:   decryptCred(v.gtag_api_secret),
                 orderId, total, items: capiItems,
                 email: buyerEmail, phone: input.phone,
                 clientIp: ip,

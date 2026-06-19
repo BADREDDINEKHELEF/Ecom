@@ -10,9 +10,11 @@ import {
 } from '@/lib/supabase/queries'
 import { dispatchShipment } from '@/lib/delivery/dispatch'
 
+const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
+
 const CreateShipmentSchema = z.object({
   orderId:        z.string().uuid(),
-  provider:       z.string().min(1),
+  provider:       z.enum(SUPPORTED_PROVIDERS),
   trackingNumber: z.string().optional(),
   autoCreate:     z.boolean().optional().default(false),
   notes:          z.string().max(500).optional(),

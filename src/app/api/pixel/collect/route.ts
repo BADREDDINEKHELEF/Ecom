@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { createHash } from 'crypto'
 
 // Transparent 1×1 GIF
@@ -61,7 +62,15 @@ export async function GET(req: NextRequest) {
   return response
 }
 
+// UUID v4 pattern — pixel IDs stored in DB are UUIDs generated at vendor creation
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 export async function POST(req: NextRequest) {
+  // Rate-limit pixel events: 60/min per IP (normal visitor activity)
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? req.headers.get('x-real-ip') ?? 'unknown'
+  const rl = await checkPublicRateLimit(clientIp, 'pixel_collect')
+  if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
+
   try {
     const body = await req.json()
     const { pixelId, event, url, referrer, meta } = body as {
@@ -72,7 +81,7 @@ export async function POST(req: NextRequest) {
       meta?:   Record<string, unknown>
     }
 
-    if (!pixelId || !event) {
+    if (!pixelId || !event || !UUID_RE.test(pixelId)) {
       return NextResponse.json({ ok: false }, { status: 400 })
     }
 

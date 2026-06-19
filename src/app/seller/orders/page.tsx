@@ -319,7 +319,7 @@ export default function SellerOrdersPage() {
                   const actions = NEXT_ACTIONS[order.status] ?? []
                   const isExpanded = expanded === order.id
                   const isRevealed = revealedPhone.has(order.id)
-                  const maskedPhone = order.phone.slice(0, 4) + '•••' + order.phone.slice(-3)
+                  const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + '•••' + order.phone.slice(-3) : order.phone
 
                   return (
                     <div key={order.id + '-m'}
@@ -465,7 +465,7 @@ export default function SellerOrdersPage() {
                     const actions = NEXT_ACTIONS[order.status] ?? []
                     const isExpanded = expanded === order.id
                     const isRevealed = revealedPhone.has(order.id)
-                    const maskedPhone = order.phone.slice(0, 4) + '•••' + order.phone.slice(-3)
+                    const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + '•••' + order.phone.slice(-3) : order.phone
 
                     return (
                       <div key={order.id}

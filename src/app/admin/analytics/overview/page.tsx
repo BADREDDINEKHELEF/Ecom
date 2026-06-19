@@ -61,7 +61,7 @@ export default function OverviewPage() {
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/analytics/overview', {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') ?? '' },
+        
       })
       if (res.ok) {
         setData(await res.json())

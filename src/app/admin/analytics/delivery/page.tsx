@@ -29,7 +29,7 @@ export default function DeliveryPage() {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/analytics/delivery?days=${days}`, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') ?? '' },
+        
       })
       if (res.ok) setData(await res.json())
     } finally {

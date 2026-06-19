@@ -100,9 +100,7 @@ export default function AdminAnalyticsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/analytics?days=${days}`, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') ?? '' },
-      })
+      const res = await fetch(`/api/admin/analytics?days=${days}`)
       if (res.ok) setData(await res.json())
     } finally {
       setLoading(false)

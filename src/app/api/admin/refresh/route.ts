@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminToken, signAdminToken } from '@/lib/auth/jwt'
+import { revokeAdminToken } from '@/lib/auth/adminAuth'
 
 // POST /api/admin/refresh — re-issues the admin cookie without requiring a password.
 // Only works if the current token is still valid (not expired, not tampered).
@@ -10,6 +11,9 @@ export async function POST(req: NextRequest) {
 
   const payload = await verifyAdminToken(token)
   if (!payload) return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 })
+
+  // Revoke the old token before issuing a new one — prevents both being valid simultaneously
+  await revokeAdminToken(token)
 
   // Issue a fresh 8-hour token
   const newToken = await signAdminToken()

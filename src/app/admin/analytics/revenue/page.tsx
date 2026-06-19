@@ -47,7 +47,7 @@ export default function RevenuePage() {
     setLoading(true)
     try {
       const res = await fetch('/api/admin/analytics/revenue', {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') ?? '' },
+        
       })
       if (res.ok) setData(await res.json())
     } finally {
@@ -64,7 +64,7 @@ export default function RevenuePage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-token': localStorage.getItem('adminToken') ?? '',
+          
         },
         body: JSON.stringify({ id }),
       })

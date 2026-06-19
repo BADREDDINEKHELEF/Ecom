@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { getVendorByUserIdServer, updateVendor } from '@/lib/supabase/vendors'
+import { encryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
+
+function encryptIfNeeded(value: string | null | undefined): string | null | undefined {
+  if (!value) return value
+  return isEncrypted(value) ? value : encryptField(value)
+}
 
 const PatchSchema = z.object({
   store_name:       z.string().min(1).max(100).optional(),
@@ -59,13 +65,21 @@ export async function PATCH(req: NextRequest) {
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
 
+    // Encrypt server-side CAPI tokens before storing — never persist them in plaintext
+    const dataToSave = {
+      ...parsed.data,
+      ...(parsed.data.meta_capi_token   !== undefined && { meta_capi_token:   encryptIfNeeded(parsed.data.meta_capi_token) }),
+      ...(parsed.data.tiktok_capi_token !== undefined && { tiktok_capi_token: encryptIfNeeded(parsed.data.tiktok_capi_token) }),
+      ...(parsed.data.gtag_api_secret   !== undefined && { gtag_api_secret:   encryptIfNeeded(parsed.data.gtag_api_secret) }),
+    }
+
     try {
-      await updateVendor(vendor.id, parsed.data)
+      await updateVendor(vendor.id, dataToSave)
     } catch (dbErr) {
       // If migration_033 hasn't been applied yet, retry without the new pixel/CAPI columns
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr)
       if (msg.includes('column') && msg.includes('does not exist')) {
-        const { tiktok_pixel_id, meta_capi_token, tiktok_capi_token, gtag_api_secret, ...safe } = parsed.data
+        const { tiktok_pixel_id, meta_capi_token, tiktok_capi_token, gtag_api_secret, ...safe } = dataToSave
         void tiktok_pixel_id; void meta_capi_token; void tiktok_capi_token; void gtag_api_secret
         await updateVendor(vendor.id, safe)
       } else {
