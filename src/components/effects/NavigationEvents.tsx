@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation'
 
 /**
  * Fires custom DOM events for PixelLoadingBar:
- *   shopdzNavStart — fires when Next.js pushState/replaceState is called
- *   shopdzNavEnd   — fires when the pathname hook resolves to the new value
+ *   storedzNavStart — fires when Next.js pushState/replaceState is called
+ *   storedzNavEnd   — fires when the pathname hook resolves to the new value
  *
  * Mount once in layout.tsx alongside PixelLoadingBar.
  */
@@ -20,11 +20,11 @@ export default function NavigationEvents() {
     const origReplace = history.replaceState.bind(history)
 
     history.pushState = function (...args) {
-      window.dispatchEvent(new CustomEvent('shopdzNavStart'))
+      window.dispatchEvent(new CustomEvent('storedzNavStart'))
       return origPush(...args)
     }
     history.replaceState = function (...args) {
-      window.dispatchEvent(new CustomEvent('shopdzNavStart'))
+      window.dispatchEvent(new CustomEvent('storedzNavStart'))
       return origReplace(...args)
     }
 
@@ -38,7 +38,7 @@ export default function NavigationEvents() {
   useEffect(() => {
     if (prevPathname.current === pathname) return
     prevPathname.current = pathname
-    window.dispatchEvent(new CustomEvent('shopdzNavEnd', { detail: { pathname } }))
+    window.dispatchEvent(new CustomEvent('storedzNavEnd', { detail: { pathname } }))
   }, [pathname])
 
   return null

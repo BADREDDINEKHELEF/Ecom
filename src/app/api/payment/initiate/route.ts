@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { satimRegisterOrder, satimConfigured } from '@/lib/payment/satim'
 import { baridimobInitiatePayment, baridimobConfigured } from '@/lib/payment/baridimob'
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       const bmResult = await baridimobInitiatePayment({
         orderNumber: orderId,
         amountDZD:   total,
-        description: `Commande ShopDZ #${orderId.slice(0, 8)}`,
+        description: `Commande StoreDz #${orderId.slice(0, 8)}`,
         callbackUrl: `${appUrl}/api/payment/callback`,
       })
       return NextResponse.json({ orderId, qrCodeData: bmResult.qrCodeData, deepLink: bmResult.deepLink, expiresAt: bmResult.expiresAt, method: 'baridimob' }, { status: 201 })
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     const satimResult = await satimRegisterOrder({
       orderNumber:    orderId,
       amountCentimes: orderAmountCentimes,
-      description:    `Commande ShopDZ #${orderId.slice(0, 8)}`,
+      description:    `Commande StoreDz #${orderId.slice(0, 8)}`,
       returnUrl:      `${appUrl}/api/payment/callback?result=success&orderId=${orderId}`,
       failUrl:        `${appUrl}/api/payment/callback?result=fail&orderId=${orderId}`,
       language:       'fr',

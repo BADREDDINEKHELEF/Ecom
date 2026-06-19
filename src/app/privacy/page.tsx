@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Politique de confidentialité — ShopDZ',
-  description: 'Comment ShopDZ collecte, utilise et protège vos données personnelles conformément à la loi algérienne 18-07.',
+  title: 'Politique de confidentialité — StoreDz',
+  description: 'Comment StoreDz collecte, utilise et protège vos données personnelles conformément à la loi algérienne 18-07.',
 }
 
 const LAST_UPDATED = 'Juin 2025'
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          Retour à ShopDZ
+          Retour à StoreDz
         </Link>
 
         <div className="bg-white rounded-2xl p-8 shadow-sm">
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-lg font-bold text-gray-900 mb-2">1. Données collectées</h2>
-              <p>Lorsque vous passez une commande sur ShopDZ, nous collectons les données personnelles suivantes :</p>
+              <p>Lorsque vous passez une commande sur StoreDz, nous collectons les données personnelles suivantes :</p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>Votre nom complet et numéro de téléphone (nécessaires pour le traitement et la livraison de votre commande)</li>
                 <li>Votre adresse de livraison : wilaya, commune et adresse précise</li>
@@ -109,8 +109,8 @@ export default function PrivacyPage() {
               </ul>
               <p className="mt-2">
                 Pour exercer ces droits, contactez-nous à{' '}
-                <a href="mailto:privacy@shopdz.dz" className="text-indigo-600 hover:underline">
-                  privacy@shopdz.dz
+                <a href="mailto:privacy@storedz.dz" className="text-indigo-600 hover:underline">
+                  privacy@storedz.dz
                 </a>
               </p>
             </section>
@@ -118,7 +118,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-lg font-bold text-gray-900 mb-2">7. Cookies</h2>
               <p>
-                ShopDZ utilise uniquement des <strong>cookies fonctionnels</strong> — spécifiquement un cookie
+                StoreDz utilise uniquement des <strong>cookies fonctionnels</strong> — spécifiquement un cookie
                 de session httpOnly pour l'authentification des vendeurs et administrateurs. Nous n'utilisons
                 pas de cookies publicitaires ou de suivi comportemental.
               </p>
@@ -128,8 +128,8 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-gray-900 mb-2">8. Contact</h2>
               <p>
                 Pour toute question relative à la confidentialité ou pour exercer vos droits :{' '}
-                <a href="mailto:privacy@shopdz.dz" className="text-indigo-600 hover:underline">
-                  privacy@shopdz.dz
+                <a href="mailto:privacy@storedz.dz" className="text-indigo-600 hover:underline">
+                  privacy@storedz.dz
                 </a>
               </p>
             </section>

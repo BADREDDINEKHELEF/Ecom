@@ -37,9 +37,9 @@ export default function PixelDemoPage() {
   }
 
   function simulateNav() {
-    window.dispatchEvent(new CustomEvent('shopdzNavStart'))
+    window.dispatchEvent(new CustomEvent('storedzNavStart'))
     setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('shopdzNavEnd', { detail: { pathname: '/demo' } }))
+      window.dispatchEvent(new CustomEvent('storedzNavEnd', { detail: { pathname: '/demo' } }))
     }, 1500)
   }
 
@@ -78,7 +78,7 @@ export default function PixelDemoPage() {
         marginBottom: 8,
         lineHeight: 1.6,
       }}>
-        🎮 ShopDZ Pixel System
+        🎮 StoreDz Pixel System
       </h1>
       <p style={{
         fontFamily: '"Press Start 2P", monospace',

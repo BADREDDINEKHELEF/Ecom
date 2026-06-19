@@ -97,8 +97,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const vendor = await getVendorBySlug(slug)
   if (!vendor) return { title: 'Boutique introuvable' }
   return {
-    title:       vendor.seo_title ?? `${vendor.store_name} — ShopDZ`,
-    description: vendor.seo_description ?? vendor.description ?? `Boutique ${vendor.store_name} sur ShopDZ`,
+    title:       vendor.seo_title ?? `${vendor.store_name} — StoreDz`,
+    description: vendor.seo_description ?? vendor.description ?? `Boutique ${vendor.store_name} sur StoreDz`,
     openGraph: {
       title:       vendor.store_name,
       description: vendor.description ?? '',
@@ -193,7 +193,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             href="/"
             className="inline-flex items-center gap-1.5 text-white/80 text-sm font-medium bg-white/10 backdrop-blur-sm border border-white/20 px-3.5 py-1.5 rounded-full hover:bg-white/20 transition-colors"
           >
-            ← ShopDZ
+            ← StoreDz
           </Link>
         </div>
 
@@ -272,7 +272,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
               href="/"
               className="text-[#86868b] text-xs font-medium hover:text-[#1d1d1f] transition-colors hidden sm:block flex-shrink-0"
             >
-              ShopDZ
+              StoreDz
             </Link>
             <span className="text-[#c7c7cc] text-sm hidden sm:block">/</span>
             {vendor.logo_url && (

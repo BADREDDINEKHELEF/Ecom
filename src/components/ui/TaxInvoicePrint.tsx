@@ -50,7 +50,7 @@ export default function TaxInvoicePrint(props: TaxInvoiceProps) {
       <hr style="margin:12px 0"/>
       <div style="display:flex;justify-content:space-between;gap:20px">
         <div>
-          <strong>Vendeur</strong><br/>Casbah Store<br/>commerce@shopdz.dz
+          <strong>Vendeur</strong><br/>Casbah Store<br/>commerce@storedz.dz
         </div>
         <div>
           <strong>Client</strong><br/>${props.buyerName}<br/>${props.buyerPhone}<br/>${props.buyerAddress}

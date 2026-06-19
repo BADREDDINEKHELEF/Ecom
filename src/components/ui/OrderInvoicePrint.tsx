@@ -33,7 +33,7 @@ export default function OrderInvoicePrint({ order, storeName = 'Casbah Store' }:
         <div className="flex items-start justify-between mb-8">
           <div>
             <h1 className="text-2xl font-black">{storeName}</h1>
-            <p className="text-gray-600 text-sm mt-1">Algérie · support@shopdz.dz</p>
+            <p className="text-gray-600 text-sm mt-1">Algérie · support@storedz.dz</p>
           </div>
           <div className="text-right">
             <p className="text-lg font-bold">FACTURE</p>

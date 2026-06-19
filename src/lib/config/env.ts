@@ -60,7 +60,7 @@ const OPTIONAL_ENV = {
   WHATSAPP_ACCESS_TOKEN:    'WhatsApp permanent system user token — from Meta Business Manager',
 
   // ── App ───────────────────────────────────────────────────────────────
-  NEXT_PUBLIC_APP_URL:      'Your production URL (e.g. https://shopdz.dz) — used in payment callback URLs',
+  NEXT_PUBLIC_APP_URL:      'Your production URL (e.g. https://storedz.dz) — used in payment callback URLs',
   ADMIN_IP_ALLOWLIST:       'Comma-separated IP addresses allowed to access /admin (optional hardening)',
   ADMIN_TOTP_SECRET:        '2FA TOTP secret — generate with the /admin/totp setup page',
 }
@@ -119,13 +119,13 @@ export function assertEnv(): void {
   const { valid, errors, warnings } = validateEnv()
 
   if (warnings.length > 0 && process.env.NODE_ENV !== 'test') {
-    console.warn('\n🟡 ShopDZ — Some features are disabled (env vars not set):')
+    console.warn('\n🟡 StoreDz — Some features are disabled (env vars not set):')
     warnings.forEach((w) => console.warn('  ' + w))
     console.warn('')
   }
 
   if (!valid) {
-    console.error('\n🚨 ShopDZ — Critical env vars missing (app may not work correctly):')
+    console.error('\n🚨 StoreDz — Critical env vars missing (app may not work correctly):')
     errors.forEach((e) => console.error('  ' + e))
     console.error('  → Add these in Vercel Dashboard > Settings > Environment Variables\n')
     // Never process.exit() — let the app start and fail gracefully per-request

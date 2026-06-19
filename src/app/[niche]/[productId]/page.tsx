@@ -7,7 +7,7 @@ import ProductDetails from './ProductDetails'
 
 export const dynamic = 'force-dynamic'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://shopdz.dz'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://storedz.dz'
 
 interface PageProps {
   params: Promise<{ niche: string; productId: string }>

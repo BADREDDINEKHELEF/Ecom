@@ -1,4 +1,4 @@
-const CACHE = 'shopdz-v1'
+﻿const CACHE = 'storedz-v1'
 const STATIC = ['/offline', '/manifest.json']
 
 self.addEventListener('install', (e) => {

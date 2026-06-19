@@ -12,8 +12,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const vendor = await getVendorBySlug(storeSlug)
   if (!vendor) return {}
   return {
-    title: `${vendor.store_name} | ShopDZ`,
-    description: vendor.description || `Shop at ${vendor.store_name} on ShopDZ`,
+    title: `${vendor.store_name} | StoreDz`,
+    description: vendor.description || `Shop at ${vendor.store_name} on StoreDz`,
   }
 }
 

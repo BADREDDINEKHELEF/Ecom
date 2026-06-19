@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Lang } from './translations'
 
-const STORAGE_KEY = 'shopdz_locale'
+const STORAGE_KEY = 'storedz_locale'
 
 export function useLocale() {
   const [locale, setLocaleState] = useState<Lang>('fr')

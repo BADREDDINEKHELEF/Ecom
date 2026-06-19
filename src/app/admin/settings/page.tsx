@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Save, Store, Truck, CreditCard, Loader2, CheckCircle, ExternalLink, Zap, Circle, Banknote, Megaphone } from 'lucide-react'
@@ -199,7 +199,7 @@ export default function AdminSettingsPage() {
             <textarea
               value={form.paymentNote}
               onChange={(e) => set('paymentNote', e.target.value)}
-              placeholder="Ex: Au nom de ShopDZ SARL — inclure votre ID boutique en référence"
+              placeholder="Ex: Au nom de StoreDz SARL — inclure votre ID boutique en référence"
               rows={3}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 transition-colors resize-none"
             />

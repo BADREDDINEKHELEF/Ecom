@@ -86,7 +86,7 @@ export default function SellerSignupSection() {
         {/* Header */}
         <div className="text-center mb-12">
           <span className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 text-sm font-semibold px-4 py-1.5 rounded-full mb-4">
-            <Store className="w-4 h-4" /> {t.seller.sellOnShopDZ}
+            <Store className="w-4 h-4" /> {t.seller.sellOnStoreDz}
           </span>
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-3">
             {t.seller.startStoreToday}
@@ -212,7 +212,7 @@ export default function SellerSignupSection() {
                   <div>
                     <label htmlFor="ss-storeSlug" className="sr-only">{t.seller.myStorePH}</label>
                     <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
-                      <span className="px-3 py-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap">shopdz.dz/shop/</span>
+                      <span className="px-3 py-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap">storedz.dz/shop/</span>
                       <input id="ss-storeSlug" required type="text" value={form.storeSlug}
                         onChange={(e) => f('storeSlug', slugify(e.target.value))}
                         placeholder={t.seller.myStorePH}

@@ -267,7 +267,7 @@ export default function WholesalePage() {
       {/* Footer Nav */}
       <div className="py-6 px-4 text-center border-t border-gray-100">
         <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
-          <Package className="inline w-4 h-4 mr-1" /> {w.backToShopDZ}
+          <Package className="inline w-4 h-4 mr-1" /> {w.backToStoreDz}
         </Link>
       </div>
     </div>

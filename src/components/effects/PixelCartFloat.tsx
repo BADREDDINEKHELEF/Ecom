@@ -196,7 +196,7 @@ export default function PixelCartFloat({
 
         // Trigger cart icon bounce via custom event
         if (!burstSpawned) {
-          window.dispatchEvent(new CustomEvent('shopdzCartBounce'))
+          window.dispatchEvent(new CustomEvent('storedzCartBounce'))
         }
       }
 

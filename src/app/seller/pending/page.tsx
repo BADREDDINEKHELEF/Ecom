@@ -62,7 +62,7 @@ export default function SellerPendingPage() {
               </div>
             )}
             <p className="text-xs text-gray-400 mb-6">
-              Contactez-nous à <a href="mailto:support@shopdz.dz" className="text-emerald-600 underline">support@shopdz.dz</a> pour plus d&apos;informations.
+              Contactez-nous à <a href="mailto:support@storedz.dz" className="text-emerald-600 underline">support@storedz.dz</a> pour plus d&apos;informations.
             </p>
           </>
         ) : (

@@ -1,6 +1,6 @@
 /**
  * Analytics helpers — safe wrappers around Meta Pixel (fbq), Google Tag (gtag),
- * and the ShopDZ first-party pixel (window.__pixel).
+ * and the StoreDz first-party pixel (window.__pixel).
  * All calls are no-ops when scripts are blocked (ad blockers) or not configured.
  */
 

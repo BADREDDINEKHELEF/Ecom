@@ -111,7 +111,7 @@ export default function SellerPromotionsPage() {
       ? `${code.discount_value}% de réduction`
       : `${formatPrice(code.discount_value)} de réduction`
     const msg = encodeURIComponent(
-      `🎁 Code promo exclusif : *${code.code}*\n${discount} sur votre commande.\n${code.min_order > 0 ? `Commande minimum : ${formatPrice(code.min_order)}.\n` : ''}${code.expires_at ? `Valable jusqu\'au ${new Date(code.expires_at).toLocaleDateString('fr-DZ')}.\n` : ''}Commandez sur shopdz.dz/shop/${vendor?.store_slug}`
+      `🎁 Code promo exclusif : *${code.code}*\n${discount} sur votre commande.\n${code.min_order > 0 ? `Commande minimum : ${formatPrice(code.min_order)}.\n` : ''}${code.expires_at ? `Valable jusqu\'au ${new Date(code.expires_at).toLocaleDateString('fr-DZ')}.\n` : ''}Commandez sur storedz.dz/shop/${vendor?.store_slug}`
     )
     window.open(`https://wa.me/?text=${msg}`, '_blank')
   }

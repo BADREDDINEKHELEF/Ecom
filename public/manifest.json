@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "Casbah Store",
-  "short_name": "ShopDZ",
+  "short_name": "StoreDz",
   "description": "Boutique e-commerce algérienne — livraison partout en Algérie",
   "start_url": "/",
   "display": "standalone",

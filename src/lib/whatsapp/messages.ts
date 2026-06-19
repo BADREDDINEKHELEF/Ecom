@@ -17,7 +17,7 @@ function formatPhone(phone: string): string {
 }
 
 function buildMessage(order: OrderInfo): string {
-  const storeName = process.env.NEXT_PUBLIC_STORE_NAME ?? 'ShopDZ'
+  const storeName = process.env.NEXT_PUBLIC_STORE_NAME ?? 'StoreDz'
   const id = order.id.slice(0, 8).toUpperCase()
 
   switch (order.status) {

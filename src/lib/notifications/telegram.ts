@@ -22,7 +22,7 @@ export async function sendTelegramAlert(
   if (!token || !chatId) return
 
   const now = new Date().toLocaleString('fr-DZ', { timeZone: 'Africa/Algiers' })
-  const text = `${EMOJI[severity]} <b>ShopDZ Alert</b>\n\n${message}\n\n<i>${now}</i>`
+  const text = `${EMOJI[severity]} <b>StoreDz Alert</b>\n\n${message}\n\n<i>${now}</i>`
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

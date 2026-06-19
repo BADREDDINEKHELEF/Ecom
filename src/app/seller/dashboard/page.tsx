@@ -321,7 +321,7 @@ export default function SellerDashboardPage() {
           <div className="flex-1 min-w-0">
             <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Lien de votre boutique</p>
             <p className="text-white text-sm font-medium truncate">
-              {typeof window !== 'undefined' ? window.location.origin : 'https://shopdz.dz'}/store/{vendor.store_slug}
+              {typeof window !== 'undefined' ? window.location.origin : 'https://storedz.dz'}/store/{vendor.store_slug}
             </p>
           </div>
           <a

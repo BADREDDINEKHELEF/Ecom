@@ -247,7 +247,7 @@ export default function SellerRegisterPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.storeUrlLabel}</label>
               <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
-                <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">shopdz.dz/shop/</span>
+                <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">storedz.dz/shop/</span>
                 <input required type="text" value={form.storeSlug}
                   onChange={(e) => f('storeSlug', slugify(e.target.value))}
                   placeholder="my-shop"

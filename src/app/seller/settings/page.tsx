@@ -364,9 +364,9 @@ export default function SellerSettingsPage() {
                 className={INPUT} />
             </Field>
 
-            <Field label="URL de votre boutique" hint="Votre lien unique : shopdz.dz/store/votre-nom — uniquement des lettres, chiffres et tirets">
+            <Field label="URL de votre boutique" hint="Votre lien unique : storedz.dz/store/votre-nom — uniquement des lettres, chiffres et tirets">
               <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
-                <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">shopdz.dz/store/</span>
+                <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">storedz.dz/store/</span>
                 <input required type="text" value={form.store_slug}
                   onChange={(e) => setForm({ ...form, store_slug: slugify(e.target.value) })}
                   className="flex-1 px-3 py-3 text-sm focus:outline-none" />
@@ -571,7 +571,7 @@ export default function SellerSettingsPage() {
             <Field label="Titre SEO" hint={`${form.seo_title.length}/70 caractères — apparaît dans l'onglet du navigateur et Google`}>
               <input type="text" value={form.seo_title} maxLength={70}
                 onChange={(e) => setForm({ ...form, seo_title: e.target.value })}
-                placeholder={`${form.store_name} — ShopDZ`}
+                placeholder={`${form.store_name} — StoreDz`}
                 className={INPUT} />
             </Field>
             <Field label="Méta-description" hint={`${form.seo_description.length}/160 caractères — résumé affiché dans les résultats Google`}>
@@ -701,21 +701,21 @@ export default function SellerSettingsPage() {
               </Field>
             </div>
 
-            {/* ShopDZ first-party pixel */}
+            {/* StoreDz first-party pixel */}
             {vendor.pixel_id && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-gray-800">Pixel ShopDZ (1st party)</p>
+                  <p className="text-sm font-bold text-gray-800">Pixel StoreDz (1st party)</p>
                   <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">ACTIF</span>
                 </div>
-                <p className="text-xs text-gray-500">Snippet à intégrer sur n&apos;importe quelle page externe pour collecter des données dans votre tableau de bord ShopDZ.</p>
+                <p className="text-xs text-gray-500">Snippet à intégrer sur n&apos;importe quelle page externe pour collecter des données dans votre tableau de bord StoreDz.</p>
                 <div className="relative">
                   <pre className="bg-gray-900 text-green-400 text-[11px] rounded-xl p-3 overflow-x-auto leading-relaxed whitespace-pre-wrap break-all">
-{`<img src="https://shopdz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`}
+{`<img src="https://storedz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`}
                   </pre>
                   <button type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(`<img src="https://shopdz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`)
+                      navigator.clipboard.writeText(`<img src="https://storedz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`)
                       setPixelCopied(true)
                       setTimeout(() => setPixelCopied(false), 2000)
                     }}

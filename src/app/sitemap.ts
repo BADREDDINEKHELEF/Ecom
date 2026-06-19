@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 import { niches } from '@/lib/data/niches'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://shopdz.dz'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://storedz.dz'
 
 export const revalidate = 3600
 

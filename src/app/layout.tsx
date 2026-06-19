@@ -17,12 +17,12 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: { default: 'ShopDZ — Ouvrez votre boutique en ligne', template: '%s | ShopDZ' },
+  title: { default: 'StoreDz — Ouvrez votre boutique en ligne', template: '%s | StoreDz' },
   description: 'Créez votre boutique en ligne en Algérie. Livraison vers les 58 wilayas. 0% de commission.',
   keywords: ['algerie', 'algérie', 'الجزائر', 'boutique en ligne', 'vendeur', 'e-commerce'],
   manifest: '/manifest.json',
   openGraph: {
-    siteName: 'ShopDZ',
+    siteName: 'StoreDz',
     locale: 'fr_DZ',
     type: 'website',
   },

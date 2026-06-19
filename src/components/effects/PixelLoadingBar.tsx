@@ -90,11 +90,11 @@ export default function PixelLoadingBar() {
       return () => clearTimeout(t1)
     }
 
-    window.addEventListener('shopdzNavStart', onNavStart)
-    window.addEventListener('shopdzNavEnd',   onNavEnd)
+    window.addEventListener('storedzNavStart', onNavStart)
+    window.addEventListener('storedzNavEnd',   onNavEnd)
     return () => {
-      window.removeEventListener('shopdzNavStart', onNavStart)
-      window.removeEventListener('shopdzNavEnd',   onNavEnd)
+      window.removeEventListener('storedzNavStart', onNavStart)
+      window.removeEventListener('storedzNavEnd',   onNavEnd)
       cancelAnimationFrame(rafRef.current)
     }
   }, [])

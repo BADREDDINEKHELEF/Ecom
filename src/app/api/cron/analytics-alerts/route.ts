@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendTelegramAlert } from '@/lib/notifications/telegram'
 
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     const severity = cancelRate > 20 || totalOrders === 0 ? 'high' : 'medium'
 
     const lines = [
-      `📊 <b>Rapport quotidien ShopDZ</b> — ${ySince}`,
+      `📊 <b>Rapport quotidien StoreDz</b> — ${ySince}`,
       '',
       `📦 Commandes : <b>${totalOrders}</b>`,
       `💰 GMV : <b>${gmv.toLocaleString('fr')} DA</b>`,

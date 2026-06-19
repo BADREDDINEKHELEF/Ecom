@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { formatPrice } from '@/lib/utils'
 
-const KEY = 'shopdzRecentlyViewed'
+const KEY = 'storedzRecentlyViewed'
 const MAX = 8
 
 export interface RecentItem {

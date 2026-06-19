@@ -14,7 +14,7 @@ export async function yassirCreateShipmentWithKey(
 ): Promise<ShipmentResult> {
   const body = {
     sender: {
-      name:    process.env.YASSIR_SENDER_NAME ?? 'ShopDZ',
+      name:    process.env.YASSIR_SENDER_NAME ?? 'StoreDz',
       phone:   process.env.YASSIR_SENDER_PHONE ?? '',
       address: process.env.YASSIR_SENDER_ADDRESS ?? 'Alger',
     },

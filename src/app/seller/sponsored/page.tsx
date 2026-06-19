@@ -139,7 +139,7 @@ export default function SellerSponsoredPage() {
                 <Zap className="w-5 h-5 text-amber-500" />
                 <h1 className="text-2xl font-black text-gray-900">Produits Sponsorisés</h1>
               </div>
-              <p className="text-gray-500 text-sm">Boostez la visibilité de vos produits sur ShopDZ</p>
+              <p className="text-gray-500 text-sm">Boostez la visibilité de vos produits sur StoreDz</p>
             </div>
             <button
               onClick={() => setShowForm(!showForm)}

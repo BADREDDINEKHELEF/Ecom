@@ -4,10 +4,10 @@ import { useCallback, useRef } from 'react'
 
 function getSessionId(): string {
   if (typeof window === 'undefined') return ''
-  let id = sessionStorage.getItem('shopdzSession')
+  let id = sessionStorage.getItem('storedzSession')
   if (!id) {
     id = `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    sessionStorage.setItem('shopdzSession', id)
+    sessionStorage.setItem('storedzSession', id)
   }
   return id
 }
@@ -44,7 +44,7 @@ export function useAbandonedCheckout() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId, orderId }),
     }).catch(() => {})
-    sessionStorage.removeItem('shopdzSession')
+    sessionStorage.removeItem('storedzSession')
   }, [])
 
   return { save, markRecovered }
