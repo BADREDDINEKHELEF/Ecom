@@ -7,49 +7,60 @@ interface LogoProps {
 export default function Logo({ size = 'md', variant = 'full', dark = false }: LogoProps) {
   const iconSize = size === 'sm' ? 28 : size === 'lg' ? 44 : 36
 
+  // Colors: on dark bg use white icon; on light bg use indigo icon
+  const houseColor = dark ? 'white' : '#3730a3'
+  const bagColor   = dark ? 'white' : '#3730a3'
+
   const icon = (
     <svg
       width={iconSize}
       height={iconSize}
-      viewBox="0 0 40 40"
+      viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Background tile */}
-      <rect width="40" height="40" rx="10" fill="#4f46e5" />
-
-      {/* Casbah arch door — main arch */}
+      {/* Roof / chevron — open bottom */}
       <path
-        d="M20 8 C13 8 10 13 10 18 L10 32 L30 32 L30 18 C30 13 27 8 20 8 Z"
-        fill="#6366f1"
+        d="M12 46 L50 12 L88 46"
+        stroke={houseColor}
+        strokeWidth="9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
       />
 
-      {/* Inner arch cutout (door opening) */}
+      {/* Left wall */}
+      <rect x="14" y="44" width="13" height="38" rx="3" fill={houseColor} />
+
+      {/* Right wall */}
+      <rect x="73" y="44" width="13" height="38" rx="3" fill={houseColor} />
+
+      {/* Bottom bar */}
+      <rect x="14" y="79" width="72" height="3" rx="1.5" fill={houseColor} />
+
+      {/* Arch opening — two rounded pillars + arch top */}
       <path
-        d="M20 15 C16.5 15 14 17.5 14 21 L14 32 L26 32 L26 21 C26 17.5 23.5 15 20 15 Z"
-        fill="#4f46e5"
+        d="M33 82 L33 60 Q33 48 50 48 Q67 48 67 60 L67 82"
+        stroke={houseColor}
+        strokeWidth="8"
+        strokeLinecap="round"
+        fill="none"
       />
 
-      {/* Door arch hole */}
+      {/* Shopping bag body */}
+      <rect x="40" y="60" width="20" height="18" rx="3" fill={bagColor} />
+
+      {/* Shopping bag handle */}
       <path
-        d="M20 16 C17.2 16 15 18.2 15 21 L15 32 L25 32 L25 21 C25 18.2 22.8 16 20 16 Z"
-        fill="white"
-        opacity="0.15"
+        d="M44 60 Q44 54 50 54 Q56 54 56 60"
+        stroke={bagColor}
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
       />
 
-      {/* Left window */}
-      <ellipse cx="13" cy="22" rx="2" ry="2.5" fill="white" opacity="0.5" />
-
-      {/* Right window */}
-      <ellipse cx="27" cy="22" rx="2" ry="2.5" fill="white" opacity="0.5" />
-
-      {/* Roofline decorative dots */}
-      <circle cx="20" cy="6" r="1.5" fill="#a5b4fc" />
-      <circle cx="14" cy="8" r="1" fill="#a5b4fc" opacity="0.7" />
-      <circle cx="26" cy="8" r="1" fill="#a5b4fc" opacity="0.7" />
-
-      {/* Ground line */}
-      <rect x="8" y="32" width="24" height="2" rx="1" fill="white" opacity="0.3" />
+      {/* Orange accent dot */}
+      <circle cx="72" cy="24" r="7" fill="#f59e0b" />
     </svg>
   )
 
@@ -63,7 +74,7 @@ export default function Logo({ size = 'md', variant = 'full', dark = false }: Lo
       {icon}
       <span className={`font-black tracking-tight leading-none ${textSize}`}>
         <span className={dark ? 'text-white' : 'text-gray-900'}>Store</span>
-        <span className="text-indigo-500">Dz</span>
+        <span className={dark ? 'text-amber-400' : 'text-indigo-600'}>Dz</span>
       </span>
     </span>
   )
