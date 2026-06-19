@@ -57,9 +57,12 @@ export async function getUnreadCount(vendorId: string): Promise<number> {
   return count ?? 0
 }
 
-export async function markNotificationRead(id: string): Promise<void> {
+export async function markNotificationRead(id: string, vendorId: string): Promise<void> {
   const supabase = createAdminClient()
-  await supabase.from('seller_notifications').update({ is_read: true }).eq('id', id)
+  await supabase.from('seller_notifications')
+    .update({ is_read: true })
+    .eq('id', id)
+    .eq('vendor_id', vendorId)
 }
 
 export async function markAllRead(vendorId: string): Promise<void> {

@@ -1,6 +1,10 @@
 import { logger } from '@/lib/logger'
 
 const RESEND_API = 'https://api.resend.com/emails'
+
+function esc(s: string): string {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 const FROM = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
@@ -63,11 +67,11 @@ export async function sendOrderConfirmationEmail(opts: {
       `
       <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px">
         <h2 style="color:#059669">Commande confirmée !</h2>
-        <p>Bonjour <strong>${opts.fullName}</strong>,</p>
+        <p>Bonjour <strong>${esc(opts.fullName)}</strong>,</p>
         <p>Votre commande de <strong>${opts.itemCount} article(s)</strong> a bien été reçue.</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0">
           <tr><td style="color:#6b7280;padding:4px 0">Numéro de commande</td><td><strong>#${opts.orderId.slice(0, 8).toUpperCase()}</strong></td></tr>
-          <tr><td style="color:#6b7280;padding:4px 0">Wilaya</td><td><strong>${opts.wilaya}</strong></td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0">Wilaya</td><td><strong>${esc(opts.wilaya)}</strong></td></tr>
           <tr><td style="color:#6b7280;padding:4px 0">Total</td><td><strong>${opts.total.toLocaleString('fr-DZ')} DA</strong></td></tr>
         </table>
         <p>Vous recevrez une notification dès que votre commande est expédiée.</p>
@@ -94,9 +98,9 @@ export async function sendShippingUpdateEmail(opts: {
       `
       <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px">
         <h2 style="color:#4f46e5">Votre commande est expédiée !</h2>
-        <p>Bonjour <strong>${opts.fullName}</strong>,</p>
+        <p>Bonjour <strong>${esc(opts.fullName)}</strong>,</p>
         <p>Bonne nouvelle ! Votre commande <strong>#${opts.orderId.slice(0, 8).toUpperCase()}</strong> est en cours de livraison.</p>
-        ${opts.trackingNumber ? `<p>Numéro de suivi : <strong>${opts.trackingNumber}</strong> (${opts.provider ?? ''})</p>` : ''}
+        ${opts.trackingNumber ? `<p>Numéro de suivi : <strong>${esc(opts.trackingNumber)}</strong> (${esc(opts.provider ?? '')})</p>` : ''}
         <p style="color:#9ca3af;font-size:12px;margin-top:32px">StoreDz — La marketplace algérienne</p>
       </div>
       `,
@@ -118,7 +122,7 @@ export async function sendAbandonedCartEmail(opts: {
       `
       <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px">
         <h2 style="color:#f59e0b">Votre panier vous attend !</h2>
-        <p>Bonjour ${opts.name ? `<strong>${opts.name}</strong>` : ''},</p>
+        <p>Bonjour ${opts.name ? `<strong>${esc(opts.name)}</strong>` : ''},</p>
         <p>Vous avez laissé des articles dans votre panier pour un total de <strong>${opts.cartTotal.toLocaleString('fr-DZ')} DA</strong>.</p>
         <a href="https://storedz.dz/checkout" style="display:inline-block;margin-top:16px;background:#059669;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">Finaliser ma commande</a>
         <p style="color:#9ca3af;font-size:12px;margin-top:32px">StoreDz — La marketplace algérienne</p>

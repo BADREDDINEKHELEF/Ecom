@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest) {
     if (markAll) {
       await markAllRead(vendor.id)
     } else if (id && typeof id === 'string') {
-      await markNotificationRead(id)
+      await markNotificationRead(id, vendor.id)
     } else {
       return NextResponse.json({ error: 'Provide id or markAll' }, { status: 400 })
     }

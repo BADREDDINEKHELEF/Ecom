@@ -28,6 +28,9 @@ export default function ImageLightbox({ images, index, onClose, onPrev, onNext }
     }
   }, [handleKey])
 
+  const src = images[index]
+  if (!src) return null
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
@@ -67,7 +70,7 @@ export default function ImageLightbox({ images, index, onClose, onPrev, onNext }
         onClick={(e) => e.stopPropagation()}
       >
         <Image
-          src={images[index]}
+          src={src}
           alt={`Image ${index + 1}`}
           width={1200}
           height={900}

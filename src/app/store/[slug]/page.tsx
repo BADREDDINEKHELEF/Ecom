@@ -135,7 +135,8 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
   if (!vendor) notFound()
 
   const { products, totalOrders, storeNiches } = await getStoreProducts(vendor.id)
-  const accent = vendor.accent_color ?? '#4f46e5'
+  const HEX_RE = /^#[0-9a-fA-F]{3,8}$/
+  const accent = (vendor.accent_color && HEX_RE.test(vendor.accent_color)) ? vendor.accent_color : '#4f46e5'
 
   const ratedProducts = products.filter(p => p.rating > 0)
   const avgRating = ratedProducts.length > 0

@@ -11,11 +11,14 @@ const QuestionSchema = z.object({
   phone:       z.string().max(20).optional().nullable(),
 })
 
+const PRODUCT_ID_RE = /^[a-zA-Z0-9_-]{1,200}$/
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ productId: string }> }
 ) {
   const { productId } = await params
+  if (!PRODUCT_ID_RE.test(productId)) return NextResponse.json([], { status: 200 })
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase
@@ -39,6 +42,7 @@ export async function POST(
   { params }: { params: Promise<{ productId: string }> }
 ) {
   const { productId } = await params
+  if (!PRODUCT_ID_RE.test(productId)) return NextResponse.json({ error: 'Invalid product' }, { status: 400 })
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'product_questions')
   if (!rl.allowed) {

@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       } catch (providerErr) {
         const msg = providerErr instanceof Error ? providerErr.message : String(providerErr)
         logger.error(`[POST /api/seller/shipments] provider=${provider} error`, { error: msg })
-        return NextResponse.json({ error: `Delivery provider error: ${msg}` }, { status: 502 })
+        return NextResponse.json({ error: 'Delivery provider error. Please check your configuration and try again.' }, { status: 502 })
       }
       finalTracking  = result.tracking
       labelUrl       = result.labelUrl

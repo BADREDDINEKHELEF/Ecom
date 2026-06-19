@@ -76,5 +76,6 @@ async function markOrderFailed(orderId: string) {
     .from('orders')
     .update({ status: 'cancelled', payment_status: 'failed' })
     .eq('id', orderId)
+    .eq('status', 'pending_payment') // Idempotency guard — never cancel a confirmed/delivered order
   if (error) logger.error('[payment/callback] markOrderFailed failed', { orderId, error: error.message })
 }

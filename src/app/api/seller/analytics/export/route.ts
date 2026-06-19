@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
 
   // Build CSV
   const rows = ['Date,Commande,Produit,Qté,Prix unitaire,Sous-total,Statut,Wilaya']
+  const escCsv = (s: string) => `"${String(s ?? '').replace(/"/g, '""')}"`
 
   for (const item of items ?? []) {
     const order = orderMap.get(item.order_id)
@@ -61,14 +62,14 @@ export async function GET(req: NextRequest) {
     // Prefix product name with tab to neutralise CSV formula injection (=,+,-,@)
     const safeProduct = `"\t${String(item.product_name ?? '').replace(/"/g, '""')}"`
     rows.push([
-      date,
+      escCsv(date),
       String(order.id).slice(0, 8).toUpperCase(),
       safeProduct,
       item.quantity,
       item.unit_price,
       subtotal,
-      order.status,
-      order.wilaya ?? '',
+      escCsv(order.status),
+      escCsv(order.wilaya ?? ''),
     ].join(','))
   }
 

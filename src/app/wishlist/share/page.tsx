@@ -58,7 +58,9 @@ export default function SharedWishlistPage() {
             <div key={product.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
               <Link href={`/${product.nicheId}/${product.id}`}>
                 <div className="relative aspect-square bg-gray-100">
-                  <Image src={product.images[0] ?? ''} alt={product.name} fill className="object-cover" sizes="(max-width:768px) 50vw, 25vw" />
+                  {product.images[0] && (
+                    <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="(max-width:768px) 50vw, 25vw" />
+                  )}
                 </div>
               </Link>
               <div className="p-3">

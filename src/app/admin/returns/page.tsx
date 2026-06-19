@@ -43,12 +43,18 @@ export default function ReturnsPage() {
   const [updating, setUpdating]   = useState<string | null>(null)
   const [note, setNote]           = useState<Record<string, string>>({})
 
+  const [loadError, setLoadError] = useState('')
+
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
     try {
       const res = await fetch('/api/admin/returns', { credentials: 'include' })
+      if (!res.ok) throw new Error('Erreur de chargement')
       const { returns: list } = await res.json()
       setReturns(list ?? [])
+    } catch {
+      setLoadError('Impossible de charger les retours')
     } finally {
       setLoading(false)
     }
@@ -59,12 +65,13 @@ export default function ReturnsPage() {
   const updateStatus = async (id: string, status: ReturnStatus, adminNote?: string) => {
     setUpdating(id)
     try {
-      await fetch(`/api/admin/returns/${id}`, {
+      const res = await fetch(`/api/admin/returns/${id}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, adminNote: adminNote ?? null }),
       })
+      if (!res.ok) throw new Error('Update failed')
       setReturns((prev) => prev.map((r) => r.id === id ? { ...r, status, admin_note: adminNote ?? r.admin_note } : r))
     } finally {
       setUpdating(null)
@@ -80,6 +87,7 @@ export default function ReturnsPage() {
             Retours &amp; Remboursements
           </h1>
           <p className="text-gray-500 text-sm mt-1">{returns.length} demande(s)</p>
+        {loadError && <p className="text-red-500 text-sm mt-1">{loadError}</p>}
         </div>
         <button onClick={load} className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
           <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />

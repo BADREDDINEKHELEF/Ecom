@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   // Fixes the stale-read race where two concurrent requests both read the same balance
   // and then write SET balance = stale_value - deduct, corrupting the final balance.
   const { data, error } = await supabase.rpc('redeem_gift_card', {
-    p_code:   code.trim(),
+    p_code:   code.trim().toUpperCase(),
     p_amount: amount,
   })
 

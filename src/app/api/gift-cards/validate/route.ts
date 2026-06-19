@@ -30,5 +30,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ce code cadeau est épuisé' }, { status: 400 })
   }
 
-  return NextResponse.json({ balance: data.balance, id: data.id })
+  return NextResponse.json({ balance: data.balance })
 }

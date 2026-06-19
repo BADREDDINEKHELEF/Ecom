@@ -170,8 +170,12 @@ export default function SellerProductsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm(sp.deleteConfirm)) return
-    await deleteProduct(id)
-    setProducts((prev) => prev.filter((p) => p.id !== id))
+    try {
+      await deleteProduct(id)
+      setProducts((prev) => prev.filter((p) => p.id !== id))
+    } catch {
+      setFormError('Impossible de supprimer ce produit. Réessayez.')
+    }
   }
 
   const filtered = products.filter((p) =>

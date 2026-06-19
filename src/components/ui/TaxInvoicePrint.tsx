@@ -24,6 +24,10 @@ interface TaxInvoiceProps {
   total: number
 }
 
+function esc(s: string): string {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 export default function TaxInvoicePrint(props: TaxInvoiceProps) {
   const tva = props.subtotal * 0.19
 
@@ -53,17 +57,17 @@ export default function TaxInvoicePrint(props: TaxInvoiceProps) {
           <strong>Vendeur</strong><br/>StoreDz<br/>storedz321123@gmail.com
         </div>
         <div>
-          <strong>Client</strong><br/>${props.buyerName}<br/>${props.buyerPhone}<br/>${props.buyerAddress}
-          ${props.companyName ? `<br/><br/><strong>${props.companyName}</strong>` : ''}
-          ${props.nif ? `<br/>NIF: ${props.nif}` : ''}
-          ${props.nis ? `<br/>NIS: ${props.nis}` : ''}
-          ${props.rc  ? `<br/>RC: ${props.rc}`   : ''}
+          <strong>Client</strong><br/>${esc(props.buyerName)}<br/>${esc(props.buyerPhone)}<br/>${esc(props.buyerAddress)}
+          ${props.companyName ? `<br/><br/><strong>${esc(props.companyName)}</strong>` : ''}
+          ${props.nif ? `<br/>NIF: ${esc(props.nif)}` : ''}
+          ${props.nis ? `<br/>NIS: ${esc(props.nis)}` : ''}
+          ${props.rc  ? `<br/>RC: ${esc(props.rc)}`   : ''}
         </div>
       </div>
       <table>
         <thead><tr><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total HT</th></tr></thead>
         <tbody>
-          ${props.items.map((i) => `<tr><td>${i.productName}</td><td>${i.quantity}</td><td>${i.unitPrice.toLocaleString('fr-DZ')} DA</td><td>${(i.quantity * i.unitPrice).toLocaleString('fr-DZ')} DA</td></tr>`).join('')}
+          ${props.items.map((i) => `<tr><td>${esc(i.productName)}</td><td>${i.quantity}</td><td>${i.unitPrice.toLocaleString('fr-DZ')} DA</td><td>${(i.quantity * i.unitPrice).toLocaleString('fr-DZ')} DA</td></tr>`).join('')}
         </tbody>
         <tfoot>
           <tr class="total-row"><td colspan="3">Sous-total HT</td><td>${props.subtotal.toLocaleString('fr-DZ')} DA</td></tr>

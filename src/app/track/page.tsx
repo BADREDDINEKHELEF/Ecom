@@ -49,7 +49,7 @@ function normalizePhone(phone: string): string {
 }
 
 function validateAlgerianPhone(phone: string): boolean {
-  return /^(213)?(05|06|07)\d{8}$/.test(normalizePhone(phone))
+  return /^(213[5-7]|0[5-7])\d{8}$/.test(normalizePhone(phone))
 }
 
 export default function TrackOrderPage() {

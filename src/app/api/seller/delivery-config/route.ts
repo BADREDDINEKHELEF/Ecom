@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
       const msg = pg?.message ?? (dbErr instanceof Error ? dbErr.message : JSON.stringify(dbErr))
       const detail = [pg?.code, pg?.details, pg?.hint].filter(Boolean).join(' | ')
       logger.error('[PATCH /api/seller/delivery-config] db error', { error: msg, detail })
-      return NextResponse.json({ error: msg, detail }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to save delivery configuration' }, { status: 500 })
     }
     return NextResponse.json({ ok: true })
   } catch (err) {
