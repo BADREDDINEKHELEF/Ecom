@@ -1,25 +1,59 @@
-﻿const CACHE = 'storedz-v1'
-const STATIC = ['/offline', '/manifest.json']
+﻿const CACHE = 'storedz-v3'
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIC)))
+self.addEventListener('install', (event) => {
   self.skipWaiting()
+
+  event.waitUntil(
+    caches.open(CACHE).then((cache) =>
+      cache.add('/offline.html')
+    )
+  )
 })
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))))
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE)
+          .map((key) => caches.delete(key))
+      )
+    )
+  )
+
   self.clients.claim()
 })
 
-self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url)
-  // Network-first for API and Next.js internal routes
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/')) return
-  // Cache-first for static assets
-  if (e.request.method !== 'GET') return
-  e.respondWith(
-    caches.match(e.request).then((cached) =>
-      cached ?? fetch(e.request).catch(() => caches.match('/offline'))
-    )
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return
+
+  const url = new URL(event.request.url)
+
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/_next/')
+  ) {
+    return
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => response)
+      .catch(async () => {
+        const cache = await caches.open(CACHE)
+        const offline = await cache.match('/offline.html')
+
+        return offline || new Response(
+          'Offline',
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/html'
+            }
+          }
+        )
+      })
   )
 })
