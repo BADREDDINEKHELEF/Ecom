@@ -22,10 +22,10 @@ export default function NotFound() {
           <ArrowLeft className="w-4 h-4" /> {t.common.back}
         </Link>
         <Link
-          href="/search"
+          href="/track"
           className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-semibold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition-colors"
         >
-          {t.search.title}
+          Suivre ma commande
         </Link>
       </div>
     </div>

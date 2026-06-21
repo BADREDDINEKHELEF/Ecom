@@ -23,6 +23,7 @@ const OrderItemSchema = z.object({
   productName:   z.string().min(1).max(500),
   productImage:  z.string().max(1000).default(''),
   quantity:      z.number().int().min(1).max(100),
+  unitPrice:     z.number().min(0).max(10_000_000).default(0),
   vendorId:      z.string().uuid().nullable().optional(),
   selectedColor: z.string().max(100).nullable().optional(),
 })
@@ -35,7 +36,6 @@ const CreateOrderSchema = z.object({
   city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
   address:       z.string().min(5).max(500),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
-  shippingCost:  z.number().min(0).max(10000),
   promoCodeId:      z.string().uuid().optional().nullable(),
   discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
   giftCardCode:     z.string().max(100).optional().nullable(),
@@ -47,6 +47,7 @@ const CreateOrderSchema = z.object({
   nif:              z.string().max(50).optional().nullable(),
   nis:              z.string().max(50).optional().nullable(),
   rc:               z.string().max(50).optional().nullable(),
+  gaClientId:       z.string().max(100).optional().nullable(),
   items:            z.array(OrderItemSchema).min(1).max(50),
 })
 
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
     nif,
     nis,
     rc,
+    gaClientId,
     ...rest
   } = parsed.data
   const input = {
@@ -111,13 +113,19 @@ export async function POST(req: NextRequest) {
   try {
     const { id: orderId, total } = await createOrder(input)
 
-    // Redeem gift card balance (non-blocking — order already committed)
+    // Redeem gift card balance — awaited direct RPC, not fire-and-forget HTTP.
+    // The order is already committed with the discounted total, so failure here means
+    // the customer got the discount without the balance being deducted. Log it.
     if (giftCardCode && giftCardDeduction > 0) {
-      fetch(`${req.nextUrl.origin}/api/gift-cards/redeem`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: giftCardCode, amount: giftCardDeduction }),
-      }).catch((err) => logger.error('[gift-card] redeem failed', { error: err instanceof Error ? err.message : String(err) }))
+      try {
+        const { error: gcErr } = await createAdminClient().rpc('redeem_gift_card', {
+          p_code:   giftCardCode,
+          p_amount: giftCardDeduction,
+        })
+        if (gcErr) logger.error('[gift-card] redeem rpc failed', { orderId, error: gcErr.message })
+      } catch (gcErr) {
+        logger.error('[gift-card] redeem failed', { orderId, error: gcErr instanceof Error ? gcErr.message : String(gcErr) })
+      }
     }
 
     // Redeem loyalty points (non-blocking)
@@ -182,7 +190,7 @@ export async function POST(req: NextRequest) {
             .from('vendors')
             .select('meta_pixel_id, meta_capi_token, tiktok_pixel_id, tiktok_capi_token, gtag_id, gtag_api_secret')
             .in('id', vendorIds)
-          const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: 0, quantity: i.quantity }))
+          const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: i.unitPrice, quantity: i.quantity }))
           await Promise.all(
             (vendors ?? []).map((v: Record<string, string | null>) =>
               firePurchaseCAPI({
@@ -196,6 +204,7 @@ export async function POST(req: NextRequest) {
                 email: buyerEmail, phone: input.phone,
                 clientIp: ip,
                 clientUserAgent: req.headers.get('user-agent') ?? undefined,
+                gaClientId: gaClientId ?? undefined,
               })
             )
           )
@@ -207,7 +216,7 @@ export async function POST(req: NextRequest) {
 
     // Platform-level CAPI (non-blocking)
     ;(async () => {
-      const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: 0, quantity: i.quantity }))
+      const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: i.unitPrice, quantity: i.quantity }))
       await firePurchaseCAPI({
         metaPixelId:     process.env.NEXT_PUBLIC_META_PIXEL_ID,
         metaCAPIToken:   process.env.META_CAPI_TOKEN,
@@ -219,6 +228,7 @@ export async function POST(req: NextRequest) {
         email: buyerEmail, phone: input.phone,
         clientIp: ip,
         clientUserAgent: req.headers.get('user-agent') ?? undefined,
+        gaClientId: gaClientId ?? undefined,
       })
     })().catch((err) => logger.error('[platform CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
 

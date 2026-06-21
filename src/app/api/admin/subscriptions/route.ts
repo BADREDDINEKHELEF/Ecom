@@ -7,11 +7,19 @@ import {
   getSubscriptionPlans,
   getSubscriptionById,
 } from '@/lib/supabase/vendors'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/admin/subscriptions?status=trial&page=0
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'subscriptions_read', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const { searchParams } = new URL(req.url)
@@ -28,8 +36,13 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'subscriptions_write', 30, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '0.0.0.0'
   const ua = req.headers.get('user-agent') ?? 'unknown'
 
   try {

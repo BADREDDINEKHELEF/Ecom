@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/admin/promotions?status=pending&page=0
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'promotions_read', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const { searchParams } = new URL(req.url)
@@ -43,6 +51,12 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'promotions_write', 30, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const body = await req.json().catch(() => ({})) as {

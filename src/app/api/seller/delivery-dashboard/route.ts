@@ -4,13 +4,27 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer, getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { dispatchGetStats } from '@/lib/delivery/dispatch'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/seller/delivery-dashboard
 // Returns aggregate shipment stats from local DB + optionally from provider API
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'delivery_dashboard', 60, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const supabase = createRouteClient(req)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const userRl = await checkUserRateLimit(user.id, 'delivery_dashboard', 60, 3600)
+  if (!userRl.allowed) return NextResponse.json(
+    { error: 'Limite atteinte. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+  )
 
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
@@ -51,30 +65,31 @@ export async function GET(req: NextRequest) {
       returnRate:      finished > 0 ? Math.round((counts.returned  / finished) * 100) : 0,
     }
 
-    // Provider live stats — best-effort, may be null
+    // Provider live stats — best-effort, only when vendor has their own config
     let providerStats = null
     try {
       const config = await getVendorDeliveryConfig(vendor.id)
-      const provider = config?.default_provider ?? 'yalidine'
-
-      const vendorCreds = {
-        yalidine_api_id:    config?.yalidine_api_id    ?? undefined,
-        yalidine_api_token: config?.yalidine_api_token ?? undefined,
-        procolis_token:     config?.procolis_token     ?? undefined,
-        zr_token:           config?.zr_token           ?? undefined,
-        colivraison_token:  config?.colivraison_token  ?? undefined,
-        maystro_token:      config?.maystro_token      ?? undefined,
-        rex_token:          config?.rex_token          ?? undefined,
-        yassir_api_key:     config?.yassir_api_key     ?? undefined,
-        ecom_token:         config?.ecom_token         ?? undefined,
-        apec_api_id:        config?.apec_api_id        ?? undefined,
-        apec_api_token:     config?.apec_api_token     ?? undefined,
+      // Never fall back to platform-level credentials — skip stats if vendor has no config
+      if (config) {
+        const provider = config.default_provider ?? 'yalidine'
+        const vendorCreds = {
+          yalidine_api_id:    config.yalidine_api_id    ?? undefined,
+          yalidine_api_token: config.yalidine_api_token ?? undefined,
+          procolis_token:     config.procolis_token     ?? undefined,
+          zr_token:           config.zr_token           ?? undefined,
+          colivraison_token:  config.colivraison_token  ?? undefined,
+          maystro_token:      config.maystro_token      ?? undefined,
+          rex_token:          config.rex_token          ?? undefined,
+          yassir_api_key:     config.yassir_api_key     ?? undefined,
+          ecom_token:         config.ecom_token         ?? undefined,
+          apec_api_id:        config.apec_api_id        ?? undefined,
+          apec_api_token:     config.apec_api_token     ?? undefined,
+        }
+        providerStats = await Promise.race([
+          dispatchGetStats(provider, vendorCreds),
+          new Promise<null>((res) => setTimeout(() => res(null), 5000)),
+        ])
       }
-
-      providerStats = await Promise.race([
-        dispatchGetStats(provider, vendorCreds),
-        new Promise<null>((res) => setTimeout(() => res(null), 5000)),
-      ])
     } catch {
       // Provider stats are optional — swallow error
     }

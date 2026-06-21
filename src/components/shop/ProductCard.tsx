@@ -3,14 +3,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { ShoppingCart, Heart, ArrowLeftRight } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { memo, useRef } from 'react'
 import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
-import { useWishlistStore } from '@/lib/store/wishlistStore'
-import { useCompareStore } from '@/lib/store/compareStore'
 import { useToastStore } from '@/lib/store/toastStore'
-import { useT, useRTL } from '@/lib/store/langStore'
+import { useT } from '@/lib/store/langStore'
 import { formatPrice, discount } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import StarRating from '@/components/ui/StarRating'
@@ -26,50 +24,41 @@ const PixelCartFloat = dynamic(
 
 interface ProductCardProps {
   product: Product
+  storeSlug?: string
 }
 
-function ProductCard({ product }: ProductCardProps) {
+function ProductCard({ product, storeSlug }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem)
-  const { toggle, has } = useWishlistStore()
-  const { toggle: compareToggle, has: compareHas } = useCompareStore()
   const addToast = useToastStore((s) => s.add)
   const imgRef  = useRef<HTMLImageElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const { triggerPop } = usePixelCartPop()
   const { floatState, triggerFloat, resetFloat } = usePixelCartFloat()
   const t = useT()
-  const isRTL = useRTL()
-  const wishlisted = has(product.id)
-  const inCompare  = compareHas(product.id)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount ? discount(product.price, product.comparePrice!) : 0
   const savings     = hasDiscount ? product.comparePrice! - product.price : 0
+
+  // Product page link — prefer store context if available
+  const productHref = storeSlug
+    ? `/store/${storeSlug}/${product.id}`
+    : `/store/${product.id}` // fallback: product ID only (won't 404, redirects gracefully)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     addItem(product)
     addToast(`${product.name} ${t.product.addedMsg}`)
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: 1 })
-    // V2 effects fire simultaneously
     triggerPop(imgRef)
     if (cardRef.current) {
       triggerFloat(cardRef.current.getBoundingClientRect(), product.images[0] ?? '')
     }
   }
 
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault()
-    toggle(product)
-    addToast(
-      wishlisted ? t.product.removedWishlist : t.product.savedWishlist,
-      wishlisted ? 'info' : 'success',
-    )
-  }
-
   return (
     <div ref={cardRef} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
-      <Link href={`/${product.nicheId}/${product.id}`}>
+      <Link href={productHref}>
         <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
           {product.images[0] ? (
             <Image
@@ -88,7 +77,6 @@ function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          {/* Out-of-stock overlay */}
           {product.stock === 0 && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
@@ -97,59 +85,19 @@ function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          {/* Condition / new / discount / cod-safe badges — top-left */}
-          <div className={`absolute top-2.5 ${isRTL ? 'right-2.5' : 'left-2.5'} flex flex-col gap-1.5`}>
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
             {product.condition === 'used'        && <Badge variant="warning">Occasion</Badge>}
             {product.condition === 'refurbished' && <Badge variant="sale">Reconditionné</Badge>}
             {product.isNew && <PixelBadge variant="new" />}
             {hasDiscount && <PixelBadge variant="promo" discount={discountPct} />}
           </div>
 
-          {/* COD-safe badge — always shown for COD products */}
-          {(product as Product & { paymentMethod?: string }).paymentMethod === 'cod' && (
-            <div className={`absolute bottom-9 ${isRTL ? 'right-2.5' : 'left-2.5'}`}>
-              <PixelBadge variant="cod-safe" size="sm" />
-            </div>
-          )}
-
-          {/* Pixel top-seller badge */}
           {product.isFeatured && (
-            <div className="absolute bottom-9 left-2.5">
+            <div className="absolute bottom-2.5 left-2.5">
               <PixelBadge variant="top-seller" />
             </div>
           )}
 
-          {/* Wishlist — top-right */}
-          <button
-            onClick={handleWishlist}
-            aria-label={wishlisted ? t.product.removedWishlist : t.product.savedWishlist}
-            className={`absolute top-2.5 ${isRTL ? 'left-2.5' : 'right-2.5'} p-2 rounded-full shadow-sm transition-all ${
-              wishlisted
-                ? 'bg-red-50 opacity-100'
-                : 'bg-white/90 opacity-60 hover:opacity-100 hover:bg-white'
-            }`}
-          >
-            <Heart
-              className={`w-4 h-4 transition-colors ${wishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'}`}
-            />
-          </button>
-
-          {/* Compare — bottom-right, visible on hover */}
-          <button
-            onClick={(e) => { e.preventDefault(); compareToggle(product) }}
-            aria-label={inCompare ? `Retirer ${product.name} de la comparaison` : `Comparer ${product.name}`}
-            aria-pressed={inCompare}
-            className={`absolute bottom-2.5 ${isRTL ? 'left-2.5' : 'right-2.5'} flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full backdrop-blur-sm transition-all duration-200 ${
-              inCompare
-                ? 'bg-indigo-600 text-white opacity-100'
-                : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
-            }`}
-          >
-            <ArrowLeftRight className="w-3 h-3" />
-            {inCompare ? t.product.inCompare : t.product.compare}
-          </button>
-
-          {/* Multi-image dots */}
           {product.images.length > 1 && (
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
               {product.images.slice(0, 4).map((_, i) => (
@@ -161,7 +109,7 @@ function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       <div className="p-4">
-        <Link href={`/${product.nicheId}/${product.id}`}>
+        <Link href={productHref}>
           <h3 className="text-gray-900 font-semibold text-sm leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-2">
             {product.name}
           </h3>
@@ -224,7 +172,6 @@ function ProductCard({ product }: ProductCardProps) {
         )}
       </div>
 
-      {/* Lazy-loaded fly-to-cart animation */}
       <PixelCartFloat
         trigger={floatState.trigger}
         fromRect={floatState.fromRect}

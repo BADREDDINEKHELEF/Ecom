@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { getVendorByUserIdServer, getVendorDeliveryConfig, saveVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 const PatchSchema = z.object({
   default_provider:    z.string().max(50).optional(),
@@ -24,6 +26,12 @@ const PatchSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'delivery_config_read', 60, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -57,9 +65,21 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'delivery_config_write', 10, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const userRl = await checkUserRateLimit(user.id, 'delivery_config', 10, 3600)
+    if (!userRl.allowed) return NextResponse.json(
+      { error: 'Limite atteinte. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+    )
 
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })

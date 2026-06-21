@@ -1,5 +1,8 @@
 import { createAdminClient } from './admin'
 import { incrementPromoUses } from './promo'
+import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
+import { getVendorDeliveryConfig } from './vendors'
+import { dispatchGetRate } from '@/lib/delivery/dispatch'
 
 export interface OrderItemRow {
   id:             string
@@ -41,7 +44,6 @@ export interface CreateOrderInput {
   city:               string
   address:            string
   paymentMethod:      string
-  shippingCost:       number
   promoCodeId?:       string
   discountAmount?:    number
   giftCardDeduction?: number
@@ -82,6 +84,38 @@ function phoneVariants(phone: string): string[] {
 export interface CreateOrderResult {
   id:    string
   total: number
+}
+
+/**
+ * Returns the authoritative shipping cost for an order.
+ * Tries the vendor's live delivery provider rate first (same source as /api/delivery/rates),
+ * then falls back to static zone pricing so the server always agrees with the checkout display.
+ */
+async function resolveShippingCost(
+  wilaya: string,
+  subtotal: number,
+  items: CreateOrderInput['items'],
+): Promise<number> {
+  // Static zone fallback — always available
+  const zone   = WILAYA_DATA[wilaya]?.zone ?? 3
+  const zoneCfg = ZONE_CONFIG[zone]
+  const staticCost = subtotal >= zoneCfg.freeFrom ? 0 : zoneCfg.cost
+
+  // Try live provider rate for the first vendor found in the cart
+  const vendorId = items.find((i) => i.vendorId)?.vendorId ?? null
+  if (!vendorId) return staticCost
+
+  try {
+    const config = await getVendorDeliveryConfig(vendorId)
+    if (!config) return staticCost
+    const provider = config.default_provider ?? 'yalidine'
+    const rate = await dispatchGetRate(provider, wilaya, config, true)
+    if (!rate) return staticCost
+    // Free shipping still applies on top of the live rate
+    return subtotal >= zoneCfg.freeFrom ? 0 : rate.homeDelivery
+  } catch {
+    return staticCost
+  }
 }
 
 /**
@@ -155,25 +189,86 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     }
   }
 
+  // ── 3b. Claim promo code slot BEFORE touching stock ─────────────────
+  // Incrementing here (instead of after order insert) eliminates the TOCTOU
+  // window where two concurrent orders could both pass the uses_count check
+  // above and both apply the same single-use discount. If the RPC returns false
+  // the promo was consumed by a concurrent request — drop the discount cleanly
+  // before any stock is decremented or an order row is created.
+  if (input.promoCodeId && discountAmount > 0) {
+    const promoAccepted = await incrementPromoUses(input.promoCodeId)
+    if (!promoAccepted) {
+      discountAmount = 0   // code was maxed out between validation and increment
+    }
+  }
+
+  // Compute shipping server-side — never trust the client value.
+  // Mirrors the logic in /api/delivery/rates: try live provider rate for the vendor,
+  // fall back to static zone pricing so the server always agrees with the checkout display.
+  const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, input.items)
+
   // Subtract gift card and loyalty points deductions (capped to prevent negative total)
   const giftCardDeduction = Math.max(0, input.giftCardDeduction ?? 0)
   const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
-  const total = Math.max(0, computedSubtotal + input.shippingCost - discountAmount - giftCardDeduction - pointsDeduction)
+  const total = Math.max(0, computedSubtotal + shippingCost - discountAmount - giftCardDeduction - pointsDeduction)
 
   // ── 4. Decrement stock atomically via DB RPC ─────────────────────
   // decrement_product_stock uses SELECT … FOR UPDATE (row-level lock)
   // so concurrent orders for the same product cannot both succeed when
   // only one unit remains. Defined in migration_005_stock_decrement.sql.
+  // Track what has been decremented so we can compensate on order-insert failure.
+  const decrementedItems: Array<{ productId: string; quantity: number }> = []
+
   for (const item of validatedItems) {
     const { data: decremented, error: stockErr } = await supabase
       .rpc('decrement_product_stock', {
         p_product_id: item.productId,
         p_quantity:   item.quantity,
       })
-    if (stockErr) throw new Error(`Stock reservation failed: ${stockErr.message}`)
-    if (!decremented) {
-      throw new Error(`Insufficient stock for "${item.productName}"`)
+    if (stockErr || !decremented) {
+      // Restore any stock we already decremented in this loop before throwing
+      await Promise.all(
+        decrementedItems.map(async (prev) => {
+          const { data: p } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', prev.productId)
+            .single()
+          if (p) {
+            await supabase
+              .from('products')
+              .update({ stock: (p.stock as number) + prev.quantity })
+              .eq('id', prev.productId)
+          }
+        })
+      )
+      throw new Error(stockErr
+        ? `Stock reservation failed: ${stockErr.message}`
+        : `Insufficient stock for "${item.productName}"`)
     }
+    decrementedItems.push({ productId: item.productId, quantity: item.quantity })
+  }
+
+  // Helper: restore all decremented stock. Used to compensate if the order
+  // insert fails after stock has already been decremented. Uses a
+  // select-then-update pattern (not a dedicated RPC) — safe enough since
+  // it only ever adds stock back, never removes it.
+  async function restoreStock() {
+    await Promise.all(
+      decrementedItems.map(async (item) => {
+        const { data: p } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.productId)
+          .single()
+        if (p) {
+          await supabase
+            .from('products')
+            .update({ stock: (p.stock as number) + item.quantity })
+            .eq('id', item.productId)
+        }
+      })
+    )
   }
 
   // ── 5. Insert order ───────────────────────────────────────────────
@@ -188,7 +283,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       payment_method:  input.paymentMethod,
       status:          input.status ?? 'pending',
       subtotal:        computedSubtotal,
-      shipping_cost:   input.shippingCost,
+      shipping_cost:   shippingCost,
       total,
       promo_code_id:   input.promoCodeId ?? null,
       discount_amount: discountAmount,
@@ -202,7 +297,10 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     .select('id')
     .single()
 
-  if (orderErr) throw orderErr
+  if (orderErr) {
+    await restoreStock()
+    throw orderErr
+  }
 
   // ── 6. Insert order items ─────────────────────────────────────────
   const { error: itemsErr } = await supabase.from('order_items').insert(
@@ -219,23 +317,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       ...(item.selectedColor ? { selected_color: item.selectedColor } : {}),
     }))
   )
-  if (itemsErr) throw itemsErr
-
-  // ── 7. Atomically increment promo usage (with row-level lock) ─────
-  // The RPC returns false if the promo was maxed out by a concurrent order between
-  // our validation (step 3) and this increment. In that race case, correct the
-  // already-inserted order by removing the discount.
-  if (input.promoCodeId) {
-    const promoAccepted = await incrementPromoUses(input.promoCodeId)
-    if (!promoAccepted) {
-      const correctedTotal = Math.max(0, computedSubtotal + input.shippingCost - giftCardDeduction - pointsDeduction)
-      await supabase
-        .from('orders')
-        .update({ discount_amount: 0, promo_code_id: null, total: correctedTotal })
-        .eq('id', order.id)
-      return { id: order.id, total: correctedTotal }
-    }
+  if (itemsErr) {
+    await restoreStock()
+    throw itemsErr
   }
+
+  // Promo increment was already performed in step 3b (before stock decrement).
+  // No compensating transaction needed here.
 
   return { id: order.id, total }
 }
@@ -255,7 +343,7 @@ export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
   const variants = phoneVariants(phone)
   const { data, error } = await supabase
     .from('orders')
-    .select('*, order_items(*)')
+    .select('id,full_name,wilaya,city,status,total,delivery_outcome,yalidine_tracking,delivery_provider,created_at,order_items(id,product_name,quantity,subtotal,product_image)')
     .in('phone', variants)
     .order('created_at', { ascending: false })
   if (error) throw error

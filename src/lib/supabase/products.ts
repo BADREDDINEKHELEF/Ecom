@@ -97,6 +97,26 @@ export const getProductById = unstable_cache(
 )
 
 
+export async function getVendorPhoneByProductId(productId: string): Promise<string | null> {
+  const supabase = createAdminClient()
+  const { data: row } = await supabase
+    .from('products')
+    .select('vendor_id')
+    .eq('id', productId)
+    .single()
+  if (!row?.vendor_id) return null
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('phone, social_whatsapp')
+    .eq('id', row.vendor_id)
+    .single()
+  if (!vendor) return null
+  const raw = (vendor.social_whatsapp || vendor.phone) as string | null
+  if (!raw) return null
+  const digits = raw.replace(/\D/g, '')
+  return digits.startsWith('213') ? digits : digits.startsWith('0') ? '213' + digits.slice(1) : '213' + digits
+}
+
 export async function getVendorProducts(vendorId: string): Promise<Product[]> {
   const supabase = createClient()
   const { data, error } = await supabase

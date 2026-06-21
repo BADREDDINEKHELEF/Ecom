@@ -14,7 +14,7 @@ import { formatPrice } from '@/lib/utils'
 import { getDeliveryInfo, ALL_WILAYAS } from '@/lib/data/wilayas'
 import { getCommunesForWilaya } from '@/lib/data/communes'
 import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
-import { trackPurchase } from '@/lib/analytics'
+import { trackPurchase, trackInitiateCheckout } from '@/lib/analytics'
 import { track } from '@/lib/analytics/track'
 
 function normalizeW(s: string) {
@@ -109,13 +109,39 @@ export default function CheckoutContent() {
   const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null)
   const [usePoints, setUsePoints] = useState(false)
 
+  const [liveDeliveryCost, setLiveDeliveryCost] = useState<number | null>(null)
+  const [deliveryFetching, setDeliveryFetching] = useState(false)
+
   useEffect(() => {
     fetch('/api/loyalty')
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.balance > 0) setLoyaltyBalance(d.balance) })
       .catch(() => {})
     track('checkout_start', {})
+    // Fire pixel InitiateCheckout once — uses closure values from mount
+    const { items: cartItems, total: getTotal } = useCartStore.getState()
+    trackInitiateCheckout({ total: getTotal(), numItems: cartItems.reduce((s, i) => s + i.quantity, 0) })
   }, [])
+
+  // Fetch live delivery price from vendor's configured provider when wilaya changes
+  useEffect(() => {
+    if (!form.wilaya) { setLiveDeliveryCost(null); return }
+    setDeliveryFetching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ wilaya: form.wilaya })
+        if (cartStoreSlug) params.set('storeSlug', cartStoreSlug)
+        const res = await fetch(`/api/delivery/rates?${params}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (typeof data.homeDelivery === 'number') setLiveDeliveryCost(data.homeDelivery)
+        }
+      } catch { /* fall back to static */ } finally {
+        setDeliveryFetching(false)
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [form.wilaya, cartStoreSlug])
 
   const handleLocate = () => {
     if (!navigator.geolocation) { setLocError(t.checkout.locationFailed); return }
@@ -153,7 +179,9 @@ export default function CheckoutContent() {
   const discountAmount = promoResult?.discountAmount ?? 0
   const giftCardDeduction = giftCardResult?.deduction ?? 0
   const pointsDeduction = (usePoints && loyaltyBalance) ? Math.min(loyaltyBalance, Math.max(0, cartTotal - discountAmount - giftCardDeduction)) : 0
-  const orderTotal = Math.max(0, cartTotal - discountAmount - giftCardDeduction - pointsDeduction + delivery.cost)
+  // Live rate from provider API; falls back to static zone pricing
+  const shippingCost = delivery.isFree ? 0 : (liveDeliveryCost ?? delivery.cost)
+  const orderTotal = Math.max(0, cartTotal - discountAmount - giftCardDeduction - pointsDeduction + shippingCost)
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return
@@ -250,6 +278,15 @@ export default function CheckoutContent() {
       return
     }
 
+    // Read GA4 client_id from _ga cookie so the server-side Measurement Protocol hit
+    // is attributed to the same browser session (fixes attribution when CAPI fires).
+    const gaClientId = (() => {
+      try {
+        const m = document.cookie.match(/_ga=GA\d+\.\d+\.(\d+\.\d+)/)
+        return m ? m[1] : null
+      } catch { return null }
+    })()
+
     const orderPayload = {
       fullName:       form.fullName,
       phone:          form.phone,
@@ -257,7 +294,6 @@ export default function CheckoutContent() {
       city:           resolvedCity,
       address:        form.address,
       paymentMethod:  payment,
-      shippingCost:   delivery.cost,
       promoCodeId:    promoResult?.id ?? null,
       discountAmount: discountAmount || 0,
       giftCardCode:   giftCardResult?.code ?? null,
@@ -269,11 +305,13 @@ export default function CheckoutContent() {
       nif:            b2b.isB2B ? b2b.nif || null : null,
       nis:            b2b.isB2B ? b2b.nis || null : null,
       rc:             b2b.isB2B ? b2b.rc  || null : null,
+      gaClientId:     gaClientId ?? null,
       items: items.map(({ product, quantity, selectedColor }) => ({
         productId:     product.id,
         productName:   product.name,
         productImage:  product.images?.[0] || '',
         quantity,
+        unitPrice:     product.price,
         selectedColor: selectedColor || null,
       })),
     }
@@ -296,7 +334,8 @@ export default function CheckoutContent() {
         }
         const orderData = await res.json().catch(() => ({}))
         const resolvedOrderId = orderData.orderId ?? orderData.id
-        trackPurchase({ transactionId: resolvedOrderId ?? `cod_${Date.now()}`, total: orderTotal, items: cartSnapshot })
+        if (!resolvedOrderId) { setSaveError(t.checkout.orderFailed); return }
+        trackPurchase({ transactionId: resolvedOrderId, total: orderTotal, items: cartSnapshot })
         track('checkout_complete', { order_id: resolvedOrderId, total: orderTotal, payment_method: 'cash', wilaya: form?.wilaya })
 
         markRecovered()
@@ -555,8 +594,10 @@ export default function CheckoutContent() {
                     <span className="text-indigo-700">{delivery.days}</span>
                     {delivery.isFree ? (
                       <span className="ml-2 text-green-600 font-bold">— {t.cart.freeShipping}!</span>
+                    ) : deliveryFetching ? (
+                      <span className="ml-2 text-gray-400">…</span>
                     ) : (
-                      <span className="ml-2 text-gray-600">— {formatPrice(delivery.cost)}</span>
+                      <span className="ml-2 text-gray-600">— {formatPrice(shippingCost)}</span>
                     )}
                   </div>
                 </div>
@@ -793,7 +834,7 @@ export default function CheckoutContent() {
               <div className="flex justify-between text-gray-600">
                 <span>{t.cart.shipping}</span>
                 <span className={delivery.isFree ? 'text-green-600 font-bold' : ''}>
-                  {delivery.isFree ? t.cart.freeShipping : form.wilaya ? formatPrice(delivery.cost) : '—'}
+                  {delivery.isFree ? t.cart.freeShipping : form.wilaya ? (deliveryFetching ? '…' : formatPrice(shippingCost)) : '—'}
                 </span>
               </div>
               {!form.wilaya && (

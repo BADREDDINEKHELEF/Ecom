@@ -3,10 +3,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { revalidateTag } from 'next/cache'
 import { logger } from '@/lib/logger'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function PATCH(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'settings_write', 30, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const { text, active, color } = await req.json().catch(() => ({}))

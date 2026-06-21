@@ -40,15 +40,46 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const status = await satimGetOrderStatus(satimId)
-    if (status.orderStatus === 2) {
-      await satimConfirmOrder(satimId)
-      await markOrderPaid(orderId, satimId)
+    // Fetch the order first to verify amount and detect replay
+    const { data: order, error: orderErr } = await createAdminClient()
+      .from('orders')
+      .select('id, status, total, satim_order_id')
+      .eq('id', orderId)
+      .single()
+
+    if (orderErr || !order) {
+      logger.warn('[payment/callback] order not found', { orderId, satimId })
+      return NextResponse.redirect(`${appUrl}/payment/failure?reason=order_not_found`)
+    }
+
+    // Replay attack guard: if satim_order_id is already set, this payment was processed
+    if (order.satim_order_id && order.satim_order_id === satimId) {
+      logger.warn('[payment/callback] duplicate callback — already processed', { orderId, satimId })
+      // Already paid → redirect to success rather than re-processing
       return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
     }
-    // Satim returned a non-success status — payment not completed
-    await markOrderFailed(orderId)
-    return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=not_paid`)
+
+    const status = await satimGetOrderStatus(satimId)
+    if (status.orderStatus !== 2) {
+      await markOrderFailed(orderId)
+      return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=not_paid`)
+    }
+
+    // Amount verification — Satim reports in centimes (DZD × 100)
+    const expectedCentimes = Math.round(order.total * 100)
+    if (status.amount !== expectedCentimes) {
+      logger.error('[payment/callback] AMOUNT MISMATCH — possible tampering', {
+        orderId, satimId,
+        expected: expectedCentimes,
+        received: status.amount,
+      })
+      // Do NOT fulfil the order if the amount does not match. Fail safe.
+      return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=amount_mismatch`)
+    }
+
+    await satimConfirmOrder(satimId)
+    await markOrderPaid(orderId, satimId)
+    return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
   } catch (err) {
     logger.error('[payment/callback] Satim verification failed', { error: err instanceof Error ? err.message : String(err) })
     // Do NOT mark as paid when we cannot verify. Fail safe.

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
-import { upsertProduct } from '@/lib/supabase/mutations'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
 function parseCSVLine(line: string): string[] {
@@ -39,9 +40,24 @@ function parseCSV(text: string): Record<string, string>[] {
 
 export async function POST(req: NextRequest) {
   try {
+    // IP-level gate first — before any auth or body parsing
+    const ip = getClientIp(req)
+    const ipRl = await checkSellerRateLimit(ip, 'import', 5, 60 * 60)
+    if (!ipRl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfterSeconds) } }
+    )
+
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Per-account gate — prevents one seller exhausting the limit for a shared NAT
+    const userRl = await checkUserRateLimit(user.id, 'import', 3, 60 * 60)
+    if (!userRl.allowed) return NextResponse.json(
+      { error: 'Limite atteinte. Maximum 3 imports par heure.' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+    )
 
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
@@ -66,24 +82,29 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const productId = `v-${vendor.id.slice(0, 8)}-${Date.now()}-${imported}`
-        await upsertProduct({
-          id:           productId,
-          nicheId:      row['niche'] || row['niche_id'] || 'cars',
-          category:     row['category'] || row['categorie'] || 'Général',
-          name,
-          description:  row['description'] || '',
-          price,
-          comparePrice: parseFloat(row['compare_price'] || row['prix_compare'] || '0') || undefined,
-          stock:        (() => { const s = parseInt(row['stock'] ?? '', 10); return isNaN(s) ? 1 : Math.max(0, s) })(),
-          images:       (row['images'] || row['image'] || '').split('|').filter(Boolean),
-          tags:         (row['tags'] || '').split('|').filter(Boolean),
-          isNew:        false,
-          isFeatured:   false,
-        })
-        // Attach vendor_id (not in upsertProduct signature)
+        // Single atomic upsert with vendor_id included — avoids the two-step
+        // insert+update window where the product exists without an owner.
+        // crypto.randomUUID() guarantees uniqueness; Date.now() does not when
+        // multiple rows are processed in rapid succession.
         const admin = createAdminClient()
-        await admin.from('products').update({ vendor_id: vendor.id }).eq('id', productId)
+        const productId = crypto.randomUUID()
+        const { error: upsertErr } = await admin.from('products').upsert({
+          id:            productId,
+          vendor_id:     vendor.id,
+          niche_id:      row['niche'] || row['niche_id'] || 'cars',
+          category:      row['category'] || row['categorie'] || 'Général',
+          name,
+          description:   row['description'] || '',
+          price,
+          compare_price: parseFloat(row['compare_price'] || row['prix_compare'] || '0') || null,
+          stock:         (() => { const s = parseInt(row['stock'] ?? '', 10); return isNaN(s) ? 1 : Math.max(0, s) })(),
+          images:        (row['images'] || row['image'] || '').split('|').filter(Boolean),
+          tags:          (row['tags'] || '').split('|').filter(Boolean),
+          is_new:        false,
+          is_featured:   false,
+          updated_at:    new Date().toISOString(),
+        })
+        if (upsertErr) throw upsertErr
         imported++
       } catch (err) {
         errors.push(`Erreur pour "${name}": ${err instanceof Error ? err.message : 'Erreur inconnue'}`)

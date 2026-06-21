@@ -91,18 +91,33 @@ export function trackAddToCart(product: {
   _ttq('AddToCart', { content_id: product.id, content_name: product.name, quantity: product.quantity, value: product.price * product.quantity, currency: 'DZD' })
 }
 
+export function trackInitiateCheckout(cart: { total: number; numItems: number }) {
+  _fbq('track', 'InitiateCheckout', {
+    value:     cart.total,
+    currency:  'DZD',
+    num_items: cart.numItems,
+  })
+  _gtag('event', 'begin_checkout', {
+    currency: 'DZD',
+    value:    cart.total,
+  })
+  _ttq('InitiateCheckout', { value: cart.total, currency: 'DZD' })
+  _pixel('InitiateCheckout', { total: cart.total, num_items: cart.numItems, currency: 'DZD' })
+}
+
 export function trackPurchase(order: {
   transactionId: string
   total:         number
   items: Array<{ id: string; name: string; price: number; quantity: number }>
 }) {
+  // Pass eventID so Meta/TikTok can deduplicate against the server-side CAPI event
   _fbq('track', 'Purchase', {
     value:        order.total,
     currency:     'DZD',
     content_ids:  order.items.map(i => i.id),
     content_type: 'product',
     num_items:    order.items.reduce((s, i) => s + i.quantity, 0),
-  })
+  }, { eventID: order.transactionId })
   _gtag('event', 'purchase', {
     transaction_id: order.transactionId,
     value:          order.total,
@@ -121,9 +136,11 @@ export function trackPurchase(order: {
     num_items:      order.items.reduce((s, i) => s + i.quantity, 0),
     product_ids:    order.items.map(i => i.id),
   })
-  _ttq('PlaceAnOrder', {
+  // TikTok purchase standard event is 'CompletePayment' (not 'PlaceAnOrder')
+  _ttq('CompletePayment', {
     value:    order.total,
     currency: 'DZD',
+    event_id: order.transactionId,
     contents: order.items.map(i => ({ content_id: i.id, content_name: i.name, quantity: i.quantity, price: i.price })),
   })
 }

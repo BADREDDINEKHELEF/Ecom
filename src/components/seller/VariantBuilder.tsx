@@ -30,7 +30,7 @@ const PRESET_OPTIONS = [
 ]
 
 function genId() {
-  return Math.random().toString(36).slice(2, 10)
+  return crypto.randomUUID()
 }
 
 function cartesian(arrays: string[][]): string[][] {

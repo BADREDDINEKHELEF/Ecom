@@ -2,20 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'analytics', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const supabase = createAdminClient()
 
-    // Algiers midnight (UTC+1)
+    // Algiers is UTC+1, no DST. toLocaleString creates a local-time string that
+    // loses tz info when reparsed, so we use arithmetic instead.
     const now = new Date()
-    const todayAlgiers = new Date(now.toLocaleString('en', { timeZone: 'Africa/Algiers' }))
-    todayAlgiers.setHours(0, 0, 0, 0)
-    // Convert back to UTC for DB queries
-    const todayUTC = new Date(todayAlgiers.getTime() - 60 * 60 * 1000)
+    const ALGIERS_OFFSET_MS = 60 * 60 * 1000  // UTC+1
+    const nowAlgiersMs = now.getTime() + ALGIERS_OFFSET_MS
+    const todayStartAlgiersMs = nowAlgiersMs - (nowAlgiersMs % (24 * 60 * 60 * 1000))
+    const todayUTC = new Date(todayStartAlgiersMs - ALGIERS_OFFSET_MS)
     const fortyEightAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
 
     const [todayOrders, totalVendors, recentOrders] = await Promise.all([
@@ -39,12 +48,11 @@ export async function GET(req: NextRequest) {
     const vendors    = totalVendors.data ?? []
     const recent     = recentOrders.data ?? []
 
-    // Revenue = confirmed delivered orders only
-    const transmittedToday = orders.filter((o) => o.status === 'delivered')
-    const todayGMV   = transmittedToday.reduce((s, o) => s + (o.total ?? 0), 0)
+    // GMV = all non-cancelled orders placed today (delivered + in-progress)
+    const todayGMV   = orders.reduce((s, o) => s + (o.total ?? 0), 0)
     const codOrders  = orders.filter((o) => o.payment_method === 'cash').length
     const codRate    = orders.length > 0 ? Math.round((codOrders / orders.length) * 100) : 0
-    const avgBasket  = transmittedToday.length > 0 ? Math.round(todayGMV / transmittedToday.length) : 0
+    const avgBasket  = orders.length > 0 ? Math.round(todayGMV / orders.length) : 0
 
     const newVendorsToday = vendors.filter(
       (v) => new Date(v.created_at) >= todayUTC

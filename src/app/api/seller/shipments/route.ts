@@ -9,28 +9,46 @@ import {
   getVendorDeliveryConfig, updateShippingInfo, updateOrderStatus
 } from '@/lib/supabase/queries'
 import { dispatchShipment } from '@/lib/delivery/dispatch'
+import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
+const SHIPMENT_STATUSES   = ['pending', 'in_transit', 'picked_up', 'out_for_delivery', 'delivered', 'returned', 'failed', 'cancelled'] as const
 
 const CreateShipmentSchema = z.object({
   orderId:        z.string().uuid(),
   provider:       z.enum(SUPPORTED_PROVIDERS),
-  trackingNumber: z.string().optional(),
+  trackingNumber: z.string().max(100).optional(),
   autoCreate:     z.boolean().optional().default(false),
   notes:          z.string().max(500).optional(),
 })
 
 const PatchShipmentSchema = z.object({
   shipmentId:     z.string().uuid(),
-  trackingNumber: z.string().optional(),
-  status:         z.string().optional(),
-  detail:         z.string().optional(),
+  trackingNumber: z.string().max(100).optional(),
+  status:         z.enum(SHIPMENT_STATUSES).optional(),
+  detail:         z.string().max(500).optional(),
 })
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'shipments_create', 20, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const supabase = createRouteClient(req)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const userRl = await checkUserDualRateLimit(user.id, 'shipments', {
+    burstMax: 5, burstWindowSecs: 60,
+    sustainedMax: 30, sustainedWindowSecs: 3600,
+  })
+  if (!userRl.allowed) return NextResponse.json(
+    { error: 'Limite atteinte. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+  )
 
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
@@ -63,7 +81,19 @@ export async function POST(req: NextRequest) {
     let labelUrl: string | undefined
     let requiresManual = true
 
-    if (autoCreate && !trackingNumber) {
+    // Prevent duplicate shipments for the same order+vendor (race condition guard)
+    const { data: existingShipment } = await admin
+      .from('shipments')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('vendor_id', vendor.id)
+      .limit(1)
+      .maybeSingle()
+    if (existingShipment) {
+      return NextResponse.json({ error: 'A shipment already exists for this order' }, { status: 409 })
+    }
+
+    if (autoCreate && !trackingNumber && provider !== 'manual') {
       const config = await getVendorDeliveryConfig(vendor.id)
       let result
       try {
@@ -135,6 +165,12 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'shipments_read', 60, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const supabase = createRouteClient(req)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -144,7 +180,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url)
-    const page     = parseInt(searchParams.get('page') ?? '0')
+    const page     = Math.max(0, parseInt(searchParams.get('page') ?? '0') || 0)
     const status   = searchParams.get('status')   ?? undefined
     const provider = searchParams.get('provider') ?? undefined
 
@@ -157,6 +193,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'shipments_patch', 20, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const supabase = createRouteClient(req)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -182,7 +224,7 @@ export async function PATCH(req: NextRequest) {
     // Verify shipment belongs to authenticated vendor before updating
     const { data: existing } = await admin
       .from('shipments')
-      .select('id, vendor_id')
+      .select('id, vendor_id, order_id, provider')
       .eq('id', shipmentId)
       .single()
 
@@ -191,6 +233,8 @@ export async function PATCH(req: NextRequest) {
 
     if (trackingNumber) {
       await admin.from('shipments').update({ tracking_number: trackingNumber }).eq('id', shipmentId)
+      // Propagate to orders table so customer tracking page reflects the new number
+      await updateShippingInfo(existing.order_id, trackingNumber, existing.provider)
     }
     if (status) {
       await updateShipmentStatus(shipmentId, status, detail)

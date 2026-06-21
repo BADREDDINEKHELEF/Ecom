@@ -6,14 +6,31 @@ import { updateShipmentStatus } from '@/lib/supabase/shipments'
 import { updateOrderStatus } from '@/lib/supabase/orders'
 import { dispatchTrack } from '@/lib/delivery/dispatch'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // POST /api/seller/shipments/sync
 // Fetches live status from each provider for all active (non-terminal) shipments
 // and updates them in the database. Returns { synced, skipped, errors }.
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'shipments_sync', 10, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const supabase = createRouteClient(req)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const userRl = await checkUserDualRateLimit(user.id, 'shipments_sync', {
+    burstMax: 3, burstWindowSecs: 60,
+    sustainedMax: 20, sustainedWindowSecs: 3600,
+  })
+  if (!userRl.allowed) return NextResponse.json(
+    { error: 'Limite atteinte. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+  )
 
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })

@@ -1,10 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/logger'
 
 export type AuditAction =
   | 'admin_login_success'
   | 'admin_login_failure'
   | 'admin_logout'
   | 'admin_page_visit'
+  | 'admin_session_revoked'
+  | 'admin_commission_paid'
   | 'product_created'
   | 'product_updated'
   | 'product_deleted'
@@ -20,15 +23,15 @@ export type AuditAction =
 
 export async function writeAuditLog({
   action,
-  ip,
-  userAgent,
-  result,
+  ip = 'server',
+  userAgent = 'server',
+  result = 'success',
   meta,
 }: {
   action: AuditAction
-  ip: string
-  userAgent: string
-  result: 'success' | 'failure'
+  ip?: string
+  userAgent?: string
+  result?: 'success' | 'failure'
   meta?: Record<string, unknown>
 }) {
   try {
@@ -42,6 +45,6 @@ export async function writeAuditLog({
     })
   } catch {
     // Never throw — audit log must not break the main flow
-    console.error('[AuditLog] write failed')
+    logger.error('[AuditLog] write failed')
   }
 }

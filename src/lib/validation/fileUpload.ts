@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto'
+
 /**
  * File upload security utilities.
  * Validates MIME type, enforces size limits, sanitizes filenames, and strips EXIF.
@@ -72,6 +74,6 @@ export function generateStoragePath(folder: string, originalName: string): strin
   const ext    = originalName.split('.').pop()?.toLowerCase() ?? 'bin'
   const safe   = sanitizeFilename(ext)
   const ts     = Date.now()
-  const random = Math.random().toString(36).slice(2, 10)
+  const random = randomBytes(4).toString('hex')
   return `${folder}/${ts}-${random}.${safe}`
 }

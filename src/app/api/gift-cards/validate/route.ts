@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!rl.allowed) return NextResponse.json({ error: 'Trop de tentatives' }, { status: 429 })
 
   const { code } = await req.json().catch(() => ({}))
-  if (!code || typeof code !== 'string') {
+  if (!code || typeof code !== 'string' || code.length > 100) {
     return NextResponse.json({ error: 'Code requis' }, { status: 400 })
   }
 
@@ -30,5 +30,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ce code cadeau est épuisé' }, { status: 400 })
   }
 
-  return NextResponse.json({ balance: data.balance })
+  return NextResponse.json({ valid: true })
 }

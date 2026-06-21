@@ -18,14 +18,33 @@ function getIp(req: NextRequest): string {
   )
 }
 
+// UUID v4 pattern — pixel IDs stored in DB are UUIDs generated at vendor creation
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+// Allowlist of permitted event type names (prevents arbitrary string injection into DB)
+const ALLOWED_EVENT_TYPES = new Set([
+  'pageview', 'view_content', 'add_to_cart', 'initiate_checkout',
+  'purchase', 'search', 'lead', 'subscribe', 'custom',
+])
+
+function sanitizeEventType(raw: string): string {
+  const lower = raw.toLowerCase().slice(0, 50).replace(/[^a-z0-9_]/g, '_')
+  return ALLOWED_EVENT_TYPES.has(lower) ? lower : 'pageview'
+}
+
 export async function GET(req: NextRequest) {
+  const clientIp = getIp(req)
+  // Rate limit the GIF endpoint — without this an attacker can insert millions of fake events
+  const rl = await checkPublicRateLimit(clientIp, 'pixel_collect_get')
+  const rateLimited = !rl.allowed
+
   const { searchParams } = new URL(req.url)
   const pixelId   = searchParams.get('pid')
-  const eventType = searchParams.get('e') ?? 'pageview'
-  const pageUrl   = searchParams.get('u')
-  const referrer  = searchParams.get('r')
+  const eventType = sanitizeEventType(searchParams.get('e') ?? 'pageview')
+  const pageUrl   = searchParams.get('u')?.slice(0, 2000) ?? null
+  const referrer  = searchParams.get('r')?.slice(0, 500) ?? null
 
-  // Always return the GIF immediately — tracking is fire-and-forget
+  // Always return the GIF — tracking is fire-and-forget; rate-limited hits still get the pixel
   const response = new NextResponse(GIF, {
     status: 200,
     headers: {
@@ -35,7 +54,7 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  if (!pixelId) return response
+  if (!pixelId || rateLimited || !UUID_RE.test(pixelId)) return response
 
   // Resolve vendor from pixel_id async — don't block the response
   void (async () => {
@@ -51,19 +70,16 @@ export async function GET(req: NextRequest) {
       await supabase.from('pixel_events').insert({
         vendor_id:  vendor.id,
         event_type: eventType,
-        page_url:   pageUrl ?? null,
-        referrer:   referrer ?? null,
-        user_agent: req.headers.get('user-agent') ?? null,
-        ip_hash:    hashIp(getIp(req)),
+        page_url:   pageUrl,
+        referrer:   referrer,
+        user_agent: req.headers.get('user-agent')?.slice(0, 500) ?? null,
+        ip_hash:    hashIp(clientIp),
       })
     } catch {}
   })()
 
   return response
 }
-
-// UUID v4 pattern — pixel IDs stored in DB are UUIDs generated at vendor creation
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export async function POST(req: NextRequest) {
   // Rate-limit pixel events: 60/min per IP (normal visitor activity)

@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbToProduct } from '@/lib/supabase/products'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkPublicRateLimit(ip, 'products_related')
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const { searchParams } = req.nextUrl
   const nicheId   = searchParams.get('nicheId')
   const excludeId = searchParams.get('excludeId')

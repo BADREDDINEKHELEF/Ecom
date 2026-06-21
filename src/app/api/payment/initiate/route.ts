@@ -22,7 +22,6 @@ const InitiateSchema = z.object({
   wilaya:        z.string().min(1).max(100),
   city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
   address:       z.string().min(5).max(500),
-  shippingCost:  z.number().min(0).max(10000),
   promoCodeId:   z.string().uuid().optional().nullable(),
   discountAmount: z.number().min(0).default(0),
   items:         z.array(OrderItemSchema).min(1).max(50),
@@ -53,6 +52,16 @@ export async function POST(req: NextRequest) {
   const { paymentMethod, promoCodeId, ...rest } = parsed.data
   const phone = normalizePhone(rest.phone)
 
+  // Verify gateway config BEFORE creating an order — avoids orphaned orders
+  // that consume stock and increment promo uses when the gateway is unavailable.
+  if (paymentMethod === 'baridimob') {
+    if (!baridimobConfigured()) {
+      return NextResponse.json({ error: 'BaridiMob not configured' }, { status: 503 })
+    }
+  } else if (!satimConfigured()) {
+    return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
+  }
+
   try {
     const { id: orderId, total } = await createOrder({
       ...rest,
@@ -64,13 +73,16 @@ export async function POST(req: NextRequest) {
 
     // Use the server-computed total (DZD) returned by createOrder — never trust client amounts.
     // Satim expects centimes (DZD × 100).
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`
+    // NEXT_PUBLIC_APP_URL must be set — never fall back to the Host header, which is
+    // user-controlled and could redirect Satim's callback to an attacker's server.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!appUrl) {
+      logger.error('[POST /api/payment/initiate] NEXT_PUBLIC_APP_URL env var is not set')
+      return NextResponse.json({ error: 'Payment gateway not configured' }, { status: 503 })
+    }
     const orderAmountCentimes = Math.round(total * 100)
 
     if (paymentMethod === 'baridimob') {
-      if (!baridimobConfigured()) {
-        return NextResponse.json({ error: 'BaridiMob not configured' }, { status: 503 })
-      }
       const bmResult = await baridimobInitiatePayment({
         orderNumber: orderId,
         amountDZD:   total,
@@ -81,10 +93,6 @@ export async function POST(req: NextRequest) {
     }
 
     // CIB / Edahabia / Card → Satim
-    if (!satimConfigured()) {
-      return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
-    }
-
     const satimResult = await satimRegisterOrder({
       orderNumber:    orderId,
       amountCentimes: orderAmountCentimes,

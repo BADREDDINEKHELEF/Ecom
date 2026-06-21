@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomInt } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -11,8 +12,9 @@ function normalizePhone(raw: string): string {
   return '213' + d
 }
 
+// crypto.randomInt is a CSPRNG; Math.random() is predictable and must never be used for OTPs.
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return randomInt(100000, 1000000).toString()
 }
 
 async function sendWhatsAppOTP(phone: string, otp: string): Promise<void> {

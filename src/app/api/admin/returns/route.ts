@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { logger } from '@/lib/logger'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'returns_read', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const supabase = createAdminClient()

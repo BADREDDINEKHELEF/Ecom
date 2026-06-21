@@ -6,7 +6,7 @@ function getSessionId(): string {
   if (typeof window === 'undefined') return ''
   let id = sessionStorage.getItem('storedzSession')
   if (!id) {
-    id = `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    id = `sess_${Date.now()}_${crypto.randomUUID().replace(/-/g, '')}`
     sessionStorage.setItem('storedzSession', id)
   }
   return id

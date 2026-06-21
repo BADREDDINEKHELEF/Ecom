@@ -24,8 +24,8 @@ DECLARE
   v_expires TIMESTAMPTZ;
   v_deduct  NUMERIC;
 BEGIN
-  IF p_amount <= 0 THEN
-    RAISE EXCEPTION 'invalid_amount: p_amount must be positive';
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'invalid_amount';
   END IF;
 
   -- Lock the row so concurrent calls serialize; NOWAIT returns error immediately
@@ -67,4 +67,7 @@ BEGIN
 END;
 $redeem_gc$;
 
+-- Restrict execution to service_role only; SECURITY DEFINER runs as owner (postgres)
+-- so PUBLIC access would let any authenticated user bypass the API's rate-limiter.
+REVOKE ALL ON FUNCTION redeem_gift_card(TEXT, NUMERIC) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION redeem_gift_card(TEXT, NUMERIC) TO service_role;

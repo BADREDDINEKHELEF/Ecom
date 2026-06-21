@@ -26,6 +26,10 @@ export async function sendPasswordResetEmail(opts: {
   to: string
   resetLink: string
 }): Promise<void> {
+  if (!opts.resetLink.startsWith('https://')) {
+    logger.error('[email] sendPasswordResetEmail: resetLink must start with https://')
+    return
+  }
   await sendEmail(
     opts.to,
     'Réinitialisation de votre mot de passe StoreDz',
@@ -124,7 +128,7 @@ export async function sendAbandonedCartEmail(opts: {
         <h2 style="color:#f59e0b">Votre panier vous attend !</h2>
         <p>Bonjour ${opts.name ? `<strong>${esc(opts.name)}</strong>` : ''},</p>
         <p>Vous avez laissé des articles dans votre panier pour un total de <strong>${opts.cartTotal.toLocaleString('fr-DZ')} DA</strong>.</p>
-        <a href="https://storedz.dz/checkout" style="display:inline-block;margin-top:16px;background:#059669;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">Finaliser ma commande</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://storedz.dz'}/checkout" style="display:inline-block;margin-top:16px;background:#059669;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">Finaliser ma commande</a>
         <p style="color:#9ca3af;font-size:12px;margin-top:32px">StoreDz — La marketplace algérienne</p>
       </div>
       `,

@@ -53,6 +53,19 @@ export function verifyTotp(token: string, secret: string, window = 1): boolean {
   return false
 }
 
+/**
+ * Like verifyTotp but returns the matching counter value on success (needed for
+ * replay protection — the caller records the counter so it can't be reused).
+ * Returns null if the code is invalid.
+ */
+export function verifyTotpGetCounter(token: string, secret: string, window = 1): number | null {
+  const counter = Math.floor(Date.now() / 1000 / 30)
+  for (let delta = -window; delta <= window; delta++) {
+    if (generateToken(secret, counter + delta) === token) return counter + delta
+  }
+  return null
+}
+
 export async function generateQrCode(secret: string, issuer = 'StoreDz'): Promise<string> {
   const otpauth = `otpauth://totp/${encodeURIComponent(issuer)}:admin?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`
   return QRCode.toDataURL(otpauth)

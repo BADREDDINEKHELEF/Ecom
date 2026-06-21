@@ -3,11 +3,19 @@ import { requireAdmin } from '@/lib/auth/adminAuth'
 import { writeAuditLog, type AuditAction } from '@/lib/auth/auditLog'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAllVendors } from '@/lib/supabase/vendors'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/admin/vendors?filter=pending|approved|all&page=0
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'vendors_read', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const { searchParams } = new URL(req.url)
@@ -24,8 +32,13 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'vendors_write', 30, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '0.0.0.0'
   const ua = req.headers.get('user-agent') ?? 'unknown'
 
   try {
@@ -35,10 +48,14 @@ export async function PATCH(req: NextRequest) {
       admin_note?: string
     }
 
-    if (!body.id)     return NextResponse.json({ error: 'id is required' },     { status: 400 })
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!body.id || !UUID_RE.test(body.id)) return NextResponse.json({ error: 'id is required' }, { status: 400 })
     if (!body.action) return NextResponse.json({ error: 'action is required' }, { status: 400 })
     if (!['approve', 'decline', 'suspend', 'reactivate'].includes(body.action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
+    if (body.admin_note && body.admin_note.length > 1000) {
+      return NextResponse.json({ error: 'admin_note trop long' }, { status: 400 })
     }
 
     const admin = createAdminClient()

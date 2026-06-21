@@ -1,14 +1,14 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { DELIVERY_PROVIDERS } from './providers'
-import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfigured, yalidineTrack, yalidineListParcels } from './yalidine'
-import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured, procolisTrack, procolisListParcels } from './procolis'
-import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured, zrTrack, zrListParcels } from './zrexpress'
-import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured, colivraisonTrack, colivraisonListParcels } from './colivraison'
-import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels } from './maystro'
-import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels } from './rex'
+import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfigured, yalidineTrack, yalidineListParcels, yalidineGetRateWithCreds } from './yalidine'
+import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured, procolisTrack, procolisListParcels, procolisGetRateWithToken } from './procolis'
+import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured, zrTrack, zrListParcels, zrGetRateWithToken } from './zrexpress'
+import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured, colivraisonTrack, colivraisonListParcels, colivraisonGetRateWithToken } from './colivraison'
+import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels, maystroGetRateWithToken } from './maystro'
+import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels, rexGetRateWithToken } from './rex'
 import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
 import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
-import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels } from './apec'
+import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels, apecGetRateWithCreds } from './apec'
 
 export interface DispatchResult extends ShipmentResult {
   provider: string
@@ -378,6 +378,91 @@ export async function dispatchGetStats(
     const parcels = extractParcelArray(data)
     if (parcels.length === 0) return null
     return countStatuses(parcels)
+  } catch {
+    return null
+  }
+}
+
+export interface RateResult {
+  homeDelivery: number
+  deskDelivery?: number
+  provider: string
+}
+
+type VendorCreds = {
+  yalidine_api_id?: string | null; yalidine_api_token?: string | null
+  procolis_token?: string | null; zr_token?: string | null
+  colivraison_token?: string | null; maystro_token?: string | null
+  rex_token?: string | null; yassir_api_key?: string | null
+  ecom_token?: string | null; apec_api_id?: string | null; apec_api_token?: string | null
+}
+
+// vendorOnly=true prevents null vendor tokens from falling through to platform env vars.
+// Always pass vendorOnly=true when called from a vendor-scoped public endpoint.
+export async function dispatchGetRate(
+  provider: string,
+  wilayaName: string,
+  vendorCreds?: VendorCreds,
+  vendorOnly = false
+): Promise<RateResult | null> {
+  // Helper: resolve a token using vendor creds. When vendorOnly=true, a null vendor
+  // credential returns '' (no token) rather than falling back to the platform env var,
+  // so vendor stores can't accidentally bill the platform's delivery account.
+  const tok = (vendorVal: string | null | undefined, envVal: string | undefined) =>
+    vendorOnly
+      ? (vendorVal != null ? vendorVal : '')
+      : (vendorVal ?? envVal ?? '')
+
+  try {
+    switch (provider) {
+      case 'yalidine': {
+        const id = tok(vendorCreds?.yalidine_api_id, process.env.YALIDINE_API_ID)
+        const tk = tok(vendorCreds?.yalidine_api_token, process.env.YALIDINE_API_TOKEN)
+        if (!id || !tk) return null
+        const r = await yalidineGetRateWithCreds(wilayaName, id, tk)
+        return r ? { ...r, provider } : null
+      }
+      case 'procolis': {
+        const token = tok(vendorCreds?.procolis_token, process.env.PROCOLIS_TOKEN)
+        if (!token) return null
+        const r = await procolisGetRateWithToken(wilayaName, token)
+        return r ? { ...r, provider } : null
+      }
+      case 'zr': {
+        const token = tok(vendorCreds?.zr_token, process.env.ZR_TOKEN)
+        if (!token) return null
+        const r = await zrGetRateWithToken(wilayaName, token)
+        return r ? { ...r, provider } : null
+      }
+      case 'colivraison': {
+        const token = tok(vendorCreds?.colivraison_token, process.env.COLIVRAISON_TOKEN)
+        if (!token) return null
+        const r = await colivraisonGetRateWithToken(wilayaName, token)
+        return r ? { ...r, provider } : null
+      }
+      case 'maystro': {
+        const token = tok(vendorCreds?.maystro_token, process.env.MAYSTRO_TOKEN)
+        if (!token) return null
+        const r = await maystroGetRateWithToken(wilayaName, token)
+        return r ? { ...r, provider } : null
+      }
+      case 'rex': {
+        const token = tok(vendorCreds?.rex_token, process.env.REX_TOKEN)
+        if (!token) return null
+        const r = await rexGetRateWithToken(wilayaName, token)
+        return r ? { ...r, provider } : null
+      }
+      case 'apec': {
+        const id = tok(vendorCreds?.apec_api_id, process.env.APEC_API_ID)
+        const tk = tok(vendorCreds?.apec_api_token, process.env.APEC_API_TOKEN)
+        if (!id || !tk) return null
+        const r = await apecGetRateWithCreds(wilayaName, id, tk)
+        return r ? { ...r, provider } : null
+      }
+      // yassir/ecom: no rate endpoint — fall back to static
+      default:
+        return null
+    }
   } catch {
     return null
   }

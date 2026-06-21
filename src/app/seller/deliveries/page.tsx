@@ -242,13 +242,15 @@ export default function SellerDeliveriesPage() {
 
   // ── CSV export ─────────────────────────────────────────────────────────────
   const exportCSV = () => {
+    const q = (s: string) => `"${String(s ?? '').replace(/"/g, '""')}"`
     const rows = shipments.filter((s) => selected.size === 0 || selected.has(s.id))
     const header = ['ID', 'Order', 'Customer', 'Wilaya', 'Provider', 'Tracking', 'Status', 'Date']
     const csv = [
       header.join(','),
       ...rows.map((s) =>
-        [s.id.slice(0, 8), s.order_id.slice(0, 8), s.recipient_name, s.wilaya, s.provider,
-         s.tracking_number || '', s.status, new Date(s.created_at).toLocaleDateString('fr-DZ')].join(',')
+        [s.id.slice(0, 8), s.order_id.slice(0, 8), q(s.recipient_name ?? ''), q(s.wilaya ?? ''),
+         q(s.provider), q(s.tracking_number || ''), q(s.status),
+         new Date(s.created_at).toLocaleDateString('fr-DZ')].join(',')
       ),
     ].join('\n')
     const anchor = document.createElement('a')

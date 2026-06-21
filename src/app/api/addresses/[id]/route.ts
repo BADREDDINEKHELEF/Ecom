@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
 const PatchSchema = z.object({
@@ -14,11 +16,22 @@ const PatchSchema = z.object({
   is_default: z.boolean().optional(),
 })
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+
+  const ip = getClientIp(req)
+  const rl = await checkPublicRateLimit(ip, 'addresses_write')
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
+
   try {
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -38,13 +51,16 @@ export async function PATCH(
       await admin.from('saved_addresses').update({ is_default: false }).eq('user_id', user.id)
     }
 
-    const { error } = await admin
+    const { data: updated, error } = await admin
       .from('saved_addresses')
       .update(parsed.data)
       .eq('id', id)
       .eq('user_id', user.id)
+      .select('id')
+      .single()
 
     if (error) throw error
+    if (!updated) return NextResponse.json({ error: 'Adresse introuvable' }, { status: 404 })
     return NextResponse.json({ ok: true })
   } catch (err) {
     logger.error('[PATCH /api/addresses/[id]]', { error: err instanceof Error ? err.message : String(err) })
@@ -57,6 +73,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+
+  const ip = getClientIp(req)
+  const rl = await checkPublicRateLimit(ip, 'addresses_write')
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
+
   try {
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()

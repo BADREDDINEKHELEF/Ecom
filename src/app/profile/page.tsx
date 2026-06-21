@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Package, Heart, Lock, MapPin, ChevronRight, LogOut, Loader2 } from 'lucide-react'
+import { User, Package, Lock, MapPin, ChevronRight, LogOut, Loader2, Store } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { useT } from '@/lib/store/langStore'
@@ -51,8 +51,8 @@ export default function ProfilePage() {
 
   const QUICK_LINKS = [
     { href: '/orders',            icon: Package, label: p.myOrders,    desc: p.myOrdersDesc,    color: 'text-indigo-600 bg-indigo-50' },
-    { href: '/profile/addresses', icon: MapPin,  label: p.myAddresses, desc: p.myAddressesDesc, color: 'text-emerald-600 bg-emerald-50' },
-    { href: '/wishlist',          icon: Heart,   label: p.myWishlist,  desc: p.myWishlistDesc,  color: 'text-red-500 bg-red-50' },
+    { href: '/track',             icon: MapPin,  label: 'Suivre ma commande', desc: 'Statut de livraison en temps réel', color: 'text-emerald-600 bg-emerald-50' },
+    { href: '/seller/dashboard',  icon: Store,   label: 'Ma boutique', desc: 'Gérer mes produits et commandes', color: 'text-violet-600 bg-violet-50' },
     { href: '/auth',              icon: Lock,    label: p.security,    desc: p.securityDesc,    color: 'text-amber-600 bg-amber-50' },
   ]
 

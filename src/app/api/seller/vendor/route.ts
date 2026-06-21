@@ -4,10 +4,23 @@ import { createRouteClient } from '@/lib/supabase/server'
 import { getVendorByUserIdServer, updateVendor } from '@/lib/supabase/vendors'
 import { encryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 function encryptIfNeeded(value: string | null | undefined): string | null | undefined {
   if (!value) return value
   return isEncrypted(value) ? value : encryptField(value)
+}
+
+const ALLOWED_STORAGE_HOSTS = ['supabase.co', 'supabase.in']
+
+function safeStorageUrl() {
+  return z.string().url().refine((url) => {
+    try {
+      const { protocol, hostname } = new URL(url)
+      return protocol === 'https:' && ALLOWED_STORAGE_HOSTS.some((h) => hostname.endsWith(h))
+    } catch { return false }
+  }, { message: 'URL must be an https Supabase storage URL' }).nullable().optional()
 }
 
 const PatchSchema = z.object({
@@ -16,9 +29,9 @@ const PatchSchema = z.object({
   phone:            z.string().max(30).nullable().optional(),
   wilaya:           z.string().max(100).nullable().optional(),
   description:      z.string().max(2000).nullable().optional(),
-  logo_url:         z.string().url().nullable().optional(),
-  banner_url:       z.string().url().nullable().optional(),
-  cover_url:        z.string().url().nullable().optional(),
+  logo_url:         safeStorageUrl(),
+  banner_url:       safeStorageUrl(),
+  cover_url:        safeStorageUrl(),
   accent_color:     z.string().regex(/^#[0-9a-fA-F]{3,8}$/).nullable().optional(),
   seo_title:        z.string().max(200).nullable().optional(),
   seo_description:  z.string().max(500).nullable().optional(),
@@ -50,9 +63,21 @@ const PatchSchema = z.object({
 
 export async function PATCH(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'vendor_settings', 20, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const userRl = await checkUserRateLimit(user.id, 'vendor_settings', 10, 3600)
+    if (!userRl.allowed) return NextResponse.json(
+      { error: 'Limite atteinte. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+    )
 
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })

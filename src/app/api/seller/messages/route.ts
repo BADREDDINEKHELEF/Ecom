@@ -4,6 +4,8 @@ import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 const PostSchema = z.object({
   buyerPhone: z.string().min(5).max(30),
@@ -14,6 +16,12 @@ const PostSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'messages_read', 60, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -77,9 +85,24 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'messages_write', 20, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const userRl = await checkUserDualRateLimit(user.id, 'messages_write', {
+      burstMax: 5, burstWindowSecs: 60,
+      sustainedMax: 30, sustainedWindowSecs: 3600,
+    })
+    if (!userRl.allowed) return NextResponse.json(
+      { error: 'Limite atteinte. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+    )
 
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })

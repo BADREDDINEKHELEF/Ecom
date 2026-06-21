@@ -2,15 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Tag, ShoppingCart, User } from 'lucide-react'
+import { Home, Package, ShoppingCart, User, Store } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
-import { useT } from '@/lib/store/langStore'
 import { useState, useEffect } from 'react'
 
 export default function BottomNav() {
   const pathname = usePathname()
   const { itemCount, toggleCart } = useCartStore()
-  const t = useT()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const cartCount = itemCount()
@@ -23,13 +21,8 @@ export default function BottomNav() {
     pathname.startsWith('/shop/')
   ) return null
 
-  const tabs = [
-    { href: '/',        icon: Home,         label: t.nav.home    },
-    { href: '/search',  icon: Search,       label: t.nav.search.split('…')[0].trim() || 'Search' },
-    { href: '/deals',   icon: Tag,          label: t.nav.deals   },
-    { href: '/cart',    icon: ShoppingCart, label: t.nav.cart,   badge: true },
-    { href: '/profile', icon: User,         label: t.nav.account },
-  ]
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   return (
     <nav
@@ -38,49 +31,56 @@ export default function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-14">
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const isCart = tab.badge
-          const isActive = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
-          const count = mounted && isCart ? cartCount : 0
 
-          if (isCart) {
-            return (
-              <button
-                key={tab.href}
-                onClick={() => toggleCart()}
-                aria-label={`${tab.label}${count > 0 ? ` (${count})` : ''}`}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
-              >
-                <div className="relative">
-                  <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400'}`} />
-                  {count > 0 && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
-                      {count > 99 ? '99+' : count}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-[10px] font-medium leading-none ${isActive ? 'text-indigo-600' : 'text-gray-400'}`}>
-                  {tab.label}
-                </span>
-              </button>
-            )
-          }
+        {/* Home */}
+        <Link href="/" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          <Home className={`w-5 h-5 transition-colors ${isActive('/') ? 'text-indigo-600' : 'text-gray-400'}`} />
+          <span className={`text-[10px] font-medium leading-none ${isActive('/') ? 'text-indigo-600' : 'text-gray-400'}`}>
+            Accueil
+          </span>
+        </Link>
 
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              aria-label={tab.label}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5"
-            >
-              <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400'}`} />
-              <span className={`text-[10px] font-medium leading-none ${isActive ? 'text-indigo-600' : 'text-gray-400'}`}>
-                {tab.label}
+        {/* Track order */}
+        <Link href="/track" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          <Package className={`w-5 h-5 transition-colors ${isActive('/track') ? 'text-indigo-600' : 'text-gray-400'}`} />
+          <span className={`text-[10px] font-medium leading-none ${isActive('/track') ? 'text-indigo-600' : 'text-gray-400'}`}>
+            Commande
+          </span>
+        </Link>
+
+        {/* Cart */}
+        <button
+          onClick={() => toggleCart()}
+          aria-label={`Panier${mounted && cartCount > 0 ? ` (${cartCount})` : ''}`}
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
+        >
+          <div className="relative">
+            <ShoppingCart className={`w-5 h-5 transition-colors ${isActive('/cart') ? 'text-indigo-600' : 'text-gray-400'}`} />
+            {mounted && cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                {cartCount > 99 ? '99+' : cartCount}
               </span>
-            </Link>
-          )
-        })}
+            )}
+          </div>
+          <span className="text-[10px] font-medium leading-none text-gray-400">Panier</span>
+        </button>
+
+        {/* Seller dashboard */}
+        <Link href="/seller/dashboard" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          <Store className={`w-5 h-5 transition-colors ${isActive('/seller') ? 'text-indigo-600' : 'text-gray-400'}`} />
+          <span className={`text-[10px] font-medium leading-none ${isActive('/seller') ? 'text-indigo-600' : 'text-gray-400'}`}>
+            Ma boutique
+          </span>
+        </Link>
+
+        {/* Profile */}
+        <Link href="/profile" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          <User className={`w-5 h-5 transition-colors ${isActive('/profile') ? 'text-indigo-600' : 'text-gray-400'}`} />
+          <span className={`text-[10px] font-medium leading-none ${isActive('/profile') ? 'text-indigo-600' : 'text-gray-400'}`}>
+            Compte
+          </span>
+        </Link>
+
       </div>
     </nav>
   )

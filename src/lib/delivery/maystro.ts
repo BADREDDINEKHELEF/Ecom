@@ -3,6 +3,27 @@ import { ShipmentInput, ShipmentResult } from './types'
 const BASE_URL = 'https://maystro-delivery.com/api/v1'
 const TIMEOUT  = 15_000
 
+// Maystro API requires numeric wilaya codes, not name strings
+const WILAYA_TO_ID: Record<string, number> = {
+  'Adrar': 1, 'Chlef': 2, 'Laghouat': 3, 'Oum El Bouaghi': 4, 'Batna': 5,
+  'Béjaïa': 6, 'Biskra': 7, 'Béchar': 8, 'Blida': 9, 'Bouira': 10,
+  'Tamanrasset': 11, 'Tébessa': 12, 'Tlemcen': 13, 'Tiaret': 14, 'Tizi Ouzou': 15,
+  'Alger': 16, 'Djelfa': 17, 'Jijel': 18, 'Sétif': 19, 'Saïda': 20,
+  'Skikda': 21, 'Sidi Bel Abbès': 22, 'Annaba': 23, 'Guelma': 24, 'Constantine': 25,
+  'Médéa': 26, 'Mostaganem': 27, 'Msila': 28, 'Mascara': 29, 'Ouargla': 30,
+  'Oran': 31, 'El Bayadh': 32, 'Illizi': 33, 'Bordj Bou Arreridj': 34, 'Boumerdès': 35,
+  'El Tarf': 36, 'Tindouf': 37, 'Tissemsilt': 38, 'El Oued': 39, 'Khenchela': 40,
+  'Souk Ahras': 41, 'Tipaza': 42, 'Mila': 43, 'Aïn Defla': 44, 'Naâma': 45,
+  'Aïn Témouchent': 46, 'Ghardaïa': 47, 'Relizane': 48, 'Timimoun': 49,
+  'Bordj Badji Mokhtar': 50, 'Ouled Djellal': 51, 'Béni Abbès': 52,
+  'In Salah': 53, 'In Guezzam': 54, 'Touggourt': 55, 'Djanet': 56,
+  'El Meghaier': 57, 'El Meniaa': 58,
+}
+
+function wilayaToId(name: string): number | null {
+  return WILAYA_TO_ID[name] ?? WILAYA_TO_ID[name.trim()] ?? null
+}
+
 export function maystroConfigured(): boolean {
   return !!process.env.MAYSTRO_TOKEN
 }
@@ -11,11 +32,14 @@ export async function maystroCreateShipmentWithToken(
   input: ShipmentInput,
   token: string
 ): Promise<ShipmentResult> {
+  const wilayaId = wilayaToId(input.wilaya)
+  if (!wilayaId) throw new Error(`Maystro: unknown wilaya "${input.wilaya}"`)
+
   const body = {
     client_name:      input.fullName,
     client_phone:     input.phone,
     destination_text: input.address,
-    wilaya:           input.wilaya,
+    wilaya:           wilayaId,
     commune:          input.city,
     product_price:    input.total,
     note:             input.items || '',
@@ -62,6 +86,30 @@ export async function maystroListParcels(token: string, pageSize = 100) {
     if (!res.ok) return null
     return res.json()
   } catch { return null }
+}
+
+export async function maystroGetRateWithToken(
+  wilayaName: string,
+  token: string
+): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  const wilayaId = wilayaToId(wilayaName)
+  if (!wilayaId) return null  // unknown wilaya → caller falls back to static
+  try {
+    const res = await fetch(`${BASE_URL}/shipping-prices/?wilaya=${wilayaId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const row = Array.isArray(data) ? data[0] : (data?.results?.[0] ?? data)
+    if (!row) return null
+    const home = Number(row.home_delivery_fee ?? row.price ?? row.tarif ?? row.fee ?? row.home_fee)
+    const desk = Number(row.desk_delivery_fee ?? row.bureau_fee ?? row.desk_fee)
+    if (!home || isNaN(home)) return null
+    return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
+  } catch {
+    return null
+  }
 }
 
 export async function maystroTrack(trackingCode: string, token: string) {

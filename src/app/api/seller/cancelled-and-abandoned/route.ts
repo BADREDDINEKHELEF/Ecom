@@ -2,13 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { maskPhone, maskEmail } from '@/lib/utils/mask'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/seller/cancelled-and-abandoned
 // Returns:
 //   cancelled  — orders that contain this vendor's items and have status=cancelled
 //   abandoned  — recent abandoned_checkouts (store-wide, last 30 days)
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'cancelled_abandoned', 60, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const supabase = createRouteClient(req)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -46,7 +55,7 @@ export async function GET(req: NextRequest) {
       .map((r) => ({
         orderId:     r.orders!.id,
         fullName:    r.orders!.full_name,
-        phone:       r.orders!.phone,
+        phone:       maskPhone(r.orders!.phone),
         wilaya:      r.orders!.wilaya,
         total:       r.orders!.total,
         createdAt:   r.orders!.created_at,
@@ -71,14 +80,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (abandonedRows === null) {
-      const { data } = await admin
-        .from('abandoned_checkouts')
-        .select('session_id, name, phone, email, wilaya, cart_total, status, updated_at')
-        .eq('status', 'abandoned')
-        .gte('updated_at', since.toISOString())
-        .order('updated_at', { ascending: false })
-        .limit(100)
-      abandonedRows = data
+      // store_slug column not yet added (pre-migration) — return empty rather than
+      // leaking every vendor's abandoned checkouts to the requesting vendor
+      abandonedRows = []
     }
 
     return NextResponse.json({
@@ -86,8 +90,8 @@ export async function GET(req: NextRequest) {
       abandoned: (abandonedRows ?? []).map((r) => ({
         sessionId: r.session_id,
         name:      r.name,
-        phone:     r.phone,
-        email:     r.email,
+        phone:     maskPhone(r.phone),
+        email:     maskEmail(r.email),
         wilaya:    r.wilaya,
         cartTotal: r.cart_total,
         updatedAt: r.updated_at,

@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/seller/stores — list all stores owned by the authenticated user
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'stores_read', 60, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,9 +34,21 @@ export async function GET(req: NextRequest) {
 // POST /api/seller/stores — create a new store for the authenticated user
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'stores_write', 5, 3600)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const userRl = await checkUserRateLimit(user.id, 'stores_write', 3, 3600)
+    if (!userRl.allowed) return NextResponse.json(
+      { error: 'Limite atteinte. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+    )
 
     const body = await req.json().catch(() => ({})) as {
       store_name?: string
@@ -113,9 +133,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // PATCH /api/seller/stores — update a store (must be owned by user)
 export async function PATCH(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'stores_write', 20, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
+
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -130,6 +159,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    if (!UUID_RE.test(body.id)) return NextResponse.json({ error: 'Invalid store ID' }, { status: 400 })
 
     const admin = createAdminClient()
 

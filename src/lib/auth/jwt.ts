@@ -7,15 +7,23 @@ const secret = () => {
   return new TextEncoder().encode(s)
 }
 
-// 8-hour session — long enough for a full workday without TOTP re-entry,
-// but short enough to limit exposure if the cookie is ever stolen.
+// 2-hour session — reduced from 8h to limit exposure window if the cookie is stolen.
+// The admin UI auto-refreshes at the 1h50m mark (via /api/admin/refresh) so the
+// session stays alive during active use without requiring re-authentication.
 // Each token gets a unique JTI so it can be individually revoked on logout.
-export async function signAdminToken(): Promise<string> {
+export const ADMIN_TOKEN_MAX_AGE_SECONDS = 2 * 60 * 60  // 2 hours
+
+/**
+ * Signs a new admin JWT.
+ * Pass a pre-generated JTI when you need the identifier before signing
+ * (e.g. to create the session record first). Omit to auto-generate one.
+ */
+export async function signAdminToken(jti: string = randomUUID()): Promise<string> {
   return new SignJWT({ role: 'admin' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('8h')
-    .setJti(randomUUID())
+    .setExpirationTime('2h')
+    .setJti(jti)
     .sign(secret())
 }
 

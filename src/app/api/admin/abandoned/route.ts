@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'abandoned_read', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const { searchParams } = new URL(req.url)
   const period = searchParams.get('period') ?? 'all'
   const supabase = createAdminClient()
@@ -22,13 +31,22 @@ export async function GET(req: NextRequest) {
     query = query.gte('created_at', start.toISOString())
   }
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error('[GET /api/admin/abandoned]', { error: error.message })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
   return NextResponse.json(data ?? [])
 }
 
 export async function PATCH(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'abandoned_write', 30, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const { id, status } = await req.json().catch(() => ({}))
   if (!id || !status) return NextResponse.json({ error: 'id and status required' }, { status: 400 })
   const supabase = createAdminClient()
@@ -36,6 +54,9 @@ export async function PATCH(req: NextRequest) {
     status,
     ...(status === 'recovered' ? { recovered_at: new Date().toISOString() } : {}),
   }).eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error('[PATCH /api/admin/abandoned]', { error: error.message })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
   return NextResponse.json({ ok: true })
 }

@@ -115,3 +115,26 @@ export async function yalidineGetRates(wilayaName: string) {
     return null
   }
 }
+
+export async function yalidineGetRateWithCreds(
+  wilayaName: string,
+  apiId: string,
+  apiToken: string
+): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
+      headers: buildHeaders(apiId, apiToken),
+      signal: AbortSignal.timeout(TIMEOUT),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const row = Array.isArray(data) ? data[0] : (Array.isArray(data?.data) ? data.data[0] : data)
+    if (!row) return null
+    const home = Number(row.home_fee ?? row.fee ?? row.tarif ?? row.price)
+    const desk = Number(row.desk_fee ?? row.bureau_fee ?? row.stop_desk_fee)
+    if (!home || isNaN(home)) return null
+    return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
+  } catch {
+    return null
+  }
+}

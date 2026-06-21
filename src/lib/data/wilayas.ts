@@ -44,7 +44,6 @@ export const WILAYA_DATA: Record<string, WilayaInfo> = {
   'Relizane':        { name: 'Relizane',         zone: 3 },
   'Aïn Témouchent':  { name: 'Aïn Témouchent',   zone: 3 },
   'Tiaret':          { name: 'Tiaret',           zone: 3 },
-  'Djelfа':          { name: 'Djelfa',           zone: 3 },
   'Djelfa':          { name: 'Djelfa',           zone: 3 },
   'Khenchela':       { name: 'Khenchela',        zone: 3 },
   'Oum El Bouaghi':  { name: 'Oum El Bouaghi',   zone: 3 },

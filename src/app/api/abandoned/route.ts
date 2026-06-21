@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
       phone: typeof phone === 'string' ? phone.slice(0, 20) : null,
       wilaya: typeof wilaya === 'string' ? wilaya.slice(0, 100) : null,
       address: typeof address === 'string' ? address.slice(0, 500) : null,
-      cart_snapshot: cartSnapshot ?? null,
+      // Cap cartSnapshot to 50 items to prevent DB bloat from malicious large payloads
+      cart_snapshot: Array.isArray(cartSnapshot)
+        ? cartSnapshot.slice(0, 50)
+        : (cartSnapshot !== null && typeof cartSnapshot === 'object' ? cartSnapshot : null),
       cart_total: typeof cartTotal === 'number' ? cartTotal : 0,
       status: 'abandoned',
       updated_at: new Date().toISOString(),

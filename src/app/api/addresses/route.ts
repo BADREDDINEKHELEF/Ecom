@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
 const AddressSchema = z.object({
@@ -16,6 +18,13 @@ const AddressSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkPublicRateLimit(ip, 'addresses_read')
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
+
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -38,6 +47,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkPublicRateLimit(ip, 'addresses_write')
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
+
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -52,6 +68,18 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
 
+    // Enforce per-user limit (prevents unbounded growth)
+    const { count } = await admin
+      .from('saved_addresses')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+    if ((count ?? 0) >= 10) {
+      return NextResponse.json({ error: 'Maximum 10 adresses enregistrées' }, { status: 400 })
+    }
+
+    // Clear existing default before setting a new one.
+    // A concurrent request could also set is_default=true between these two statements —
+    // fully preventing that requires a DB-level unique partial index on (user_id) WHERE is_default=true.
     if (parsed.data.is_default) {
       await admin.from('saved_addresses').update({ is_default: false }).eq('user_id', user.id)
     }

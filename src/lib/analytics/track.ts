@@ -24,7 +24,7 @@ function getSessionId(): string {
   try {
     let id = sessionStorage.getItem('_sid')
     if (!id) {
-      id = Math.random().toString(36).slice(2) + Date.now().toString(36)
+      id = crypto.randomUUID().replace(/-/g, '')
       sessionStorage.setItem('_sid', id)
     }
     return id

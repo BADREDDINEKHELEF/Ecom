@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/sponsored?placement=homepage&limit=8 — public endpoint for active sponsored products
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkPublicRateLimit(ip, 'sponsored')
+    if (!rl.allowed) return NextResponse.json(
+      { products: [] },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     const { searchParams } = new URL(req.url)
-    const placement = searchParams.get('placement') ?? 'homepage'
+    // Allowlist placement to prevent PostgREST filter injection via .or() string interpolation
+    const VALID_PLACEMENTS = new Set(['homepage', 'sidebar', 'category', 'product', 'checkout', 'search'])
+    const rawPlacement = searchParams.get('placement') ?? 'homepage'
+    const placement = VALID_PLACEMENTS.has(rawPlacement) ? rawPlacement : 'homepage'
     const limit = Math.min(20, Math.max(1, parseInt(searchParams.get('limit') ?? '8')))
 
     const admin = createAdminClient()

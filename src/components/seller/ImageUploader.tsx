@@ -43,7 +43,7 @@ const COLOR_PRESETS = [
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function uid() {
-  return Math.random().toString(36).slice(2, 10)
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 8)
 }
 
 async function compressToWebP(file: File, maxPx = 1400, quality = 0.85): Promise<Blob> {

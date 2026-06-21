@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'analytics', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const supabase = createAdminClient()
@@ -17,7 +25,8 @@ export async function GET(req: NextRequest) {
       supabase
         .from('order_items')
         .select('vendor_id, subtotal, quantity, orders(id, status, delivery_outcome, created_at)')
-        .not('vendor_id', 'is', null),
+        .not('vendor_id', 'is', null)
+        .limit(10000),
     ])
 
     const vendors  = vendorsRes.data  ?? []
@@ -71,7 +80,7 @@ export async function GET(req: NextRequest) {
         ...v,
         cancelRate: v.orderCount > 0 ? Math.round((v.cancelCount / v.orderCount) * 100) : 0,
         deliveryRate: v.orderCount > 0 ? Math.round((v.deliveredCount / v.orderCount) * 100) : 0,
-        flagged: v.cancelCount / Math.max(v.orderCount, 1) > 0.15 || v.lastSaleDaysAgo >= 45,
+        flagged: v.orderCount > 0 && (v.cancelCount / v.orderCount > 0.15 || v.lastSaleDaysAgo >= 45),
       }))
       .sort((a, b) => b.gmv - a.gmv)
 

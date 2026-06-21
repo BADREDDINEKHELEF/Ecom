@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
+import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 const PayoutSchema = z.object({
   id: z.string().uuid(),
@@ -11,6 +13,12 @@ const PayoutSchema = z.object({
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
   if (denied) return denied
+  const ip = getClientIp(req)
+  const rl = await checkAdminApiRateLimit(ip, 'analytics', 120, 60)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
 
   try {
     const supabase = createAdminClient()
@@ -20,7 +28,7 @@ export async function GET(req: NextRequest) {
         .from('commissions')
         .select('id, vendor_id, order_total_dzd, commission_amount_dzd, status, created_at, paid_at')
         .order('created_at', { ascending: false })
-        .limit(500),
+        .limit(5000),
       supabase
         .from('vendors')
         .select('id, store_name, store_slug'),

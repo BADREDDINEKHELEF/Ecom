@@ -1,46 +1,29 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { ShoppingCart, Search, Menu, X, Heart, Store, User } from 'lucide-react'
+import { useState } from 'react'
+import { ShoppingCart, Menu, X, Store, User } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
-import { useWishlistStore } from '@/lib/store/wishlistStore'
-import { useT, useRTL } from '@/lib/store/langStore'
+import { useT } from '@/lib/store/langStore'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import Logo from '@/components/ui/Logo'
 import ThemeToggle from '@/components/ui/ThemeToggle'
-import { track } from '@/lib/analytics/track'
+import { useEffect } from 'react'
 
 export default function Header() {
   const { toggleCart, itemCount } = useCartStore()
-  const wishlistCount = useWishlistStore((s) => s.items.length)
   const cartCount = itemCount()
   const t = useT()
-  const isRTL = useRTL()
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted]   = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  const [searchValue, setSearchValue] = useState('')
-  const router = useRouter()
-  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setMounted(true) }, [])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchValue.trim()) {
-      track('search', { query: searchValue.trim() })
-      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`)
-      setSearchValue('')
-      searchRef.current?.blur()
-    }
-  }
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 gap-3">
+
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             <Logo size="sm" />
@@ -69,41 +52,16 @@ export default function Header() {
               <LanguageSwitcher />
             </div>
 
-            {/* Search */}
-            <form onSubmit={handleSearch} className="hidden sm:flex items-center relative">
-              <label htmlFor="header-search" className="sr-only">{t.nav.search}</label>
-              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} w-4 h-4 text-gray-400 pointer-events-none`} />
-              <input
-                id="header-search"
-                ref={searchRef}
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder={t.nav.search}
-                className={`${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2 text-sm border border-gray-200 rounded-lg w-36 focus:w-52 transition-all duration-200 focus:outline-none focus:border-indigo-400 bg-gray-50 focus:bg-white`}
-              />
-            </form>
-
-            {/* Mobile search toggle */}
-            <button
-              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-              className="sm:hidden p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
-              aria-label={t.nav.search}
+            {/* Seller dashboard shortcut */}
+            <Link
+              href="/seller/dashboard"
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             >
-              <Search className="w-5 h-5" />
-            </button>
-
-            {/* Wishlist */}
-            <Link href="/wishlist" aria-label={t.nav.wishlist ?? 'Liste de souhaits'} className="relative p-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
-              <Heart className="w-5 h-5" />
-              {mounted && wishlistCount > 0 && (
-                <span className={`absolute -top-0.5 ${isRTL ? '-left-0.5' : '-right-0.5'} min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1`}>
-                  {wishlistCount}
-                </span>
-              )}
+              <Store className="w-4 h-4" />
+              Mon tableau de bord
             </Link>
 
-            {/* Cart */}
+            {/* Cart — for COD orders from individual stores */}
             <button
               onClick={() => toggleCart()}
               data-pixel-cart-target="true"
@@ -112,14 +70,14 @@ export default function Header() {
             >
               <ShoppingCart className="w-5 h-5" />
               {mounted && cartCount > 0 && (
-                <span className={`absolute -top-0.5 ${isRTL ? '-left-0.5' : '-right-0.5'} min-w-[18px] h-[18px] bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center px-1`}>
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
             </button>
 
             {/* Profile */}
-            <Link href="/profile" className="hidden sm:flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <Link href="/profile" className="hidden sm:flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="w-7 h-7 bg-indigo-100 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-indigo-600" />
               </div>
@@ -137,23 +95,6 @@ export default function Header() {
             </button>
           </div>
         </div>
-
-        {/* Mobile search bar */}
-        {mobileSearchOpen && (
-          <div className="sm:hidden border-t border-gray-100 py-2 px-4 animate-fade-in">
-            <form onSubmit={(e) => { handleSearch(e); setMobileSearchOpen(false) }} className="relative">
-              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
-              <input
-                autoFocus
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder={t.nav.search}
-                className={`w-full ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-gray-50`}
-              />
-            </form>
-          </div>
-        )}
 
         {/* Mobile menu */}
         {menuOpen && (
@@ -174,37 +115,39 @@ export default function Header() {
               <span className="text-2xl">🏪</span>
               <p className="font-semibold text-indigo-600">Créer ma boutique</p>
             </Link>
-
-            {/* Mobile search */}
-            <form onSubmit={(e) => { handleSearch(e); setMenuOpen(false) }} className="px-4 pt-2 pb-1">
-              <div className="relative">
-                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder={t.nav.search}
-                  className={`w-full ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400`}
-                />
-              </div>
-            </form>
+            <Link
+              href="/seller/dashboard"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-2xl">📊</span>
+              <p className="font-semibold text-gray-700">Mon tableau de bord</p>
+            </Link>
+            <Link
+              href="/track"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-2xl">📦</span>
+              <p className="font-semibold text-gray-700">Suivre ma commande</p>
+            </Link>
             <div className="px-4 py-2">
               <LanguageSwitcher />
             </div>
             <div className="pt-2 border-t border-gray-100 flex gap-3 px-4">
               <Link
-                href="/profile"
+                href="/seller/login"
                 onClick={() => setMenuOpen(false)}
                 className="flex-1 text-center py-2.5 font-semibold text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 text-sm transition-colors"
               >
-                {t.nav.profile}
+                Se connecter
               </Link>
               <Link
-                href="/auth"
+                href="/become-seller"
                 onClick={() => setMenuOpen(false)}
                 className="flex-1 text-center py-2.5 font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 text-sm transition-colors"
               >
-                {t.nav.signIn}
+                Créer boutique
               </Link>
             </div>
           </div>

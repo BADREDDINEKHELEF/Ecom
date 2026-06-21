@@ -38,6 +38,9 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     const msg = error.message ?? ''
+    if (msg.includes('invalid_amount')) {
+      return NextResponse.json({ error: 'Montant invalide' }, { status: 400 })
+    }
     if (msg.includes('invalid_card') || msg.includes('inactive_card')) {
       return NextResponse.json({ error: 'Code cadeau invalide ou désactivé' }, { status: 404 })
     }

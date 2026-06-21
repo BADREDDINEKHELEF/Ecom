@@ -2,11 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'analytics_export', 10, 3600)
+  if (!rl.allowed) return NextResponse.json(
+    { error: 'Trop de requêtes. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+  )
   const routeClient = createRouteClient(req)
   const { data: { user } } = await routeClient.auth.getUser()
   if (!user) return new NextResponse('Non authentifié', { status: 401 })
+
+  const userRl = await checkUserRateLimit(user.id, 'analytics_export', 3, 3600)
+  if (!userRl.allowed) return NextResponse.json(
+    { error: 'Limite atteinte. Réessayez plus tard.' },
+    { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+  )
 
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return new NextResponse('Vendeur introuvable', { status: 403 })

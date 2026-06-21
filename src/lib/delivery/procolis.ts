@@ -44,8 +44,9 @@ export async function procolisCreateShipmentWithToken(
   }
 
   const data = await res.json()
-  const parcel = (data?.parcel_list ?? data?.Colis ?? [])[0] ?? {}
-  const tracking = String(parcel.tracking ?? parcel.code_suivi ?? '')
+  // Procolis response wraps created parcels in data.Colis[]
+  const parcel = (Array.isArray(data?.Colis) ? data.Colis : [])[0] ?? data ?? {}
+  const tracking = String(parcel.code_suivi ?? parcel.tracking ?? parcel.id ?? '')
 
   return { tracking }
 }
@@ -64,6 +65,28 @@ export async function procolisListParcels(token: string, pageSize = 100) {
     if (!res.ok) return null
     return res.json()
   } catch { return null }
+}
+
+export async function procolisGetRateWithToken(
+  wilayaName: string,
+  token: string
+): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/tarif?Wilaya=${encodeURIComponent(wilayaName)}`, {
+      headers: { 'Content-Type': 'application/json', token },
+      signal: AbortSignal.timeout(TIMEOUT),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return null
+    const home = Number(row.tarif_domicile ?? row.tarif ?? row.prix ?? row.home_fee ?? row.domicile)
+    const desk = Number(row.tarif_bureau ?? row.bureau ?? row.desk_fee)
+    if (!home || isNaN(home)) return null
+    return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
+  } catch {
+    return null
+  }
 }
 
 export async function procolisTrack(trackingNumber: string, token: string) {

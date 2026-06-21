@@ -66,7 +66,7 @@ export async function POST(
         author_name: parsed.data.author_name,
         question:    parsed.data.question,
         phone:       parsed.data.phone ?? null,
-        is_public:   true,
+        is_public:   false,
       })
       .select('id, author_name, question, answer, answered_at, created_at')
       .single()

@@ -4,6 +4,28 @@ import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
 
+/**
+ * Signs out all active Supabase sessions for a user via the GoTrue admin REST
+ * API. Called after a successful password reset so a compromised session cannot
+ * remain valid after the owner regains control of their account.
+ * Non-fatal: the password was already changed, so failure here is acceptable.
+ */
+async function signOutAllUserSessions(userId: string): Promise<void> {
+  try {
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${userId}/logout`
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        apikey:        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+        'Content-Type': 'application/json',
+      },
+    })
+  } catch {
+    // non-fatal
+  }
+}
+
 function otpEqual(a: string, b: string): boolean {
   try {
     const ba = Buffer.from(a.padEnd(8))
@@ -87,6 +109,10 @@ export async function POST(req: NextRequest) {
       logger.error('[verify-otp] password update failed', { error: updateErr.message })
       return NextResponse.json({ error: 'Impossible de mettre à jour le mot de passe. Réessayez.' }, { status: 500 })
     }
+
+    // Invalidate all existing Supabase sessions for this user so that a
+    // compromised session can't be used after the owner resets their password.
+    await signOutAllUserSessions(vendor.user_id)
 
     // Mark OTP as used
     await supabase

@@ -1,6 +1,8 @@
 ﻿import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { sendTelegramAlert } from '@/lib/notifications/telegram'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,9 +11,15 @@ export async function GET(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
-  // Verify Vercel cron secret
-  const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Verify Vercel cron secret — use timingSafeEqual to prevent timing attacks.
+  // String equality (`!==`) short-circuits at the first differing character,
+  // leaking information about how many prefix bytes matched.
+  const provided = (request.headers.get('authorization') ?? '').replace('Bearer ', '')
+  const expected = process.env.CRON_SECRET ?? ''
+  const valid = expected.length > 0
+    && provided.length === expected.length
+    && timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+  if (!valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -78,7 +86,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ok: true, date: ySince, orders: totalOrders, gmv })
   } catch (err) {
-    console.error('[cron/analytics-alerts]', err)
+    logger.error('[cron/analytics-alerts]', { error: err instanceof Error ? err.message : String(err) })
     await sendTelegramAlert('🔴 Erreur cron analytics-alerts — voir les logs Vercel', 'critical')
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }

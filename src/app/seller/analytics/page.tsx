@@ -253,6 +253,7 @@ export default function SellerAnalyticsPage() {
     setFetching(true)
     try {
       const res = await fetch(`/api/seller/analytics?vendorId=${vendor.id}&days=${days}`)
+      if (!res.ok) throw new Error(`Analytics fetch failed: ${res.status}`)
       setData(await res.json())
     } finally {
       setFetching(false)

@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateImageUpload } from '@/lib/validation/fileUpload'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'upload', 10, 300)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
     // Auth — verify session via route client (reads cookies from request)
     const supabase = createRouteClient(req)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -14,6 +24,15 @@ export async function POST(req: NextRequest) {
       logger.warn('[upload] auth failed', { error: authErr?.message })
       return NextResponse.json({ error: 'Non connecté. Reconnectez-vous.' }, { status: 401 })
     }
+
+    const userRl = await checkUserDualRateLimit(user.id, 'upload', {
+      burstMax: 5, burstWindowSecs: 120,
+      sustainedMax: 20, sustainedWindowSecs: 3600,
+    })
+    if (!userRl.allowed) return NextResponse.json(
+      { error: 'Limite atteinte. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+    )
 
     // Vendor lookup — use the authenticated session (RLS lets users read their own vendor row)
     const { data: vendorRow, error: vendorErr } = await supabase
@@ -65,8 +84,18 @@ export async function POST(req: NextRequest) {
                 : file.type === 'image/png'  ? 'png'
                 : file.type === 'image/gif'  ? 'gif'
                 : 'jpg'
-    const path  = `vendors/${vendorRow.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const path  = `vendors/${vendorRow.id}/${Date.now()}-${randomBytes(4).toString('hex')}.${ext}`
     const bytes = await file.arrayBuffer()
+
+    // Magic byte verification — prevents MIME type spoofing (e.g., a .php file with image/jpeg content-type)
+    try {
+      validateImageUpload(Buffer.from(bytes), file.type || 'image/jpeg')
+    } catch (validationErr) {
+      return NextResponse.json(
+        { error: validationErr instanceof Error ? validationErr.message : 'Fichier invalide.' },
+        { status: 400 }
+      )
+    }
 
     // Ensure bucket exists — creates it on first deploy without needing a manual migration
     const { data: buckets } = await admin.storage.listBuckets()

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomInt } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
 function normalizePhone(raw: string): string {
@@ -9,8 +12,9 @@ function normalizePhone(raw: string): string {
   return '213' + d
 }
 
+// crypto.randomInt is a CSPRNG; Math.random() is predictable and must never be used for OTPs.
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return randomInt(100000, 1000000).toString()
 }
 
 async function sendWhatsAppOTP(phone: string, otp: string): Promise<void> {
@@ -51,6 +55,16 @@ export async function POST(req: NextRequest) {
     const normalized = normalizePhone(phone)
     if (normalized.length < 11) {
       return NextResponse.json({ error: 'Numéro de téléphone invalide.' }, { status: 400 })
+    }
+
+    // Rate limit: 5/15min per IP and 3/hour per phone (same as send-phone-otp)
+    const ip = getClientIp(req)
+    const rl = await checkOtpSendRateLimit(ip, normalized)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
     }
 
     const supabase = createAdminClient()

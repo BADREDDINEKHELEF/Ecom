@@ -19,6 +19,7 @@
 
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis }     from '@upstash/redis'
+import { logger } from '@/lib/logger'
 
 interface RateLimitResult {
   allowed:           boolean
@@ -154,10 +155,17 @@ async function check(
   maxRequests: number,
   windowSeconds: number
 ): Promise<RateLimitResult> {
-  if (isUpstashConfigured()) {
-    return checkUpstash(namespace, key, maxRequests, windowSeconds)
+  const result = isUpstashConfigured()
+    ? await checkUpstash(namespace, key, maxRequests, windowSeconds)
+    : checkInMemory(namespace, key, maxRequests, windowSeconds * 1000)
+  if (!result.allowed) {
+    logger.warn('[rateLimit] limit reached', {
+      namespace,
+      key: key.slice(0, 40),
+      retryAfterSeconds: result.retryAfterSeconds,
+    })
   }
-  return checkInMemory(namespace, key, maxRequests, windowSeconds * 1000)
+  return result
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -199,4 +207,89 @@ export async function checkOtpSendRateLimit(ip: string, phone: string): Promise<
 /** OTP verify: 10 attempts per 15 min per phone (brute-force guard) */
 export async function checkOtpVerifyRateLimit(phone: string): Promise<RateLimitResult> {
   return check('otp_verify', phone, 10, 15 * 60)
+}
+
+/**
+ * Seller authenticated endpoints.
+ * Default: 60 requests / 1 min per IP. Override for expensive operations.
+ */
+export async function checkSellerRateLimit(
+  ip: string,
+  namespace: string,
+  maxRequests = 60,
+  windowSeconds = 60
+): Promise<RateLimitResult> {
+  return check(`seller_${namespace}`, ip, maxRequests, windowSeconds)
+}
+
+/**
+ * Admin panel API endpoints (called after JWT verification).
+ * Default: 120 reads / 1 min per IP; pass 30 for writes.
+ */
+export async function checkAdminApiRateLimit(
+  ip: string,
+  namespace: string,
+  maxRequests = 120,
+  windowSeconds = 60
+): Promise<RateLimitResult> {
+  return check(`admin_${namespace}`, ip, maxRequests, windowSeconds)
+}
+
+/**
+ * Admin TOTP setup endpoint: 3 per hour per IP (one-time setup, very restrictive).
+ */
+export async function checkTotpSetupRateLimit(ip: string): Promise<RateLimitResult> {
+  return check('admin_totp_setup', ip, 3, 60 * 60)
+}
+
+// ── User-level (account-scoped) rate limits ─────────────────────────────────
+// These run AFTER authentication, keyed on the verified user ID rather than IP.
+// Purpose: prevent one compromised or misbehaving account from exhausting shared
+// resources regardless of IP rotation or shared-IP (corporate NAT) scenarios.
+
+/**
+ * Per-user sustained rate limit.
+ * Call after getUser() — uses user.id as the rate-limit key.
+ */
+export async function checkUserRateLimit(
+  userId: string,
+  namespace: string,
+  maxRequests: number,
+  windowSeconds: number
+): Promise<RateLimitResult> {
+  return check(`u_${namespace}`, `uid:${userId}`, maxRequests, windowSeconds)
+}
+
+export interface BurstSustainedLimits {
+  /** Short burst: high max, short window — absorbs legitimate spikes */
+  burstMax:            number
+  burstWindowSecs:     number
+  /** Sustained: lower max, longer window — prevents prolonged exhaustion */
+  sustainedMax:        number
+  sustainedWindowSecs: number
+}
+
+/**
+ * Per-user dual (burst + sustained) rate limit.
+ * Both windows must pass for the request to proceed.
+ * Example: 5 uploads/2 min (burst) + 20 uploads/hour (sustained).
+ */
+export async function checkUserDualRateLimit(
+  userId: string,
+  namespace: string,
+  limits: BurstSustainedLimits
+): Promise<RateLimitResult> {
+  const burst = await check(
+    `u_${namespace}_burst`,
+    `uid:${userId}`,
+    limits.burstMax,
+    limits.burstWindowSecs
+  )
+  if (!burst.allowed) return burst
+  return check(
+    `u_${namespace}_sustained`,
+    `uid:${userId}`,
+    limits.sustainedMax,
+    limits.sustainedWindowSecs
+  )
 }

@@ -250,9 +250,9 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
   const ordersGrowth  = priorOrderCnt > 0 ? Math.round(((totalOrders   - priorOrderCnt) / priorOrderCnt) * 100) : 0
   const avgOrderValue = transmitted.length > 0 ? Math.round(totalRevenue / transmitted.length) : 0
 
-  // Delivery / return rates
-  const delivered   = orders.filter((o) => o.delivery_outcome === 'delivered').length
-  const returned    = orders.filter((o) => o.delivery_outcome === 'returned').length
+  // Delivery / return rates — use `status` consistently (delivery_outcome is often null)
+  const delivered   = orders.filter((o) => o.status === 'delivered').length
+  const returned    = orders.filter((o) => o.status === 'returned').length
   const deliveryRate = totalOrders > 0 ? Math.round((delivered / totalOrders) * 100) : 0
   const returnRate   = totalOrders > 0 ? Math.round((returned  / totalOrders) * 100) : 0
 
@@ -297,7 +297,7 @@ export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
       if (!seenVendors.has(vid)) {
         seenVendors.add(vid)
         vendorMap[vid].orders++
-        if (order.delivery_outcome === 'delivered') vendorMap[vid].delivered++
+        if (order.status === 'delivered') vendorMap[vid].delivered++
       }
     }
   }
@@ -443,15 +443,19 @@ export async function getSellerAnalytics(
     }
   }
 
-  // ── Prior period — delivered orders only ──────────────────
-  const priorOrderMap = new Map<string, number>()
+  // ── Prior period ───────────────────────────────────────────
+  const priorRevenueMap = new Map<string, number>()
+  const priorAllOrderIds = new Set<string>()
   for (const row of priorRows) {
     const order = row.orders
-    if (!order || order.status !== 'delivered') continue
-    priorOrderMap.set(order.id, (priorOrderMap.get(order.id) ?? 0) + row.subtotal)
+    if (!order) continue
+    if (order.status === 'delivered') {
+      priorRevenueMap.set(order.id, (priorRevenueMap.get(order.id) ?? 0) + row.subtotal)
+    }
+    if (order.status !== 'cancelled') priorAllOrderIds.add(order.id)
   }
-  const priorRevenue = Array.from(priorOrderMap.values()).reduce((s, v) => s + v, 0)
-  const priorOrders  = priorOrderMap.size
+  const priorRevenue = Array.from(priorRevenueMap.values()).reduce((s, v) => s + v, 0)
+  const priorOrders  = priorAllOrderIds.size  // consistent with totalOrders (non-cancelled)
   const revenueGrowth = priorRevenue > 0 ? Math.round(((totalRevenue - priorRevenue) / priorRevenue) * 100) : 0
   const ordersGrowth  = priorOrders  > 0 ? Math.round(((totalOrders  - priorOrders)  / priorOrders)  * 100) : 0
 

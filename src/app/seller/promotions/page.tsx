@@ -43,7 +43,7 @@ interface FlashSale {
 type PromoTab = 'codes' | 'flash'
 
 function generateCode() {
-  return 'PROMO' + Math.random().toString(36).slice(2, 7).toUpperCase()
+  return 'PROMO' + crypto.randomUUID().replace(/-/g, '').slice(0, 5).toUpperCase()
 }
 
 function pad(n: number) { return String(n).padStart(2, '0') }

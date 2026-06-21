@@ -20,7 +20,15 @@ const WILAYA_NAME_TO_ZR_ID: Record<string, number> = {
 }
 
 function wilayaToZrId(name: string): number {
-  return WILAYA_NAME_TO_ZR_ID[name] ?? WILAYA_NAME_TO_ZR_ID[name.trim()] ?? 16
+  const id = WILAYA_NAME_TO_ZR_ID[name] ?? WILAYA_NAME_TO_ZR_ID[name.trim()]
+  if (!id) throw new Error(`ZR Express: unknown wilaya "${name}"`)
+  return id
+}
+
+// Returns null when the wilaya name is not in the map — used for rates so we
+// don't silently return Alger's price for an unknown/differently-spelled wilaya.
+function wilayaToZrIdOrNull(name: string): number | null {
+  return WILAYA_NAME_TO_ZR_ID[name] ?? WILAYA_NAME_TO_ZR_ID[name.trim()] ?? null
 }
 
 export function zrConfigured(): boolean {
@@ -83,6 +91,30 @@ export async function zrListParcels(token: string, pageSize = 100) {
     if (!res.ok) return null
     return res.json()
   } catch { return null }
+}
+
+export async function zrGetRateWithToken(
+  wilayaName: string,
+  token: string
+): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  const id = wilayaToZrIdOrNull(wilayaName)
+  if (id === null) return null  // unknown wilaya → caller falls back to static
+  try {
+    const res = await fetch(`${BASE_URL}/tarif?IDWilaya=${id}`, {
+      headers: { Authorization: `Token ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return null
+    const home = Number(row.Tarif ?? row.TarifDomicile ?? row.tarif ?? row.prix ?? row.home_fee)
+    const desk = Number(row.TarifBureau ?? row.tarif_bureau ?? row.desk_fee)
+    if (!home || isNaN(home)) return null
+    return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
+  } catch {
+    return null
+  }
 }
 
 export async function zrTrack(trackingNumber: string, token: string) {

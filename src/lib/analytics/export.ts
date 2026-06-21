@@ -10,8 +10,9 @@ export function exportToCSV(data: unknown[], filename: string): void {
   const headers = Object.keys(data[0] as Record<string, unknown>)
   const escape = (val: unknown): string => {
     if (val === null || val === undefined) return ''
-    const s = String(val)
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    let s = String(val)
+    if (/^[=+\-@\t\r]/.test(s)) s = '\t' + s  // neutralise Excel formula injection
+    if (s.includes(',') || s.includes('"') || s.includes('\n') || s.startsWith('\t')) {
       return `"${s.replace(/"/g, '""')}"`
     }
     return s

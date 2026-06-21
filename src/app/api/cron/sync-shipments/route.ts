@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { updateShipmentStatus } from '@/lib/supabase/shipments'
@@ -14,8 +15,12 @@ const ACTIVE_STATUSES = ['pending', 'in_transit', 'picked_up', 'out_for_delivery
 // Polls all delivery providers for up-to-date shipment statuses across all vendors.
 // Processes the 200 most-stale shipments per run (ordered by updated_at ASC).
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const provided = (request.headers.get('authorization') ?? '').replace('Bearer ', '')
+  const expected = process.env.CRON_SECRET ?? ''
+  const valid = expected.length > 0
+    && provided.length === expected.length
+    && timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+  if (!valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

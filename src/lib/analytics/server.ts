@@ -31,14 +31,15 @@ export async function fireMetaPurchase(opts: {
 }): Promise<void> {
   const { pixelId, accessToken, orderId, total, email, phone, clientIp, clientUserAgent } = opts
   try {
+    // Meta CAPI requires scalar hashed strings, NOT arrays — arrays are silently ignored
     const userData: Record<string, unknown> = {}
-    if (email)            userData.em  = [sha256(email)]
-    if (phone)            userData.ph  = [sha256(normalizePhone(phone))]
+    if (email)            userData.em  = sha256(email)
+    if (phone)            userData.ph  = sha256(normalizePhone(phone))
     if (clientIp)         userData.client_ip_address  = clientIp
     if (clientUserAgent)  userData.client_user_agent  = clientUserAgent
 
     await fetch(
-      `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`,
+      `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,26 +76,29 @@ export async function fireTikTokPurchase(opts: {
     if (email) user.email        = sha256(email)
     if (phone) user.phone_number = sha256(normalizePhone(phone))
 
+    // TikTok Events API v1.3 requires events wrapped in an array
     await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Access-Token': accessToken },
       body: JSON.stringify({
         pixel_code: pixelId,
-        event:      'PlaceAnOrder',
-        event_id:   orderId,
-        timestamp:  new Date().toISOString(),
-        context:    { user },
-        properties: {
-          order_id: orderId,
-          value:    total,
-          currency: 'DZD',
-          contents: items.map(i => ({
-            content_id:   i.id,
-            content_name: i.name,
-            quantity:     i.quantity,
-            price:        i.price,
-          })),
-        },
+        events: [{
+          event:      'CompletePayment',
+          event_id:   orderId,
+          event_time: Math.floor(Date.now() / 1000),
+          user,
+          properties: {
+            order_id: orderId,
+            value:    total,
+            currency: 'DZD',
+            contents: items.map(i => ({
+              content_id:   i.id,
+              content_name: i.name,
+              quantity:     i.quantity,
+              price:        i.price,
+            })),
+          },
+        }],
       }),
     })
   } catch { /* best-effort */ }
@@ -111,7 +115,11 @@ export async function fireGA4Purchase(opts: {
   items:         Array<{ id: string; name: string; price: number; quantity: number }>
   clientId?:     string
 }): Promise<void> {
-  const { measurementId, apiSecret, orderId, total, items, clientId = 'server' } = opts
+  // clientId is the browser's GA4 _ga cookie value (parsed to "XXXXXXXXXX.XXXXXXXXXX" format).
+  // Fall back to a deterministic orderId-based value so the hit is accepted by the API.
+  // Without the real clientId the purchase won't be attributed to the user's acquisition source.
+  const { measurementId, apiSecret, orderId, total, items, clientId } = opts
+  const effectiveClientId = clientId ?? `sv.${orderId.replace(/-/g, '').slice(0, 16)}`
   try {
     await fetch(
       `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
@@ -119,7 +127,7 @@ export async function fireGA4Purchase(opts: {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          client_id: clientId,
+          client_id: effectiveClientId,
           events: [{
             name:   'purchase',
             params: {
@@ -156,6 +164,7 @@ export async function firePurchaseCAPI(opts: {
   phone?:   string | null
   clientIp?:         string
   clientUserAgent?:  string
+  gaClientId?:       string
 }): Promise<void> {
   const calls: Promise<void>[] = []
 
@@ -191,6 +200,7 @@ export async function firePurchaseCAPI(opts: {
       orderId:       opts.orderId,
       total:         opts.total,
       items:         opts.items,
+      clientId:      opts.gaClientId,
     }))
   }
 
