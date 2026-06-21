@@ -1,59 +1,40 @@
-﻿const CACHE = 'storedz-v3'
+﻿const CACHE_NAME = "app-cache-v2";
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting()
-
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) =>
-      cache.add('/offline.html')
-    )
-  )
-})
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.add("/offline"))
+      .catch((err) => console.error("CACHE ERROR", err))
+  );
+
+  self.skipWaiting();
+});
 
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
+    caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE)
-          .map((key) => caches.delete(key))
+          .filter(k => k !== CACHE_NAME)
+          .map(k => caches.delete(k))
       )
-    )
-  )
-
-  self.clients.claim()
-})
+    ).then(() => self.clients.claim())
+  );
+});
 
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
 
-  const url = new URL(event.request.url)
+  const url = new URL(event.request.url);
 
-  if (
-    url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/_next/')
-  ) {
-    return
+  if (url.pathname === "/offline") return;
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => caches.match("/offline"))
+    );
   }
-
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => response)
-      .catch(async () => {
-        const cache = await caches.open(CACHE)
-        const offline = await cache.match('/offline.html')
-
-        return offline || new Response(
-          'Offline',
-          {
-            status: 200,
-            headers: {
-              'Content-Type': 'text/html'
-            }
-          }
-        )
-      })
-  )
-})
+});
