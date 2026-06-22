@@ -110,7 +110,7 @@ export async function zrGetRateWithToken(
     if (!row) return null
     const home = Number(row.Tarif ?? row.TarifDomicile ?? row.tarif ?? row.prix ?? row.home_fee)
     const desk = Number(row.TarifBureau ?? row.tarif_bureau ?? row.desk_fee)
-    if (!home || isNaN(home)) return null
+    if (home === undefined || home === null || isNaN(home)) return null
     return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
   } catch {
     return null

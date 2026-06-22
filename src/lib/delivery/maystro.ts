@@ -105,7 +105,7 @@ export async function maystroGetRateWithToken(
     if (!row) return null
     const home = Number(row.home_delivery_fee ?? row.price ?? row.tarif ?? row.fee ?? row.home_fee)
     const desk = Number(row.desk_delivery_fee ?? row.bureau_fee ?? row.desk_fee)
-    if (!home || isNaN(home)) return null
+    if (home === undefined || home === null || isNaN(home)) return null
     return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
   } catch {
     return null

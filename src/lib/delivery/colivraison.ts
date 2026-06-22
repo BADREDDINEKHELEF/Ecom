@@ -80,7 +80,7 @@ export async function colivraisonGetRateWithToken(
     if (!row) return null
     const home = Number(row.home_fee ?? row.tarif_domicile ?? row.domicile ?? row.prix ?? row.price)
     const desk = Number(row.desk_fee ?? row.tarif_bureau ?? row.bureau)
-    if (!home || isNaN(home)) return null
+    if (home === undefined || home === null || isNaN(home)) return null
     return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
   } catch {
     return null

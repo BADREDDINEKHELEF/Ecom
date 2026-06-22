@@ -82,7 +82,7 @@ export async function procolisGetRateWithToken(
     if (!row) return null
     const home = Number(row.tarif_domicile ?? row.tarif ?? row.prix ?? row.home_fee ?? row.domicile)
     const desk = Number(row.tarif_bureau ?? row.bureau ?? row.desk_fee)
-    if (!home || isNaN(home)) return null
+    if (home === undefined || home === null || isNaN(home)) return null
     return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
   } catch {
     return null
