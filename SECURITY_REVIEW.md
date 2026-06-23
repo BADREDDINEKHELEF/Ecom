@@ -140,9 +140,9 @@ All endpoints with zero authentication:
 | `/api/orders/[id]/cancel` | POST | checkPublicRateLimit | Phone match required |
 | `/api/orders/[id]/return` | POST | checkPublicRateLimit | Phone match + delivered status |
 | `/api/seller/register` | POST | 5/3600s | Requires Supabase session |
-| `/api/seller/forgot-password` | POST | OTP limits | Returns success regardless of phone existence |
-| `/api/seller/send-phone-otp` | POST | OTP limits | CSPRNG OTP, WhatsApp delivery |
-| `/api/seller/verify-phone-otp` | POST | OTP limits | Timing-safe compare |
+| `/api/seller/forgot-password` | POST | OTP limits | Returns success regardless of email existence |
+| `/api/seller/send-email-otp` | POST | OTP limits | CSPRNG OTP, email delivery (non-blocking) |
+| `/api/seller/verify-email-otp` | POST | OTP limits | Timing-safe compare |
 | `/api/seller/verify-otp` | POST | 10/15min | Password reset + session invalidation |
 | `/api/admin/login` | POST | 5/15min | TOTP replay-protected |
 | `/api/admin/logout` | POST | 10/60s | Clears cookie, revokes JTI |

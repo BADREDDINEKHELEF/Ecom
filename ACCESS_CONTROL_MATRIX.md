@@ -66,8 +66,8 @@
 |----------|--------|-----------|-------|--------|-------|
 | `/api/seller/register` | POST | ❌ | ✅ (creates vendor) | ✅ | ✅ |
 | `/api/seller/forgot-password` | POST | ✅ RL | ✅ RL | ✅ RL | — |
-| `/api/seller/send-phone-otp` | POST | ✅ RL | ✅ RL | ✅ RL | — |
-| `/api/seller/verify-phone-otp` | POST | ✅ RL | ✅ RL | ✅ RL | — |
+| `/api/seller/send-email-otp` | POST | ✅ RL | ✅ RL | ✅ RL | — |
+| `/api/seller/verify-email-otp` | POST | ✅ RL | ✅ RL | ✅ RL | — |
 | `/api/seller/verify-otp` | POST | ✅ RL | ✅ RL | ✅ RL | — |
 | `/api/seller/vendor` | PATCH | ❌ | ❌ | ✅ (own vendor) | — |
 | `/api/seller/vendor/vacation` | PATCH | ❌ | ❌ | ✅ (own vendor) | — |

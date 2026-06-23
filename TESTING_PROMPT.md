@@ -89,7 +89,7 @@ Work through every section below in order. For each area:
 ## 3. Seller Dashboard
 
 ### 3.1 Auth
-- [ ] `/seller/register` — OTP sent to phone via `POST /api/seller/send-phone-otp`; verification works
+- [ ] `/seller/register` — OTP sent to email via `POST /api/seller/send-email-otp`; verification works
 - [ ] `/seller/login` — JWT cookie set; protected pages accessible
 - [ ] `/seller/reset-password` — email-based reset works end-to-end
 
