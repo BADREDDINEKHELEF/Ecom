@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache'
 import { createClient } from './client'
 import { createAdminClient } from './admin'
 import { Product, ColorVariant } from '@/types'
+import { normalizePhone } from '@/lib/utils/phone'
 
 export function dbToProduct(row: Record<string, unknown>): Product {
   return {
@@ -113,8 +114,14 @@ export async function getVendorPhoneByProductId(productId: string): Promise<stri
   if (!vendor) return null
   const raw = (vendor.social_whatsapp || vendor.phone) as string | null
   if (!raw) return null
-  const digits = raw.replace(/\D/g, '')
-  return digits.startsWith('213') ? digits : digits.startsWith('0') ? '213' + digits.slice(1) : '213' + digits
+  try {
+    // Use the centralized, robust phone normalization utility.
+    return normalizePhone(raw)
+  } catch (error) {
+    console.error(`Failed to normalize vendor phone for product ${productId}:`, error)
+    // Return null if the stored number is invalid, maintaining function signature.
+    return null
+  }
 }
 
 export async function getVendorProducts(vendorId: string): Promise<Product[]> {

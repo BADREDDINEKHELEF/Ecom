@@ -84,13 +84,20 @@ export default function AdminProductsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this product?')) return
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
     setDeleting(id)
     try {
       await deleteProduct(id)
       setProductList((prev) => prev.filter((p) => p.id !== id))
-    } catch {
-      alert('Failed to delete product.')
+    } catch (error) {
+      console.error('Delete failed:', error)
+      let errorMessage = 'Failed to delete product.'
+      // Check for a common database constraint violation error
+      if (error instanceof Error && error.message.includes('violates foreign key constraint')) {
+        errorMessage = 'Cannot delete product as it is part of existing orders. Consider deactivating it instead.'
+      }
+      // For better UX, consider replacing alert() with a toast notification library
+      alert(errorMessage)
     } finally {
       setDeleting(null)
     }
@@ -116,13 +123,15 @@ export default function AdminProductsPage() {
       isFeatured: form.isFeatured,
     }
     try {
-      await upsertProduct(product)
+      // Assume upsertProduct returns the saved product from the database
+      const savedProduct = await upsertProduct(product)
       if (editing) {
         setProductList((prev) => prev.map((p) =>
-          p.id === editing.id ? { ...p, ...product, rating: p.rating, reviewCount: p.reviewCount } : p
+          p.id === editing.id ? { ...p, ...savedProduct } : p
         ))
       } else {
-        setProductList((prev) => [{ ...product, rating: 0, reviewCount: 0 }, ...prev])
+        // Add the product returned from the database to the list
+        setProductList((prev) => [savedProduct, ...prev])
       }
       setShowModal(false)
     } catch {
