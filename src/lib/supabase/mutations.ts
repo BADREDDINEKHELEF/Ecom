@@ -31,6 +31,7 @@ export async function upsertProduct(
   if (error) throw error
   revalidateTag('products')
   return dbToProduct(data) // Map the returned data to Product type
+}
 
 export async function updateProductExtras(
   id: string,

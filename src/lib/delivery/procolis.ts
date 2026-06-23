@@ -95,7 +95,7 @@ export async function procolisTrack(trackingNumber: string, token: string) {
     const res = await fetch(
       `${BASE_URL}/traking?code_suivi=${encodeURIComponent(trackingNumber)}`,
       {
-        headers: { 'Content-Type': 'application/json', token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         signal: AbortSignal.timeout(TIMEOUT),
       }
     )

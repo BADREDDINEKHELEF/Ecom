@@ -28,10 +28,11 @@ async function signOutAllUserSessions(userId: string): Promise<void> {
 }
 
 function otpEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
   try {
-    const ba = Buffer.from(a.padEnd(8))
-    const bb = Buffer.from(b.padEnd(8))
-    return ba.length === bb.length && timingSafeEqual(ba, bb) && a.length === b.length
+    const ba = Buffer.from(a)
+    const bb = Buffer.from(b)
+    return timingSafeEqual(ba, bb)
   } catch { return false }
 }
 

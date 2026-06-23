@@ -4,6 +4,7 @@ import { signAdminToken, ADMIN_TOKEN_MAX_AGE_SECONDS } from '@/lib/auth/jwt'
 import { requireAdmin, invalidateJtiOnly } from '@/lib/auth/adminAuth'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { getAdminCookieName, getAdminCookieOptions } from '@/cookie'
 import { rotateSessionJti, createSession } from '@/lib/auth/sessions'
 
 // POST /api/admin/refresh — re-issues the admin cookie without a password check.
@@ -16,7 +17,7 @@ import { rotateSessionJti, createSession } from '@/lib/auth/sessions'
 //   3. New token → set in cookie
 // This differs from logout, which deactivates the session entirely.
 export async function POST(req: NextRequest) {
-  const token = req.cookies.get('casbah_admin_token')?.value
+  const token = req.cookies.get(getAdminCookieName())?.value
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   // Full check: signature + expiry + revocation blocklist
@@ -50,12 +51,8 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ ok: true })
-  res.cookies.set('casbah_admin_token', newToken, {
-    httpOnly: true,
-    secure:   process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge:   ADMIN_TOKEN_MAX_AGE_SECONDS,
-    path:     '/',
-  })
+  const cookieName = getAdminCookieName()
+  const cookieOpts = getAdminCookieOptions(ADMIN_TOKEN_MAX_AGE_SECONDS)
+  res.cookies.set(cookieName, newToken, cookieOpts)
   return res
 }

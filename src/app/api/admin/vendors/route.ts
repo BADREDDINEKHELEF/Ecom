@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest) {
         ? { is_active: false }
         : { is_active: true }
 
-    const { error, count } = await admin.from('vendors').update(updates).eq('id', body.id)
+    const { error, count } = await admin.from('vendors').update(updates, { count: 'exact' }).eq('id', body.id)
     if (error) throw error
     if (count === 0) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 })

@@ -12,6 +12,7 @@ import { awardPoints, redeemPoints } from '@/lib/loyalty'
 import { firePurchaseCAPI } from '@/lib/analytics/server'
 import { decryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
+import { normalizePhone as utilNormalizePhone } from '@/lib/utils/phone'
 
 function decryptCred(v: string | null | undefined): string | null {
   if (!v) return null
@@ -36,6 +37,7 @@ const CreateOrderSchema = z.object({
   city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
   address:       z.string().min(5).max(500),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
+  // shippingCost is intentionally removed to prevent client-side manipulation (C-01)
   promoCodeId:      z.string().uuid().optional().nullable(),
   discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
   giftCardCode:     z.string().max(100).optional().nullable(),
@@ -49,10 +51,6 @@ const CreateOrderSchema = z.object({
   gaClientId:       z.string().max(100).optional().nullable(),
   items:            z.array(OrderItemSchema).min(1).max(50),
 })
-
-function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-().+]/g, '')
-}
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
@@ -94,7 +92,7 @@ export async function POST(req: NextRequest) {
   } = parsed.data
   const input = {
     ...rest,
-    phone: normalizePhone(parsed.data.phone),
+    phone: utilNormalizePhone(parsed.data.phone),
     promoCodeId:      rawPromoCodeId ?? undefined,
     giftCardCode:     rawGiftCardCode?.trim().toUpperCase() || undefined,
     notes: rawNotes ?? null,

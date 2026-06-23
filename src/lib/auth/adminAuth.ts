@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { verifyAdminToken, decodeAdminToken } from './jwt'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
+import { getAdminCookieName } from '@/cookie'
 
 /**
  * Reads and verifies the admin JWT cookie, then checks the JTI revocation
@@ -12,7 +13,7 @@ import { logger } from '@/lib/logger'
  * This prevents a stolen token from being usable during a DB outage.
  */
 export async function requireAdmin(req: NextRequest): Promise<NextResponse | null> {
-  const token = req.cookies.get('casbah_admin_token')?.value
+  const token = req.cookies.get(getAdminCookieName())?.value
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const payload = await verifyAdminToken(token)

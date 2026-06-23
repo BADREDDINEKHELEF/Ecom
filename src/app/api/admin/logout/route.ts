@@ -3,6 +3,7 @@ import { writeAuditLog } from '@/lib/auth/auditLog'
 import { revokeAdminToken } from '@/lib/auth/adminAuth'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { getAdminCookieName } from '@/cookie'
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
@@ -15,11 +16,11 @@ export async function POST(req: NextRequest) {
 
   // Revoke the JWT so it cannot be reused before its 2h natural expiry.
   // revokeAdminToken also marks the admin_sessions row as inactive.
-  const token = req.cookies.get('casbah_admin_token')?.value
+  const token = req.cookies.get(getAdminCookieName())?.value
   if (token) await revokeAdminToken(token)
 
   await writeAuditLog({ action: 'admin_logout', ip, userAgent: ua, result: 'success' })
   const res = NextResponse.json({ ok: true })
-  res.cookies.delete('casbah_admin_token')
+  res.cookies.delete(getAdminCookieName())
   return res
 }

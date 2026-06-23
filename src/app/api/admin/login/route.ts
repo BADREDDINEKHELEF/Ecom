@@ -5,6 +5,7 @@ import { signAdminToken, ADMIN_TOKEN_MAX_AGE_SECONDS } from '@/lib/auth/jwt'
 import { verifyTotpGetCounter } from '@/lib/auth/totp'
 import { writeAuditLog } from '@/lib/auth/auditLog'
 import { getClientIp } from '@/lib/utils/ip'
+import { getAdminCookieName, getAdminCookieOptions } from '@/cookie'
 import { createSession, isTotpCounterUsed, markTotpCounterUsed } from '@/lib/auth/sessions'
 
 export async function POST(req: NextRequest) {
@@ -98,12 +99,8 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ action: 'admin_login_success', ip, userAgent: ua, result: 'success' })
 
   const res = NextResponse.json({ ok: true })
-  res.cookies.set('casbah_admin_token', token, {
-    httpOnly: true,
-    secure:   process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge:   ADMIN_TOKEN_MAX_AGE_SECONDS,
-    path:     '/',
-  })
+  const cookieName = getAdminCookieName()
+  const cookieOpts = getAdminCookieOptions(ADMIN_TOKEN_MAX_AGE_SECONDS)
+  res.cookies.set(cookieName, token, cookieOpts)
   return res
 }

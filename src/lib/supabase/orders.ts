@@ -188,14 +188,10 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     }
   }
 
-  // Compute shipping server-side to prevent client-side manipulation (C-01).
-  // This uses the same logic as the /api/delivery/rates endpoint to ensure consistency.
+  // BUGFIX (C-01): Compute shipping server-side to prevent client-side manipulation.
   const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, input.items)
 
-  // Points deduction
   const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
-
-  // Calculate total before applying gift card
   const subtotalAfterDiscounts = computedSubtotal + shippingCost - discountAmount - pointsDeduction
 
   // Server-side gift card validation and deduction calculation (H-01 fix)
@@ -257,7 +253,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       payment_method:  input.paymentMethod,
       status:          input.status ?? 'pending',
       subtotal:        computedSubtotal,
-      shipping_cost:   shippingCost,
+      shipping_cost:   shippingCost, // Use server-calculated value
       total,
       promo_code_id:   input.promoCodeId ?? null,
       discount_amount: discountAmount,

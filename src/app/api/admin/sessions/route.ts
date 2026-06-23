@@ -4,6 +4,7 @@ import { decodeAdminToken } from '@/lib/auth/jwt'
 import { listActiveSessions } from '@/lib/auth/sessions'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { getAdminCookieName } from '@/cookie'
 
 // GET /api/admin/sessions — list all active admin sessions with device details.
 // The response includes a `isCurrent` flag so the UI can highlight the session
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   )
 
   // Decode the current token to determine which session is "this device"
-  const token = req.cookies.get('casbah_admin_token')?.value
+  const token = req.cookies.get(getAdminCookieName())?.value
   const currentJti = token ? (decodeAdminToken(token)?.jti ?? null) : null
 
   const sessions = await listActiveSessions()
