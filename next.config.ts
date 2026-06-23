@@ -114,7 +114,21 @@ const nextConfig: NextConfig = {
 
   // Redirect http → https in production (belt-and-suspenders with HSTS)
   async redirects() {
-    return []
+    if (process.env.NODE_ENV !== 'production') return []
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'header',
+            key: 'x-forwarded-proto',
+            value: 'http',
+          },
+        ],
+        destination: 'https://:host/:path*',
+        permanent: true,
+      },
+    ]
   },
 }
 

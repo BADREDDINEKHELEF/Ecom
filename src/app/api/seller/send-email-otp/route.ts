@@ -42,11 +42,11 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient()
 
     // Remove old OTPs for this email
-    await supabase.from('password_reset_otps').delete().eq('phone', email)
+    await supabase.from('password_reset_otps').delete().eq('email', email)
 
     const otp = generateOTP()
     await supabase.from('password_reset_otps').insert({
-      phone:      email,
+      email:      email,
       otp,
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })

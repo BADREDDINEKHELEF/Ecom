@@ -88,7 +88,13 @@ export async function PATCH(req: NextRequest) {
     }
 
     const parsed = PatchSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+    if (!parsed.success) {
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+      return NextResponse.json(
+        { error: 'Validation failed', ...(details && { details }) },
+        { status: 400 }
+      )
+    }
 
     // Encrypt server-side CAPI tokens before storing — never persist them in plaintext
     const dataToSave = {

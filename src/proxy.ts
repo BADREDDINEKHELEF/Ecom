@@ -40,7 +40,8 @@ export async function proxy(request: NextRequest) {
     if (!token || !(await verifyAdminJwt(token))) {
       const loginUrl = request.nextUrl.clone()
       loginUrl.pathname = '/admin/login'
-      loginUrl.searchParams.set('next', pathname)
+      const next = pathname.startsWith('/') && !pathname.startsWith('//') ? pathname : '/admin/login'
+      loginUrl.searchParams.set('next', next)
       return NextResponse.redirect(loginUrl)
     }
   }

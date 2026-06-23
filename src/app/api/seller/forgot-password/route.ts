@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Check vendor exists with this email (via vendors table which now has email column)
+    // Check vendor exists with this email (from vendors table)
     const { data: vendor } = await supabase
       .from('vendors')
       .select('id')
@@ -55,12 +55,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Delete old unused OTPs for this email
-    await supabase.from('password_reset_otps').delete().eq('phone', email)
+    await supabase.from('password_reset_otps').delete().eq('email', email)
 
     // Generate and store OTP
     const otp = generateOTP()
     await supabase.from('password_reset_otps').insert({
-      phone:      email,
+      email:      email,
       otp,
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })

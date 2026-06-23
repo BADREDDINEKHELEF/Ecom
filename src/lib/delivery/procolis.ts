@@ -32,7 +32,7 @@ export async function procolisCreateShipmentWithToken(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      token,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(TIMEOUT),
@@ -59,7 +59,7 @@ export async function procolisCreateShipment(input: ShipmentInput): Promise<Ship
 export async function procolisListParcels(token: string, pageSize = 100) {
   try {
     const res = await fetch(`${BASE_URL}/colis?page=1&per_page=${pageSize}`, {
-      headers: { 'Content-Type': 'application/json', token },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
@@ -73,7 +73,7 @@ export async function procolisGetRateWithToken(
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   try {
     const res = await fetch(`${BASE_URL}/tarif?Wilaya=${encodeURIComponent(wilayaName)}`, {
-      headers: { 'Content-Type': 'application/json', token },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null

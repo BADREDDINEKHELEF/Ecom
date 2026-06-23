@@ -93,12 +93,22 @@ function getStore(namespace: string): Map<string, WindowEntry> {
   return stores.get(namespace)!
 }
 
+
+function evictStale(namespace: string): void {
+  const store = getStore(namespace)
+  const now = Date.now()
+  for (const [key, entry] of store) {
+    if (now - entry.windowStart > 30 * 60 * 1000) store.delete(key)
+  }
+}
+
 function checkInMemory(
   namespace: string,
   key: string,
   maxAttempts: number,
   windowMs: number
 ): RateLimitResult {
+  evictStale(namespace)
   const store = getStore(namespace)
   const now   = Date.now()
   const entry = store.get(key)
@@ -118,6 +128,7 @@ function checkInMemory(
 }
 
 function resetInMemory(namespace: string, key: string): void {
+  evictStale(namespace)
   getStore(namespace).delete(key)
 }
 
@@ -133,18 +144,6 @@ if (
     'concurrent requests across Vercel serverless instances. ' +
     'Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN to enable shared Redis rate limiting.'
   )
-}
-
-// Evict stale in-memory entries every 10 minutes (prevents unbounded growth)
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now()
-    for (const [, store] of stores) {
-      for (const [key, entry] of store) {
-        if (now - entry.windowStart > 30 * 60 * 1000) store.delete(key)
-      }
-    }
-  }, 10 * 60 * 1000)
 }
 
 // ── Unified check helper ────────────────────────────────────────────────────
