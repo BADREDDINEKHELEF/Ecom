@@ -143,11 +143,11 @@ describe('OTP generator uses CSPRNG (not Math.random)', () => {
     expect(src).toContain('randomInt(100000, 1000000)')
   })
 
-  it('send-phone-otp uses randomInt from crypto for OTP generation', async () => {
+  it('send-email-otp uses randomInt from crypto for OTP generation', async () => {
     const { readFileSync } = await import('fs')
     const { resolve } = await import('path')
     const src = readFileSync(
-      resolve(__dirname, '../app/api/seller/send-phone-otp/route.ts'),
+      resolve(__dirname, '../app/api/seller/send-email-otp/route.ts'),
       'utf-8'
     )
     expect(src).toContain("import { randomInt } from 'crypto'")
