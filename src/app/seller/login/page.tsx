@@ -64,26 +64,29 @@ export default function SellerLoginPage() {
      router.push('/seller/dashboard'); router.refresh()
    }
 
-   // ── Step 1 — Send OTP to email ─────────────────────────────────────────────
-   const handleSendOTP = async (e: React.FormEvent) => {
-     e.preventDefault()
-     setLoading(true); setError('')
-     try {
-       const res = await fetch('/api/seller/forgot-password', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ email: phone }),
-       })
-       const body = await res.json()
-       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
-       setView('forgot_otp')
-       setSuccess('Code envoyé par e-mail ✓')
-     } catch {
-       setError('Erreur de connexion. Vérifiez votre accès internet.')
-     } finally {
-       setLoading(false)
-     }
-   }
+    // ── Step 1 — Send OTP to email ─────────────────────────────────────────────
+    const handleSendOTP = async (e: React.FormEvent) => {
+      e.preventDefault()
+      setLoading(true); setError('')
+      try {
+        const res = await fetch('/api/seller/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: phone }),
+        })
+        const body = await res.json()
+        if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
+        if (body._devOtp) {
+          setError(`[DEV] Code OTP : ${body._devOtp}  (domaine Resend non configuré)`)
+        }
+        setView('forgot_otp')
+        setSuccess('Code envoyé par e-mail ✓')
+      } catch {
+        setError('Erreur de connexion. Vérifiez votre accès internet.')
+      } finally {
+        setLoading(false)
+      }
+    }
 
    // ── Step 2 — Verify OTP + set new password ─────────────────────────────────
    const handleVerifyOTP = async (e: React.FormEvent) => {

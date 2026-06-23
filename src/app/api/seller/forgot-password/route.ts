@@ -65,11 +65,22 @@ export async function POST(req: NextRequest) {
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })
 
-    // Send via email
-    await sendOTPEmail(email, otp)
-    logger.info('[forgot-password] OTP sent', { email })
+    // Send via email — non-blocking; OTP is already stored in DB
+    let emailSent = false
+    try {
+      await sendOTPEmail(email, otp)
+      emailSent = true
+      logger.info('[forgot-password] OTP sent', { email })
+    } catch (err) {
+      logger.warn('[forgot-password] email delivery failed — OTP stored in DB', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      ...(process.env.NODE_ENV === 'development' && !emailSent ? { _devOtp: otp } : {}),
+    })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     logger.error('[POST /api/seller/forgot-password]', { error: msg })
