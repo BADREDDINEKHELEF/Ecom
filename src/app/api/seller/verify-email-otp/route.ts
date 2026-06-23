@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const { data: record } = await supabase
       .from('password_reset_otps')
       .select('id, otp, expires_at, used')
-      .eq('phone', email)
+      .eq('email', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)

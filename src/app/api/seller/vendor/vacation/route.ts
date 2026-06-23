@@ -3,6 +3,8 @@ import { createRouteClient } from '@/lib/supabase/server'
 import { getVendorByUserIdServer, updateVendor } from '@/lib/supabase/vendors'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 const Schema = z.object({
   isOnVacation:    z.boolean(),
@@ -11,9 +13,26 @@ const Schema = z.object({
 
 export async function PATCH(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'vendor_vacation', 20, 60)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de requêtes. Réessayez plus tard.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
+    }
+
     const supabase = createRouteClient(req)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return new Response('Unauthorized', { status: 401 })
+
+    const userRl = await checkUserRateLimit(user.id, 'vendor_vacation', 10, 3600)
+    if (!userRl.allowed) {
+      return NextResponse.json(
+        { error: 'Limite atteinte. Réessayez plus tard.' },
+        { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+      )
+    }
 
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return new Response('Not a vendor', { status: 403 })
