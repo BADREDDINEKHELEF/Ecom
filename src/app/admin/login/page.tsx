@@ -25,7 +25,14 @@ export default function AdminLoginPage() {
       body: JSON.stringify({ password, totpCode: totpCode || undefined }),
     })
 
-    const data = await res.json()
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      setError('Réponse serveur invalide.')
+      setLoading(false)
+      return
+    }
     setLoading(false)
 
     if (res.ok) {

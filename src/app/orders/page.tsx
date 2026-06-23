@@ -222,7 +222,7 @@ export default function OrdersPage() {
                         {cancelling === order.id
                           ? <Loader2 className="w-4 h-4 animate-spin" />
                           : <X className="w-4 h-4" />}
-                        Annuler la commande
+                        {t.orders.cancelOrder}
                       </button>
                     </div>
                   )}
@@ -269,7 +269,7 @@ export default function OrdersPage() {
                   )}
                   {returnSuccess === order.id && (
                     <div className="mt-4 bg-green-50 text-green-700 rounded-xl px-4 py-2 text-sm font-medium">
-                      Demande de retour soumise. Notre équipe vous contactera sous 48h.
+                      {t.orders.returnSubmitted}
                     </div>
                   )}
                 </div>

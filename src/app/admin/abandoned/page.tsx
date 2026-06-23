@@ -39,7 +39,8 @@ function buildWhatsAppMsg(row: AbandonedCheckout): string {
   const items = row.cart_snapshot?.slice(0, 2).map((i) => i.name).join(', ') ?? 'vos articles'
   const total = formatPrice(row.cart_total)
   const msg = `Salam ${name} 👋 Vous avez laissé *${items}* dans votre panier (${total}). Voulez-vous finaliser votre commande ? 🛍️ Répondez OUI et on vous confirme tout de suite !`
-  return `https://wa.me/${row.phone?.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`
+  const phoneClean = row.phone ? row.phone.replace(/[^0-9]/g, '') : ''
+  return `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}`
 }
 
 export default function AbandonedCheckoutsPage() {

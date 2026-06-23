@@ -16,7 +16,7 @@ async function sendOTPEmail(email: string, otp: string): Promise<void> {
     'Votre code de vérification StoreDz',
     `
     <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px">
-      <h2 style="color:#059669">Réinitialisation de mot de passe</h2>
+      <h2 style="color:#059669">Vérifiez votre adresse e-mail</h2>
       <p>Votre code de vérification StoreDz est : <strong style="font-size:24px">${otp}</strong></p>
       <p style="color:#6b7280">Ce code expire dans 5 minutes. Ne le partagez avec personne.</p>
       <p style="color:#9ca3af;font-size:12px;margin-top:32px">StoreDz — La marketplace algérienne</p>
@@ -41,23 +41,9 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Check vendor exists with this email (via vendors table which now has email column)
-    const { data: vendor } = await supabase
-      .from('vendors')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle()
-
-    // Always return success — don't leak which emails are registered
-    if (!vendor) {
-      logger.warn('[forgot-password] email not found', { email })
-      return NextResponse.json({ success: true })
-    }
-
-    // Delete old unused OTPs for this email
+    // Remove old OTPs for this email
     await supabase.from('password_reset_otps').delete().eq('phone', email)
 
-    // Generate and store OTP
     const otp = generateOTP()
     await supabase.from('password_reset_otps').insert({
       phone:      email,
@@ -65,18 +51,13 @@ export async function POST(req: NextRequest) {
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })
 
-    // Send via email
     await sendOTPEmail(email, otp)
-    logger.info('[forgot-password] OTP sent', { email })
+    logger.info('[send-email-otp] OTP sent', { email })
 
     return NextResponse.json({ success: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    logger.error('[POST /api/seller/forgot-password]', { error: msg })
-    if (process.env.NODE_ENV === 'development') {
-      return NextResponse.json({ error: msg }, { status: 500 })
-    }
+    logger.error('[POST /api/seller/send-email-otp]', { error: msg })
     return NextResponse.json({ error: 'Impossible d\'envoyer le code. Réessayez.' }, { status: 500 })
   }
 }
-

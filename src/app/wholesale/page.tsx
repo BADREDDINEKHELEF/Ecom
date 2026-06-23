@@ -81,7 +81,8 @@ export default function WholesalePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/rfq"
+              href="#"
+              onClick={(e) => { e.preventDefault(); alert('Fonctionnalité bientôt disponible. Inscrivez-vous sur la liste d\'attente !') }}
               className="inline-flex items-center justify-center gap-2 bg-white text-indigo-900 font-black px-8 py-4 rounded-2xl hover:bg-indigo-50 transition-colors text-base"
             >
               <Package className="w-5 h-5" /> {w.postRfq}

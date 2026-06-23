@@ -10,6 +10,11 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   return (
     <html lang="fr">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Erreur — StoreDz</title>
+      </head>
       <body>
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-8 text-center">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Une erreur est survenue</h2>

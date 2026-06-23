@@ -3,13 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { timingSafeEqual } from 'crypto'
 
-function normalizePhone(raw: string): string {
-  const d = raw.replace(/\D/g, '')
-  if (d.startsWith('213')) return d
-  if (d.startsWith('0'))   return '213' + d.slice(1)
-  return '213' + d
-}
-
 function otpEqual(a: string, b: string): boolean {
   try {
     const ba = Buffer.from(a.padEnd(8))
@@ -20,15 +13,13 @@ function otpEqual(a: string, b: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, otp } = await req.json() as { phone?: string; otp?: string }
+    const { email, otp } = await req.json() as { email?: string; otp?: string }
 
-    if (!phone || !otp) {
+    if (!email || !otp) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
 
-    const normalized = normalizePhone(phone)
-
-    const rl = await checkOtpVerifyRateLimit(normalized)
+    const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {
       return NextResponse.json(
         { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
@@ -41,7 +32,7 @@ export async function POST(req: NextRequest) {
     const { data: record } = await supabase
       .from('password_reset_otps')
       .select('id, otp, expires_at, used')
-      .eq('phone', normalized)
+      .eq('phone', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)

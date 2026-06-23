@@ -34,13 +34,6 @@ function otpEqual(a: string, b: string): boolean {
   } catch { return false }
 }
 
-function normalizePhone(raw: string): string {
-  const d = raw.replace(/\D/g, '')
-  if (d.startsWith('213')) return d
-  if (d.startsWith('0'))   return '213' + d.slice(1)
-  return '213' + d
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { phone, otp, newPassword } = await req.json() as {
@@ -56,9 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères.' }, { status: 400 })
     }
 
-    const normalized = normalizePhone(phone)
-
-    const rl = await checkOtpVerifyRateLimit(normalized)
+    const rl = await checkOtpVerifyRateLimit(phone)
     if (!rl.allowed) {
       return NextResponse.json(
         { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
@@ -72,7 +63,7 @@ export async function POST(req: NextRequest) {
     const { data: record } = await supabase
       .from('password_reset_otps')
       .select('id, otp, expires_at, used')
-      .eq('phone', normalized)
+      .eq('phone', phone)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -88,11 +79,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Code incorrect. Vérifiez et réessayez.' }, { status: 400 })
     }
 
-    // Find vendor by exact phone match (not ilike — avoids ambiguous last-9-digit collisions)
+    // Find vendor by email (stored in the phone column of password_reset_otps)
     const { data: vendor } = await supabase
       .from('vendors')
       .select('user_id')
-      .eq('phone', normalized)
+      .eq('email', phone)
       .maybeSingle()
 
     if (!vendor?.user_id) {
@@ -120,7 +111,7 @@ export async function POST(req: NextRequest) {
       .update({ used: true })
       .eq('id', record.id)
 
-    logger.info('[verify-otp] password reset successful', { phone: normalized })
+    logger.info('[verify-otp] password reset successful', { email: phone })
     return NextResponse.json({ success: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

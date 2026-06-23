@@ -41,13 +41,13 @@ export default function SellerRegisterPage() {
     e.preventDefault()
     if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
     if (RESERVED_SLUGS.has(form.storeSlug)) { setError(t.seller.urlTaken); return }
-    if (!form.phone) { setError('Numéro WhatsApp requis pour vérifier votre compte.'); return }
+    if (!form.email) { setError('Adresse e-mail requise pour vérifier votre compte.'); return }
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/seller/send-phone-otp', {
+      const res = await fetch('/api/seller/send-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: form.phone }),
+        body: JSON.stringify({ email: form.email }),
       })
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
@@ -65,10 +65,10 @@ export default function SellerRegisterPage() {
     setLoading(true); setError('')
     try {
       // Verify OTP
-      const verifyRes = await fetch('/api/seller/verify-phone-otp', {
+      const verifyRes = await fetch('/api/seller/verify-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: form.phone, otp }),
+        body: JSON.stringify({ email: form.email, otp }),
       })
       const verifyBody = await verifyRes.json()
       if (!verifyRes.ok) { setError(verifyBody.error ?? 'Code incorrect.'); setLoading(false); return }
@@ -83,10 +83,14 @@ export default function SellerRegisterPage() {
       if (signUpErr) { setError(signUpErr.message); setLoading(false); return }
       if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
 
-      // Create vendor record
+      // Create vendor record — pass auth token in case session cookie isn't set yet
+      const authToken = authData.session?.access_token
+      const regHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (authToken) regHeaders['Authorization'] = `Bearer ${authToken}`
+
       const res = await fetch('/api/seller/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: regHeaders,
         body: JSON.stringify({
           store_name:  form.storeName,
           store_slug:  form.storeSlug,
@@ -94,6 +98,7 @@ export default function SellerRegisterPage() {
           description: form.description || null,
           phone:       form.phone || null,
           wilaya:      form.wilaya || null,
+          email:       form.email || null,
         }),
       })
       if (!res.ok) {
@@ -113,10 +118,10 @@ export default function SellerRegisterPage() {
   const handleResend = async () => {
     setError(''); setLoading(true)
     try {
-      await fetch('/api/seller/send-phone-otp', {
+      await fetch('/api/seller/send-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: form.phone }),
+        body: JSON.stringify({ email: form.email }),
       })
     } finally {
       setLoading(false)
@@ -153,12 +158,12 @@ export default function SellerRegisterPage() {
             <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               {view === 'otp' ? <KeyRound className="w-6 h-6 text-white" /> : <Store className="w-6 h-6 text-white" />}
             </div>
-            <h1 className="text-2xl font-black text-gray-900">
-              {view === 'otp' ? 'Vérifiez votre WhatsApp' : t.seller.registerTitle}
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {view === 'otp' ? `Code envoyé au ${form.phone} via WhatsApp` : t.seller.registerSub}
-            </p>
+<h1 className="text-2xl font-black text-gray-900">
+               {view === 'otp' ? 'Vérifiez votre e-mail' : t.seller.registerTitle}
+             </h1>
+             <p className="text-gray-500 text-sm mt-1">
+               {view === 'otp' ? `Code envoyé à ${form.email}` : t.seller.registerSub}
+             </p>
           </div>
 
           {error && (
@@ -169,7 +174,7 @@ export default function SellerRegisterPage() {
           {view === 'otp' && (
             <form onSubmit={handleVerifyAndCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Code WhatsApp (6 chiffres)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Code e-mail (6 chiffres)</label>
                 <input type="text" required maxLength={6} value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="123456" autoFocus

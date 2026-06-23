@@ -11,9 +11,9 @@ export default function ContactPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-8 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> {t.cart.continueShopping}
+        <ArrowLeft className="w-4 h-4" /> {c.backLabel}
       </Link>
-      <h1 className="text-3xl font-black text-gray-900 mb-2">{t.footer.contactUs}</h1>
+      <h1 className="text-3xl font-black text-gray-900 mb-2">{c.title}</h1>
       <p className="text-gray-500 mb-10">{c.subtitle}</p>
 
       <div className="grid gap-4">
@@ -40,7 +40,7 @@ export default function ContactPage() {
             <Phone className="w-6 h-6 text-white" />
           </div>
           <div>
-            <p className="font-bold text-gray-900">{t.footer.contactUs}</p>
+            <p className="font-bold text-gray-900">{c.phoneTitle}</p>
             <p className="text-sm text-gray-600">+213 555 000 000 · {c.phoneHours}</p>
           </div>
         </a>

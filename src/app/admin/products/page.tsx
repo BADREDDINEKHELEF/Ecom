@@ -74,7 +74,7 @@ export default function AdminProductsPage() {
       nicheId: p.nicheId,
       category: p.category,
       description: p.description,
-      images: p.images.join('\n'),
+      images: (p.images ?? []).join('\n'),
       tags: p.tags.join(', '),
       isNew: p.isNew ?? false,
       isFeatured: p.isFeatured ?? false,
@@ -215,7 +215,7 @@ export default function AdminProductsPage() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                            {product.images[0] ? (
+                            {(product.images?.[0]) ? (
                               <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="48px" />
                             ) : (
                               <Package className="w-6 h-6 text-gray-300 m-auto" />

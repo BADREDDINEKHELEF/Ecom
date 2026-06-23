@@ -130,7 +130,7 @@ export default function HomePage() {
             </span>
           </h1>
 
-          <p className="text-white/65 text-base sm:text-xl mb-10 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-white/60 text-base sm:text-xl mb-10 leading-relaxed max-w-2xl mx-auto">
             Votre boutique. Votre lien. Vos clients.<br />
             Vendez partout en Algérie avec WhatsApp et paiement à la livraison.
           </p>

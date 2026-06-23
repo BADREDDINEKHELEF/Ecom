@@ -171,7 +171,9 @@ export default function AdminPromotionsPage() {
                     {promo.payment_reference && <> · Ref: <code className="text-xs bg-gray-100 px-1 rounded">{promo.payment_reference}</code></>}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {new Date(promo.starts_at).toLocaleDateString()} → {new Date(promo.ends_at).toLocaleDateString()}
+                    {promo.starts_at && promo.ends_at
+                      ? `${new Date(promo.starts_at).toLocaleDateString()} → ${new Date(promo.ends_at).toLocaleDateString()}`
+                      : 'Dates non définies'}
                   </p>
                   {promo.admin_note && <p className="text-xs text-amber-600 mt-1 italic">{promo.admin_note}</p>}
                 </div>

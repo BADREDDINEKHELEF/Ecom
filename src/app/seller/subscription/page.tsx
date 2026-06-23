@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle2, Crown, Zap, Star, AlertCircle, Clock, CreditCard, Upload, RefreshCw, ChevronDown, ChevronUp, Menu } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { useRTL } from '@/lib/store/langStore'
+import { useRTL, useLang } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { SubscriptionPlan, VendorSubscription } from '@/lib/supabase/vendors'
 
@@ -59,7 +59,7 @@ export default function SellerSubscriptionPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const lang = 'fr' as Lang
+  const lang = useLang()
 
   useEffect(() => {
     if (!vendor) return

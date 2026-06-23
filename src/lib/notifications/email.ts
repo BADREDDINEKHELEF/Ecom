@@ -7,7 +7,7 @@ function esc(s: string): string {
 }
 const FROM = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const key = process.env.RESEND_API_KEY
   if (!key) return // Degrade gracefully when key is not set
 

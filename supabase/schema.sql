@@ -176,20 +176,21 @@ create index if not exists reviews_product_idx on public.reviews(product_id);
 -- VENDOR / MERCHANT PLATFORM (Shopify side)
 -- ============================================================
 
-create table if not exists public.vendors (
-  id              uuid default gen_random_uuid() primary key,
-  user_id         uuid references auth.users(id) on delete cascade unique not null,
-  store_name      text not null,
-  store_slug      text not null unique,
-  logo_url        text,
-  description     text,
-  phone           text,
-  wilaya          text,
-  commission_rate numeric default 10,  -- platform takes 10% per sale
-  is_approved     boolean default true, -- auto-approve for MVP
-  is_active       boolean default true,
-  created_at      timestamptz default now()
-);
+ create table if not exists public.vendors (
+   id              uuid default gen_random_uuid() primary key,
+   user_id         uuid references auth.users(id) on delete cascade unique not null,
+   store_name      text not null,
+   store_slug      text not null unique,
+   logo_url        text,
+   description     text,
+   phone           text,
+   wilaya          text,
+   email           text,
+   commission_rate numeric default 10,  -- platform takes 10% per sale
+   is_approved     boolean default true, -- auto-approve for MVP
+   is_active       boolean default true,
+   created_at      timestamptz default now()
+ );
 
 alter table public.vendors enable row level security;
 

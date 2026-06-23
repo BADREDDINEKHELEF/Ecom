@@ -49,7 +49,11 @@ export default function PromoPage() {
           is_active: form.is_active,
         }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed')
+      if (!res.ok) {
+        let errMsg = 'Failed'
+        try { const d = await res.json(); errMsg = d.error ?? 'Failed' } catch { /* non-JSON */ }
+        throw new Error(errMsg)
+      }
       setShowForm(false)
       setForm(EMPTY_FORM)
       await load()

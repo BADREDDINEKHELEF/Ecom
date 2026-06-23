@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createRouteClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -24,6 +25,7 @@ const Schema = z.object({
   wilaya:      z.string().max(60).nullable().optional(),
   description: z.string().max(500).nullable().optional(),
   logo_url:    safeStorageUrl(),
+  email:       z.string().email().nullable().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -34,10 +36,29 @@ export async function POST(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     )
-    // Authenticate — derive user_id from session, never trust client
+    // Authenticate — try session cookie first, then fall back to Authorization header
+    let user_id: string | null = null
+
     const routeClient = createRouteClient(req)
-    const { data: { user }, error: authErr } = await routeClient.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { user: sessionUser }, error: authErr } = await routeClient.auth.getUser()
+    if (sessionUser && !authErr) {
+      user_id = sessionUser.id
+    } else {
+      // Fallback: accept Bearer token from Authorization header
+      const authHeader = req.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        const supabaseAnon = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          { global: { headers: { Authorization: `Bearer ${token}` } } }
+        )
+        const { data: { user: tokenUser } } = await supabaseAnon.auth.getUser(token)
+        if (tokenUser) user_id = tokenUser.id
+      }
+    }
+
+    if (!user_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     let body: unknown
     try { body = await req.json() } catch {
@@ -49,8 +70,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
     }
 
-    const { store_name, store_slug, phone, wilaya, description, logo_url } = parsed.data
-    const user_id = user.id
+    const { store_name, store_slug, phone, wilaya, description, logo_url, email } = parsed.data
 
     const supabase = createAdminClient()
 
@@ -75,6 +95,7 @@ export async function POST(req: NextRequest) {
         wilaya:      wilaya ?? null,
         description: description ?? null,
         logo_url:    logo_url ?? null,
+        email:       email ?? null,
       })
       .select()
       .single()

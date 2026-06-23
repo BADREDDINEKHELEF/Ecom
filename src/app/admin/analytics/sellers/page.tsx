@@ -36,7 +36,7 @@ export default function SellersPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/admin/analytics/sellers', {
-        
+        credentials: 'include',
       })
       if (res.ok) setData(await res.json())
     } finally {

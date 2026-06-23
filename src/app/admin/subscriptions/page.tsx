@@ -47,11 +47,20 @@ export default function AdminSubscriptionsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const params = filter !== 'all' ? `?status=${filter}` : ''
-    const res = await fetch(`/api/admin/subscriptions${params}`)
-    const data = await res.json()
-    setSubs(data.subscriptions ?? [])
-    setLoading(false)
+    try {
+      const params = filter !== 'all' ? `?status=${filter}` : ''
+      const res = await fetch(`/api/admin/subscriptions${params}`, {
+        credentials: 'include',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSubs(data.subscriptions ?? [])
+      }
+    } catch {
+      setUpdateError('Erreur de chargement.')
+    } finally {
+      setLoading(false)
+    }
   }, [filter])
 
   useEffect(() => { load() }, [load])

@@ -29,7 +29,7 @@ export default function DeliveryPage() {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/analytics/delivery?days=${days}`, {
-        
+        credentials: 'include',
       })
       if (res.ok) setData(await res.json())
     } finally {

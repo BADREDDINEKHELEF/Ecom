@@ -310,11 +310,13 @@ export default function AdminOrdersPage() {
   useEffect(() => { load('admin') }, [load])
 
   const filtered = orders.filter((o) => {
+    const name = o.full_name ?? ''
+    const wilaya = o.wilaya ?? ''
     const matchSearch =
       o.id.toLowerCase().includes(search.toLowerCase()) ||
-      o.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      o.phone.includes(search) ||
-      o.wilaya.toLowerCase().includes(search.toLowerCase())
+      name.toLowerCase().includes(search.toLowerCase()) ||
+      (o.phone ?? '').includes(search) ||
+      wilaya.toLowerCase().includes(search.toLowerCase())
     const matchStatus = !filterStatus || o.status === filterStatus
     return matchSearch && matchStatus
   })
@@ -506,7 +508,7 @@ export default function AdminOrdersPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {[a.colOrder, a.colCustomer, a.colWilaya, a.colItems, a.colTotal, a.colPayment, a.colStatus, a.colTracking, a.colDate, ''].map((h) => (
+                    {[a.colOrder, a.colCustomer, a.colWilaya, a.colItems, a.colTotal, a.colPayment, a.colStatus, a.colTracking, a.colDate, 'actions'].map((h) => (
                       <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-4 py-4">{h}</th>
                     ))}
                   </tr>
@@ -638,7 +640,7 @@ export default function AdminOrdersPage() {
               {[
                 { label: a.detailCustomer, value: selectedOrder.full_name },
                 { label: a.detailPhone,    value: selectedOrder.phone },
-                { label: a.detailAddress,  value: `${selectedOrder.address}, ${selectedOrder.city}, ${selectedOrder.wilaya}` },
+                { label: a.detailAddress,  value: [selectedOrder.address, selectedOrder.city, selectedOrder.wilaya].filter(Boolean).join(', ') || '—' },
                 { label: a.detailPayment,  value: selectedOrder.payment_method === 'cash' ? '💵 Cash' : `💳 ${selectedOrder.payment_method}` },
                 { label: a.detailSubtotal, value: formatPrice(selectedOrder.subtotal) },
                 { label: a.detailShipping, value: formatPrice(selectedOrder.shipping_cost) },

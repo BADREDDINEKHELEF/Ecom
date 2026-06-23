@@ -24,8 +24,10 @@ interface VendorExt {
   verified_at?: string | null
   logo_url?: string | null
   social_whatsapp?: string | null
+  phone?: string | null
   meta_pixel_id?: string | null
   gtag_id?: string | null
+  tiktok_pixel_id?: string | null
   pixel_id?: string | null
 }
 

@@ -29,9 +29,9 @@ export default function SellerLoginPage() {
   const t = useT()
 
   const [view, setView]         = useState<View>('login')
-  const [form, setForm]         = useState({ email: '', password: '' })
-  const [phone, setPhone]       = useState('')
-  const [otp, setOtp]           = useState('')
+   const [form, setForm]         = useState({ email: '', password: '' })
+   const [phone, setPhone]       = useState('')
+   const [otp, setOtp]           = useState('')
   const [newPwd, setNewPwd]     = useState('')
   const [showPwd, setShowPwd]   = useState(false)
   const [showNew, setShowNew]   = useState(false)
@@ -39,73 +39,73 @@ export default function SellerLoginPage() {
   const [error, setError]       = useState('')
   const [success, setSuccess]   = useState('')
 
-  const reset = (v: View) => { setView(v); setError(''); setSuccess(''); setOtp('') }
+  const reset = (v: View) => { setView(v); setError(''); setSuccess(''); setPhone(''); setOtp('') }
 
-  // ── Login ──────────────────────────────────────────────────────────────────
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true); setError('')
-    const supabase = createClient()
-    const { data, error: err } = await supabase.auth.signInWithPassword({
-      email: form.email, password: form.password,
-    })
-    if (err) { setError(friendlyAuthError(err.message)); setLoading(false); return }
+   // ── Login ──────────────────────────────────────────────────────────────────
+   const handleLogin = async (e: React.FormEvent) => {
+     e.preventDefault()
+     setLoading(true); setError('')
+     const supabase = createClient()
+     const { data, error: err } = await supabase.auth.signInWithPassword({
+       email: form.email, password: form.password,
+     })
+     if (err) { setError(friendlyAuthError(err.message)); setLoading(false); return }
 
-    const vendor = await getVendorByUserId(data.user.id)
-    if (!vendor) {
-      setError(t.seller.noSellerFound)
-      await supabase.auth.signOut(); setLoading(false); return
-    }
-    if (!vendor.is_approved) { setLoading(false); router.push('/seller/pending'); return }
-    if (!vendor.is_active) {
-      setError(t.seller.suspended)
-      await supabase.auth.signOut(); setLoading(false); return
-    }
-    router.push('/seller/dashboard'); router.refresh()
-  }
+     const vendor = await getVendorByUserId(data.user.id)
+     if (!vendor) {
+       setError(t.seller.noSellerFound)
+       await supabase.auth.signOut(); setLoading(false); return
+     }
+     if (!vendor.is_approved) { setLoading(false); router.push('/seller/pending'); return }
+     if (!vendor.is_active) {
+       setError(t.seller.suspended)
+       await supabase.auth.signOut(); setLoading(false); return
+     }
+     router.push('/seller/dashboard'); router.refresh()
+   }
 
-  // ── Step 1 — Send OTP to phone ─────────────────────────────────────────────
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('/api/seller/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const body = await res.json()
-      if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
-      setView('forgot_otp')
-      setSuccess('Code envoyé sur WhatsApp ✓')
-    } catch {
-      setError('Erreur de connexion. Vérifiez votre accès internet.')
-    } finally {
-      setLoading(false)
-    }
-  }
+   // ── Step 1 — Send OTP to email ─────────────────────────────────────────────
+   const handleSendOTP = async (e: React.FormEvent) => {
+     e.preventDefault()
+     setLoading(true); setError('')
+     try {
+       const res = await fetch('/api/seller/forgot-password', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ email: phone }),
+       })
+       const body = await res.json()
+       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
+       setView('forgot_otp')
+       setSuccess('Code envoyé par e-mail ✓')
+     } catch {
+       setError('Erreur de connexion. Vérifiez votre accès internet.')
+     } finally {
+       setLoading(false)
+     }
+   }
 
-  // ── Step 2 — Verify OTP + set new password ─────────────────────────────────
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newPwd.length < 8) { setError('Mot de passe : 8 caractères minimum.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('/api/seller/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, newPassword: newPwd }),
-      })
-      const body = await res.json()
-      if (!res.ok) { setError(body.error ?? 'Code incorrect.'); return }
-      setSuccess('Mot de passe mis à jour ! Connectez-vous.')
-      setTimeout(() => reset('login'), 2000)
-    } catch {
-      setError('Erreur de connexion. Vérifiez votre accès internet.')
-    } finally {
-      setLoading(false)
-    }
-  }
+   // ── Step 2 — Verify OTP + set new password ─────────────────────────────────
+   const handleVerifyOTP = async (e: React.FormEvent) => {
+     e.preventDefault()
+     if (newPwd.length < 8) { setError('Mot de passe : 8 caractères minimum.'); return }
+     setLoading(true); setError('')
+     try {
+       const res = await fetch('/api/seller/verify-otp', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ phone, otp, newPassword: newPwd }),
+       })
+       const body = await res.json()
+       if (!res.ok) { setError(body.error ?? 'Code incorrect.'); return }
+       setSuccess('Mot de passe mis à jour ! Connectez-vous.')
+       setTimeout(() => reset('login'), 2000)
+     } catch {
+       setError('Erreur de connexion. Vérifiez votre accès internet.')
+     } finally {
+       setLoading(false)
+     }
+   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-900 flex items-center justify-center px-4 py-12">
@@ -124,15 +124,15 @@ export default function SellerLoginPage() {
                  <Phone className="w-6 h-6 text-white" />}
               </div>
             </div>
-            <h1 className="text-2xl font-black text-gray-900">
-              {view === 'login'       ? t.seller.loginTitle :
-               view === 'forgot_otp' ? 'Entrez le code' :
-               'Mot de passe oublié ?'}
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {view === 'login'       ? t.seller.loginSub :
-               view === 'forgot_otp' ? `Code envoyé au ${phone} via WhatsApp` :
-               'Entrez votre numéro WhatsApp enregistré'}
+<h1 className="text-2xl font-black text-gray-900">
+               {view === 'login'       ? t.seller.loginTitle :
+                view === 'forgot_otp' ? 'Entrez le code' :
+                'Mot de passe oublié ?'}
+             </h1>
+             <p className="text-gray-500 text-sm mt-1">
+               {view === 'login'       ? t.seller.loginSub :
+                 view === 'forgot_otp' ? `Code envoyé à ${phone}` :
+                'Entrez votre adresse e-mail enregistrée'}
             </p>
           </div>
 

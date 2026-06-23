@@ -30,7 +30,7 @@ export default function CustomersPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/admin/analytics/customers', {
-        
+        credentials: 'include',
       })
       if (res.ok) setData(await res.json())
     } finally {

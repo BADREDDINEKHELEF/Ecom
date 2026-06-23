@@ -7,7 +7,7 @@ import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivrai
 import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels, maystroGetRateWithToken } from './maystro'
 import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels, rexGetRateWithToken } from './rex'
 import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
-import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
+import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels, ecomGetRateWithToken } from './ecom'
 import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels, apecGetRateWithCreds } from './apec'
 
 export interface DispatchResult extends ShipmentResult {
@@ -459,7 +459,13 @@ export async function dispatchGetRate(
         const r = await apecGetRateWithCreds(wilayaName, id, tk)
         return r ? { ...r, provider } : null
       }
-      // yassir/ecom: no rate endpoint — fall back to static
+      case 'ecom': {
+        const token = tok(vendorCreds?.ecom_token, process.env.ECOM_TOKEN)
+        if (!token) return null
+        const r = await ecomGetRateWithToken(wilayaName, token)
+        return r ? { ...r, provider } : null
+      }
+      // yassir: no rate endpoint — fall back to static
       default:
         return null
     }

@@ -159,6 +159,8 @@ export const translations = {
       callSupport: '📞 Call Support',
       shopMore: 'Shop More',
       loadError: 'Could not load orders. Please try again.',
+      cancelOrder: 'Cancel Order',
+      returnSubmitted: 'Return request submitted. Our team will contact you within 48 hours.',
       status: {
         pending: 'Pending',
         confirmed: 'Confirmed',
@@ -379,7 +381,9 @@ export const translations = {
       q5: 'How do I track my order?', a5: 'Go to the Orders page and enter your phone number to see your order status.',
     },
     contact: {
+      title: 'Contact Us',
       subtitle: 'Get in touch', whatsappDesc: 'Fast response', phoneHours: 'Sat–Thu 9am–6pm',
+      backLabel: 'Back to store', phoneTitle: 'Phone',
       emailLabel: 'Email', locationName: 'Algeria',
     },
     sellerProducts: {
@@ -783,6 +787,8 @@ export const translations = {
       callSupport: '📞 Appeler le support',
       shopMore: 'Continuer mes achats',
       loadError: 'Impossible de charger les commandes. Veuillez réessayer.',
+      cancelOrder: 'Annuler la commande',
+      returnSubmitted: 'Demande de retour soumise. Notre équipe vous contactera sous 48h.',
       status: {
         pending: 'En attente',
         confirmed: 'Confirmée',
@@ -1003,7 +1009,9 @@ export const translations = {
       q5: 'Comment suivre ma commande ?', a5: 'Rendez-vous sur la page Commandes et saisissez votre numéro de téléphone pour voir le statut.',
     },
     contact: {
+      title: 'Contactez-nous',
       subtitle: 'Contactez-nous', whatsappDesc: 'Réponse rapide', phoneHours: 'Sam–Jeu 9h–18h',
+      backLabel: 'Retour à la boutique', phoneTitle: 'Téléphone',
       emailLabel: 'Email', locationName: 'Algérie',
     },
     sellerProducts: {
@@ -1407,6 +1415,8 @@ export const translations = {
       callSupport: '📞 اتصل بالدعم',
       shopMore: 'تسوق أكثر',
       loadError: 'تعذر تحميل الطلبات. يرجى المحاولة مرة أخرى.',
+      cancelOrder: 'إلغاء الطلب',
+      returnSubmitted: 'تم تقديم طلب الإرجاع. سيتواصل معك الفريق خلال 48 ساعة.',
       status: {
         pending: 'قيد الانتظار',
         confirmed: 'مؤكد',
@@ -1627,7 +1637,9 @@ export const translations = {
       q5: 'كيف أتابع طلبي؟', a5: 'اذهب إلى صفحة الطلبات وأدخل رقم هاتفك لرؤية حالة طلبك.',
     },
     contact: {
+      title: 'تواصل معنا',
       subtitle: 'تواصل معنا', whatsappDesc: 'رد سريع', phoneHours: 'السبت–الخميس 9ص–6م',
+      backLabel: 'العودة إلى المتجر', phoneTitle: 'الهاتف',
       emailLabel: 'البريد الإلكتروني', locationName: 'الجزائر',
     },
     sellerProducts: {

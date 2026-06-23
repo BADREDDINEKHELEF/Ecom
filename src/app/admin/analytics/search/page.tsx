@@ -25,7 +25,7 @@ export default function SearchAnalyticsPage() {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/analytics/search?days=${days}`, {
-        
+        credentials: 'include',
       })
       if (res.ok) setData(await res.json())
     } finally {

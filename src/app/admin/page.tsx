@@ -199,10 +199,10 @@ export default async function AdminDashboard() {
                       <td className="py-3 pr-4 font-mono font-semibold text-gray-900 text-xs">
                         #{order.id.substring(0, 8).toUpperCase()}
                       </td>
-                      <td className="py-3 pr-4 font-medium text-gray-700 max-w-[120px] truncate">
-                        {order.full_name}
-                      </td>
-                      <td className="py-3 pr-4 text-gray-600 text-xs">{order.wilaya}</td>
+                       <td className="py-3 pr-4 font-medium text-gray-700 max-w-[120px] truncate">
+                         {order.full_name ?? '—'}
+                       </td>
+                       <td className="py-3 pr-4 text-gray-600 text-xs">{order.wilaya ?? '—'}</td>
                       <td className="py-3 pr-4 font-bold text-gray-900">{formatPrice(order.total)}</td>
                       <td className="py-3 pr-4">
                         <span
@@ -213,9 +213,9 @@ export default async function AdminDashboard() {
                           {order.status}
                         </span>
                       </td>
-                      <td className="py-3 text-gray-500 text-xs">
-                        {new Date(order.created_at).toLocaleDateString('fr-DZ')}
-                      </td>
+                       <td className="py-3 text-gray-500 text-xs">
+                         {order.created_at ? new Date(order.created_at).toLocaleDateString('fr-DZ') : '—'}
+                       </td>
                     </tr>
                   ))}
                 </tbody>
@@ -281,9 +281,9 @@ export default async function AdminDashboard() {
                           : <span className="flex items-center gap-1 text-red-500 text-xs font-semibold"><XCircle className="w-3.5 h-3.5" /> {a.pendingApproval}</span>
                         }
                       </td>
-                      <td className="px-6 py-3 text-gray-500 text-xs">
-                        {new Date(v.created_at).toLocaleDateString('fr-DZ')}
-                      </td>
+                       <td className="px-6 py-3 text-gray-500 text-xs">
+                         {v.created_at ? new Date(v.created_at).toLocaleDateString('fr-DZ') : '—'}
+                       </td>
                     </tr>
                   )
                 })}
