@@ -76,6 +76,28 @@ export async function ecomListParcels(token: string, pageSize = 100) {
   } catch { return null }
 }
 
+export async function ecomGetRateWithToken(
+  wilayaName: string,
+  token: string
+): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(TIMEOUT),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return null
+    const home = Number(row.home_fee ?? row.domicile_fee ?? row.tarif ?? row.price)
+    const desk = Number(row.desk_fee ?? row.bureau_fee ?? row.stop_desk_fee)
+    if (home === undefined || home === null || isNaN(home)) return null
+    return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
+  } catch {
+    return null
+  }
+}
+
 export async function ecomTrack(trackingNumber: string, token: string) {
   try {
     const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
