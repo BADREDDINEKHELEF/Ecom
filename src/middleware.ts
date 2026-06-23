@@ -70,10 +70,9 @@ export async function middleware(req: NextRequest) {
   const allowlist = process.env.ADMIN_IP_ALLOWLIST
   if (allowlist) {
     const allowed = allowlist.split(',').map((s) => s.trim())
-    const clientIp =
-      req.headers.get('x-real-ip') ??
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      '0.0.0.0'
+    // Use `req.ip` for security — it's securely provided by platforms like Vercel
+    // and cannot be spoofed by headers like X-Forwarded-For.
+    const clientIp = req.ip ?? '0.0.0.0'
     if (!allowed.includes(clientIp)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

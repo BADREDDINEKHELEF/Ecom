@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
+import { normalizePhone } from '@/lib/utils/phone'
 
 /**
  * Signs out all active Supabase sessions for a user via the GoTrue admin REST
@@ -36,20 +37,21 @@ function otpEqual(a: string, b: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, otp, newPassword } = await req.json() as {
-      phone?: string
+    // The 'phone' field here is actually the user's email for this flow.
+    const { email, otp, newPassword } = await req.json() as {
+      email?: string
       otp?: string
       newPassword?: string
     }
 
-    if (!phone || !otp || !newPassword) {
+    if (!email || !otp || !newPassword) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
     if (newPassword.length < 8) {
       return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères.' }, { status: 400 })
     }
 
-    const rl = await checkOtpVerifyRateLimit(phone)
+    const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {
       return NextResponse.json(
         { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
     const { data: record } = await supabase
       .from('password_reset_otps')
       .select('id, otp, expires_at, used')
-      .eq('phone', phone)
+      .eq('email', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
     const { data: vendor } = await supabase
       .from('vendors')
       .select('user_id')
-      .eq('email', phone)
+      .eq('email', email)
       .maybeSingle()
 
     if (!vendor?.user_id) {
@@ -111,7 +113,7 @@ export async function POST(req: NextRequest) {
       .update({ used: true })
       .eq('id', record.id)
 
-    logger.info('[verify-otp] password reset successful', { email: phone })
+    logger.info('[verify-otp] password reset successful', { email: email })
     return NextResponse.json({ success: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

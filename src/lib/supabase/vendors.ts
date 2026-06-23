@@ -175,7 +175,7 @@ export async function createVendor(
   const { data, error } = await supabase
     .from('vendors')
     .insert(vendor)
-    .select()
+    .select(VENDOR_COLS)
     .single()
   if (error) throw error
   return data as Vendor

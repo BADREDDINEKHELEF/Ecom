@@ -39,7 +39,6 @@ const CreateOrderSchema = z.object({
   promoCodeId:      z.string().uuid().optional().nullable(),
   discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
   giftCardCode:     z.string().max(100).optional().nullable(),
-  giftCardDeduction: z.number().min(0).max(1_000_000).optional().default(0),
   pointsRedeemed:   z.number().int().min(0).max(1_000_000).optional().default(0),
   notes:            z.string().max(500).optional().nullable(),
   isB2B:            z.boolean().optional().default(false),
@@ -84,7 +83,6 @@ export async function POST(req: NextRequest) {
     notes: rawNotes,
     email: rawEmail,
     giftCardCode: rawGiftCardCode,
-    giftCardDeduction,
     pointsRedeemed,
     isB2B,
     companyName,
@@ -97,29 +95,28 @@ export async function POST(req: NextRequest) {
   const input = {
     ...rest,
     phone: normalizePhone(parsed.data.phone),
-    promoCodeId: rawPromoCodeId ?? undefined,
+    promoCodeId:      rawPromoCodeId ?? undefined,
+    giftCardCode:     rawGiftCardCode?.trim().toUpperCase() || undefined,
     notes: rawNotes ?? null,
     isB2B: isB2B ?? false,
     companyName: companyName ?? null,
     nif: nif ?? null,
     nis: nis ?? null,
     rc: rc ?? null,
-    giftCardDeduction,
     pointsRedeemed,
   }
   const buyerEmail = rawEmail ?? null
-  const giftCardCode = rawGiftCardCode?.trim().toUpperCase() || null
 
   try {
-    const { id: orderId, total } = await createOrder(input)
+    const { id: orderId, total, giftCardDeduction } = await createOrder(input)
 
     // Redeem gift card balance — awaited direct RPC, not fire-and-forget HTTP.
     // The order is already committed with the discounted total, so failure here means
     // the customer got the discount without the balance being deducted. Log it.
-    if (giftCardCode && giftCardDeduction > 0) {
+    if (input.giftCardCode && giftCardDeduction > 0) {
       try {
         const { error: gcErr } = await createAdminClient().rpc('redeem_gift_card', {
-          p_code:   giftCardCode,
+          p_code:   input.giftCardCode,
           p_amount: giftCardDeduction,
         })
         if (gcErr) logger.error('[gift-card] redeem rpc failed', { orderId, error: gcErr.message })

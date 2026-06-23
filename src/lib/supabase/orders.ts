@@ -2,6 +2,7 @@ import { createAdminClient } from './admin'
 import { incrementPromoUses } from './promo'
 import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
 import { getVendorDeliveryConfig } from './vendors'
+import { normalizePhone, getPhoneVariants } from '@/lib/utils/phone'
 import { dispatchGetRate } from '@/lib/delivery/dispatch'
 
 export interface OrderItemRow {
@@ -46,7 +47,7 @@ export interface CreateOrderInput {
   paymentMethod:      string
   promoCodeId?:       string
   discountAmount?:    number
-  giftCardDeduction?: number
+  giftCardCode?:      string
   pointsRedeemed?:    number
   notes?:             string | null
   status?:            string
@@ -65,25 +66,10 @@ export interface CreateOrderInput {
   }[]
 }
 
-function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-().+]/g, '')
-}
-
-/** Returns both 0XXX and 213XXX variants so a lookup never misses due to prefix format */
-function phoneVariants(phone: string): string[] {
-  const clean = normalizePhone(phone)
-  const variants = new Set([clean])
-  if (clean.startsWith('0') && clean.length === 10) {
-    variants.add('213' + clean.slice(1))
-  } else if (clean.startsWith('213') && clean.length === 12) {
-    variants.add('0' + clean.slice(3))
-  }
-  return Array.from(variants)
-}
-
 export interface CreateOrderResult {
-  id:    string
-  total: number
+  id:                string
+  total:             number
+  giftCardDeduction: number
 }
 
 /**
@@ -202,15 +188,31 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     }
   }
 
-  // Compute shipping server-side — never trust the client value.
-  // Mirrors the logic in /api/delivery/rates: try live provider rate for the vendor,
-  // fall back to static zone pricing so the server always agrees with the checkout display.
+  // Compute shipping server-side to prevent client-side manipulation (C-01).
+  // This uses the same logic as the /api/delivery/rates endpoint to ensure consistency.
   const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, input.items)
 
-  // Subtract gift card and loyalty points deductions (capped to prevent negative total)
-  const giftCardDeduction = Math.max(0, input.giftCardDeduction ?? 0)
+  // Points deduction
   const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
-  const total = Math.max(0, computedSubtotal + shippingCost - discountAmount - giftCardDeduction - pointsDeduction)
+
+  // Calculate total before applying gift card
+  const subtotalAfterDiscounts = computedSubtotal + shippingCost - discountAmount - pointsDeduction
+
+  // Server-side gift card validation and deduction calculation (H-01 fix)
+  let giftCardDeduction = 0
+  if (input.giftCardCode && subtotalAfterDiscounts > 0) {
+    const { data: gc } = await supabase
+      .from('gift_cards')
+      .select('balance, is_active, expires_at')
+      .eq('code', input.giftCardCode)
+      .single()
+
+    if (gc && gc.is_active && (!gc.expires_at || new Date(gc.expires_at) > new Date())) {
+      giftCardDeduction = Math.min(gc.balance, subtotalAfterDiscounts)
+    }
+  }
+
+  const total = Math.max(0, subtotalAfterDiscounts - giftCardDeduction)
 
   // ── 4. Decrement stock atomically via DB RPC ─────────────────────
   // decrement_product_stock uses SELECT … FOR UPDATE (row-level lock)
@@ -220,55 +222,27 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const decrementedItems: Array<{ productId: string; quantity: number }> = []
 
   for (const item of validatedItems) {
-    const { data: decremented, error: stockErr } = await supabase
-      .rpc('decrement_product_stock', {
-        p_product_id: item.productId,
-        p_quantity:   item.quantity,
-      })
+    const { data: decremented, error: stockErr } = await supabase.rpc('decrement_product_stock', {
+      p_product_id: item.productId,
+      p_quantity: item.quantity,
+    })
     if (stockErr || !decremented) {
       // Restore any stock we already decremented in this loop before throwing
-      await Promise.all(
-        decrementedItems.map(async (prev) => {
-          const { data: p } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', prev.productId)
-            .single()
-          if (p) {
-            await supabase
-              .from('products')
-              .update({ stock: (p.stock as number) + prev.quantity })
-              .eq('id', prev.productId)
-          }
-        })
+      await restoreStock()
+      throw new Error(
+        stockErr
+          ? `Stock reservation failed: ${stockErr.message}`
+          : `Insufficient stock for "${item.productName}"`
       )
-      throw new Error(stockErr
-        ? `Stock reservation failed: ${stockErr.message}`
-        : `Insufficient stock for "${item.productName}"`)
     }
     decrementedItems.push({ productId: item.productId, quantity: item.quantity })
   }
 
-  // Helper: restore all decremented stock. Used to compensate if the order
-  // insert fails after stock has already been decremented. Uses a
-  // select-then-update pattern (not a dedicated RPC) — safe enough since
-  // it only ever adds stock back, never removes it.
+  // Atomically restore all decremented stock using an RPC. This is critical
+  // to prevent race conditions if order creation fails after stock is reserved.
   async function restoreStock() {
-    await Promise.all(
-      decrementedItems.map(async (item) => {
-        const { data: p } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.productId)
-          .single()
-        if (p) {
-          await supabase
-            .from('products')
-            .update({ stock: (p.stock as number) + item.quantity })
-            .eq('id', item.productId)
-        }
-      })
-    )
+    if (decrementedItems.length === 0) return
+    await supabase.rpc('restore_product_stocks', { items: decrementedItems })
   }
 
   // ── 5. Insert order ───────────────────────────────────────────────
@@ -322,10 +296,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     throw itemsErr
   }
 
-  // Promo increment was already performed in step 3b (before stock decrement).
-  // No compensating transaction needed here.
-
-  return { id: order.id, total }
+  return { id: order.id, total, giftCardDeduction }
 }
 
 export async function getOrderById(id: string): Promise<OrderRow | null> {
@@ -340,7 +311,7 @@ export async function getOrderById(id: string): Promise<OrderRow | null> {
 
 export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
   const supabase = createAdminClient()
-  const variants = phoneVariants(phone)
+  const variants = getPhoneVariants(normalizePhone(phone))
   const { data, error } = await supabase
     .from('orders')
     .select('id,full_name,wilaya,city,status,total,delivery_outcome,yalidine_tracking,delivery_provider,created_at,order_items(id,product_name,quantity,subtotal,product_image)')
