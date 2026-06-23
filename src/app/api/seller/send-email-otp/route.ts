@@ -51,13 +51,28 @@ export async function POST(req: NextRequest) {
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })
 
-    await sendOTPEmail(email, otp)
-    logger.info('[send-email-otp] OTP sent', { email })
+    // Email delivery is best-effort — Resend requires a verified domain.
+    // Without one the API rejects the send; we never let that block the OTP flow.
+    let emailSent = false
+    try {
+      await sendOTPEmail(email, otp)
+      emailSent = true
+      logger.info('[send-email-otp] OTP sent', { email })
+    } catch (err) {
+      logger.warn('[send-email-otp] email delivery failed — OTP stored in DB', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      // In dev mode we surface the OTP so the front-end can display it as a fallback
+      ...(process.env.NODE_ENV === 'development' && !emailSent ? { _devOtp: otp } : {}),
+    })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     logger.error('[POST /api/seller/send-email-otp]', { error: msg })
-    return NextResponse.json({ error: 'Impossible d\'envoyer le code. Réessayez.' }, { status: 500 })
+    const publicMsg = process.env.NODE_ENV === 'development' ? msg : 'Impossible d\'envoyer le code. Réessayez.'
+    return NextResponse.json({ error: publicMsg }, { status: 500 })
   }
 }

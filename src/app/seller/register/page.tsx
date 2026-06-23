@@ -51,6 +51,9 @@ export default function SellerRegisterPage() {
       })
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
+      if (body._devOtp) {
+        setError(`[DEV] Code OTP : ${body._devOtp}  (domaine Resend non configuré)`)
+      }
       setView('otp')
     } catch {
       setError('Erreur de connexion. Vérifiez votre accès internet.')
