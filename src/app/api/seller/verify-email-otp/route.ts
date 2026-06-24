@@ -5,20 +5,26 @@ import { timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
 
 function otpEqual(a: string, b: string): boolean {
+  const sa = String(a).trim()
+  const sb = String(b).trim()
+  if (sa.length !== sb.length) return false
   try {
-    const ba = Buffer.from(a.padEnd(8))
-    const bb = Buffer.from(b.padEnd(8))
-    return ba.length === bb.length && timingSafeEqual(ba, bb) && a.length === b.length
+    const ba = Buffer.from(sa)
+    const bb = Buffer.from(sb)
+    return timingSafeEqual(ba, bb)
   } catch { return false }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, otp } = await req.json() as { email?: string; otp?: string }
+    const { email: emailInput, otp: otpInput } = await req.json() as { email?: string; otp?: string }
 
-    if (!email || !otp) {
+    if (!emailInput || !otpInput) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
+
+    const email = emailInput.trim().toLowerCase()
+    const otp = otpInput.trim()
 
     const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {

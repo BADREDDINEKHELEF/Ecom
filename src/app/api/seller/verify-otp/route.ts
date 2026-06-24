@@ -28,10 +28,12 @@ async function signOutAllUserSessions(userId: string): Promise<void> {
 }
 
 function otpEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
+  const sa = String(a).trim()
+  const sb = String(b).trim()
+  if (sa.length !== sb.length) return false
   try {
-    const ba = Buffer.from(a)
-    const bb = Buffer.from(b)
+    const ba = Buffer.from(sa)
+    const bb = Buffer.from(sb)
     return timingSafeEqual(ba, bb)
   } catch { return false }
 }
@@ -39,17 +41,19 @@ function otpEqual(a: string, b: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     // The 'phone' field here is actually the user's email for this flow.
-    const { email: emailInput, phone, otp, newPassword } = await req.json() as {
+    const { email: emailInput, phone, otp: otpInput, newPassword } = await req.json() as {
       email?: string
       phone?: string
       otp?: string
       newPassword?: string
     }
-    const email = emailInput || phone
+    const rawEmail = emailInput || phone
 
-    if (!email || !otp || !newPassword) {
+    if (!rawEmail || !otpInput || !newPassword) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
+    const email = rawEmail.trim().toLowerCase()
+    const otp = otpInput.trim()
     if (newPassword.length < 8) {
       return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères.' }, { status: 400 })
     }

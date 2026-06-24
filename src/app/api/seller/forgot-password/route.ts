@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       )
     }
-    const { email } = parsed.data
+    const email = parsed.data.email.trim().toLowerCase()
 
     const ip = getClientIp(req)
     const rl = await checkOtpSendRateLimit(ip, email)
