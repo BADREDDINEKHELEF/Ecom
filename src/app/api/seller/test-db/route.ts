@@ -28,15 +28,29 @@ export async function GET(req: NextRequest) {
     // Clean up
     await supabase.from('password_reset_otps').delete().eq('phone', testEmail)
 
+    let rateLimitResult: any = null
+    let rateLimitError: string | null = null
+    const upstashUrl = process.env.UPSTASH_REDIS_REST_URL || 'NOT SET'
+    const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN || 'NOT SET'
+
+    try {
+      const { checkOtpSendRateLimit } = require('@/lib/auth/rateLimit')
+      rateLimitResult = await checkOtpSendRateLimit('127.0.0.1', 'test-rate-limit@example.com')
+    } catch (err) {
+      rateLimitError = err instanceof Error ? err.message : String(err)
+    }
+
     if (error) {
       return NextResponse.json({
         success: false,
         url,
         keyMasked,
+        upstashUrl,
+        upstashTokenMasked: upstashToken !== 'NOT SET' ? `${upstashToken.slice(0, 5)}...` : 'NOT SET',
         error: error.message,
         code: error.code,
-        details: error.details,
-        hint: error.hint
+        rateLimitResult,
+        rateLimitError
       })
     }
 
@@ -44,8 +58,12 @@ export async function GET(req: NextRequest) {
       success: true,
       url,
       keyMasked,
+      upstashUrl,
+      upstashTokenMasked: upstashToken !== 'NOT SET' ? `${upstashToken.slice(0, 5)}...` : 'NOT SET',
       message: 'Database query succeeded!',
-      data
+      data,
+      rateLimitResult,
+      rateLimitError
     })
   } catch (err) {
     return NextResponse.json({
