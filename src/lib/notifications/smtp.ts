@@ -4,7 +4,11 @@ import { logger } from '@/lib/logger'
 import { setTimeout as sleep } from 'timers/promises'
 
 // Use Google/Cloudflare DNS instead of Vercel's overloaded resolver (getaddrinfo EBUSY)
-dns.setServers(['8.8.8.8', '1.1.1.1'])
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1'])
+} catch (err) {
+  logger.warn('[smtp] dns.setServers failed, using default resolver', { error: err instanceof Error ? err.message : String(err) })
+}
 
 let transporter: nodemailer.Transporter | null = null
 

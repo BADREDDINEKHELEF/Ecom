@@ -7,6 +7,8 @@ import { sendEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
 import { getClientIp } from '@/lib/utils/ip'
 
+import { logSecurityFailure } from '@/lib/auth/securityEvents'
+
 const RequestSchema = z.object({
   email: z.string().email('Format d\'email invalide'),
 })
@@ -74,6 +76,16 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       emailError = err instanceof Error ? `${err.message}\n${err.stack}` : String(err)
       logger.warn('[send-email-otp] email delivery failed', { error: emailError })
+      
+      // Log to security_events table in Supabase so we can read it on Vercel
+      await logSecurityFailure({
+        actorType: 'system',
+        action: 'email_delivery_failure',
+        resource: `email:${email.slice(0, 4)}...`,
+        ipAddress: ip,
+        meta: { error: emailError.slice(0, 1000) }
+      })
+
       try {
         require('fs').appendFileSync(
           require('path').join(process.cwd(), 'email-error.log'),
