@@ -15,7 +15,11 @@ function getFromAddress(): string {
 }
 
 function isSmtpConfigured(): boolean {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+  return Boolean(
+    process.env.SMTP_HOST?.trim() &&
+    process.env.SMTP_USER?.trim() &&
+    process.env.SMTP_PASS?.trim()
+  )
 }
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {

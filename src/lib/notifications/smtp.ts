@@ -13,11 +13,11 @@ try {
 let transporter: nodemailer.Transporter | null = null
 
 function getSmtpConfig() {
-  const host = process.env.SMTP_HOST
-  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASS
-  const from = process.env.SMTP_FROM_EMAIL || user
+  const host = process.env.SMTP_HOST?.trim()
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT.trim(), 10) : 587
+  const user = process.env.SMTP_USER?.trim()
+  const pass = process.env.SMTP_PASS?.trim()
+  const from = process.env.SMTP_FROM_EMAIL?.trim() || user
 
   if (!host || !user || !pass) return null
 
