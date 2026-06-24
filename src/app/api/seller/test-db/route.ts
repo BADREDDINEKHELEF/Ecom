@@ -11,11 +11,22 @@ export async function GET(req: NextRequest) {
 
     const supabase = createAdminClient()
     
-    // Attempt a test query
+    // Attempt a test insert
+    const testEmail = 'test-vercel-write@example.com'
+    // Delete any old record first
+    await supabase.from('password_reset_otps').delete().eq('phone', testEmail)
+    
     const { data, error } = await supabase
       .from('password_reset_otps')
-      .select('*')
-      .limit(1)
+      .insert({
+        phone: testEmail,
+        otp: '999999',
+        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      })
+      .select()
+
+    // Clean up
+    await supabase.from('password_reset_otps').delete().eq('phone', testEmail)
 
     if (error) {
       return NextResponse.json({
