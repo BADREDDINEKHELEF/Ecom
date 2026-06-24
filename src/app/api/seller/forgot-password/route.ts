@@ -89,7 +89,10 @@ export async function POST(req: NextRequest) {
 
     if (emailError && process.env.NODE_ENV !== 'development') {
       return NextResponse.json(
-        { error: "Impossible d'envoyer l'email. Vérifiez votre adresse ou réessayez plus tard." },
+        {
+          error: "Impossible d'envoyer l'email. Vérifiez votre adresse ou réessayez plus tard.",
+          _emailError: emailError,
+        },
         { status: 502 },
       )
     }
