@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger'
+import { sendEmailViaSmtp } from './smtp'
 
 const RESEND_API = 'https://api.resend.com/emails'
 
@@ -13,9 +14,20 @@ function getFromAddress(): string {
   return `${display} <${raw}>`
 }
 
+function isSmtpConfigured(): boolean {
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+}
+
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  // Prefer SMTP (no domain required — works with Gmail App Passwords)
+  if (isSmtpConfigured()) {
+    await sendEmailViaSmtp(to, subject, html)
+    return
+  }
+
+  // Fallback: Resend (requires verified domain in production)
   const key = process.env.RESEND_API_KEY
-  if (!key) throw new Error('RESEND_API_KEY is not configured')
+  if (!key) throw new Error('No email provider configured. Set SMTP_HOST/SMTP_USER/SMTP_PASS or RESEND_API_KEY.')
 
   const from = getFromAddress()
   const body = JSON.stringify({ from, to: [to], subject, html })

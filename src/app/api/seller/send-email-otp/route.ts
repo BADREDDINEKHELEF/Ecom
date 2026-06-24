@@ -63,27 +63,31 @@ export async function POST(req: NextRequest) {
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })
 
-    // Email delivery is best-effort — Resend requires a verified domain.
-    // Without one the API rejects the send; we never let that block the OTP flow.
-    let emailSent = false
+    // Try to send the email. In dev mode we also surface the OTP as a fallback
+    // so the front-end can display it directly. In production, if the email
+    // fails we MUST return an error — otherwise the user sees "success" but
+    // never gets the code.
     let emailError: string | null = null
     try {
       await sendOTPEmail(email, otp)
-      emailSent = true
       logger.info('[send-email-otp] OTP sent', { email })
     } catch (err) {
       emailError = err instanceof Error ? err.message : String(err)
-      logger.warn('[send-email-otp] email delivery failed — OTP stored in DB', {
-        error: emailError,
-      })
+      logger.warn('[send-email-otp] email delivery failed', { error: emailError })
+    }
+
+    if (emailError && process.env.NODE_ENV !== 'development') {
+      return NextResponse.json(
+        { error: "Impossible d'envoyer l'email. Vérifiez votre adresse ou réessayez plus tard." },
+        { status: 502 },
+      )
     }
 
     return NextResponse.json({
       success: true,
-      emailSent,
-      ...(emailError && process.env.NODE_ENV === 'development' ? { _emailError: emailError } : {}),
+      ...(emailError ? { _emailError: emailError } : {}),
       // In dev mode we surface the OTP so the front-end can display it as a fallback
-      ...(process.env.NODE_ENV === 'development' && !emailSent ? { _devOtp: otp } : {}),
+      ...(process.env.NODE_ENV === 'development' ? { _devOtp: otp } : {}),
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

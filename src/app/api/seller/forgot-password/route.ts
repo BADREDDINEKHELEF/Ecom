@@ -78,24 +78,26 @@ export async function POST(req: NextRequest) {
     })
 
     // Send via email — non-blocking; OTP is already stored in DB
-    let emailSent = false
     let emailError: string | null = null
     try {
       await sendOTPEmail(email, otp)
-      emailSent = true
       logger.info('[forgot-password] OTP sent', { email })
     } catch (err) {
       emailError = err instanceof Error ? err.message : String(err)
-      logger.warn('[forgot-password] email delivery failed — OTP stored in DB', {
-        error: emailError,
-      })
+      logger.warn('[forgot-password] email delivery failed', { error: emailError })
+    }
+
+    if (emailError && process.env.NODE_ENV !== 'development') {
+      return NextResponse.json(
+        { error: "Impossible d'envoyer l'email. Vérifiez votre adresse ou réessayez plus tard." },
+        { status: 502 },
+      )
     }
 
     return NextResponse.json({
       success: true,
-      emailSent,
-      ...(emailError && process.env.NODE_ENV === 'development' ? { _emailError: emailError } : {}),
-      ...(process.env.NODE_ENV === 'development' && !emailSent ? { _devOtp: otp } : {}),
+      ...(emailError ? { _emailError: emailError } : {}),
+      ...(process.env.NODE_ENV === 'development' ? { _devOtp: otp } : {}),
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
