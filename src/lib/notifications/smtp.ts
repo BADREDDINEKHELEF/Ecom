@@ -52,7 +52,7 @@ async function resolveWithRetry(hostname: string, maxRetries = 3): Promise<strin
 }
 
 function createTransporter(config: NonNullable<ReturnType<typeof getSmtpConfig>>): nodemailer.Transporter {
-  return nodemailer.createTransport({
+  const opts: any = {
     host: config.host,
     port: config.port,
     secure: config.port === 465,
@@ -61,7 +61,8 @@ function createTransporter(config: NonNullable<ReturnType<typeof getSmtpConfig>>
     greetingTimeout: 15000,
     socketTimeout: 20000,
     lookup: createLookupWithRetry(),
-  })
+  }
+  return nodemailer.createTransport(opts)
 }
 
 async function sendWithRetry(
