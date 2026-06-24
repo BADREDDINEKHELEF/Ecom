@@ -14,7 +14,7 @@ function buildCsp(extra: string[] = []): string {
     "default-src 'self'",
     // recharts 3.x and @supabase/supabase-js 2.x do not use eval() or new Function().
     // unsafe-eval is NOT required and is omitted.
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     [
