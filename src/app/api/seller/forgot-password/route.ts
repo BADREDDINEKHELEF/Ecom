@@ -67,12 +67,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Delete old unused OTPs for this email
-    await supabase.from('password_reset_otps').delete().eq('email', email)
+    await supabase.from('password_reset_otps').delete().eq('phone', email)
 
     // Generate and store OTP
     const otp = generateOTP()
     await supabase.from('password_reset_otps').insert({
-      email:      email,
+      phone:      email,
       otp,
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })
@@ -83,8 +83,14 @@ export async function POST(req: NextRequest) {
       await sendOTPEmail(email, otp)
       logger.info('[forgot-password] OTP sent', { email })
     } catch (err) {
-      emailError = err instanceof Error ? err.message : String(err)
+      emailError = err instanceof Error ? `${err.message}\n${err.stack}` : String(err)
       logger.warn('[forgot-password] email delivery failed', { error: emailError })
+      try {
+        require('fs').appendFileSync(
+          require('path').join(process.cwd(), 'email-error.log'),
+          `[${new Date().toISOString()}] forgot-password error to ${email}:\n${emailError}\n\n`
+        )
+      } catch (e) {}
     }
 
     if (emailError && process.env.NODE_ENV !== 'development') {
