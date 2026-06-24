@@ -24,17 +24,54 @@ function getSmtpConfig() {
   return { host, port, user, pass, from }
 }
 
+async function resolveViaDoH(hostname: string): Promise<string> {
+  const providers = [
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=A`,
+    `https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=A`
+  ]
+
+  for (const url of providers) {
+    try {
+      const isCloudflare = url.includes('cloudflare')
+      const res = await fetch(url, {
+        headers: isCloudflare ? { 'Accept': 'application/dns-json' } : {},
+        signal: AbortSignal.timeout(3000)
+      })
+      if (!res.ok) continue
+      const data = await res.json()
+      const answers = data.Answer
+      if (answers && answers.length > 0) {
+        const aRecord = answers.find((ans: any) => ans.type === 1)
+        if (aRecord && aRecord.data) {
+          return aRecord.data
+        }
+      }
+    } catch (err) {
+      logger.warn('[smtp] DoH lookup failed', { url, error: err instanceof Error ? err.message : String(err) })
+    }
+  }
+  throw new Error(`DoH resolution failed for ${hostname}`)
+}
+
 // Custom DNS lookup that uses dns.resolve4 (avoids getaddrinfo EBUSY on Vercel)
 // and retries on transient failures.
 function createLookupWithRetry() {
   return (hostname: string, options: dns.LookupOptions, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
-    resolveWithRetry(hostname)
-      .then((address) => callback(null, address, 4))
-      .catch((err) => {
-        logger.warn('[smtp] custom dns lookup failed, falling back to system dns.lookup', { hostname, error: err instanceof Error ? err.message : String(err) })
-        dns.lookup(hostname, options, (nativeErr, address, family) => {
-          callback(nativeErr, address as string, family as number)
-        })
+    resolveViaDoH(hostname)
+      .then((address) => {
+        logger.info('[smtp] resolved hostname via DoH', { hostname, address })
+        callback(null, address, 4)
+      })
+      .catch((dohErr) => {
+        logger.warn('[smtp] DoH resolution failed, falling back to resolveWithRetry', { hostname, error: dohErr.message })
+        resolveWithRetry(hostname)
+          .then((address) => callback(null, address, 4))
+          .catch((err) => {
+            logger.warn('[smtp] custom resolveWithRetry failed, falling back to system dns.lookup', { hostname, error: err.message })
+            dns.lookup(hostname, options, (nativeErr, address, family) => {
+              callback(nativeErr, address as string, family as number)
+            })
+          })
       })
   }
 }
