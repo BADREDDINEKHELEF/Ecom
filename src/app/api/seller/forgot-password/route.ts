@@ -71,11 +71,14 @@ export async function POST(req: NextRequest) {
 
     // Generate and store OTP
     const otp = generateOTP()
-    await supabase.from('password_reset_otps').insert({
+    const { error: insertErr } = await supabase.from('password_reset_otps').insert({
       phone:      email,
       otp,
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })
+    if (insertErr) {
+      throw new Error(`Database insert failed: ${insertErr.message} (code: ${insertErr.code})`)
+    }
 
     // Send via email — non-blocking; OTP is already stored in DB
     let emailError: string | null = null

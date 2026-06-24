@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient()
 
     // Verify OTP
-    const { data: record } = await supabase
+    const { data: record, error: queryErr } = await supabase
       .from('password_reset_otps')
       .select('id, otp, expires_at, used')
       .eq('phone', email)
@@ -77,6 +77,10 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    if (queryErr) {
+      throw new Error(`Database query failed: ${queryErr.message} (code: ${queryErr.code})`)
+    }
 
     if (!record) {
       return NextResponse.json({ error: 'Code invalide ou expiré. Demandez un nouveau code.' }, { status: 400 })
@@ -115,10 +119,13 @@ export async function POST(req: NextRequest) {
     await signOutAllUserSessions(vendor.user_id)
 
     // Mark OTP as used
-    await supabase
+    const { error: updateErr2 } = await supabase
       .from('password_reset_otps')
       .update({ used: true })
       .eq('id', record.id)
+    if (updateErr2) {
+      logger.warn('[verify-otp] failed to mark OTP as used', { error: updateErr2.message })
+    }
 
     logger.info('[verify-otp] password reset successful', { email: email })
     return NextResponse.json({ success: true })

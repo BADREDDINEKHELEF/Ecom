@@ -59,11 +59,14 @@ export async function POST(req: NextRequest) {
     await supabase.from('password_reset_otps').delete().eq('phone', email)
 
     const otp = generateOTP()
-    await supabase.from('password_reset_otps').insert({
+    const { error: insertErr } = await supabase.from('password_reset_otps').insert({
       phone:      email,
       otp,
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     })
+    if (insertErr) {
+      throw new Error(`Database insert failed: ${insertErr.message} (code: ${insertErr.code})`)
+    }
 
     // Try to send the email. In dev mode we also surface the OTP as a fallback
     // so the front-end can display it directly. In production, if the email
