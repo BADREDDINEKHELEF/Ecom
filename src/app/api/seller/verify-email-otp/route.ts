@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { timingSafeEqual } from 'crypto'
+import { logger } from '@/lib/logger'
 
 function otpEqual(a: string, b: string): boolean {
   try {
@@ -51,7 +52,9 @@ export async function POST(req: NextRequest) {
     await supabase.from('password_reset_otps').update({ used: true }).eq('id', record.id)
 
     return NextResponse.json({ success: true })
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error('[POST /api/seller/verify-email-otp]', { error: msg })
     return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
   }
 }

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
 
 const Schema = z.object({
   email: z.email(),
