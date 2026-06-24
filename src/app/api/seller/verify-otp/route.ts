@@ -39,11 +39,13 @@ function otpEqual(a: string, b: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     // The 'phone' field here is actually the user's email for this flow.
-    const { email, otp, newPassword } = await req.json() as {
+    const { email: emailInput, phone, otp, newPassword } = await req.json() as {
       email?: string
+      phone?: string
       otp?: string
       newPassword?: string
     }
+    const email = emailInput || phone
 
     if (!email || !otp || !newPassword) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })

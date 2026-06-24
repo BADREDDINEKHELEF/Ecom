@@ -83,7 +83,7 @@ async function sendWithRetry(
       if (attempt < maxRetries && isDnsError) {
         const delay = Math.min(500 * Math.pow(2, attempt - 1), 3000)
         logger.warn(`[smtp] retry ${attempt}/${maxRetries} after ${delay}ms`, { error: msg })
-        await setTimeout(delay)
+        await sleep(delay)
         continue
       }
       throw lastError
