@@ -1,6 +1,10 @@
 import nodemailer from 'nodemailer'
+import dns from 'dns'
 import { logger } from '@/lib/logger'
-import { setTimeout } from 'timers/promises'
+import { setTimeout as sleep } from 'timers/promises'
+
+// Use Google/Cloudflare DNS instead of Vercel's overloaded resolver (getaddrinfo EBUSY)
+dns.setServers(['8.8.8.8', '1.1.1.1'])
 
 let transporter: nodemailer.Transporter | null = null
 
@@ -16,15 +20,47 @@ function getSmtpConfig() {
   return { host, port, user, pass, from }
 }
 
+// Custom DNS lookup that uses dns.resolve4 (avoids getaddrinfo EBUSY on Vercel)
+// and retries on transient failures.
+function createLookupWithRetry() {
+  return (hostname: string, _options: dns.LookupOptions, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
+    resolveWithRetry(hostname)
+      .then((address) => callback(null, address, 4))
+      .catch((err) => {
+        const dnsErr = err instanceof Error ? err : new Error(String(err))
+        callback(dnsErr as NodeJS.ErrnoException, '', 4)
+      })
+  }
+}
+
+async function resolveWithRetry(hostname: string, maxRetries = 3): Promise<string> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const addresses = await dns.promises.resolve4(hostname)
+      if (addresses.length > 0) return addresses[0]
+    } catch (err) {
+      if (attempt < maxRetries) {
+        const delay = Math.min(500 * Math.pow(2, attempt - 1), 3000)
+        logger.warn(`[smtp] dns retry ${attempt}/${maxRetries} after ${delay}ms`, { hostname, error: (err as Error).message })
+        await sleep(delay)
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error(`DNS resolution failed for ${hostname} after ${maxRetries} attempts`)
+}
+
 function createTransporter(config: NonNullable<ReturnType<typeof getSmtpConfig>>): nodemailer.Transporter {
   return nodemailer.createTransport({
     host: config.host,
     port: config.port,
     secure: config.port === 465,
     auth: { user: config.user, pass: config.pass },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
+    lookup: createLookupWithRetry(),
   })
 }
 

@@ -28,8 +28,10 @@ export async function POST(req: NextRequest) {
       .from('newsletter_subscribers')
       .upsert({ email: parsed.data.email, subscribed_at: new Date().toISOString() }, { onConflict: 'email' })
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
     // Table may not exist yet — don't surface error to user
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn('[POST /api/newsletter] database write failed', { error: msg })
     return NextResponse.json({ ok: true })
   }
 }
