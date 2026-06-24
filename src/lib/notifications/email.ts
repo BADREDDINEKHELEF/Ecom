@@ -5,7 +5,7 @@ const RESEND_API = 'https://api.resend.com/emails'
 function esc(s: string): string {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
-const FROM = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+const FROM = process.env.RESEND_FROM_EMAIL || 'StoreDz <onboarding@resend.dev>'
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const key = process.env.RESEND_API_KEY
@@ -14,7 +14,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   const res = await fetch(RESEND_API, {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')

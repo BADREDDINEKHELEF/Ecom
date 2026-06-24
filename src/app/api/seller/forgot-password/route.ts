@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomInt } from 'crypto'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
 import { sendEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
 import { getClientIp } from '@/lib/utils/ip'
+
+const RequestSchema = z.object({
+  email: z.string().email('Format d\'email invalide'),
+})
 
 function generateOTP(): string {
   return randomInt(100000, 1000000).toString()
@@ -27,8 +32,15 @@ async function sendOTPEmail(email: string, otp: string): Promise<void> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json() as { email?: string }
-    if (!email) return NextResponse.json({ error: 'Adresse e-mail requise.' }, { status: 400 })
+    const body = await req.json().catch(() => ({}))
+    const parsed = RequestSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Adresse e-mail valide requise.', details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      )
+    }
+    const { email } = parsed.data
 
     const ip = getClientIp(req)
     const rl = await checkOtpSendRateLimit(ip, email)
@@ -67,18 +79,22 @@ export async function POST(req: NextRequest) {
 
     // Send via email — non-blocking; OTP is already stored in DB
     let emailSent = false
+    let emailError: string | null = null
     try {
       await sendOTPEmail(email, otp)
       emailSent = true
       logger.info('[forgot-password] OTP sent', { email })
     } catch (err) {
+      emailError = err instanceof Error ? err.message : String(err)
       logger.warn('[forgot-password] email delivery failed — OTP stored in DB', {
-        error: err instanceof Error ? err.message : String(err),
+        error: emailError,
       })
     }
 
     return NextResponse.json({
       success: true,
+      emailSent,
+      ...(emailError && process.env.NODE_ENV === 'development' ? { _emailError: emailError } : {}),
       ...(process.env.NODE_ENV === 'development' && !emailSent ? { _devOtp: otp } : {}),
     })
   } catch (err) {
