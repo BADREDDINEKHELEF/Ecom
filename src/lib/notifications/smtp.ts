@@ -21,23 +21,38 @@ function createTransporter(config: NonNullable<ReturnType<typeof getSmtpConfig>>
     port: config.port,
     secure: config.port === 465,
     auth: { user: config.user, pass: config.pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   })
 }
 
 export async function sendEmailViaSmtp(to: string, subject: string, html: string): Promise<void> {
   const config = getSmtpConfig()
-  if (!config) throw new Error('SMTP not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS')
+  if (!config) {
+    const err = new Error('SMTP not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS')
+    logger.error('[smtp] config missing', { error: err.message })
+    throw err
+  }
 
   if (!transporter) {
     transporter = createTransporter(config)
   }
 
-  await transporter.sendMail({
-    from: `"StoreDz" <${config.from}>`,
-    to,
-    subject,
-    html,
-  })
-
-  logger.info('[smtp] email sent', { to, subject })
+  try {
+    await transporter.sendMail({
+      from: `"StoreDz" <${config.from}>`,
+      to,
+      subject,
+      html,
+    })
+    logger.info('[smtp] email sent', { to, subject })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const code = err instanceof Error && 'code' in err ? (err as any).code : 'unknown'
+    const response = err instanceof Error && 'response' in err ? (err as any).response : ''
+    logger.error('[smtp] send failed', { to, error: msg, code, response })
+    console.error('[smtp] FULL ERROR:', err)
+    throw new Error(`SMTP ${code}: ${msg}`)
+  }
 }
