@@ -3,7 +3,17 @@
 import { useState, useTransition, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Loader2, Search } from 'lucide-react'
-import type { InventoryProduct } from '@/app/seller/inventory/page'
+
+export interface InventoryProduct {
+  id: string
+  name: string
+  images: string[] | null
+  sku: string | null
+  stock: number
+  reserved: number
+  available: number
+  threshold: number
+}
 
 function StockStatusBadge({ available, threshold }: { available: number; threshold: number }) {
   if (available <= 0) {

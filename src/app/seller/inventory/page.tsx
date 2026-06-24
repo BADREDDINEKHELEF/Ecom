@@ -4,18 +4,8 @@ import { useState, useEffect } from 'react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import { InventoryTable } from '@/components/seller/inventory/InventoryTable'
+import type { InventoryProduct } from '@/components/seller/inventory/InventoryTable'
 import { Menu } from 'lucide-react'
-
-export interface InventoryProduct {
-  id: string
-  name: string
-  images: string[] | null
-  sku: string | null
-  stock: number
-  reserved: number
-  available: number
-  threshold: number
-}
 
 export default function SellerInventoryPage() {
   const { vendor, loading: authLoading, signOut } = useSellerAuth()
