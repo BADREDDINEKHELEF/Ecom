@@ -27,12 +27,14 @@ function getSmtpConfig() {
 // Custom DNS lookup that uses dns.resolve4 (avoids getaddrinfo EBUSY on Vercel)
 // and retries on transient failures.
 function createLookupWithRetry() {
-  return (hostname: string, _options: dns.LookupOptions, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
+  return (hostname: string, options: dns.LookupOptions, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
     resolveWithRetry(hostname)
       .then((address) => callback(null, address, 4))
       .catch((err) => {
-        const dnsErr = err instanceof Error ? err : new Error(String(err))
-        callback(dnsErr as NodeJS.ErrnoException, '', 4)
+        logger.warn('[smtp] custom dns lookup failed, falling back to system dns.lookup', { hostname, error: err instanceof Error ? err.message : String(err) })
+        dns.lookup(hostname, options, (nativeErr, address, family) => {
+          callback(nativeErr, address as string, family as number)
+        })
       })
   }
 }
