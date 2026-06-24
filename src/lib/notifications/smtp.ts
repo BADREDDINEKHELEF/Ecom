@@ -26,13 +26,13 @@ function getSmtpConfig() {
 
 async function resolveViaDoH(hostname: string): Promise<string> {
   const providers = [
-    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=A`,
-    `https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=A`
+    `https://1.1.1.1/dns-query?name=${encodeURIComponent(hostname)}&type=A`,
+    `https://8.8.8.8/resolve?name=${encodeURIComponent(hostname)}&type=A`
   ]
 
   for (const url of providers) {
     try {
-      const isCloudflare = url.includes('cloudflare')
+      const isCloudflare = url.includes('1.1.1.1')
       const res = await fetch(url, {
         headers: isCloudflare ? { 'Accept': 'application/dns-json' } : {},
         signal: AbortSignal.timeout(3000)
