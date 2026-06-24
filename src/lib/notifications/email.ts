@@ -5,20 +5,32 @@ const RESEND_API = 'https://api.resend.com/emails'
 function esc(s: string): string {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
-const FROM = process.env.RESEND_FROM_EMAIL || 'StoreDz <onboarding@resend.dev>'
+
+function getFromAddress(): string {
+  const raw = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+  if (raw.includes('<') && raw.includes('>')) return raw
+  const display = process.env.RESEND_FROM_NAME || 'StoreDz'
+  return `${display} <${raw}>`
+}
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const key = process.env.RESEND_API_KEY
   if (!key) throw new Error('RESEND_API_KEY is not configured')
 
+  const from = getFromAddress()
+  const body = JSON.stringify({ from, to: [to], subject, html })
+
   const res = await fetch(RESEND_API, {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+    body,
   })
   if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Resend ${res.status}: ${text}`)
+    let text = ''
+    try { text = await res.text() } catch { /* ignore */ }
+    let detail = text
+    try { const j = JSON.parse(text); detail = j.message || j.error || text } catch { /* plain text */ }
+    throw new Error(`Resend ${res.status}: ${detail}`)
   }
 }
 
