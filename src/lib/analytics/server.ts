@@ -16,6 +16,26 @@ function normalizePhone(phone: string): string {
   return digits.startsWith('213') ? digits : digits.startsWith('0') ? '213' + digits.slice(1) : digits
 }
 
+function anonymizeIp(ip: string): string {
+  if (!ip) return ''
+  // IPv4: mask last octet (e.g. 192.168.1.123 -> 192.168.1.0)
+  if (ip.includes('.')) {
+    const parts = ip.split('.')
+    if (parts.length === 4) {
+      parts[3] = '0'
+      return parts.join('.')
+    }
+  }
+  // IPv6: mask last 80 bits (e.g. 2001:db8:85a3:8d3:1319:8a2e:370:7348 -> 2001:db8:85a3::)
+  if (ip.includes(':')) {
+    const parts = ip.split(':')
+    if (parts.length > 3) {
+      return parts.slice(0, 4).join(':') + '::'
+    }
+  }
+  return ip
+}
+
 // ── Meta Conversions API ────────────────────────────────────────────────────
 // Docs: https://developers.facebook.com/docs/marketing-api/conversions-api
 
@@ -35,7 +55,7 @@ export async function fireMetaPurchase(opts: {
     const userData: Record<string, unknown> = {}
     if (email)            userData.em  = sha256(email)
     if (phone)            userData.ph  = sha256(normalizePhone(phone))
-    if (clientIp)         userData.client_ip_address  = clientIp
+    if (clientIp)         userData.client_ip_address  = anonymizeIp(clientIp)
     if (clientUserAgent)  userData.client_user_agent  = clientUserAgent
 
     await fetch(

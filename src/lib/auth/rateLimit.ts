@@ -185,6 +185,11 @@ export async function checkPublicRateLimit(ip: string, namespace: string): Promi
   return check(namespace, ip, 30, 60)
 }
 
+/** Gift card validate: 5 requests / 10 min per IP (prevents brute-force) */
+export async function checkGiftCardRateLimit(ip: string): Promise<RateLimitResult> {
+  return check('giftcard_validate', ip, 5, 10 * 60)
+}
+
 /** Checkout: 10 orders / 10 min per IP (prevents order flooding) */
 export async function checkCheckoutRateLimit(ip: string): Promise<RateLimitResult> {
   return check('checkout', ip, 10, 10 * 60)

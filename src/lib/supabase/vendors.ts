@@ -249,7 +249,7 @@ export async function getVendorDeliveryConfig(
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('vendor_delivery_config')
-    .select('*')
+    .select('id, vendor_id, default_provider, yalidine_api_id, yalidine_api_token, procolis_token, zr_token, colivraison_token, maystro_token, rex_token, yassir_api_key, ecom_token, apec_api_id, apec_api_token, auto_create_shipment, notify_whatsapp, notify_sms')
     .eq('vendor_id', vendorId)
     .maybeSingle()
   if (!data) return null

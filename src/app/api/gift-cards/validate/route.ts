@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { checkGiftCardRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = await checkPublicRateLimit(ip, 'giftcard')
-  if (!rl.allowed) return NextResponse.json({ error: 'Trop de tentatives' }, { status: 429 })
+  const rl = await checkGiftCardRateLimit(ip)
+  if (!rl.allowed) return NextResponse.json({ error: 'Trop de tentatives. Réessayez plus tard.' }, { status: 429 })
 
   const { code } = await req.json().catch(() => ({}))
   if (!code || typeof code !== 'string' || code.length > 100) {
@@ -30,5 +30,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ce code cadeau est épuisé' }, { status: 400 })
   }
 
-  return NextResponse.json({ valid: true })
+  return NextResponse.json({ valid: true, id: data.id, balance: data.balance })
 }

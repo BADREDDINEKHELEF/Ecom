@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
                 : file.type === 'image/png'  ? 'png'
                 : file.type === 'image/gif'  ? 'gif'
                 : 'jpg'
-    const path  = `vendors/${vendorRow.id}/${Date.now()}-${randomBytes(4).toString('hex')}.${ext}`
+    const path  = `vendors/${vendorRow.id}/${Date.now()}-${randomBytes(16).toString('hex')}.${ext}`
     const bytes = await file.arrayBuffer()
 
     // Magic byte verification — prevents MIME type spoofing (e.g., a .php file with image/jpeg content-type)

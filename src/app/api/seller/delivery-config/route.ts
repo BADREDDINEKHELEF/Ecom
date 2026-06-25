@@ -40,12 +40,23 @@ export async function GET(req: NextRequest) {
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
     const config = await getVendorDeliveryConfig(vendor.id)
-    // Never send raw API credentials to the browser — only expose presence flags.
+    const mask = (v?: string | null) => v ? '••••••••' : ''
     const redacted = config ? {
       default_provider:     config.default_provider,
       auto_create_shipment: config.auto_create_shipment,
       notify_whatsapp:      config.notify_whatsapp,
       notify_sms:           config.notify_sms,
+      yalidine_api_id:      mask(config.yalidine_api_id),
+      yalidine_api_token:   mask(config.yalidine_api_token),
+      procolis_token:       mask(config.procolis_token),
+      zr_token:             mask(config.zr_token),
+      colivraison_token:    mask(config.colivraison_token),
+      maystro_token:        mask(config.maystro_token),
+      rex_token:            mask(config.rex_token),
+      yassir_api_key:       mask(config.yassir_api_key),
+      ecom_token:           mask(config.ecom_token),
+      apec_api_id:          mask(config.apec_api_id),
+      apec_api_token:       mask(config.apec_api_token),
       has_yalidine:         !!(config.yalidine_api_id && config.yalidine_api_token),
       has_procolis:         !!config.procolis_token,
       has_zr:               !!config.zr_token,
@@ -92,8 +103,28 @@ export async function PATCH(req: NextRequest) {
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
 
+    const updates = { ...parsed.data }
+    const existing = await getVendorDeliveryConfig(vendor.id)
+    if (existing) {
+      const merge = (newVal: string | null | undefined, oldVal: string | null | undefined) => {
+        if (newVal === '••••••••') return oldVal
+        return newVal
+      }
+      if (updates.yalidine_api_id !== undefined)    updates.yalidine_api_id    = merge(updates.yalidine_api_id, existing.yalidine_api_id)
+      if (updates.yalidine_api_token !== undefined) updates.yalidine_api_token = merge(updates.yalidine_api_token, existing.yalidine_api_token)
+      if (updates.procolis_token !== undefined)     updates.procolis_token     = merge(updates.procolis_token, existing.procolis_token)
+      if (updates.zr_token !== undefined)           updates.zr_token           = merge(updates.zr_token, existing.zr_token)
+      if (updates.colivraison_token !== undefined)  updates.colivraison_token  = merge(updates.colivraison_token, existing.colivraison_token)
+      if (updates.maystro_token !== undefined)      updates.maystro_token      = merge(updates.maystro_token, existing.maystro_token)
+      if (updates.rex_token !== undefined)          updates.rex_token          = merge(updates.rex_token, existing.rex_token)
+      if (updates.yassir_api_key !== undefined)     updates.yassir_api_key     = merge(updates.yassir_api_key, existing.yassir_api_key)
+      if (updates.ecom_token !== undefined)         updates.ecom_token         = merge(updates.ecom_token, existing.ecom_token)
+      if (updates.apec_api_id !== undefined)        updates.apec_api_id        = merge(updates.apec_api_id, existing.apec_api_id)
+      if (updates.apec_api_token !== undefined)     updates.apec_api_token     = merge(updates.apec_api_token, existing.apec_api_token)
+    }
+
     try {
-      await saveVendorDeliveryConfig(vendor.id, parsed.data)
+      await saveVendorDeliveryConfig(vendor.id, updates)
     } catch (dbErr: unknown) {
       // Supabase throws PostgrestError (not a standard Error) — extract message explicitly
       const pg = dbErr as { message?: string; code?: string; details?: string; hint?: string }

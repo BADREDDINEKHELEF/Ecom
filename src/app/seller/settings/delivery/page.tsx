@@ -37,12 +37,14 @@ export default function DeliverySettingsPage() {
   const [error, setError]           = useState('')
   const [loadingConfig, setLoadingConfig] = useState(true)
   const [testing, setTesting]         = useState(false)
-  const [testResult, setTestResult]   = useState<'ok' | 'fail' | null>(null)
+  const [testResult, setTestResult]   = useState<'ok' | 'fail' | 'unsaved' | null>(null)
   const [testingApec, setTestingApec] = useState(false)
-  const [testResultApec, setTestResultApec] = useState<'ok' | 'fail' | null>(null)
+  const [testResultApec, setTestResultApec] = useState<'ok' | 'fail' | 'unsaved' | null>(null)
+  const [savedConfig, setSavedConfig] = useState<any>(null)
 
-  useEffect(() => {
+  const loadConfig = () => {
     if (!vendor) return
+    setLoadingConfig(true)
     fetch('/api/seller/delivery-config')
       .then((r) => r.json())
       .then(({ config: cfg }) => {
@@ -64,10 +66,15 @@ export default function DeliverySettingsPage() {
             notify_whatsapp:      cfg.notify_whatsapp ?? true,
             notify_sms:           cfg.notify_sms ?? false,
           })
+          setSavedConfig(cfg)
         }
         setLoadingConfig(false)
       })
       .catch(() => setLoadingConfig(false))
+  }
+
+  useEffect(() => {
+    loadConfig()
   }, [vendor])
 
   const handleSave = async (e: React.FormEvent) => {
@@ -100,6 +107,7 @@ export default function DeliverySettingsPage() {
       if (!res.ok) throw new Error((await res.json()).error ?? a.savedBtn)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
+      loadConfig()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : a.savedBtn)
     } finally {
@@ -109,13 +117,20 @@ export default function DeliverySettingsPage() {
 
   const testYalidineCredentials = async () => {
     if (!form.yalidine_api_id || !form.yalidine_api_token) return
+    const unsaved = savedConfig && (
+      form.yalidine_api_id !== (savedConfig.yalidine_api_id ?? '') ||
+      form.yalidine_api_token !== (savedConfig.yalidine_api_token ?? '')
+    )
+    if (unsaved) {
+      setTestResult('unsaved')
+      return
+    }
     setTesting(true)
     setTestResult(null)
     try {
       const res = await fetch('/api/seller/test-yalidine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiId: form.yalidine_api_id, apiToken: form.yalidine_api_token }),
       })
       const data = await res.json()
       setTestResult(data.ok ? 'ok' : 'fail')
@@ -128,13 +143,20 @@ export default function DeliverySettingsPage() {
 
   const testApecCredentials = async () => {
     if (!form.apec_api_id || !form.apec_api_token) return
+    const unsaved = savedConfig && (
+      form.apec_api_id !== (savedConfig.apec_api_id ?? '') ||
+      form.apec_api_token !== (savedConfig.apec_api_token ?? '')
+    )
+    if (unsaved) {
+      setTestResultApec('unsaved')
+      return
+    }
     setTestingApec(true)
     setTestResultApec(null)
     try {
       const res = await fetch('/api/seller/test-apec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiId: form.apec_api_id, apiToken: form.apec_api_token }),
       })
       const data = await res.json()
       setTestResultApec(data.ok ? 'ok' : 'fail')
@@ -266,6 +288,11 @@ export default function DeliverySettingsPage() {
                       )}
                       {testResult === 'fail' && (
                         <span className="text-sm font-semibold text-red-500">{a.connectionFail}</span>
+                      )}
+                      {testResult === 'unsaved' && (
+                        <span className="text-sm font-semibold text-amber-500">
+                          {isRTL ? 'يرجى حفظ التغييرات أولاً للتجربة' : "Sauvegardez d'abord pour tester."}
+                        </span>
                       )}
                     </div>
                   )}
@@ -474,6 +501,11 @@ export default function DeliverySettingsPage() {
                       )}
                       {testResultApec === 'fail' && (
                         <span className="text-sm font-semibold text-red-500">{a.connectionFail}</span>
+                      )}
+                      {testResultApec === 'unsaved' && (
+                        <span className="text-sm font-semibold text-amber-500">
+                          {isRTL ? 'يرجى حفظ التغييرات أولاً للتجربة' : "Sauvegardez d'abord pour tester."}
+                        </span>
                       )}
                     </div>
                   )}

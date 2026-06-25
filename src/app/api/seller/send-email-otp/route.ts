@@ -56,14 +56,33 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient()
 
     // Remove old OTPs for this email
-    await supabase.from('password_reset_otps').delete().eq('phone', email)
+    try {
+      await supabase.from('password_reset_otps').delete().or(`phone.eq.${email},email.eq.${email}`)
+    } catch {
+      await supabase.from('password_reset_otps').delete().eq('phone', email)
+    }
 
     const otp = generateOTP()
-    const { error: insertErr } = await supabase.from('password_reset_otps').insert({
+    const expiryStr = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    
+    let insertErr = null
+    const { error } = await supabase.from('password_reset_otps').insert({
       phone:      email,
+      email:      email,
       otp,
-      expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      expires_at: expiryStr,
     })
+    insertErr = error
+
+    if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('column') || String(insertErr.message).includes('email'))) {
+      const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
+        phone:      email,
+        otp,
+        expires_at: expiryStr,
+      })
+      insertErr = fallbackErr
+    }
+
     if (insertErr) {
       throw new Error(`Database insert failed: ${insertErr.message} (code: ${insertErr.code})`)
     }

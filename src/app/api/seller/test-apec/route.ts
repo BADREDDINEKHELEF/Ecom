@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { getVendorByUserIdServer, getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
@@ -24,12 +24,11 @@ export async function POST(req: NextRequest) {
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-  let body: { apiId?: string; apiToken?: string }
-  try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  const config = await getVendorDeliveryConfig(vendor.id)
+  if (!config || !config.apec_api_id || !config.apec_api_token) {
+    return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
   }
-  const { apiId, apiToken } = body
-  if (!apiId || !apiToken) return NextResponse.json({ ok: false, error: 'Missing credentials' }, { status: 400 })
+  const { apec_api_id: apiId, apec_api_token: apiToken } = config
 
   try {
     // Call a lightweight GET to verify APEC credentials

@@ -74,6 +74,6 @@ export function generateStoragePath(folder: string, originalName: string): strin
   const ext    = originalName.split('.').pop()?.toLowerCase() ?? 'bin'
   const safe   = sanitizeFilename(ext)
   const ts     = Date.now()
-  const random = randomBytes(4).toString('hex')
+  const random = randomBytes(16).toString('hex')
   return `${folder}/${ts}-${random}.${safe}`
 }

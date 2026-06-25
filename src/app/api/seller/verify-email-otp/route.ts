@@ -36,14 +36,55 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient()
 
-    const { data: record, error: queryErr } = await supabase
+    let record = null
+    let queryErr = null
+    
+    // Try to query by email column first
+    const { data: dataEmail, error: errEmail } = await supabase
       .from('password_reset_otps')
       .select('id, otp, expires_at, used')
-      .eq('phone', email)
+      .eq('email', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+      
+    const isEmailColumnMissing = errEmail && (
+      errEmail.code === '42703' || 
+      String(errEmail.message).includes('column') || 
+      String(errEmail.message).includes('email')
+    )
+
+    if (isEmailColumnMissing) {
+      // Fallback: query by phone column
+      const { data: dataPhone, error: errPhone } = await supabase
+        .from('password_reset_otps')
+        .select('id, otp, expires_at, used')
+        .eq('phone', email)
+        .eq('used', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      record = dataPhone
+      queryErr = errPhone
+    } else if (errEmail) {
+      queryErr = errEmail
+    } else if (dataEmail) {
+      record = dataEmail
+    } else {
+      // Column exists but returned no record. Fall back to phone column
+      // in case the OTP was created with phone only (e.g. via send-email-otp).
+      const { data: dataPhone, error: errPhone } = await supabase
+        .from('password_reset_otps')
+        .select('id, otp, expires_at, used')
+        .eq('phone', email)
+        .eq('used', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      record = dataPhone
+      queryErr = errPhone
+    }
 
     if (queryErr) {
       throw new Error(`Database query failed: ${queryErr.message} (code: ${queryErr.code})`)
