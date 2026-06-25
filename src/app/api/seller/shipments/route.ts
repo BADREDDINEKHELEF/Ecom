@@ -15,18 +15,20 @@ import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
 
 const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
 const SHIPMENT_STATUSES   = ['pending', 'in_transit', 'picked_up', 'out_for_delivery', 'delivered', 'returned', 'failed', 'cancelled'] as const
+const TRACKING_REGEX      = /^[A-Za-z0-9]{6,20}$/
 
 const CreateShipmentSchema = z.object({
   orderId:        z.string().uuid(),
   provider:       z.enum(SUPPORTED_PROVIDERS),
-  trackingNumber: z.string().max(100).optional(),
+  trackingNumber: z.string().regex(TRACKING_REGEX).optional(),
+  isStopDesk:     z.boolean().optional(),
   autoCreate:     z.boolean().optional().default(false),
   notes:          z.string().max(500).optional(),
 })
 
 const PatchShipmentSchema = z.object({
   shipmentId:     z.string().uuid(),
-  trackingNumber: z.string().max(100).optional(),
+  trackingNumber: z.string().regex(TRACKING_REGEX).optional(),
   status:         z.enum(SHIPMENT_STATUSES).optional(),
   detail:         z.string().max(500).optional(),
 })
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { orderId, provider, trackingNumber, autoCreate, notes } = parsed.data
+  const { orderId, provider, trackingNumber, isStopDesk, autoCreate, notes } = parsed.data
 
   try {
     const admin = createAdminClient()
@@ -115,7 +117,7 @@ export async function POST(req: NextRequest) {
             wilaya:   order.wilaya,
             total:    order.total,
             items:    itemsString,
-            isStopDesk: order.is_stopdesk ?? false,
+            isStopDesk: isStopDesk ?? order.is_stopdesk ?? false,
           },
           {
             yalidine_api_id:    config?.yalidine_api_id    ?? undefined,

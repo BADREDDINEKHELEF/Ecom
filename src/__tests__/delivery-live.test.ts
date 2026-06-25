@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { ecomGetRateWithToken } from '@/lib/delivery/ecom'
 import { yalidineGetRateWithCreds } from '@/lib/delivery/yalidine'
+import { apecGetRateWithCreds } from '@/lib/delivery/apec'
 
 describe('Delivery API Integration', () => {
   it('should fetch live delivery rates for a configured store', async () => {
@@ -78,4 +79,77 @@ describe('Delivery API Integration', () => {
       }
     }
   }, 30000)
+
+  it('should test Ecom API directly if ECOM_TOKEN is set in process.env', async () => {
+    const fs = require('fs')
+    const path = require('path')
+    try {
+      const envPath = path.resolve(__dirname, '../../.env.local')
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8')
+        envContent.split('\n').forEach((line: string) => {
+          const match = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/)
+          if (match) {
+            let val = match[2].trim()
+            if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1)
+            if (val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1)
+            process.env[match[1]] = val
+          }
+        })
+      }
+    } catch (e) {
+      console.warn('Could not load .env.local:', e)
+    }
+
+    const token = process.env.ECOM_TOKEN
+    if (!token) {
+      console.log('No ECOM_TOKEN in env. Skipping direct Ecom test.')
+      return
+    }
+    console.log('Testing Ecom API directly using ECOM_TOKEN env variable...')
+    const rate = await ecomGetRateWithToken('Alger', token)
+    console.log('Direct Ecom Rate result:', rate)
+    if (rate) {
+      expect(rate.homeDelivery).toBeGreaterThan(0)
+    } else {
+      console.warn('Ecom API returned null rate (could be due to invalid/sandbox token)')
+    }
+  })
+
+  it('should test Apec API directly if APEC_API_ID and APEC_API_TOKEN are set in process.env', async () => {
+    const fs = require('fs')
+    const path = require('path')
+    try {
+      const envPath = path.resolve(__dirname, '../../.env.local')
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8')
+        envContent.split('\n').forEach((line: string) => {
+          const match = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/)
+          if (match) {
+            let val = match[2].trim()
+            if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1)
+            if (val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1)
+            process.env[match[1]] = val
+          }
+        })
+      }
+    } catch (e) {
+      console.warn('Could not load .env.local:', e)
+    }
+
+    const apiId = process.env.APEC_API_ID
+    const apiToken = process.env.APEC_API_TOKEN
+    if (!apiId || !apiToken) {
+      console.log('No APEC_API_ID/TOKEN in env. Skipping direct Apec test.')
+      return
+    }
+    console.log('Testing Apec API directly using APEC credentials env variables...')
+    const rate = await apecGetRateWithCreds('Alger', apiId, apiToken)
+    console.log('Direct Apec Rate result:', rate)
+    if (rate) {
+      expect(rate.homeDelivery).toBeGreaterThan(0)
+    } else {
+      console.warn('APEC API returned null rate (could be due to invalid/sandbox credentials)')
+    }
+  })
 })
