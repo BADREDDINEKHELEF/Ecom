@@ -36,6 +36,7 @@ export async function apecCreateShipmentWithCreds(
     to_commune_name: input.city,
     product_list:    input.items || 'Colis',
     price:           input.total,
+    stop_desk:       input.isStopDesk ? 1 : 0,
     do_insurance:    0,
     declared_value:  0,
     freeshipping:    0,

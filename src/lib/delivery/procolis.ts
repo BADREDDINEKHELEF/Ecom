@@ -14,7 +14,7 @@ export async function procolisCreateShipmentWithToken(
   const body = {
     Colis: [
       {
-        TypeColis: 0,
+        TypeColis: input.isStopDesk ? 1 : 0,
         Confrimee: 0,
         client: input.fullName,
         telephone: input.phone,

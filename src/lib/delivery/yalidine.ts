@@ -1,7 +1,12 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { WILAYA_DATA } from '@/lib/data/wilayas'
 
 const BASE_URL = 'https://api.yalidine.app/v1'
 const TIMEOUT  = 15_000
+
+function isValidWilaya(wilayaName: string): boolean {
+  return wilayaName in WILAYA_DATA
+}
 
 function buildHeaders(apiId: string, apiToken: string) {
   return {
@@ -36,6 +41,7 @@ async function createShipmentWithHeaders(
     to_commune_name: input.city,
     product_list: input.items || 'Colis',
     price: input.total,
+    stop_desk: input.isStopDesk ? 1 : 0,
     do_insurance: 0,
     declared_value: 0,
     freeshipping: 0,
@@ -103,6 +109,7 @@ export async function yalidineListParcels(apiId: string, apiToken: string, pageS
 }
 
 export async function yalidineGetRates(wilayaName: string) {
+  if (!isValidWilaya(wilayaName)) return null
   if (!yalidineConfigured()) return null
   try {
     const res = await fetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
@@ -121,6 +128,7 @@ export async function yalidineGetRateWithCreds(
   apiId: string,
   apiToken: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  if (!isValidWilaya(wilayaName)) return null
   try {
     const res = await fetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
       headers: buildHeaders(apiId, apiToken),

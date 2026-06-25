@@ -49,6 +49,7 @@ const CreateOrderSchema = z.object({
   nis:              z.string().max(50).optional().nullable(),
   rc:               z.string().max(50).optional().nullable(),
   gaClientId:       z.string().max(100).optional().nullable(),
+  isStopDesk:       z.boolean().optional().default(false),
   items:            z.array(OrderItemSchema).min(1).max(50),
 })
 
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
     nis,
     rc,
     gaClientId,
+    isStopDesk,
     ...rest
   } = parsed.data
   const input = {
@@ -102,6 +104,7 @@ export async function POST(req: NextRequest) {
     nis: nis ?? null,
     rc: rc ?? null,
     pointsRedeemed,
+    isStopDesk: isStopDesk ?? false,
   }
   const buyerEmail = rawEmail ?? null
 

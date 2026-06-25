@@ -152,3 +152,34 @@ describe('Stock validation', () => {
     expect(checkStock([])).toEqual({ ok: true })
   })
 })
+
+// ── Shipping cost resolution logic (mirrors resolveShippingCost) ─────────────
+
+interface LiveRates { homeDelivery: number; deskDelivery: number | null }
+
+function mockResolveShippingCost(
+  isStopDesk: boolean,
+  rates: LiveRates,
+  staticCost: number
+): number {
+  const deliveryRate = (isStopDesk && rates.deskDelivery != null) ? rates.deskDelivery : rates.homeDelivery
+  return deliveryRate ?? staticCost
+}
+
+describe('Shipping cost resolution', () => {
+  const rates = { homeDelivery: 500, deskDelivery: 300 }
+
+  it('resolves to desk rate if isStopDesk is true and desk rate is available', () => {
+    expect(mockResolveShippingCost(true, rates, 450)).toBe(300)
+  })
+
+  it('resolves to home rate if isStopDesk is false', () => {
+    expect(mockResolveShippingCost(false, rates, 450)).toBe(500)
+  })
+
+  it('falls back to home rate if isStopDesk is true but desk rate is null', () => {
+    const ratesNoDesk = { homeDelivery: 500, deskDelivery: null }
+    expect(mockResolveShippingCost(true, ratesNoDesk, 450)).toBe(500)
+  })
+})
+

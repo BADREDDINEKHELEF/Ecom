@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('pixel_events').insert({
       vendor_id:  vendor.id,
-      event_type: event,
+      event_type: sanitizeEventType(event),
       page_url:   url ?? null,
       referrer:   referrer ?? null,
       user_agent: req.headers.get('user-agent') ?? null,
@@ -128,7 +128,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(req: NextRequest) {
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? req.headers.get('x-real-ip') ?? 'unknown'
+  const rl = await checkPublicRateLimit(clientIp, 'pixel_collect_options')
+  if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
+
   return new NextResponse(null, {
     status: 204,
     headers: {

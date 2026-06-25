@@ -27,6 +27,7 @@ export interface ShipmentInput {
   wilaya: string
   total: number
   items?: string
+  isStopDesk?: boolean
 }
 
 export interface ShipmentResult {

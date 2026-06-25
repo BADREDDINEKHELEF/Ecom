@@ -20,7 +20,7 @@ export async function colivraisonCreateShipmentWithToken(
     product:    input.items || 'Colis',
     price:      input.total,
     note:       '',
-    is_stopdesk: 0,
+    is_stopdesk: input.isStopDesk ? 1 : 0,
     can_open:   0,
   }
 

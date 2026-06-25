@@ -1,7 +1,12 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { WILAYA_DATA } from '@/lib/data/wilayas'
 
 const BASE_URL = 'https://rexlivraison.com/api/v1'
 const TIMEOUT  = 15_000
+
+function isValidWilaya(wilayaName: string): boolean {
+  return wilayaName in WILAYA_DATA
+}
 
 export function rexConfigured(): boolean {
   return !!process.env.REX_TOKEN
@@ -67,6 +72,7 @@ export async function rexGetRateWithToken(
   wilayaName: string,
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  if (!isValidWilaya(wilayaName)) return null
   try {
     const res = await fetch(`${BASE_URL}/rates?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },

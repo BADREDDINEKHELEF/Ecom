@@ -40,7 +40,7 @@ export async function zrCreateShipmentWithToken(
   token: string
 ): Promise<ShipmentResult> {
   const body = {
-    TypeLivraison: 0,
+    TypeLivraison: input.isStopDesk ? 1 : 0,
     TypeColis: 0,
     Confrimee: 1,
     Client: input.fullName,

@@ -12,11 +12,17 @@ export async function yassirCreateShipmentWithKey(
   input: ShipmentInput,
   apiKey: string
 ): Promise<ShipmentResult> {
+  const senderName = process.env.YASSIR_SENDER_NAME
+  const senderPhone = process.env.YASSIR_SENDER_PHONE
+  const senderAddress = process.env.YASSIR_SENDER_ADDRESS
+  if (!senderName || !senderPhone || !senderAddress) {
+    throw new Error('Yassir sender configuration not set (YASSIR_SENDER_NAME, YASSIR_SENDER_PHONE, YASSIR_SENDER_ADDRESS)')
+  }
   const body = {
     sender: {
-      name:    process.env.YASSIR_SENDER_NAME ?? 'StoreDz',
-      phone:   process.env.YASSIR_SENDER_PHONE ?? '',
-      address: process.env.YASSIR_SENDER_ADDRESS ?? 'Alger',
+      name:    senderName,
+      phone:   senderPhone,
+      address: senderAddress,
     },
     recipient: {
       name:    input.fullName,

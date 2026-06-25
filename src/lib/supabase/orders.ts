@@ -34,6 +34,7 @@ export interface OrderRow {
   delivery_provider?:  string | null
   yalidine_tracking?:  string | null
   yalidine_label_url?: string | null
+  is_stopdesk?:        boolean
   created_at:          string
   order_items?:        OrderItemRow[]
 }
@@ -56,6 +57,7 @@ export interface CreateOrderInput {
   nif?:               string | null
   nis?:               string | null
   rc?:                string | null
+  isStopDesk?:        boolean
   items: {
     productId:     string
     productName:   string
@@ -81,6 +83,7 @@ async function resolveShippingCost(
   wilaya: string,
   subtotal: number,
   items: CreateOrderInput['items'],
+  isStopDesk?: boolean,
 ): Promise<number> {
   // Static zone fallback — always available
   const zone   = WILAYA_DATA[wilaya]?.zone ?? 3
@@ -97,8 +100,9 @@ async function resolveShippingCost(
     const provider = config.default_provider ?? 'yalidine'
     const rate = await dispatchGetRate(provider, wilaya, config, true)
     if (!rate) return staticCost
+    const deliveryRate = (isStopDesk && rate.deskDelivery != null) ? rate.deskDelivery : rate.homeDelivery
     // Free shipping still applies on top of the live rate
-    return subtotal >= zoneCfg.freeFrom ? 0 : rate.homeDelivery
+    return subtotal >= zoneCfg.freeFrom ? 0 : deliveryRate
   } catch {
     return staticCost
   }
@@ -189,7 +193,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   }
 
   // BUGFIX (C-01): Compute shipping server-side to prevent client-side manipulation.
-  const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, input.items)
+  const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, input.items, input.isStopDesk)
 
   const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
   const subtotalAfterDiscounts = computedSubtotal + shippingCost - discountAmount - pointsDeduction
@@ -263,6 +267,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       nif:             input.nif ?? null,
       nis:             input.nis ?? null,
       rc:              input.rc ?? null,
+      is_stopdesk:     input.isStopDesk ?? false,
     })
     .select('id')
     .single()

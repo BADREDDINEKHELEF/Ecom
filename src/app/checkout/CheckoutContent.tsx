@@ -109,7 +109,8 @@ export default function CheckoutContent() {
   const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null)
   const [usePoints, setUsePoints] = useState(false)
 
-  const [liveDeliveryCost, setLiveDeliveryCost] = useState<number | null>(null)
+  const [liveDeliveryRates, setLiveDeliveryRates] = useState<{ home: number | null; desk: number | null }>({ home: null, desk: null })
+  const [isStopDesk, setIsStopDesk] = useState(false)
   const [deliveryFetching, setDeliveryFetching] = useState(false)
 
   useEffect(() => {
@@ -125,7 +126,11 @@ export default function CheckoutContent() {
 
   // Fetch live delivery price from vendor's configured provider when wilaya changes
   useEffect(() => {
-    if (!form.wilaya) { setLiveDeliveryCost(null); return }
+    if (!form.wilaya) {
+      setLiveDeliveryRates({ home: null, desk: null })
+      setIsStopDesk(false)
+      return
+    }
     setDeliveryFetching(true)
     const timer = setTimeout(async () => {
       try {
@@ -134,9 +139,21 @@ export default function CheckoutContent() {
         const res = await fetch(`/api/delivery/rates?${params}`)
         if (res.ok) {
           const data = await res.json()
-          if (typeof data.homeDelivery === 'number') setLiveDeliveryCost(data.homeDelivery)
+          setLiveDeliveryRates({
+            home: typeof data.homeDelivery === 'number' ? data.homeDelivery : null,
+            desk: typeof data.deskDelivery === 'number' ? data.deskDelivery : null,
+          })
+          if (typeof data.deskDelivery !== 'number') {
+            setIsStopDesk(false)
+          }
+        } else {
+          setLiveDeliveryRates({ home: null, desk: null })
+          setIsStopDesk(false)
         }
-      } catch { /* fall back to static */ } finally {
+      } catch {
+        setLiveDeliveryRates({ home: null, desk: null })
+        setIsStopDesk(false)
+      } finally {
         setDeliveryFetching(false)
       }
     }, 400)
@@ -180,7 +197,8 @@ export default function CheckoutContent() {
   const giftCardDeduction = giftCardResult?.deduction ?? 0
   const pointsDeduction = (usePoints && loyaltyBalance) ? Math.min(loyaltyBalance, Math.max(0, cartTotal - discountAmount - giftCardDeduction)) : 0
   // Live rate from provider API; falls back to static zone pricing
-  const shippingCost = delivery.isFree ? 0 : (liveDeliveryCost ?? delivery.cost)
+  const chosenLiveRate = isStopDesk ? liveDeliveryRates.desk : liveDeliveryRates.home
+  const shippingCost = delivery.isFree ? 0 : (chosenLiveRate ?? delivery.cost)
   const orderTotal = Math.max(0, cartTotal - discountAmount - giftCardDeduction - pointsDeduction + shippingCost)
 
   const handleApplyPromo = async () => {
@@ -306,6 +324,7 @@ export default function CheckoutContent() {
       nis:            b2b.isB2B ? b2b.nis || null : null,
       rc:             b2b.isB2B ? b2b.rc  || null : null,
       gaClientId:     gaClientId ?? null,
+      isStopDesk,
       items: items.map(({ product, quantity, selectedColor }) => ({
         productId:     product.id,
         productName:   product.name,
@@ -466,6 +485,7 @@ export default function CheckoutContent() {
           <p><span className="font-semibold">{t.checkout.fullName}:</span> {form.fullName}</p>
           <p><span className="font-semibold">{t.checkout.phone}:</span> {form.phone}</p>
           <p><span className="font-semibold">{t.checkout.address}:</span> {form.address}, {form.city === '__autre__' ? customCommune : form.city}, {form.wilaya}</p>
+          <p><span className="font-semibold">{t.checkout.deliveryMethod}:</span> {isStopDesk ? t.checkout.stopDesk : t.checkout.homeDelivery}</p>
           <p><span className="font-semibold">{t.checkout.payment}:</span> {
             payment === 'cash' ? t.checkout.cash :
             payment === 'edahabia' ? t.checkout.edahabia :
@@ -586,6 +606,42 @@ export default function CheckoutContent() {
                   />
                 )}
               </div>
+              {form.wilaya && liveDeliveryRates.desk !== null && (
+                <div className="sm:col-span-2 space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">{t.checkout.deliveryMethod}</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsStopDesk(false)}
+                      className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
+                        !isStopDesk ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <span className={`text-sm font-bold ${!isStopDesk ? 'text-indigo-700' : 'text-gray-900'}`}>
+                        {t.checkout.homeDelivery}
+                      </span>
+                      <span className="text-xs text-gray-500 mt-1">
+                        {delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(liveDeliveryRates.home ?? delivery.cost)}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsStopDesk(true)}
+                      className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
+                        isStopDesk ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <span className={`text-sm font-bold ${isStopDesk ? 'text-indigo-700' : 'text-gray-900'}`}>
+                        {t.checkout.stopDesk}
+                      </span>
+                      <span className="text-xs text-gray-500 mt-1">
+                        {delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(liveDeliveryRates.desk)}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {form.wilaya && (
                 <div className="sm:col-span-2 bg-indigo-50 rounded-xl px-4 py-3 flex items-center gap-3">
                   <Truck className="w-4 h-4 text-indigo-600 flex-shrink-0" />

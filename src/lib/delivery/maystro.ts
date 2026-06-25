@@ -46,6 +46,7 @@ export async function maystroCreateShipmentWithToken(
     product_name:     input.items || 'Colis',
     can_open_package: false,
     is_exchange:      false,
+    is_stopdesk:      !!input.isStopDesk,
   }
 
   const res = await fetch(`${BASE_URL}/orders/`, {

@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // Verify the order exists and contains at least one item from this vendor
     const [{ data: order }, { data: vendorItems }] = await Promise.all([
-      admin.from('orders').select('full_name, phone, wilaya, city, address, total, status').eq('id', orderId).single(),
+      admin.from('orders').select('full_name, phone, wilaya, city, address, total, status, is_stopdesk').eq('id', orderId).single(),
       admin.from('order_items').select('product_name, quantity').eq('order_id', orderId).eq('vendor_id', vendor.id),
     ])
 
@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
             wilaya:   order.wilaya,
             total:    order.total,
             items:    itemsString,
+            isStopDesk: order.is_stopdesk ?? false,
           },
           {
             yalidine_api_id:    config?.yalidine_api_id    ?? undefined,
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
       try {
         const rate = await dispatchGetRate(provider, order.wilaya, config ?? undefined, true)
         if (rate) {
-          resolvedDeliveryCost = rate.homeDelivery
+          resolvedDeliveryCost = (order.is_stopdesk && rate.deskDelivery != null) ? rate.deskDelivery : rate.homeDelivery
         } else {
           const zone = WILAYA_DATA[order.wilaya]?.zone ?? 3
           resolvedDeliveryCost = ZONE_CONFIG[zone].cost

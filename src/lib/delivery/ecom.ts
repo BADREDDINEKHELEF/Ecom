@@ -1,7 +1,12 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { WILAYA_DATA } from '@/lib/data/wilayas'
 
 const BASE_URL = 'https://ecom-dz.net/api/v1'
 const TIMEOUT  = 15_000
+
+function isValidWilaya(wilayaName: string): boolean {
+  return wilayaName in WILAYA_DATA
+}
 
 export function ecomConfigured(): boolean {
   return !!process.env.ECOM_TOKEN
@@ -20,6 +25,7 @@ export async function ecomCreateShipmentWithToken(
     price:        input.total,
     product:      input.items || 'Colis',
     note:         '',
+    is_stopdesk:  input.isStopDesk ? 1 : 0,
     can_open:     false,
   }
 
@@ -80,6 +86,7 @@ export async function ecomGetRateWithToken(
   wilayaName: string,
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  if (!isValidWilaya(wilayaName)) return null
   try {
     const res = await fetch(`${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },
