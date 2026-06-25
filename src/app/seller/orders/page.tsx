@@ -5,7 +5,7 @@ import Image from 'next/image'
 import {
   ShoppingBag, Search, Loader2, CheckCircle2, XCircle, Truck,
   Clock, AlertCircle, ChevronDown, Download, Phone, Package,
-  RefreshCw, Filter, Menu,
+  RefreshCw, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
@@ -184,7 +184,7 @@ export default function SellerOrdersPage() {
 
   const toggleSelect = (id: string) => {
     const next = new Set(selected)
-    next.has(id) ? next.delete(id) : next.add(id)
+    if (next.has(id)) next.delete(id); else next.add(id)
     setSelected(next)
   }
 

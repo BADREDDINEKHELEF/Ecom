@@ -5,7 +5,7 @@
  * orders as paid without a valid gateway reference.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // ── Payment amount calculation ──────────────────────────────────────────────
 

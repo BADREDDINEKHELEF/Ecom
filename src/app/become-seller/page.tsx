@@ -4,10 +4,6 @@ import Link from 'next/link'
 import { Store, TrendingUp, Shield, Truck, DollarSign, Users, Package, BarChart3, ArrowRight, CheckCircle } from 'lucide-react'
 import { useT } from '@/lib/store/langStore'
 
-function slugify(s: string) {
-  return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
-}
-
 export default function BecomeSellerPage() {
   const t = useT()
 

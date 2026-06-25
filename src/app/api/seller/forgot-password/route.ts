@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
 import { sendEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
+import fs from 'fs'
+import path from 'path'
 import { getClientIp } from '@/lib/utils/ip'
 
 const RequestSchema = z.object({
@@ -133,11 +135,11 @@ export async function POST(req: NextRequest) {
       emailError = err instanceof Error ? `${err.message}\n${err.stack}` : String(err)
       logger.warn('[forgot-password] email delivery failed', { error: emailError })
       try {
-        require('fs').appendFileSync(
-          require('path').join(process.cwd(), 'email-error.log'),
+        fs.appendFileSync(
+          path.join(process.cwd(), 'email-error.log'),
           `[${new Date().toISOString()}] forgot-password error to ${email}:\n${emailError}\n\n`
         )
-      } catch (e) {}
+      } catch {}
     }
 
     if (emailError && process.env.NODE_ENV !== 'development') {

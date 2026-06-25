@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, Store, Phone, CheckCircle, KeyRound } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, Store, CheckCircle, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getVendorByUserId } from '@/lib/supabase/queries'
 import { useT } from '@/lib/store/langStore'
@@ -250,7 +250,7 @@ export default function SellerLoginPage() {
               <div className="flex items-center justify-between text-sm">
                 <button type="button" onClick={() => reset('forgot_phone')}
                   className="text-gray-500 hover:text-gray-700">
-                  ← Changer d'e-mail
+                  ← Changer d&apos;e-mail
                 </button>
                 <button type="button" onClick={handleSendOTP} disabled={loading}
                   className="text-emerald-600 hover:underline font-medium disabled:opacity-50">

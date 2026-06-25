@@ -74,7 +74,7 @@ export default function ExitIntentPopup() {
             Attendez! 🎁
           </h2>
           <p className="text-gray-500 text-sm leading-relaxed mb-6">
-            Obtenez <strong className="text-gray-900">10% de réduction</strong> sur votre première commande. Livraison gratuite sur toute l'Algérie.
+            Obtenez <strong className="text-gray-900">10% de réduction</strong> sur votre première commande. Livraison gratuite sur toute l&apos;Algérie.
           </p>
 
           <div className="bg-gray-50 border-2 border-dashed border-indigo-300 rounded-2xl px-5 py-4 mb-4">

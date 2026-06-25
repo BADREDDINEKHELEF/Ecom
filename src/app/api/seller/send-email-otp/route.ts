@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
 import { sendEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
+import fs from 'fs'
+import path from 'path'
 import { getClientIp } from '@/lib/utils/ip'
 
 import { logSecurityFailure } from '@/lib/auth/securityEvents'
@@ -109,11 +111,11 @@ export async function POST(req: NextRequest) {
       })
 
       try {
-        require('fs').appendFileSync(
-          require('path').join(process.cwd(), 'email-error.log'),
+        fs.appendFileSync(
+          path.join(process.cwd(), 'email-error.log'),
           `[${new Date().toISOString()}] send-email-otp error to ${email}:\n${emailError}\n\n`
         )
-      } catch (e) {}
+      } catch {}
     }
 
     if (emailError && process.env.NODE_ENV !== 'development') {

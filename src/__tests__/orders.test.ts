@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 // ── Order status transition rules (mirrors seller/orders route) ───────────────
 
-const ORDER_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as const
-type OrderStatus = typeof ORDER_STATUSES[number]
+type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
 
 const SELLER_ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending:   ['confirmed', 'cancelled'],

@@ -16,8 +16,9 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = async (file: File) => {
-    if (file.type && !file.type.startsWith('image/')) { setError('Image uniquement'); return }
-    if (file.size > 5 * 1024 * 1024) { setError('Max 5 Mo'); return }
+    const isImage = file.type?.startsWith('image/') || file.type === '' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')
+    if (!isImage) { setError('Image uniquement'); return }
+    if (file.size > 20 * 1024 * 1024) { setError('Max 20 Mo'); return }
     setError('')
     setUploading(true)
     try {
@@ -72,14 +73,14 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         className="sr-only"
         onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = '' }}
       />
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-700">Logo de la boutique</p>
-        <p className="text-xs text-gray-400 mt-0.5">JPG, PNG ou WebP · Max 5 Mo · Carré recommandé</p>
+        <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP ou HEIC · Max 20 Mo · Carré recommandé</p>
         {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
         {value && (
           <button
@@ -95,10 +96,41 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
   )
 }
 
+async function convertHeicToJpeg(file: File): Promise<Blob> {
+  const win = typeof window !== 'undefined' ? window as unknown as { heic2any?: (options: { blob: Blob; toType: string; quality: number }) => Promise<Blob | Blob[]> } : undefined
+  if (win && !win.heic2any) {
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js'
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error('Failed to load HEIC converter'))
+      document.head.appendChild(script)
+    })
+  }
+  const heic2any = win?.heic2any
+  if (!heic2any) throw new Error('HEIC converter not available')
+  const blob = await heic2any({
+    blob: file,
+    toType: 'image/jpeg',
+    quality: 0.85,
+  })
+  return Array.isArray(blob) ? blob[0] : blob
+}
+
 async function compressSquare(file: File, maxPx: number): Promise<Blob> {
+  let activeFile: File | Blob = file
+  const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif'
+  if (isHeic) {
+    try {
+      activeFile = await convertHeicToJpeg(file)
+    } catch (e) {
+      console.error('HEIC conversion failed:', e)
+    }
+  }
+
   return new Promise((resolve) => {
     const img = new window.Image()
-    const blobUrl = URL.createObjectURL(file)
+    const blobUrl = URL.createObjectURL(activeFile)
     img.onload = () => {
       URL.revokeObjectURL(blobUrl)
       try {
@@ -111,12 +143,12 @@ async function compressSquare(file: File, maxPx: number): Promise<Blob> {
         const sy = (img.naturalHeight - Math.min(img.naturalWidth, img.naturalHeight)) / 2
         const s = Math.min(img.naturalWidth, img.naturalHeight)
         ctx.drawImage(img, sx, sy, s, s, 0, 0, side, side)
-        canvas.toBlob((blob) => resolve(blob ?? file), 'image/webp', 0.9)
+        canvas.toBlob((blob) => resolve(blob ?? activeFile), 'image/webp', 0.9)
       } catch {
-        resolve(file)
+        resolve(activeFile)
       }
     }
-    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file) }
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(activeFile) }
     img.src = blobUrl
   })
 }

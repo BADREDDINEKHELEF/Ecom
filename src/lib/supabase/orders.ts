@@ -314,7 +314,7 @@ export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
   const variants = getPhoneVariants(normalizePhone(phone))
   const { data, error } = await supabase
     .from('orders')
-    .select('id,full_name,wilaya,city,status,total,delivery_outcome,yalidine_tracking,delivery_provider,created_at,order_items(id,product_name,quantity,subtotal,product_image)')
+    .select('id,full_name,phone,wilaya,city,address,status,total,delivery_outcome,yalidine_tracking,delivery_provider,is_stopdesk,payment_method,created_at,order_items(id,product_name,quantity,subtotal,product_image,product_price)')
     .in('phone', variants)
     .order('created_at', { ascending: false })
   if (error) throw error

@@ -42,7 +42,6 @@ function cartesian(arrays: string[][]): string[][] {
 
 export default function VariantBuilder({ basePrice, variants, onChange }: Props) {
   const [options, setOptions]       = useState<VariantOption[]>([])
-  const [showPresets, setShowPresets] = useState(false)
   const [collapsed, setCollapsed]   = useState(false)
 
   const addOption = () => setOptions([...options, { name: '', values: [] }])

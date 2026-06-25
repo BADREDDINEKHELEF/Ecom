@@ -264,7 +264,7 @@ export default function SellerSponsoredPage() {
           ) : sponsored.length === 0 ? (
             <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
               <Zap className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">Aucune promotion pour l'instant</p>
+              <p className="text-gray-500 font-medium">Aucune promotion pour l&apos;instant</p>
               <p className="text-sm text-gray-400 mt-1">Sponsorisez un produit pour augmenter sa visibilité.</p>
             </div>
           ) : (

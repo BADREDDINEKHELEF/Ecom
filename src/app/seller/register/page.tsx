@@ -17,7 +17,7 @@ function slugify(s: string) {
 type View = 'form' | 'otp'
 
 export default function SellerRegisterPage() {
-  const router = useRouter()
+  useRouter()
   const t = useT()
   const [view, setView]       = useState<View>('form')
   const [showPwd, setShowPwd] = useState(false)

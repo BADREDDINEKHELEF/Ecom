@@ -1,4 +1,4 @@
-import { TrendingDown, TrendingUp, Package, DollarSign, AlertTriangle, Download } from 'lucide-react'
+import { TrendingDown, TrendingUp, Package, DollarSign, AlertTriangle } from 'lucide-react'
 import { getCodWilayaStats, getCodProviderStats } from '@/lib/supabase/analytics'
 import { formatPrice } from '@/lib/utils'
 import CodExportButton from './CodExportButton'

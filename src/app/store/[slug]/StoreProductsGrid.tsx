@@ -22,7 +22,6 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
   const [search, setSearch] = useState('')
   const t  = useT()
   const ts = t.store
-  const tc = t.common
 
   const newProducts  = products.filter(p => p.isNew)
   const saleProducts = products.filter(p => p.comparePrice && p.comparePrice > p.price)

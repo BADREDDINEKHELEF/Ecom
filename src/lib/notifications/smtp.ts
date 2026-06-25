@@ -41,7 +41,7 @@ async function resolveViaDoH(hostname: string): Promise<string> {
       const data = await res.json()
       const answers = data.Answer
       if (answers && answers.length > 0) {
-        const aRecord = answers.find((ans: any) => ans.type === 1)
+        const aRecord = answers.find((ans: { type: number; data: string }) => ans.type === 1)
         if (aRecord && aRecord.data) {
           return aRecord.data
         }
@@ -95,7 +95,7 @@ async function resolveWithRetry(hostname: string, maxRetries = 3): Promise<strin
 }
 
 function createTransporter(config: NonNullable<ReturnType<typeof getSmtpConfig>>): nodemailer.Transporter {
-  const opts: any = {
+  const opts = {
     host: config.host,
     port: config.port,
     secure: config.port === 465,
@@ -160,8 +160,8 @@ export async function sendEmailViaSmtp(to: string, subject: string, html: string
     logger.info('[smtp] email sent', { to, subject })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    const code = err instanceof Error && 'code' in err ? (err as any).code : 'unknown'
-    const response = err instanceof Error && 'response' in err ? (err as any).response : ''
+    const code = err instanceof Error && 'code' in err ? (err as Record<string, unknown>).code as string : 'unknown'
+    const response = err instanceof Error && 'response' in err ? (err as Record<string, unknown>).response as string : ''
     logger.error('[smtp] send failed after retries', { to, error: msg, code, response })
     console.error('[smtp] FULL ERROR:', err)
     throw new Error(`SMTP ${code}: ${msg}`)

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import {
   Store, ArrowRight, Check, Smartphone, Globe, ShoppingCart,
-  Zap, Shield, MessageCircle, BarChart3, Package, Users, Star,
+  Zap, MessageCircle, BarChart3, Package, Users, Star,
   TrendingUp, CreditCard,
 } from 'lucide-react'
 
@@ -191,7 +191,7 @@ export default function HomePage() {
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div className="text-center mb-12">
           <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">Lancez-vous en 3 étapes</h2>
-          <p className="text-gray-500">Pas besoin de coder. Pas besoin d'hébergement. Pas besoin de carte bancaire.</p>
+          <p className="text-gray-500">Pas besoin de coder. Pas besoin d&apos;hébergement. Pas besoin de carte bancaire.</p>
         </div>
         <div className="grid sm:grid-cols-3 gap-6">
           {STEPS.map(({ step, icon, title, desc }) => (

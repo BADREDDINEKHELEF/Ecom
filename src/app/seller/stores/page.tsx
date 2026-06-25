@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   Store, Plus, ExternalLink, CheckCircle2, XCircle, Clock,
-  Settings, AlertCircle, RefreshCw, Crown, Zap, ChevronRight, Menu,
+  Settings, AlertCircle, RefreshCw, Crown, ChevronRight, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useRTL } from '@/lib/store/langStore'
@@ -287,7 +287,7 @@ export default function SellerStoresPage() {
                 <Crown className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-gray-900 text-sm">Gérez jusqu'à 10 boutiques</p>
+                <p className="font-bold text-gray-900 text-sm">Gérez jusqu&apos;à 10 boutiques</p>
                 <p className="text-xs text-gray-500 mt-0.5">Passez au plan Professionnel (3 boutiques) ou Entreprise (10 boutiques).</p>
               </div>
               <Link href="/seller/subscription"

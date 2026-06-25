@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
         total,
         wilaya:    input.wilaya,
         itemCount: input.items.length,
+        isStopDesk: input.isStopDesk,
       }).catch((err) => logger.error('[email] order confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
     }
 

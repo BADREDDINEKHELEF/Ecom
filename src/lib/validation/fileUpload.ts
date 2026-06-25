@@ -12,7 +12,7 @@ const ALLOWED_IMAGE_TYPES = new Set([
   'image/gif',
 ])
 
-export const MAX_IMAGE_SIZE   = 5  * 1024 * 1024  // 5 MB
+export const MAX_IMAGE_SIZE   = 10 * 1024 * 1024 // 10 MB
 export const MAX_DOCUMENT_SIZE = 20 * 1024 * 1024  // 20 MB
 
 // Magic byte signatures for image format verification

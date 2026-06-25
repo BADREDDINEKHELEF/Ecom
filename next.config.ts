@@ -131,6 +131,10 @@ export default withSentryConfig(analyzeBundles(nextConfig), {
   // Disable the Sentry telemetry that phones home about SDK usage
   telemetry: false,
 
+  // Required to avoid conflict with Next.js internal route collection
+  disableLogger: true,
+  tunnelRoute: '/monitoring-tunnel',
+
   // Tree-shake Sentry logger statements in production bundles
   webpack: {
     treeshake: {

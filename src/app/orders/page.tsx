@@ -180,7 +180,7 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2">
-                    <span>{order.city}, {order.wilaya}</span>
+                    <span>{order.city}, {order.wilaya} {order.is_stopdesk && `(${t.checkout.stopDesk})`}</span>
                     <div className="flex items-center gap-3">
                       <span className="capitalize">
                         {order.payment_method === 'cash' ? t.orders.cashOnDelivery : '💳 ' + order.payment_method}
@@ -191,7 +191,7 @@ export default function OrdersPage() {
                           createdAt={order.created_at}
                           buyerName={order.full_name}
                           buyerPhone={order.phone}
-                          buyerAddress={`${order.address}, ${order.city}, ${order.wilaya}`}
+                          buyerAddress={`${order.address}, ${order.city}, ${order.wilaya}${order.is_stopdesk ? ` (${t.checkout.stopDesk})` : ''}`}
                           companyName={(order as (typeof order & { company_name?: string })).company_name}
                           nif={(order as (typeof order & { nif?: string })).nif}
                           nis={(order as (typeof order & { nis?: string })).nis}

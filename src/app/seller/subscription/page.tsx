@@ -35,9 +35,6 @@ const PLAN_BADGE: Record<string, string> = {
   enterprise: 'bg-amber-500',
 }
 
-// lang is kept as a variable to allow future dynamic language support
-type Lang = 'fr' | 'en' | 'ar'
-
 const PAYMENT_METHODS = [
   { id: 'baridi_mob', label: 'BaridiMob', desc: 'Virement via l\'appli BaridiMob' },
   { id: 'ccp', label: 'CCP / Virement Postal', desc: 'Virement depuis un bureau de poste' },
@@ -327,7 +324,7 @@ export default function SellerSubscriptionPage() {
                     {submitting ? (
                       <><RefreshCw className="w-4 h-4 animate-spin" /> Envoi en cours…</>
                     ) : (
-                      <><Upload className="w-4 h-4" /> Soumettre ma demande d'abonnement</>
+                      <><Upload className="w-4 h-4" /> Soumettre ma demande d&apos;abonnement</>
                     )}
                   </button>
                 </>

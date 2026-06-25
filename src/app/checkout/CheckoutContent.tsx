@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 const PixelConfetti = dynamic(() => import('@/components/effects/PixelConfetti'), { ssr: false })
 import Link from 'next/link'
@@ -484,7 +484,7 @@ export default function CheckoutContent() {
         <div className="bg-gray-50 rounded-2xl p-5 text-left mb-8 space-y-2 text-sm text-gray-700">
           <p><span className="font-semibold">{t.checkout.fullName}:</span> {form.fullName}</p>
           <p><span className="font-semibold">{t.checkout.phone}:</span> {form.phone}</p>
-          <p><span className="font-semibold">{t.checkout.address}:</span> {form.address}, {form.city === '__autre__' ? customCommune : form.city}, {form.wilaya}</p>
+          <p><span className="font-semibold">{t.checkout.address}:</span> {form.address}, {form.city === '__autre__' ? customCommune : form.city}, {form.wilaya}{isStopDesk ? ` (${t.checkout.stopDesk})` : ''}</p>
           <p><span className="font-semibold">{t.checkout.deliveryMethod}:</span> {isStopDesk ? t.checkout.stopDesk : t.checkout.homeDelivery}</p>
           <p><span className="font-semibold">{t.checkout.payment}:</span> {
             payment === 'cash' ? t.checkout.cash :

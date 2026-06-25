@@ -6,7 +6,7 @@ import { logSellerDataAccess } from '@/lib/auth/sellerAudit'
 import { logSecurityEvent, SEC_EVENT } from '@/lib/auth/securityEvents'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
-import { logger } from '@/lib/logger'
+
 
 const RevealSchema = z.object({
   phoneHash: z.string().regex(/^[0-9a-f]{16}$/, 'Invalid phone hash'),

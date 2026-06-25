@@ -40,7 +40,7 @@ export default function DeliverySettingsPage() {
   const [testResult, setTestResult]   = useState<'ok' | 'fail' | 'unsaved' | null>(null)
   const [testingApec, setTestingApec] = useState(false)
   const [testResultApec, setTestResultApec] = useState<'ok' | 'fail' | 'unsaved' | null>(null)
-  const [savedConfig, setSavedConfig] = useState<any>(null)
+  const [savedConfig, setSavedConfig] = useState<Record<string, unknown> | null>(null)
 
   const loadConfig = () => {
     if (!vendor) return

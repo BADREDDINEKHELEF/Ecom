@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   CreditCard, TrendingUp, Clock, CheckCircle2, ChevronDown,
-  Download, Loader2, Calendar, Package, Menu,
+  Download, Loader2, Calendar, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'

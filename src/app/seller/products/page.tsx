@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, Upload, ImagePlus, Tag, FileText, ChevronDown, Sparkles } from 'lucide-react'

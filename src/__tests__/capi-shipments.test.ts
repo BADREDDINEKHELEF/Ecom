@@ -29,9 +29,9 @@ const mockDispatchGetRate = vi.fn().mockResolvedValue({
 })
 
 vi.mock('@/lib/delivery/dispatch', () => ({
-  dispatchShipment: (...args: any[]) => mockDispatchShipment(...args),
-  dispatchGetRate: (...args: any[]) => mockDispatchGetRate(...args),
-  normalizeProviderStatus: (raw: any) => String(raw),
+  dispatchShipment: (...args: unknown[]) => mockDispatchShipment(...args),
+  dispatchGetRate: (...args: unknown[]) => mockDispatchGetRate(...args),
+  normalizeProviderStatus: (raw: unknown) => String(raw),
 }))
 
 // Mock user session
@@ -61,9 +61,9 @@ const mockUpdateShippingInfo = vi.fn().mockResolvedValue(null)
 const mockUpdateOrderStatus = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/lib/supabase/queries', () => ({
-  createShipment: (...args: any[]) => mockCreateShipment(...args),
-  updateShippingInfo: (...args: any[]) => mockUpdateShippingInfo(...args),
-  updateOrderStatus: (...args: any[]) => mockUpdateOrderStatus(...args),
+  createShipment: (...args: unknown[]) => mockCreateShipment(...args),
+  updateShippingInfo: (...args: unknown[]) => mockUpdateShippingInfo(...args),
+  updateOrderStatus: (...args: unknown[]) => mockUpdateOrderStatus(...args),
   getVendorDeliveryConfig: () => Promise.resolve({
     vendor_id: 'v-123',
     default_provider: 'yalidine',

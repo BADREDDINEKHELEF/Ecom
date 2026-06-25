@@ -46,10 +46,41 @@ function uid() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 8)
 }
 
+async function convertHeicToJpeg(file: File): Promise<Blob> {
+  const win = typeof window !== 'undefined' ? window as unknown as { heic2any?: (options: { blob: Blob; toType: string; quality: number }) => Promise<Blob | Blob[]> } : undefined
+  if (win && !win.heic2any) {
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js'
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error('Failed to load HEIC converter'))
+      document.head.appendChild(script)
+    })
+  }
+  const heic2any = win?.heic2any
+  if (!heic2any) throw new Error('HEIC converter not available')
+  const blob = await heic2any({
+    blob: file,
+    toType: 'image/jpeg',
+    quality: 0.85,
+  })
+  return Array.isArray(blob) ? blob[0] : blob
+}
+
 async function compressToWebP(file: File, maxPx = 1400, quality = 0.85): Promise<Blob> {
+  let activeFile: File | Blob = file
+  const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif'
+  if (isHeic) {
+    try {
+      activeFile = await convertHeicToJpeg(file)
+    } catch (e) {
+      console.error('HEIC conversion failed:', e)
+    }
+  }
+
   return new Promise((resolve) => {
     const img = new window.Image()
-    const blobUrl = URL.createObjectURL(file)
+    const blobUrl = URL.createObjectURL(activeFile)
     img.onload = () => {
       URL.revokeObjectURL(blobUrl)
       try {
@@ -61,21 +92,30 @@ async function compressToWebP(file: File, maxPx = 1400, quality = 0.85): Promise
         canvas.height = h
         canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
         canvas.toBlob(
-          (blob) => resolve(blob ?? file),
+          (blob) => resolve(blob ?? activeFile),
           'image/webp',
           quality,
         )
       } catch {
-        resolve(file)
+        resolve(activeFile)
       }
     }
-    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file) }
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(activeFile) }
     img.src = blobUrl
   })
 }
 
-function isAllowedImage(type: string) { return type.startsWith('image/') || type === '' }
-const MAX_MB = 10
+function isAllowedImage(type: string, name: string) {
+  const t = type.toLowerCase()
+  const n = name.toLowerCase()
+  return (
+    t.startsWith('image/') ||
+    t === '' ||
+    n.endsWith('.heic') ||
+    n.endsWith('.heif')
+  )
+}
+const MAX_MB = 30
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -161,7 +201,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
 
   const handleFilesSelected = useCallback((files: File[]) => {
     const valid = files.filter(
-      f => isAllowedImage(f.type) && f.size <= MAX_MB * 1024 * 1024
+      f => isAllowedImage(f.type, f.name) && f.size <= MAX_MB * 1024 * 1024
     )
     if (!valid.length) return
     addFiles(valid)
@@ -260,7 +300,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             onChange={handleFileInput}
             className="sr-only"
             aria-label="Sélectionner des images"

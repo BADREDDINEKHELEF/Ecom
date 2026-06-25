@@ -3,7 +3,7 @@
  * These run without any external dependencies.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 // Force in-memory mode for tests (no Upstash env vars)
 vi.stubEnv('UPSTASH_REDIS_REST_URL', '')

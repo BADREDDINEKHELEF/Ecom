@@ -522,7 +522,7 @@ export default function SellerAnalyticsPage() {
                         <div>
                           <p className="font-bold text-amber-800">Taux de retour élevé ({data.returnRate}%)</p>
                           <p className="text-sm text-amber-700 mt-1">
-                            Moyenne nationale : 15-20%. Confirmez chaque commande par WhatsApp avant l'expédition et améliorez vos descriptions produits.
+                            Moyenne nationale : 15-20%. Confirmez chaque commande par WhatsApp avant l&apos;expédition et améliorez vos descriptions produits.
                           </p>
                         </div>
                       </div>

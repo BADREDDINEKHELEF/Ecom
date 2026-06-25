@@ -104,10 +104,35 @@ export async function maystroGetRateWithToken(
     const data = await res.json()
     const row = Array.isArray(data) ? data[0] : (data?.results?.[0] ?? data)
     if (!row) return null
-    const home = Number(row.home_delivery_fee ?? row.price ?? row.tarif ?? row.fee ?? row.home_fee)
-    const desk = Number(row.desk_delivery_fee ?? row.bureau_fee ?? row.desk_fee)
+    const home = Number(
+      row.home_fee ??
+      row.tarif_a_domicile ??
+      row.domicile_fee ??
+      row.tarif_domicile ??
+      row.TarifDomicile ??
+      row.Tarif ??
+      row.domicile ??
+      row.fee ??
+      row.tarif ??
+      row.prix ??
+      row.price ??
+      row.home_delivery_fee
+    )
+    const desk = Number(
+      row.desk_fee ??
+      row.tarif_stopdesk ??
+      row.stop_desk_fee ??
+      row.tarif_bureau ??
+      row.TarifBureau ??
+      row.bureau_fee ??
+      row.bureau ??
+      row.desk_delivery_fee
+    )
     if (home === undefined || home === null || isNaN(home)) return null
-    return { homeDelivery: home, ...(desk > 0 && !isNaN(desk) ? { deskDelivery: desk } : {}) }
+    return {
+      homeDelivery: home,
+      ...(desk !== null && desk !== undefined && !isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
+    }
   } catch {
     return null
   }

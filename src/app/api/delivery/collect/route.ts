@@ -17,7 +17,7 @@ function staticRate(wilaya: string) {
 async function trackWithTimeout(
   provider: string,
   tracking: string,
-  vendorCreds: any,
+  vendorCreds: Record<string, string | undefined> | undefined,
   timeoutMs = 3000
 ): Promise<{ status: string; detail?: string; provider: string } | null> {
   try {
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid tracking number format' }, { status: 400 })
   }
 
-  let vendorCreds: any
+  let vendorCreds: Record<string, string | undefined> | undefined
   let defaultProvider
   let vendorOnly = false
 

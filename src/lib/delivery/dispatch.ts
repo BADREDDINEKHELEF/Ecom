@@ -35,100 +35,131 @@ export async function dispatchShipment(
   switch (provider) {
     case 'yalidine': {
       const { yalidine_api_id, yalidine_api_token } = vendorCreds ?? {}
-      if (!yalidineConfigured() && (!yalidine_api_id || !yalidine_api_token)) {
+      if (vendorCreds) {
+        if (!yalidine_api_id || !yalidine_api_token) {
+          return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        }
+        const result = await yalidineCreateShipmentWithCreds(input, yalidine_api_id, yalidine_api_token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!yalidineConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = yalidine_api_id && yalidine_api_token
-        ? await yalidineCreateShipmentWithCreds(input, yalidine_api_id, yalidine_api_token)
-        : await yalidineCreateShipment(input)
+      const result = await yalidineCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'procolis': {
       const token = vendorCreds?.procolis_token
-      if (!procolisConfigured() && !token) {
+      if (vendorCreds) {
+        if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await procolisCreateShipmentWithToken(input, token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!procolisConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = token
-        ? await procolisCreateShipmentWithToken(input, token)
-        : await procolisCreateShipment(input)
+      const result = await procolisCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'zr': {
       const token = vendorCreds?.zr_token
-      if (!zrConfigured() && !token) {
+      if (vendorCreds) {
+        if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await zrCreateShipmentWithToken(input, token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!zrConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = token
-        ? await zrCreateShipmentWithToken(input, token)
-        : await zrCreateShipment(input)
+      const result = await zrCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'colivraison': {
       const token = vendorCreds?.colivraison_token
-      if (!colivraisonConfigured() && !token) {
+      if (vendorCreds) {
+        if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await colivraisonCreateShipmentWithToken(input, token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!colivraisonConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = token
-        ? await colivraisonCreateShipmentWithToken(input, token)
-        : await colivraisonCreateShipment(input)
+      const result = await colivraisonCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'maystro': {
       const token = vendorCreds?.maystro_token
-      if (!maystroConfigured() && !token) {
+      if (vendorCreds) {
+        if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await maystroCreateShipmentWithToken(input, token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!maystroConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = token
-        ? await maystroCreateShipmentWithToken(input, token)
-        : await maystroCreateShipment(input)
+      const result = await maystroCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'rex': {
       const token = vendorCreds?.rex_token
-      if (!rexConfigured() && !token) {
+      if (vendorCreds) {
+        if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await rexCreateShipmentWithToken(input, token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!rexConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = token
-        ? await rexCreateShipmentWithToken(input, token)
-        : await rexCreateShipment(input)
+      const result = await rexCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'yassir': {
       const apiKey = vendorCreds?.yassir_api_key
-      if (!yassirConfigured() && !apiKey) {
+      if (vendorCreds) {
+        if (!apiKey) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await yassirCreateShipmentWithKey(input, apiKey)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!yassirConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = apiKey
-        ? await yassirCreateShipmentWithKey(input, apiKey)
-        : await yassirCreateShipment(input)
+      const result = await yassirCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'ecom': {
       const token = vendorCreds?.ecom_token
-      if (!ecomConfigured() && !token) {
+      if (vendorCreds) {
+        if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await ecomCreateShipmentWithToken(input, token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!ecomConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = token
-        ? await ecomCreateShipmentWithToken(input, token)
-        : await ecomCreateShipment(input)
+      const result = await ecomCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 
     case 'apec': {
       const { apec_api_id, apec_api_token } = vendorCreds ?? {}
-      if (!apecConfigured() && (!apec_api_id || !apec_api_token)) {
+      if (vendorCreds) {
+        if (!apec_api_id || !apec_api_token) {
+          return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        }
+        const result = await apecCreateShipmentWithCreds(input, apec_api_id, apec_api_token)
+        return { ...result, provider, requiresManual: false }
+      }
+      if (!apecConfigured()) {
         return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
       }
-      const result = apec_api_id && apec_api_token
-        ? await apecCreateShipmentWithCreds(input, apec_api_id, apec_api_token)
-        : await apecCreateShipment(input)
+      const result = await apecCreateShipment(input)
       return { ...result, provider, requiresManual: false }
     }
 

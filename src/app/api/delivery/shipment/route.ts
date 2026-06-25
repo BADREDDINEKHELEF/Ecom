@@ -11,14 +11,14 @@ import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
 const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
+const TRACKING_REGEX = /^[A-Za-z0-9]{6,20}$/
 
 const Schema = z.object({
   orderId:    z.string().uuid(),
   provider:   z.enum(SUPPORTED_PROVIDERS),
-  tracking:   z.string().max(100).optional(),
+  tracking:   z.string().regex(TRACKING_REGEX).optional(),
   autoCreate: z.boolean().optional().default(false),
   orderData:  z.object({
-    orderId:  z.string().max(200),
     fullName: z.string().max(200),
     phone:    z.string().max(30),
     address:  z.string().max(500),
@@ -64,10 +64,9 @@ export async function POST(req: NextRequest) {
         .single(),
       admin
         .from('order_items')
-        .select('vendor_id')
+        .select('vendor_id, product_name, quantity')
         .eq('order_id', orderId)
-        .not('vendor_id', 'is', null)
-        .limit(1),
+        .not('vendor_id', 'is', null),
     ])
 
     if (!orderRes.data) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -77,19 +76,22 @@ export async function POST(req: NextRequest) {
     const vendorId = itemsRes.data?.[0]?.vendor_id as string | undefined
     const vendorConfig = vendorId ? await getVendorDeliveryConfig(vendorId) : null
 
+    // Construct items string from fetched order_items as fallback
+    const fetchedItemsString = itemsRes.data?.map(item => `${item.product_name} x ${item.quantity}`).join(', ') ?? ''
+
     let finalTracking = tracking ?? ''
     let labelUrl: string | undefined
 
-    if (autoCreate && orderData && provider !== 'manual') {
+    if (autoCreate && provider !== 'manual') {
       const input: ShipmentInput = {
-        orderId:  orderData.orderId,
-        fullName: orderData.fullName,
-        phone:    orderData.phone,
-        address:  orderData.address,
-        city:     orderData.city,
-        wilaya:   orderData.wilaya,
-        total:    orderData.total,
-        items:    orderData.items,
+        orderId:  orderId,
+        fullName: orderData?.fullName ?? order.full_name,
+        phone:    orderData?.phone    ?? order.phone,
+        address:  orderData?.address  ?? order.address,
+        city:     orderData?.city     ?? order.city,
+        wilaya:   orderData?.wilaya   ?? order.wilaya,
+        total:    orderData?.total    ?? order.total,
+        items:    orderData?.items ?? fetchedItemsString,
       }
       const creds = vendorConfig ? {
         yalidine_api_id:    vendorConfig.yalidine_api_id    ?? undefined,

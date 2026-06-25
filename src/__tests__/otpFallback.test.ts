@@ -45,7 +45,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
   })
 
   // Helper to construct a request
-  function makeReq(url: string, body: any): NextRequest {
+  function makeReq(url: string, body: Record<string, unknown>): NextRequest {
     return new NextRequest(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

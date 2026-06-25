@@ -48,7 +48,7 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-gray-900 mb-2">2. Utilisation de vos données</h2>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Traiter et livrer votre commande</li>
-                <li>Vous contacter concernant l'état de votre commande (WhatsApp ou appel téléphonique)</li>
+                <li>Vous contacter concernant l&apos;état de votre commande (WhatsApp ou appel téléphonique)</li>
                 <li>Résoudre les litiges et traiter les retours</li>
                 <li>Améliorer nos services et détecter les tentatives de fraude</li>
                 <li>Vous envoyer des communications commerciales <em>uniquement si vous y avez explicitement consenti</em></li>
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
               <p>
                 Les données de commande sont conservées pendant <strong>3 ans</strong> conformément aux obligations
                 de tenue des registres commerciaux prévues par la législation algérienne. Les abonnements aux
-                communications commerciales sont conservés jusqu'à votre désinscription. Vous pouvez demander
+                communications commerciales sont conservés jusqu&apos;à votre désinscription. Vous pouvez demander
                 la suppression de vos données en nous contactant.
               </p>
             </section>
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
               <p>
                 Vos données sont protégées par des mesures conformes aux standards du secteur : chiffrement HTTPS
                 en transit, chiffrement AES-256-GCM pour les identifiants sensibles stockés, et sécurité au niveau
-                des lignes (Row-Level Security) sur notre base de données — chaque vendeur n'accède qu'aux données
+                des lignes (Row-Level Security) sur notre base de données — chaque vendeur n&apos;accède qu&apos;aux données
                 de ses propres clients.
               </p>
             </section>
@@ -119,7 +119,7 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-gray-900 mb-2">7. Cookies</h2>
               <p>
                 StoreDz utilise uniquement des <strong>cookies fonctionnels</strong> — spécifiquement un cookie
-                de session httpOnly pour l'authentification des vendeurs et administrateurs. Nous n'utilisons
+                de session httpOnly pour l&apos;authentification des vendeurs et administrateurs. Nous n&apos;utilisons
                 pas de cookies publicitaires ou de suivi comportemental.
               </p>
             </section>

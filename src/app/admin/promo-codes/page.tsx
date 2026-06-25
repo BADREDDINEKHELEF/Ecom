@@ -370,7 +370,7 @@ export default function AdminPromoCodesPage() {
 
               {/* Expiry date */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date d'expiration</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date d&apos;expiration</label>
                 <input
                   type="datetime-local"
                   value={form.expires_at}

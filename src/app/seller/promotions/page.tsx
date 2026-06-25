@@ -46,14 +46,6 @@ function generateCode() {
   return 'PROMO' + crypto.randomUUID().replace(/-/g, '').slice(0, 5).toUpperCase()
 }
 
-function pad(n: number) { return String(n).padStart(2, '0') }
-
-function formatDatetimeLocal(iso: string | null) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SellerPromotionsPage() {

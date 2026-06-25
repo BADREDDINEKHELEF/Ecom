@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
-import { normalizePhone } from '@/lib/utils/phone'
+
 
 /**
  * Signs out all active Supabase sessions for a user via the GoTrue admin REST

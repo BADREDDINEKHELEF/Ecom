@@ -4,8 +4,8 @@ import { useState } from 'react'
 import {
   GraduationCap, Play, CheckCircle, Clock, ChevronRight, ChevronDown,
   Star, Zap, Package, Tag, BarChart2, MessageSquare, Truck,
-  TrendingUp, BookOpen, Award, CreditCard, Smartphone, Banknote,
-  ArrowRight, AlertCircle, Info, Lightbulb, Menu, Target, Link2,
+  TrendingUp, BookOpen, Award, CreditCard, Smartphone,
+  AlertCircle, Info, Lightbulb, Menu, Target, Link2,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useRTL, useLang } from '@/lib/store/langStore'
@@ -1036,7 +1036,7 @@ export default function SellerAcademyPage() {
   const toggleDone = (lessonId: string) => {
     setDoneSet((prev) => {
       const next = new Set(prev)
-      next.has(lessonId) ? next.delete(lessonId) : next.add(lessonId)
+      if (next.has(lessonId)) next.delete(lessonId); else next.add(lessonId)
       return next
     })
   }

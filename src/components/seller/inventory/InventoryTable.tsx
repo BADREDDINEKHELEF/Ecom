@@ -44,7 +44,7 @@ function EditableStockCell({ product, onUpdate }: { product: InventoryProduct; o
         if (!res.ok) throw new Error('Failed to update stock')
         toast.success(`Stock pour "${product.name}" mis à jour.`)
         onUpdate(product.id, stock)
-      } catch (error) {
+      } catch {
         toast.error('Erreur lors de la mise à jour du stock.')
         setStock(product.stock) // Revert on failure
       }

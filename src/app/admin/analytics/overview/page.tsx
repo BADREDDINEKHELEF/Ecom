@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  ShoppingBag, DollarSign, Store, RefreshCw, Zap,
+  ShoppingBag, DollarSign, RefreshCw, Zap,
   TrendingUp, CreditCard, MapPin,
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'

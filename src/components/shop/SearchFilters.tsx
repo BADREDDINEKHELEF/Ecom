@@ -11,7 +11,6 @@ export default function SearchFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const q       = searchParams.get('q') ?? ''
   const minPrice = Number(searchParams.get('minPrice') ?? 0)
   const maxPrice = Number(searchParams.get('maxPrice') ?? PRICE_MAX)
   const minRating = Number(searchParams.get('minRating') ?? 0)

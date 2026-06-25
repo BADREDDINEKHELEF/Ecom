@@ -1,4 +1,4 @@
-import parse, { isValidPhoneNumber, AsYouType } from 'libphonenumber-js'
+import parse, { isValidPhoneNumber } from 'libphonenumber-js'
 
 /**
  * Checks if a phone number is a valid Algerian number.

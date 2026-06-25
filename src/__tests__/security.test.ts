@@ -5,7 +5,7 @@
  * They do NOT hit the network; they test the logic layer directly.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 
 // ── Crypto / JWT tests ──────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ describe('JWT — signAdminToken / verifyAdminToken', () => {
   })
 
   it('rejects a token with wrong role', async () => {
-    const { jwtVerify, SignJWT } = await import('jose')
+    const { SignJWT } = await import('jose')
     const secret = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET)
     // Craft a token with role=seller instead of role=admin
     const fakeToken = await new SignJWT({ role: 'seller' })
@@ -123,8 +123,8 @@ describe('Algerian phone validation (via orders API schema)', () => {
 // ── CSPRNG OTP generator ───────────────────────────────────────────────────
 
 describe('OTP generator uses CSPRNG (not Math.random)', () => {
-  it('crypto.randomInt produces 6-digit codes in valid range', () => {
-    const { randomInt } = require('crypto') as typeof import('crypto')
+  it('crypto.randomInt produces 6-digit codes in valid range', async () => {
+    const { randomInt } = await import('crypto')
     for (let i = 0; i < 20; i++) {
       const code = randomInt(100000, 1000000).toString()
       expect(code).toMatch(/^\d{6}$/)
@@ -554,14 +554,16 @@ describe('Content Security Policy — unsafe-eval removed', () => {
 // ── Order cancel — triple rate limiting ────────────────────────────────────
 
 describe('Order cancel — triple rate limiting source audit', () => {
-  const src = (() => {
-    const { readFileSync } = require('fs')
-    const { resolve } = require('path')
-    return readFileSync(
+  let src = ''
+
+  beforeAll(async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    src = readFileSync(
       resolve(__dirname, '../app/api/orders/[orderId]/cancel/route.ts'),
       'utf-8'
     )
-  })()
+  })
 
   it('has Gate 1: IP-level rate limit', () => {
     expect(src).toContain("'order_cancel_ip'")
@@ -605,14 +607,16 @@ describe('Order cancel — triple rate limiting source audit', () => {
 // ── SATIM payment callback — security controls ──────────────────────────────
 
 describe('SATIM payment callback — security source audit', () => {
-  const src = (() => {
-    const { readFileSync } = require('fs')
-    const { resolve } = require('path')
-    return readFileSync(
+  let src = ''
+
+  beforeAll(async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    src = readFileSync(
       resolve(__dirname, '../app/api/payment/callback/route.ts'),
       'utf-8'
     )
-  })()
+  })
 
   it('performs server-side amount verification (never trusts client result param alone)', () => {
     expect(src).toContain('expectedCentimes')

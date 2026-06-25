@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import fs from 'fs'
+import path from 'path'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { ecomGetRateWithToken } from '@/lib/delivery/ecom'
@@ -8,8 +10,6 @@ import { apecGetRateWithCreds } from '@/lib/delivery/apec'
 describe('Delivery API Integration', () => {
   it('should fetch live delivery rates for a configured store', async () => {
     // Load local environment variables for integration test
-    const fs = require('fs')
-    const path = require('path')
     try {
       const envPath = path.resolve(__dirname, '../../.env.local')
       if (fs.existsSync(envPath)) {
@@ -81,8 +81,6 @@ describe('Delivery API Integration', () => {
   }, 30000)
 
   it('should test Ecom API directly if ECOM_TOKEN is set in process.env', async () => {
-    const fs = require('fs')
-    const path = require('path')
     try {
       const envPath = path.resolve(__dirname, '../../.env.local')
       if (fs.existsSync(envPath)) {
@@ -117,8 +115,6 @@ describe('Delivery API Integration', () => {
   })
 
   it('should test Apec API directly if APEC_API_ID and APEC_API_TOKEN are set in process.env', async () => {
-    const fs = require('fs')
-    const path = require('path')
     try {
       const envPath = path.resolve(__dirname, '../../.env.local')
       if (fs.existsSync(envPath)) {
