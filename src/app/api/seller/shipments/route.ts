@@ -8,9 +8,10 @@ import {
   createShipment, getVendorShipments, updateShipmentStatus,
   getVendorDeliveryConfig, updateShippingInfo, updateOrderStatus
 } from '@/lib/supabase/queries'
-import { dispatchShipment } from '@/lib/delivery/dispatch'
+import { dispatchShipment, dispatchGetRate } from '@/lib/delivery/dispatch'
 import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
 
 const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
 const SHIPMENT_STATUSES   = ['pending', 'in_transit', 'picked_up', 'out_for_delivery', 'delivered', 'returned', 'failed', 'cancelled'] as const
@@ -69,13 +70,13 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient()
 
     // Verify the order exists and contains at least one item from this vendor
-    const [{ data: order }, { data: vendorItem }] = await Promise.all([
+    const [{ data: order }, { data: vendorItems }] = await Promise.all([
       admin.from('orders').select('full_name, phone, wilaya, city, address, total, status').eq('id', orderId).single(),
-      admin.from('order_items').select('id').eq('order_id', orderId).eq('vendor_id', vendor.id).limit(1).maybeSingle(),
+      admin.from('order_items').select('product_name, quantity').eq('order_id', orderId).eq('vendor_id', vendor.id),
     ])
 
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    if (!vendorItem) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!vendorItems || vendorItems.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     let finalTracking = trackingNumber ?? ''
     let labelUrl: string | undefined
@@ -93,8 +94,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'A shipment already exists for this order' }, { status: 409 })
     }
 
+    const config = provider !== 'manual' ? await getVendorDeliveryConfig(vendor.id) : null
+
     if (autoCreate && !trackingNumber && provider !== 'manual') {
-      const config = await getVendorDeliveryConfig(vendor.id)
+      const itemsString = vendorItems
+        .map((item) => `${item.product_name} x ${item.quantity}`)
+        .join(', ')
+        .slice(0, 500)
+
       let result
       try {
         result = await dispatchShipment(
@@ -107,6 +114,7 @@ export async function POST(req: NextRequest) {
             city:     order.city,
             wilaya:   order.wilaya,
             total:    order.total,
+            items:    itemsString,
           },
           {
             yalidine_api_id:    config?.yalidine_api_id    ?? undefined,
@@ -132,6 +140,27 @@ export async function POST(req: NextRequest) {
       requiresManual = result.requiresManual
     }
 
+    // Resolve delivery cost from carrier API, fallback to static zone price
+    let resolvedDeliveryCost = 0
+    if (provider !== 'manual') {
+      try {
+        const rate = await dispatchGetRate(provider, order.wilaya, config ?? undefined, true)
+        if (rate) {
+          resolvedDeliveryCost = rate.homeDelivery
+        } else {
+          const zone = WILAYA_DATA[order.wilaya]?.zone ?? 3
+          resolvedDeliveryCost = ZONE_CONFIG[zone].cost
+        }
+      } catch (rateErr) {
+        logger.warn(`[POST /api/seller/shipments] failed to fetch rate for provider=${provider} wilaya=${order.wilaya}`, { error: rateErr })
+        const zone = WILAYA_DATA[order.wilaya]?.zone ?? 3
+        resolvedDeliveryCost = ZONE_CONFIG[zone].cost
+      }
+    } else {
+      const zone = WILAYA_DATA[order.wilaya]?.zone ?? 3
+      resolvedDeliveryCost = ZONE_CONFIG[zone].cost
+    }
+
     const shipment = await createShipment({
       order_id:        orderId,
       vendor_id:       vendor.id,
@@ -145,7 +174,7 @@ export async function POST(req: NextRequest) {
       recipient_name:  order.full_name,
       recipient_phone: order.phone,
       declared_value:  order.total,
-      delivery_cost:   0,
+      delivery_cost:   resolvedDeliveryCost,
       notes:           notes ?? null,
     })
 

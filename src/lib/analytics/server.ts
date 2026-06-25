@@ -89,10 +89,14 @@ export async function fireTikTokPurchase(opts: {
   items:        Array<{ id: string; name: string; price: number; quantity: number }>
   email?:       string | null
   phone?:       string | null
+  clientIp?:    string
+  clientUserAgent?: string
 }): Promise<void> {
-  const { pixelId, accessToken, orderId, total, items, email, phone } = opts
+  const { pixelId, accessToken, orderId, total, items, email, phone, clientIp, clientUserAgent } = opts
   try {
     const user: Record<string, string> = {}
+    if (clientIp) user.ip        = anonymizeIp(clientIp)
+    if (clientUserAgent) user.user_agent = clientUserAgent
     if (email) user.email        = sha256(email)
     if (phone) user.phone_number = sha256(normalizePhone(phone))
 
@@ -210,6 +214,8 @@ export async function firePurchaseCAPI(opts: {
       items:       opts.items,
       email:       opts.email,
       phone:       opts.phone,
+      clientIp:    opts.clientIp,
+      clientUserAgent: opts.clientUserAgent,
     }))
   }
 
