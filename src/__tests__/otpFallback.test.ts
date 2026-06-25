@@ -22,7 +22,7 @@ vi.mock('@/lib/logger', () => ({
 // Define top-level mock functions that we can customize inside each test
 const mockFrom = vi.fn()
 const mockUpdateUserById = vi.fn()
-const mockGetUserByEmail = vi.fn()
+const mockListUsers = vi.fn()
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
@@ -30,7 +30,7 @@ vi.mock('@/lib/supabase/admin', () => ({
     auth: {
       admin: {
         updateUserById: mockUpdateUserById,
-        getUserByEmail: mockGetUserByEmail,
+        listUsers: mockListUsers,
       },
     },
   }),
@@ -41,7 +41,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     vi.restoreAllMocks()
     mockFrom.mockReset()
     mockUpdateUserById.mockReset()
-    mockGetUserByEmail.mockReset()
+    mockListUsers.mockReset()
   })
 
   // Helper to construct a request
@@ -250,16 +250,16 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     })
     mockDelete.mockReturnValue({ or: mockOr })
 
-    // getUserByEmail returns a valid auth user
-    mockGetUserByEmail.mockResolvedValue({ data: { user: { id: 'u-legacy', email: 'legacy@example.com' } } })
+    // listUsers returns a valid auth user
+    mockListUsers.mockResolvedValue({ data: { users: [{ id: 'u-legacy', email: 'legacy@example.com' }] } })
 
     const { POST } = await import('../app/api/seller/forgot-password/route')
     const req = makeReq('http://localhost/api/seller/forgot-password', { email: 'legacy@example.com' })
     const res = await POST(req)
     expect(res.status).toBe(200)
 
-    // Verify fallback auth getUserByEmail was called
-    expect(mockGetUserByEmail).toHaveBeenCalledWith('legacy@example.com')
+    // Verify fallback auth listUsers was called
+    expect(mockListUsers).toHaveBeenCalled()
     // Verify it backfilled the email column in the vendors table
     expect(mockUpdateVendors).toHaveBeenCalledWith({ email: 'legacy@example.com' })
   })
@@ -305,7 +305,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     })
 
     mockUpdateUserById.mockResolvedValue({ error: null })
-    mockGetUserByEmail.mockResolvedValue({ data: { user: { id: 'u-legacy', email: 'legacy@example.com' } } })
+    mockListUsers.mockResolvedValue({ data: { users: [{ id: 'u-legacy', email: 'legacy@example.com' }] } })
 
     const { POST } = await import('../app/api/seller/verify-otp/route')
     const req = makeReq('http://localhost/api/seller/verify-otp', {

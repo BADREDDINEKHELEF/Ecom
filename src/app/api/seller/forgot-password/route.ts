@@ -64,13 +64,14 @@ export async function POST(req: NextRequest) {
     if (vData) {
       vendor = vData
     } else {
-      // Fallback: look up in auth.users by email using admin client
-      const { data: authData } = await supabase.auth.admin.getUserByEmail(email)
-      if (authData?.user) {
+      // Fallback: look up in auth.users by email using admin client listUsers
+      const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+      const user = authData?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      if (user) {
         const { data: vFallback } = await supabase
           .from('vendors')
           .select('id')
-          .eq('user_id', authData.user.id)
+          .eq('user_id', user.id)
           .maybeSingle()
         if (vFallback) {
           vendor = vFallback
