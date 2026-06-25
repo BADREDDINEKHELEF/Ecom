@@ -1,7 +1,12 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { WILAYA_DATA } from '@/lib/data/wilayas'
 
 const BASE_URL = 'https://api.colivraison.com/api'
 const TIMEOUT  = 15_000
+
+function isValidWilaya(wilayaName: string): boolean {
+  return wilayaName in WILAYA_DATA
+}
 
 export function colivraisonConfigured(): boolean {
   return !!process.env.COLIVRAISON_TOKEN
@@ -70,6 +75,7 @@ export async function colivraisonGetRateWithToken(
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   try {
+    if (!isValidWilaya(wilayaName)) return null
     const res = await fetch(`${BASE_URL}/pricing?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(TIMEOUT),

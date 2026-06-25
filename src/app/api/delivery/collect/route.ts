@@ -7,9 +7,28 @@ import { getClientIp } from '@/lib/utils/ip'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 
+const TRACKING_REGEX = /^[A-Za-z0-9]{6,20}$/
+
 function staticRate(wilaya: string) {
   const zone = WILAYA_DATA[wilaya]?.zone ?? 3
   return { homeDelivery: ZONE_CONFIG[zone].cost, provider: 'static', live: false }
+}
+
+async function trackWithTimeout(
+  provider: string,
+  tracking: string,
+  vendorCreds: any,
+  timeoutMs = 3000
+): Promise<{ status: string; detail?: string; provider: string } | null> {
+  try {
+    const result = await Promise.race([
+      dispatchTrack(provider, tracking, vendorCreds),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ])
+    return result ? { status: result.status, detail: result.detail, provider } : null
+  } catch {
+    return null
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -23,6 +42,9 @@ export async function GET(req: NextRequest) {
   const storeSlug = searchParams.get('storeSlug')?.trim()
 
   if (!wilaya) return NextResponse.json({ error: 'wilaya required' }, { status: 400 })
+  if (tracking && !TRACKING_REGEX.test(tracking)) {
+    return NextResponse.json({ error: 'Invalid tracking number format' }, { status: 400 })
+  }
 
   let vendorCreds: any
   let defaultProvider
@@ -87,13 +109,12 @@ export async function GET(req: NextRequest) {
   let trackingStatus: { status: string; detail?: string; provider: string } | null = null
   if (tracking) {
     if (defaultProvider) {
-      const result = await dispatchTrack(defaultProvider, tracking, vendorCreds)
-      if (result) trackingStatus = { status: result.status, detail: result.detail, provider: defaultProvider }
+      trackingStatus = await trackWithTimeout(defaultProvider, tracking, vendorCreds)
     } else {
       for (const p of DELIVERY_PROVIDERS) {
-        const result = await dispatchTrack(p.id, tracking, vendorCreds)
+        const result = await trackWithTimeout(p.id, tracking, vendorCreds)
         if (result) {
-          trackingStatus = { status: result.status, detail: result.detail, provider: p.id }
+          trackingStatus = result
           break
         }
       }

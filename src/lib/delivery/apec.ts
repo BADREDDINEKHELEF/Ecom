@@ -1,7 +1,12 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { WILAYA_DATA } from '@/lib/data/wilayas'
 
 const BASE_URL = 'https://api.apec.dz/v1'
 const TIMEOUT  = 15_000
+
+function isValidWilaya(wilayaName: string): boolean {
+  return wilayaName in WILAYA_DATA
+}
 
 export function apecConfigured(): boolean {
   return !!(process.env.APEC_API_ID && process.env.APEC_API_TOKEN)
@@ -97,6 +102,7 @@ export async function apecGetRateWithCreds(
   apiId: string,
   apiToken: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  if (!isValidWilaya(wilayaName)) return null
   try {
     const res = await fetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
       headers: buildHeaders(apiId, apiToken),

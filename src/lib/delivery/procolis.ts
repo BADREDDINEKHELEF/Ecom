@@ -1,7 +1,12 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { WILAYA_DATA } from '@/lib/data/wilayas'
 
 const BASE_URL = 'https://procolis.com/api_v2'
 const TIMEOUT  = 15_000
+
+function isValidWilaya(wilayaName: string): boolean {
+  return wilayaName in WILAYA_DATA
+}
 
 export function procolisConfigured(): boolean {
   return !!process.env.PROCOLIS_TOKEN
@@ -71,6 +76,7 @@ export async function procolisGetRateWithToken(
   wilayaName: string,
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  if (!isValidWilaya(wilayaName)) return null
   try {
     const res = await fetch(`${BASE_URL}/tarif?Wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
