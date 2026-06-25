@@ -7,8 +7,7 @@ import { niches } from '@/lib/data/niches'
 import { formatPrice } from '@/lib/utils'
 import { Product } from '@/types'
 import { getProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
-import { toast } from 'sonner'
-import ConfirmModal from '@/components/ui/ConfirmModal'
+
 
 type FormState = {
   name: string

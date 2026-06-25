@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
-import { timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
-
+import { verifyOtpHash } from '@/lib/auth/otp'
 
 /**
  * Signs out all active Supabase sessions for a user via the GoTrue admin REST
@@ -28,42 +26,25 @@ async function signOutAllUserSessions(userId: string): Promise<void> {
   }
 }
 
-function otpEqual(a: string, b: string): boolean {
-  const sa = String(a).trim()
-  const sb = String(b).trim()
-  if (sa.length !== sb.length) return false
-  try {
-    const ba = Buffer.from(sa)
-    const bb = Buffer.from(sb)
-    return timingSafeEqual(ba, bb)
-  } catch { return false }
-}
-
-const VerifyOtpSchema = z.object({
-  email:       z.string().email().optional(),
-  phone:       z.string().optional(),
-  otp:         z.string().min(1),
-  newPassword: z.string().min(8),
-})
-
 export async function POST(req: NextRequest) {
   try {
-    let body: unknown
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    // The 'phone' field here is actually the user's email for this flow.
+    const { email: emailInput, phone, otp: otpInput, newPassword } = await req.json() as {
+      email?: string
+      phone?: string
+      otp?: string
+      newPassword?: string
     }
+    const rawEmail = emailInput || phone
 
-    const parsed = VerifyOtpSchema.safeParse(body)
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
-    }
-
-    const rawEmail = parsed.data.email || parsed.data.phone
-    if (!rawEmail) {
+    if (!rawEmail || !otpInput || !newPassword) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
     const email = rawEmail.trim().toLowerCase()
-    const otp = parsed.data.otp.trim()
+    const otp = otpInput.trim()
+    if (newPassword.length < 8) {
+      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères.' }, { status: 400 })
+    }
 
     const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {
@@ -77,20 +58,20 @@ export async function POST(req: NextRequest) {
 
     let record = null
     let queryErr = null
-    
+
     // Try to query by email column first
     const { data: dataEmail, error: errEmail } = await supabase
       .from('password_reset_otps')
-      .select('id, otp, expires_at, used')
+      .select('id, otp_hash, expires_at, used')
       .eq('email', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-      
+
     const isEmailColumnMissing = errEmail && (
-      errEmail.code === '42703' || 
-      String(errEmail.message).includes('column') || 
+      errEmail.code === '42703' ||
+      String(errEmail.message).includes('column') ||
       String(errEmail.message).includes('email')
     )
 
@@ -98,7 +79,7 @@ export async function POST(req: NextRequest) {
       // Fallback: query by phone column
       const { data: dataPhone, error: errPhone } = await supabase
         .from('password_reset_otps')
-        .select('id, otp, expires_at, used')
+        .select('id, otp_hash, expires_at, used')
         .eq('phone', email)
         .eq('used', false)
         .order('created_at', { ascending: false })
@@ -115,7 +96,7 @@ export async function POST(req: NextRequest) {
       // in case the OTP was created with phone only.
       const { data: dataPhone, error: errPhone } = await supabase
         .from('password_reset_otps')
-        .select('id, otp, expires_at, used')
+        .select('id, otp_hash, expires_at, used')
         .eq('phone', email)
         .eq('used', false)
         .order('created_at', { ascending: false })
@@ -135,7 +116,7 @@ export async function POST(req: NextRequest) {
     if (new Date(record.expires_at) < new Date()) {
       return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 })
     }
-    if (!otpEqual(record.otp, otp)) {
+    if (!verifyOtpHash(otp, record.otp_hash)) {
       return NextResponse.json({ error: 'Code incorrect. Vérifiez et réessayez.' }, { status: 400 })
     }
 

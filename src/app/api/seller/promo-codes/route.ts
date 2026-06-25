@@ -91,7 +91,8 @@ export async function POST(req: NextRequest) {
     }
     const parsed = CreatePromoSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+      return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
     }
     const { code, discount_type, discount_value, min_order, max_uses, expires_at, free_shipping, one_per_buyer } = parsed.data
 

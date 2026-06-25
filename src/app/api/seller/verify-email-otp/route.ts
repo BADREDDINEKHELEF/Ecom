@@ -1,40 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
-import { timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
-
-function otpEqual(a: string, b: string): boolean {
-  const sa = String(a).trim()
-  const sb = String(b).trim()
-  if (sa.length !== sb.length) return false
-  try {
-    const ba = Buffer.from(sa)
-    const bb = Buffer.from(sb)
-    return timingSafeEqual(ba, bb)
-  } catch { return false }
-}
-
-const VerifyEmailOtpSchema = z.object({
-  email: z.string().email(),
-  otp:   z.string().min(1),
-})
+import { verifyOtpHash } from '@/lib/auth/otp'
 
 export async function POST(req: NextRequest) {
   try {
-    let body: unknown
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-    }
+    const { email: emailInput, otp: otpInput } = await req.json() as { email?: string; otp?: string }
 
-    const parsed = VerifyEmailOtpSchema.safeParse(body)
-    if (!parsed.success) {
+    if (!emailInput || !otpInput) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
 
-    const email = parsed.data.email.trim().toLowerCase()
-    const otp = parsed.data.otp.trim()
+    const email = emailInput.trim().toLowerCase()
+    const otp = otpInput.trim()
 
     const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {
@@ -48,20 +27,20 @@ export async function POST(req: NextRequest) {
 
     let record = null
     let queryErr = null
-    
+
     // Try to query by email column first
     const { data: dataEmail, error: errEmail } = await supabase
       .from('password_reset_otps')
-      .select('id, otp, expires_at, used')
+      .select('id, otp_hash, expires_at, used')
       .eq('email', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-      
+
     const isEmailColumnMissing = errEmail && (
-      errEmail.code === '42703' || 
-      String(errEmail.message).includes('column') || 
+      errEmail.code === '42703' ||
+      String(errEmail.message).includes('column') ||
       String(errEmail.message).includes('email')
     )
 
@@ -69,7 +48,7 @@ export async function POST(req: NextRequest) {
       // Fallback: query by phone column
       const { data: dataPhone, error: errPhone } = await supabase
         .from('password_reset_otps')
-        .select('id, otp, expires_at, used')
+        .select('id, otp_hash, expires_at, used')
         .eq('phone', email)
         .eq('used', false)
         .order('created_at', { ascending: false })
@@ -86,7 +65,7 @@ export async function POST(req: NextRequest) {
       // in case the OTP was created with phone only (e.g. via send-email-otp).
       const { data: dataPhone, error: errPhone } = await supabase
         .from('password_reset_otps')
-        .select('id, otp, expires_at, used')
+        .select('id, otp_hash, expires_at, used')
         .eq('phone', email)
         .eq('used', false)
         .order('created_at', { ascending: false })
@@ -106,7 +85,7 @@ export async function POST(req: NextRequest) {
     if (new Date(record.expires_at) < new Date()) {
       return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 })
     }
-    if (!otpEqual(record.otp, otp)) {
+    if (!verifyOtpHash(otp, record.otp_hash)) {
       return NextResponse.json({ error: 'Code incorrect. Vérifiez et réessayez.' }, { status: 400 })
     }
 

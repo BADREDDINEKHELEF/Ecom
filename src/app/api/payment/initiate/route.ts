@@ -76,9 +76,7 @@ export async function POST(req: NextRequest) {
     nif,
     nis,
     rc,
-    gaClientId,
     isStopDesk,
-    selectedColor: _sc,
     ...rest
   } = parsed.data
   const phone = normalizePhone(rest.phone)
@@ -95,7 +93,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { id: orderId, total, giftCardDeduction: actualGcDeduction } = await createOrder({
+    const { id: orderId, total } = await createOrder({
       ...rest,
       phone,
       paymentMethod,

@@ -80,7 +80,8 @@ export async function POST(req: NextRequest) {
     }
     const parsed = CreateFlashSaleSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+      return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
     }
     const { product_id, flash_price, stock_limit, starts_at, ends_at } = parsed.data
 
@@ -153,7 +154,8 @@ export async function PATCH(req: NextRequest) {
     }
     const parsed = PatchFlashSaleSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+      return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
     }
     const { id, is_active } = parsed.data
 

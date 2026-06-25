@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
@@ -6,6 +7,11 @@ import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const ApproveQuestionSchema = z.object({
+  id: z.string().regex(UUID_RE, 'Invalid question id'),
+  action: z.enum(['approve', 'reject']),
+})
 
 // GET /api/admin/questions — list pending (is_public=false) questions
 export async function GET(req: NextRequest) {
@@ -55,15 +61,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const { id, action } = body as { id?: string; action?: string }
-
-    if (!id || !UUID_RE.test(id)) {
-      return NextResponse.json({ error: 'Invalid question id' }, { status: 400 })
-    }
-    if (action !== 'approve' && action !== 'reject') {
-      return NextResponse.json({ error: 'action must be "approve" or "reject"' }, { status: 400 })
+    const parsed = ApproveQuestionSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'id and action (approve|reject) required' }, { status: 400 })
     }
 
+    const { id, action } = parsed.data
     const supabase = createAdminClient()
 
     if (action === 'reject') {

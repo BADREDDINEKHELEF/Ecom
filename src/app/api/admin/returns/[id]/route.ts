@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { logger } from '@/lib/logger'
@@ -8,6 +9,14 @@ import { getClientIp } from '@/lib/utils/ip'
 const VALID_STATUSES = ['requested', 'approved', 'rejected', 'refunded', 'returned'] as const
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const MAX_REFUND_DZD = 10_000_000
+
+const PatchReturnSchema = z.object({
+  status:       z.enum(VALID_STATUSES).optional(),
+  adminNote:    z.string().max(2000).optional(),
+  refundAmount: z.number().nonnegative().max(MAX_REFUND_DZD).optional(),
+})
 
 export async function PATCH(
   req: NextRequest,
@@ -26,26 +35,23 @@ export async function PATCH(
     const { id } = await params
     if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
 
-    const { status, adminNote, refundAmount } = await req.json().catch(() => ({}))
-
-    if (status && !VALID_STATUSES.includes(status)) {
-      return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
-    }
-    if (adminNote !== undefined && (typeof adminNote !== 'string' || adminNote.length > 2000)) {
-      return NextResponse.json({ error: 'adminNote invalide (max 2000 caractères)' }, { status: 400 })
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const MAX_REFUND_DZD = 10_000_000
-    if (refundAmount !== undefined && (isNaN(Number(refundAmount)) || Number(refundAmount) < 0 || Number(refundAmount) > MAX_REFUND_DZD)) {
-      return NextResponse.json({ error: `Montant invalide (0 – ${MAX_REFUND_DZD.toLocaleString()} DZD)` }, { status: 400 })
+    const parsed = PatchReturnSchema.safeParse(body)
+    if (!parsed.success) {
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+      return NextResponse.json({ error: 'Données invalides', ...(details && { details }) }, { status: 400 })
     }
 
     const supabase = createAdminClient()
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (status)                update.status        = status
-    if (adminNote !== undefined) update.admin_note  = adminNote
-    if (refundAmount !== undefined) {
-      update.refund_amount = Math.max(0, Math.min(MAX_REFUND_DZD, Number(refundAmount)))
+    if (parsed.data.status)                update.status       = parsed.data.status
+    if (parsed.data.adminNote !== undefined) update.admin_note = parsed.data.adminNote
+    if (parsed.data.refundAmount !== undefined) {
+      update.refund_amount = parsed.data.refundAmount
     }
 
     const { data: updated, error } = await supabase

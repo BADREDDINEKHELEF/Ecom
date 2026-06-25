@@ -1,6 +1,5 @@
 'use client'
 
-import { Fragment, useState } from 'react'
 import { X } from 'lucide-react'
 
 interface ConfirmModalProps {

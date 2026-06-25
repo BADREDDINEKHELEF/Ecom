@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
 
   const { pixelId, event, url, referrer, meta } = parsed.data
 
+  try {
     const supabase = createAdminClient()
     const { data: vendor } = await supabase
       .from('vendors')

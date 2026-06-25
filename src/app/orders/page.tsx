@@ -7,7 +7,6 @@ import { formatPrice } from '@/lib/utils'
 import { OrderRow } from '@/lib/supabase/queries'
 import { useT, useLang } from '@/lib/store/langStore'
 import TaxInvoicePrint from '@/components/ui/TaxInvoicePrint'
-import ConfirmModal from '@/components/ui/ConfirmModal'
 
 function formatDate(iso: string, lang: string) {
   const locale = lang === 'ar' ? 'ar-DZ' : lang === 'fr' ? 'fr-DZ' : 'en-GB'

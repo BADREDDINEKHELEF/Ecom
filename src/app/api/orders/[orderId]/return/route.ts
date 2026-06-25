@@ -61,7 +61,8 @@ export async function POST(
 
     const parsed = ReturnSchema.safeParse(rawBody)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Données invalides', details: parsed.error.issues }, { status: 400 })
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+      return NextResponse.json({ error: 'Données invalides', ...(details && { details }) }, { status: 400 })
     }
 
     const { reason, phone, photos: rawPhotos } = parsed.data

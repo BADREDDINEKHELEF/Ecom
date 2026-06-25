@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import {
   getVendorByUserIdServer,
@@ -9,6 +10,14 @@ import {
 import { getStoreSettings } from '@/lib/supabase/settings'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
+
+const SubmitSubscriptionSchema = z.object({
+  plan_id:            z.string().min(1),
+  payment_method:     z.string().min(1),
+  payment_reference:  z.string().optional(),
+  payment_proof_url:  z.string().url().optional(),
+})
 
 // GET /api/seller/subscription — current subscription + available plans
 export async function GET(req: NextRequest) {
@@ -39,7 +48,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ subscription, plans, vendor, paymentDetails })
-  } catch {
+  } catch (err) {
+    logger.error('[GET /api/seller/subscription]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -66,18 +76,15 @@ export async function POST(req: NextRequest) {
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const body = await req.json().catch(() => ({})) as {
-      plan_id?: string
-      payment_method?: string
-      payment_reference?: string
-      payment_proof_url?: string
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const { plan_id, payment_method, payment_reference, payment_proof_url } = body
+    const parsed = SubmitSubscriptionSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'plan_id and payment_method are required' }, { status: 400 })
 
-    if (!plan_id || !payment_method) {
-      return NextResponse.json({ error: 'plan_id and payment_method are required' }, { status: 400 })
-    }
+    const { plan_id, payment_method, payment_reference, payment_proof_url } = parsed.data
 
     const plans = await getSubscriptionPlans()
     const plan = plans.find((p) => p.id === plan_id)
@@ -105,7 +112,8 @@ export async function POST(req: NextRequest) {
     } as Parameters<typeof createVendorSubscription>[0])
 
     return NextResponse.json({ subscription: sub }, { status: 201 })
-  } catch {
+  } catch (err) {
+    logger.error('[POST /api/seller/subscription]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

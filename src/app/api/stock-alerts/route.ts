@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
   }
 
   const parsed = StockAlertSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Données invalides' }, { status: 400 })
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? 'Données invalides'
+    return NextResponse.json({ error: message }, { status: 400 })
+  }
 
   try {
     const supabase = createAdminClient()

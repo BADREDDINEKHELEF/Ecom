@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   const parsed = InviteSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Validation failed' }, { status: 400 })
+  if (!parsed.success) return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
 
   try {
     const admin = createAdminClient()

@@ -69,7 +69,8 @@ export async function POST(req: NextRequest) {
 
   const parsed = CreateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+    const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -98,7 +99,8 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = UpdateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
+    const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
   }
 
   const { id, ...updates } = parsed.data

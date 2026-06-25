@@ -77,8 +77,9 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = PatchSchema.safeParse(body)
   if (!parsed.success) {
+    const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
     return NextResponse.json(
-      { error: 'Validation failed', details: parsed.error.issues },
+      { error: 'Validation failed', ...(details && { details }) },
       { status: 400 }
     )
   }

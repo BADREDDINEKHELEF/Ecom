@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
 
   const parsed = CreateShipmentSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
+    const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
+    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
   }
 
   const { orderId, provider, trackingNumber, isStopDesk, autoCreate, notes } = parsed.data
@@ -245,7 +246,8 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = PatchShipmentSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
+    const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
+    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
   }
 
   const { shipmentId, trackingNumber, status, detail } = parsed.data
