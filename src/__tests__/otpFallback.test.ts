@@ -22,6 +22,7 @@ vi.mock('@/lib/logger', () => ({
 // Define top-level mock functions that we can customize inside each test
 const mockFrom = vi.fn()
 const mockUpdateUserById = vi.fn()
+const mockGetUserByEmail = vi.fn()
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
@@ -29,6 +30,7 @@ vi.mock('@/lib/supabase/admin', () => ({
     auth: {
       admin: {
         updateUserById: mockUpdateUserById,
+        getUserByEmail: mockGetUserByEmail,
       },
     },
   }),
@@ -39,6 +41,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     vi.restoreAllMocks()
     mockFrom.mockReset()
     mockUpdateUserById.mockReset()
+    mockGetUserByEmail.mockReset()
   })
 
   // Helper to construct a request
@@ -215,5 +218,105 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
 
     // Verify it marked the OTP as used
     expect(mockUpdate).toHaveBeenCalledWith({ used: true })
+  })
+
+  it('forgot-password falls back to auth user and backfills vendor email if missing in vendors table', async () => {
+    // 1st vendors lookup returns null (email not in table), 2nd lookup by user_id returns vendor
+    const mockMaybeSingleVendors = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: null }) // 1st lookup by email
+      .mockResolvedValueOnce({ data: { id: 'v-legacy' }, error: null }) // 2nd lookup by user_id
+
+    const mockSelectVendors = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingleVendors }),
+      ilike: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingleVendors }),
+    })
+
+    const mockUpdateVendors = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null })
+    })
+
+    const mockDelete = vi.fn().mockReturnThis()
+    const mockOr = vi.fn().mockResolvedValue({ error: null })
+    const mockInsert = vi.fn().mockResolvedValue({ error: null })
+
+    mockFrom.mockImplementation((table) => {
+      if (table === 'vendors') {
+        return { select: mockSelectVendors, update: mockUpdateVendors }
+      }
+      if (table === 'password_reset_otps') {
+        return { delete: mockDelete, or: mockOr, insert: mockInsert }
+      }
+      return {}
+    })
+    mockDelete.mockReturnValue({ or: mockOr })
+
+    // getUserByEmail returns a valid auth user
+    mockGetUserByEmail.mockResolvedValue({ data: { user: { id: 'u-legacy', email: 'legacy@example.com' } } })
+
+    const { POST } = await import('../app/api/seller/forgot-password/route')
+    const req = makeReq('http://localhost/api/seller/forgot-password', { email: 'legacy@example.com' })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+
+    // Verify fallback auth getUserByEmail was called
+    expect(mockGetUserByEmail).toHaveBeenCalledWith('legacy@example.com')
+    // Verify it backfilled the email column in the vendors table
+    expect(mockUpdateVendors).toHaveBeenCalledWith({ email: 'legacy@example.com' })
+  })
+
+  it('verify-otp falls back to auth user and backfills vendor email if missing in vendors table', async () => {
+    const mockMaybeSingle = vi.fn()
+      // First call (querying email column on password_reset_otps) -> valid record
+      .mockResolvedValueOnce({
+        data: { id: 'otp-1', otp: '123456', expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
+        error: null,
+      })
+      // Second call (querying email on vendors) -> returns null
+      .mockResolvedValueOnce({ data: null, error: null })
+      // Third call (querying user_id on vendors fallback) -> returns vendor
+      .mockResolvedValueOnce({ data: { user_id: 'u-legacy', id: 'v-legacy' }, error: null })
+
+    const mockSelectOtps = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: mockMaybeSingle,
+    })
+
+    const mockSelectVendors = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle }),
+      ilike: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle }),
+    })
+
+    const mockUpdateVendors = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null })
+    })
+
+    const mockUpdateOtps = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+
+    mockFrom.mockImplementation((table) => {
+      if (table === 'password_reset_otps') {
+        return { select: mockSelectOtps, update: mockUpdateOtps }
+      }
+      if (table === 'vendors') {
+        return { select: mockSelectVendors, update: mockUpdateVendors }
+      }
+      return {}
+    })
+
+    mockUpdateUserById.mockResolvedValue({ error: null })
+    mockGetUserByEmail.mockResolvedValue({ data: { user: { id: 'u-legacy', email: 'legacy@example.com' } } })
+
+    const { POST } = await import('../app/api/seller/verify-otp/route')
+    const req = makeReq('http://localhost/api/seller/verify-otp', {
+      email: 'legacy@example.com',
+      otp: '123456',
+      newPassword: 'new-secure-password-123',
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+
+    // Verify it backfilled email column in vendors table
+    expect(mockUpdateVendors).toHaveBeenCalledWith({ email: 'legacy@example.com' })
   })
 })

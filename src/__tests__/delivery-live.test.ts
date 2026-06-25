@@ -77,5 +77,5 @@ describe('Delivery API Integration', () => {
         }
       }
     }
-  })
+  }, 30000)
 })

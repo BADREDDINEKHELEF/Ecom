@@ -133,11 +133,35 @@ export async function POST(req: NextRequest) {
     }
 
     // Find vendor by email (case-insensitive)
-    const { data: vendor } = await supabase
+    let vendor = null
+    const { data: vData } = await supabase
       .from('vendors')
-      .select('user_id')
+      .select('user_id, id')
       .ilike('email', email)
       .maybeSingle()
+
+    if (vData) {
+      vendor = vData
+    } else {
+      // Fallback: look up in auth.users by email using admin client
+      const { data: authData } = await supabase.auth.admin.getUserByEmail(email)
+      if (authData?.user) {
+        const { data: vFallback } = await supabase
+          .from('vendors')
+          .select('user_id, id')
+          .eq('user_id', authData.user.id)
+          .maybeSingle()
+        if (vFallback) {
+          vendor = vFallback
+          // Backfill email in vendors table
+          await supabase
+            .from('vendors')
+            .update({ email })
+            .eq('id', vFallback.id)
+          logger.info('[verify-otp] legacy email backfilled', { email, vendorId: vFallback.id })
+        }
+      }
+    }
 
     if (!vendor?.user_id) {
       return NextResponse.json({ error: 'Compte introuvable.' }, { status: 404 })

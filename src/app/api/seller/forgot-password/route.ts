@@ -54,11 +54,35 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient()
 
     // Check vendor exists with this email (from vendors table)
-    const { data: vendor } = await supabase
+    let vendor = null
+    const { data: vData } = await supabase
       .from('vendors')
       .select('id')
       .ilike('email', email)
       .maybeSingle()
+
+    if (vData) {
+      vendor = vData
+    } else {
+      // Fallback: look up in auth.users by email using admin client
+      const { data: authData } = await supabase.auth.admin.getUserByEmail(email)
+      if (authData?.user) {
+        const { data: vFallback } = await supabase
+          .from('vendors')
+          .select('id')
+          .eq('user_id', authData.user.id)
+          .maybeSingle()
+        if (vFallback) {
+          vendor = vFallback
+          // Backfill email in vendors table
+          await supabase
+            .from('vendors')
+            .update({ email })
+            .eq('id', vFallback.id)
+          logger.info('[forgot-password] legacy email backfilled', { email, vendorId: vFallback.id })
+        }
+      }
+    }
 
     // Always return success — don't leak which emails are registered
     if (!vendor) {
