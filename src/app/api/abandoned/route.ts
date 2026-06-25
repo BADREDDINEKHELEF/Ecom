@@ -1,62 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { sendAbandonedCartEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
 
+const AbandonedPostSchema = z.object({
+  sessionId:    z.string().min(1).max(64),
+  name:         z.string().max(200).optional().nullable(),
+  email:        z.string().email().max(320).optional().nullable(),
+  phone:        z.string().max(20).optional().nullable(),
+  wilaya:       z.string().max(100).optional().nullable(),
+  address:      z.string().max(500).optional().nullable(),
+  cartSnapshot: z.union([z.array(z.unknown()).max(50), z.record(z.string(), z.unknown())]).optional().nullable(),
+  cartTotal:    z.number().optional().default(0),
+  storeSlug:    z.string().max(100).optional().nullable(),
+})
+
+const AbandonedPatchSchema = z.object({
+  sessionId: z.string().min(1).max(64),
+  orderId:   z.string().optional().nullable(),
+})
+
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'abandoned')
   if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
 
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ ok: false }, { status: 400 })
+  }
+
+  const parsed = AbandonedPostSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
+
+  const { sessionId, name, email, phone, wilaya, address, cartSnapshot, cartTotal, storeSlug } = parsed.data
+
   try {
-    const body = await req.json().catch(() => null)
-    if (!body?.sessionId) return NextResponse.json({ ok: false }, { status: 400 })
-
-    const { sessionId, name, email, phone, wilaya, address, cartSnapshot, cartTotal, storeSlug } = body
-
-    if (typeof sessionId !== 'string' || sessionId.length > 64) {
-      return NextResponse.json({ ok: false }, { status: 400 })
-    }
-
     const supabase = createAdminClient()
-    const payload = {
-      session_id: sessionId,
-      name: typeof name === 'string' ? name.slice(0, 200) : null,
-      email: typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email.slice(0, 320) : null,
-      phone: typeof phone === 'string' ? phone.slice(0, 20) : null,
-      wilaya: typeof wilaya === 'string' ? wilaya.slice(0, 100) : null,
-      address: typeof address === 'string' ? address.slice(0, 500) : null,
-      // Cap cartSnapshot to 50 items to prevent DB bloat from malicious large payloads
-      cart_snapshot: Array.isArray(cartSnapshot)
-        ? cartSnapshot.slice(0, 50)
-        : (cartSnapshot !== null && typeof cartSnapshot === 'object' ? cartSnapshot : null),
-      cart_total: typeof cartTotal === 'number' ? cartTotal : 0,
-      status: 'abandoned',
-      updated_at: new Date().toISOString(),
+    const payload: Record<string, unknown> = {
+      session_id:   sessionId,
+      name:         name ?? null,
+      email:        email ?? null,
+      phone:        phone ?? null,
+      wilaya:       wilaya ?? null,
+      address:      address ?? null,
+      cart_snapshot: cartSnapshot ?? null,
+      cart_total:   cartTotal,
+      status:       'abandoned',
+      updated_at:   new Date().toISOString(),
     }
-    const payloadWithSlug = typeof storeSlug === 'string'
-      ? { ...payload, store_slug: storeSlug.slice(0, 100) }
+
+    const payloadWithSlug = storeSlug
+      ? { ...payload, store_slug: storeSlug }
       : payload
 
     // Try with store_slug first; fall back without if column not yet migrated
     const { error } = await supabase.from('abandoned_checkouts').upsert(payloadWithSlug, { onConflict: 'session_id' })
-    if (error && typeof storeSlug === 'string') {
+    if (error && storeSlug) {
       await supabase.from('abandoned_checkouts').upsert(payload, { onConflict: 'session_id' })
     }
 
     // Send abandoned cart email immediately if email provided (degrade gracefully)
-    if (typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && typeof cartTotal === 'number' && cartTotal > 0) {
+    if (email && cartTotal > 0) {
       sendAbandonedCartEmail({
         to:        email,
-        name:      typeof name === 'string' ? name : '',
+        name:      name ?? '',
         cartTotal,
       }).catch((err) => logger.error('[email] abandoned cart failed', { error: err instanceof Error ? err.message : String(err) }))
     }
 
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
+    logger.error('[POST /api/abandoned]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }
@@ -66,19 +84,25 @@ export async function PATCH(req: NextRequest) {
   const rl = await checkPublicRateLimit(ip, 'abandoned')
   if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
 
-  try {
-    const { sessionId, orderId } = await req.json().catch(() => ({}))
-    if (!sessionId) return NextResponse.json({ ok: false }, { status: 400 })
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ ok: false }, { status: 400 })
+  }
 
+  const parsed = AbandonedPatchSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
+
+  try {
     const supabase = createAdminClient()
     await supabase.from('abandoned_checkouts').update({
       status: 'recovered',
       recovered_at: new Date().toISOString(),
-      order_id: orderId ?? null,
-    }).eq('session_id', sessionId)
+      order_id: parsed.data.orderId ?? null,
+    }).eq('session_id', parsed.data.sessionId)
 
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
+    logger.error('[PATCH /api/abandoned]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }

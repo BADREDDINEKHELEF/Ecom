@@ -6,7 +6,7 @@ import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
 const Schema = z.object({
-  email: z.email(),
+  email: z.string().email(),
 })
 
 export async function POST(req: NextRequest) {

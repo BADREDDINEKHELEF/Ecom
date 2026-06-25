@@ -67,7 +67,11 @@ export async function POST(req: NextRequest) {
 
     const parsed = Schema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
+      return NextResponse.json(
+        { error: 'Validation failed', ...(details && { details }) },
+        { status: 400 }
+      )
     }
 
     const { store_name, store_slug, phone, wilaya, description, logo_url, email } = parsed.data

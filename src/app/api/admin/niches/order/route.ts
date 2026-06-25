@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { logger } from '@/lib/logger'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+
+const NicheOrderSchema = z.object({
+  nicheId:   z.string().min(1),
+  direction: z.enum(['up', 'down']),
+})
 
 export async function PATCH(req: NextRequest) {
   const denied = await requireAdmin(req)
@@ -16,10 +22,17 @@ export async function PATCH(req: NextRequest) {
   )
 
   try {
-    const { nicheId, direction } = await req.json().catch(() => ({}))
-    if (!nicheId || !['up', 'down'].includes(direction)) {
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+
+    const parsed = NicheOrderSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: 'nicheId and direction (up|down) required' }, { status: 400 })
     }
+
+    const { nicheId, direction } = parsed.data
 
     const supabase = createAdminClient()
 

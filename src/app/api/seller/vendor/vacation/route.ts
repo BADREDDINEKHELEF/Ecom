@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest) {
 
     const supabase = createRouteClient(req)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const userRl = await checkUserRateLimit(user.id, 'vendor_vacation', 10, 3600)
     if (!userRl.allowed) {
@@ -35,11 +35,20 @@ export async function PATCH(req: NextRequest) {
     }
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return new Response('Not a vendor', { status: 403 })
+    if (!vendor) return NextResponse.json({ error: 'Not a vendor' }, { status: 403 })
 
-    const parsed = Schema.safeParse(await req.json())
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+
+    const parsed = Schema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 })
+      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
+      return NextResponse.json(
+        { error: 'Invalid input', ...(details && { details }) },
+        { status: 400 }
+      )
     }
 
     const { isOnVacation, vacationMessage } = parsed.data
@@ -53,8 +62,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to update vacation mode'
-    logger.error('[PATCH /api/seller/vendor/vacation]', { error: message })
-    return new Response(message, { status: 500 })
+    logger.error('[PATCH /api/seller/vendor/vacation]', { error: err instanceof Error ? err.message : String(err) })
+    return NextResponse.json({ error: 'Erreur serveur. Réessayez.' }, { status: 500 })
   }
 }

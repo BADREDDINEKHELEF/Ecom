@@ -60,11 +60,12 @@ export default function CartContent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map(({ product, quantity, selectedColor }) => {
+          {items.map(({ product, quantity, selectedColor, storeSlug }) => {
             const displayImg = colorImage(product, selectedColor)
+            const productUrl = storeSlug ? `/store/${storeSlug}/${product.id}` : `/${product.nicheId}/${product.id}`
             return (
               <div key={`${product.id}-${selectedColor ?? ''}`} className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
-                <Link href={`/${product.nicheId}/${product.id}`}>
+                <Link href={productUrl}>
                   <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                     <Image
                       src={displayImg}
@@ -78,7 +79,7 @@ export default function CartContent() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <Link href={`/${product.nicheId}/${product.id}`}>
+                    <Link href={productUrl}>
                       <h3 className="font-bold text-gray-900 hover:text-indigo-600 transition-colors leading-snug">
                         {product.name}
                       </h3>

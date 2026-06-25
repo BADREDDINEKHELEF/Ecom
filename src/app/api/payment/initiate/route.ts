@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { satimRegisterOrder, satimConfigured } from '@/lib/payment/satim'
 import { baridimobInitiatePayment, baridimobConfigured } from '@/lib/payment/baridimob'
 import { createOrder } from '@/lib/supabase/orders'
+import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
+import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { getClientIp } from '@/lib/utils/ip'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
 import { logger } from '@/lib/logger'
@@ -16,15 +18,28 @@ const OrderItemSchema = z.object({
 })
 
 const InitiateSchema = z.object({
-  paymentMethod: z.enum(['edahabia', 'cib', 'card', 'baridimob']),
-  fullName:      z.string().min(2).max(200),
-  phone:         z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
-  wilaya:        z.string().min(1).max(100),
-  city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
-  address:       z.string().min(5).max(500),
-  promoCodeId:   z.string().uuid().optional().nullable(),
-  discountAmount: z.number().min(0).default(0),
-  items:         z.array(OrderItemSchema).min(1).max(50),
+  paymentMethod:    z.enum(['edahabia', 'cib', 'card', 'baridimob']),
+  fullName:         z.string().min(2).max(200),
+  phone:            z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
+  email:            z.string().email().max(320).optional().nullable(),
+  wilaya:           z.string().min(1).max(100),
+  city:             z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
+  address:          z.string().min(5).max(500),
+  promoCodeId:      z.string().uuid().optional().nullable(),
+  discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
+  giftCardCode:     z.string().max(100).optional().nullable(),
+  giftCardDeduction: z.number().min(0).max(1_000_000).optional().default(0),
+  pointsRedeemed:   z.number().int().min(0).max(1_000_000).optional().default(0),
+  notes:            z.string().max(500).optional().nullable(),
+  isB2B:            z.boolean().optional().default(false),
+  companyName:      z.string().max(300).optional().nullable(),
+  nif:              z.string().max(50).optional().nullable(),
+  nis:              z.string().max(50).optional().nullable(),
+  rc:               z.string().max(50).optional().nullable(),
+  gaClientId:       z.string().max(100).optional().nullable(),
+  isStopDesk:       z.boolean().optional().default(false),
+  items:            z.array(OrderItemSchema).min(1).max(50),
+  selectedColor:    z.string().max(100).nullable().optional(),
 })
 
 function normalizePhone(p: string) {
@@ -49,8 +64,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
   }
 
-  const { paymentMethod, promoCodeId, ...rest } = parsed.data
+  const {
+    paymentMethod,
+    promoCodeId,
+    email: rawEmail,
+    giftCardCode: rawGiftCardCode,
+    giftCardDeduction,
+    pointsRedeemed,
+    isB2B,
+    companyName,
+    nif,
+    nis,
+    rc,
+    gaClientId,
+    isStopDesk,
+    selectedColor: _sc,
+    ...rest
+  } = parsed.data
   const phone = normalizePhone(rest.phone)
+  const buyerEmail = rawEmail ?? null
 
   // Verify gateway config BEFORE creating an order — avoids orphaned orders
   // that consume stock and increment promo uses when the gateway is unavailable.
@@ -63,11 +95,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { id: orderId, total } = await createOrder({
+    const { id: orderId, total, giftCardDeduction: actualGcDeduction } = await createOrder({
       ...rest,
       phone,
       paymentMethod,
       promoCodeId: promoCodeId ?? undefined,
+      giftCardCode: rawGiftCardCode?.trim().toUpperCase() || undefined,
+      giftCardDeduction: giftCardDeduction || 0,
+      pointsRedeemed,
+      isB2B: isB2B ?? false,
+      companyName: companyName ?? null,
+      nif: nif ?? null,
+      nis: nis ?? null,
+      rc: rc ?? null,
+      isStopDesk: isStopDesk ?? false,
+      email:    buyerEmail,
       status: 'pending_payment',
     })
 
@@ -81,6 +123,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment gateway not configured' }, { status: 503 })
     }
     const orderAmountCentimes = Math.round(total * 100)
+
+    // Non-blocking notifications
+    if (buyerEmail) {
+      sendOrderConfirmationEmail({
+        to: buyerEmail,
+        fullName: rest.fullName,
+        orderId,
+        total,
+        wilaya: rest.wilaya,
+        itemCount: rest.items.length,
+        isStopDesk,
+      }).catch((err) => logger.error('[email initiate] confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+    notifyOrderConfirmed({
+      phone: rest.phone,
+      fullName: rest.fullName,
+      orderId,
+      total,
+      wilaya: rest.wilaya,
+      itemCount: rest.items.length,
+    }).catch((err) => logger.error('[WhatsApp initiate] notification failed', { error: err instanceof Error ? err.message : String(err) }))
 
     if (paymentMethod === 'baridimob') {
       const bmResult = await baridimobInitiatePayment({

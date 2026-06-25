@@ -110,7 +110,7 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10">
           {visible.map(product => (
-            <ProductCard key={product.id} product={product} accent={accent} storeSlug={storeSlug} gridStoreSlug={storeSlug} />
+            <ProductCard key={product.id} product={product} accent={accent} storeSlug={storeSlug} />
           ))}
         </div>
       )}
@@ -122,12 +122,10 @@ function ProductCard({
   product,
   accent,
   storeSlug,
-  gridStoreSlug,
 }: {
   product: Product
   accent: string
   storeSlug: string
-  gridStoreSlug: string
 }) {
   const addItem = useCartStore(s => s.addItem)
   const t  = useT()
@@ -145,7 +143,7 @@ function ProductCard({
     e.preventDefault()
     e.stopPropagation()
     if (product.stock === 0) return
-    const ok = addItem(product, 1, undefined, gridStoreSlug)
+    const ok = addItem(product, 1, undefined, storeSlug)
     if (!ok) return // store conflict — CartSidebar shows the modal
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)

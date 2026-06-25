@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, MapPin, Pencil, Trash2, CheckCircle, Loader2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface SavedAddress {
   id: string

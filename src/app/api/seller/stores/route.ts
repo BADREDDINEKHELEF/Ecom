@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
+
+const CreateStoreSchema = z.object({
+  store_name:  z.string().min(1).max(100),
+  store_slug:  z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
+  description: z.string().max(2000).optional(),
+  phone:       z.string().max(30).optional(),
+  wilaya:      z.string().max(100).optional(),
+})
+
+const PatchStoreSchema = z.object({
+  id:          z.string().uuid(),
+  store_name:  z.string().min(1).max(100).optional(),
+  description: z.string().max(2000).optional(),
+  phone:       z.string().max(30).optional(),
+  wilaya:      z.string().max(100).optional(),
+  is_active:   z.boolean().optional(),
+})
 
 // GET /api/seller/stores — list all stores owned by the authenticated user
 export async function GET(req: NextRequest) {
@@ -26,7 +45,8 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
     return NextResponse.json({ stores: data ?? [] })
-  } catch {
+  } catch (err) {
+    logger.error('[GET /api/seller/stores]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -50,15 +70,13 @@ export async function POST(req: NextRequest) {
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
     )
 
-    const body = await req.json().catch(() => ({})) as {
-      store_name?: string
-      store_slug?: string
-      description?: string
-      phone?: string
-      wilaya?: string
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    if (!body.store_name || !body.store_slug) {
+    const parsed = CreateStoreSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: 'store_name and store_slug are required' }, { status: 400 })
     }
 
@@ -101,7 +119,7 @@ export async function POST(req: NextRequest) {
     const { data: existing } = await admin
       .from('vendors')
       .select('id')
-      .eq('store_slug', body.store_slug)
+      .eq('store_slug', parsed.data.store_slug)
       .maybeSingle()
 
     if (existing) {
@@ -113,11 +131,11 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: user.id,
         owner_id: user.id,
-        store_name: body.store_name.trim(),
-        store_slug: body.store_slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-        description: body.description ?? null,
-        phone: body.phone ?? null,
-        wilaya: body.wilaya ?? null,
+        store_name: parsed.data.store_name.trim(),
+        store_slug: parsed.data.store_slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+        description: parsed.data.description ?? null,
+        phone: parsed.data.phone ?? null,
+        wilaya: parsed.data.wilaya ?? null,
         commission_rate: 10,
         is_approved: false,
         is_active: true,
@@ -128,12 +146,11 @@ export async function POST(req: NextRequest) {
 
     if (insertErr) throw insertErr
     return NextResponse.json({ store: newStore }, { status: 201 })
-  } catch {
+  } catch (err) {
+    logger.error('[POST /api/seller/stores]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // PATCH /api/seller/stores — update a store (must be owned by user)
 export async function PATCH(req: NextRequest) {
@@ -149,17 +166,13 @@ export async function PATCH(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await req.json().catch(() => ({})) as {
-      id?: string
-      store_name?: string
-      description?: string
-      phone?: string
-      wilaya?: string
-      is_active?: boolean
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
-    if (!UUID_RE.test(body.id)) return NextResponse.json({ error: 'Invalid store ID' }, { status: 400 })
+    const parsed = PatchStoreSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     const admin = createAdminClient()
 
@@ -167,7 +180,7 @@ export async function PATCH(req: NextRequest) {
     const { data: store } = await admin
       .from('vendors')
       .select('id, user_id, owner_id')
-      .eq('id', body.id)
+      .eq('id', parsed.data.id)
       .maybeSingle()
 
     if (!store || (store.user_id !== user.id && store.owner_id !== user.id)) {
@@ -175,16 +188,17 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updates: Record<string, unknown> = {}
-    if (body.store_name  !== undefined) updates.store_name  = body.store_name
-    if (body.description !== undefined) updates.description = body.description
-    if (body.phone       !== undefined) updates.phone       = body.phone
-    if (body.wilaya      !== undefined) updates.wilaya      = body.wilaya
-    if (body.is_active   !== undefined) updates.is_active   = body.is_active
+    if (parsed.data.store_name  !== undefined) updates.store_name  = parsed.data.store_name
+    if (parsed.data.description !== undefined) updates.description = parsed.data.description
+    if (parsed.data.phone       !== undefined) updates.phone       = parsed.data.phone
+    if (parsed.data.wilaya      !== undefined) updates.wilaya      = parsed.data.wilaya
+    if (parsed.data.is_active   !== undefined) updates.is_active   = parsed.data.is_active
 
-    const { error } = await admin.from('vendors').update(updates).eq('id', body.id)
+    const { error } = await admin.from('vendors').update(updates).eq('id', parsed.data.id)
     if (error) throw error
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
+    logger.error('[PATCH /api/seller/stores]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

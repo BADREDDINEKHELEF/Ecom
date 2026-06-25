@@ -5,13 +5,19 @@ import { logger } from '@/lib/logger'
 const POINTS_PER_100_DA = 1
 
 export async function getPointsBalance(userId: string): Promise<number> {
-  const supabase = createAdminClient()
-  const { data } = await supabase
-    .from('user_points')
-    .select('points_balance')
-    .eq('user_id', userId)
-    .maybeSingle()
-  return data?.points_balance ?? 0
+  try {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('user_points')
+      .select('points_balance')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) throw error
+    return (data as { points_balance: number } | null)?.points_balance ?? 0
+  } catch (err) {
+    logger.error('[loyalty] getPointsBalance failed', { error: err instanceof Error ? err.message : String(err) })
+    return 0
+  }
 }
 
 export async function awardPoints(userId: string, orderId: string, orderTotal: number): Promise<void> {

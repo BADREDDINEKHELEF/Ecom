@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { revalidateTag } from 'next/cache'
 import { logger } from '@/lib/logger'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+
+const PatchAnnouncementSchema = z.object({
+  text:   z.string().max(500).optional(),
+  active: z.boolean().optional(),
+  color:  z.enum(['amber', 'green', 'red', 'blue', 'indigo']).optional(),
+})
 
 export async function PATCH(req: NextRequest) {
   const denied = await requireAdmin(req)
@@ -17,14 +24,18 @@ export async function PATCH(req: NextRequest) {
   )
 
   try {
-    const { text, active, color } = await req.json().catch(() => ({}))
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+
+    const parsed = PatchAnnouncementSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
 
     const update: Record<string, unknown> = {}
-    if (typeof text   === 'string')  update.announcement_text   = text.slice(0, 500)
-    if (typeof active === 'boolean') update.announcement_active = active
-    if (typeof color  === 'string' && ['amber', 'green', 'red', 'blue', 'indigo'].includes(color)) {
-      update.announcement_color = color
-    }
+    if (parsed.data.text   !== undefined) update.announcement_text   = parsed.data.text
+    if (parsed.data.active !== undefined) update.announcement_active = parsed.data.active
+    if (parsed.data.color  !== undefined) update.announcement_color  = parsed.data.color
 
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })

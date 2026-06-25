@@ -52,8 +52,9 @@ export async function procolisCreateShipmentWithToken(
   // Procolis response wraps created parcels in data.Colis[]
   const parcel = (Array.isArray(data?.Colis) ? data.Colis : [])[0] ?? data ?? {}
   const tracking = String(parcel.code_suivi ?? parcel.tracking ?? parcel.id ?? '')
+  const labelUrl = String(parcel.label ?? parcel.label_url ?? parcel.bon_livraison ?? parcel.bon_url ?? '') || undefined
 
-  return { tracking }
+  return { tracking, labelUrl }
 }
 
 export async function procolisCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {

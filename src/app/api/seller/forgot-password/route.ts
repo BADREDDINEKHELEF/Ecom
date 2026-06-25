@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger'
 import fs from 'fs'
 import path from 'path'
 import { getClientIp } from '@/lib/utils/ip'
+import { hashOtp } from '@/lib/auth/otp'
 
 const RequestSchema = z.object({
   email: z.string().email('Format d\'email invalide'),
@@ -106,17 +107,17 @@ export async function POST(req: NextRequest) {
     
     let insertErr = null
     const { error } = await supabase.from('password_reset_otps').insert({
-      phone:      email,
-      email:      email,
-      otp,
+      phone:    email,
+      email:    email,
+      otp_hash: hashOtp(otp),
       expires_at: expiryStr,
     })
     insertErr = error
 
     if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('column') || String(insertErr.message).includes('email'))) {
       const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
-        phone:      email,
-        otp,
+        phone:    email,
+        otp_hash: hashOtp(otp),
         expires_at: expiryStr,
       })
       insertErr = fallbackErr

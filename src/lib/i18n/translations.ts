@@ -96,6 +96,8 @@ export const translations = {
       deliveryMethod: 'Delivery Method',
       homeDelivery: 'Home Delivery',
       stopDesk: 'Stop Desk (Office Pick-up)',
+      liveRates: 'Live carrier rates',
+      staticRates: 'Indicative rates (subject to verification)',
     },
     search: { title: 'Search Products', results: '{n} results for', noResults: 'No products found', hint: 'Start typing to search' },
     auth: {
@@ -727,6 +729,8 @@ export const translations = {
       deliveryMethod: 'Mode de livraison',
       homeDelivery: 'À domicile',
       stopDesk: 'Stop Desk (Bureau)',
+      liveRates: 'Tarifs en direct du transporteur',
+      staticRates: 'Tarifs indicatifs (sujet à vérification)',
     },
     search: { title: 'Recherche', results: '{n} résultats pour', noResults: 'Aucun produit trouvé', hint: 'Commencez à taper pour chercher' },
     auth: {
@@ -1358,6 +1362,8 @@ export const translations = {
       deliveryMethod: 'طريقة التوصيل',
       homeDelivery: 'توصيل للمنزل',
       stopDesk: 'استلام من المكتب (Stop Desk)',
+      liveRates: 'أسعار مباشرة من شركة الشحن',
+      staticRates: 'أسعار تقديرية (خاضعة للتحقق)',
     },
     search: { title: 'البحث عن منتجات', results: '{n} نتيجة لـ', noResults: 'لا توجد منتجات', hint: 'ابدأ الكتابة للبحث' },
     auth: {

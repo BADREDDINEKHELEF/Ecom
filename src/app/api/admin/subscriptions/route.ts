@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { writeAuditLog } from '@/lib/auth/auditLog'
 import {
@@ -9,6 +10,14 @@ import {
 } from '@/lib/supabase/vendors'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
+
+const PatchSubscriptionSchema = z.object({
+  id:        z.string().min(1),
+  status:    z.enum(['trial', 'active', 'grace_period', 'expired', 'cancelled']).optional(),
+  admin_note: z.string().optional(),
+  expires_at: z.string().optional(),
+})
 
 // GET /api/admin/subscriptions?status=trial&page=0
 export async function GET(req: NextRequest) {
@@ -46,30 +55,24 @@ export async function PATCH(req: NextRequest) {
   const ua = req.headers.get('user-agent') ?? 'unknown'
 
   try {
-    const body = await req.json().catch(() => ({})) as {
-      id?: string
-      status?: string
-      admin_note?: string
-      expires_at?: string
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
-
-    const validStatuses = ['trial', 'active', 'grace_period', 'expired', 'cancelled']
-    if (body.status && !validStatuses.includes(body.status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
-    }
+    const parsed = PatchSubscriptionSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     const updates: Parameters<typeof updateVendorSubscription>[1] = {
-      ...(body.status !== undefined       && { status: body.status as 'trial' | 'active' | 'grace_period' | 'expired' | 'cancelled' }),
-      ...(body.admin_note !== undefined   && { admin_note: body.admin_note }),
-      ...(body.expires_at                 && { expires_at: body.expires_at }),
+      ...(parsed.data.status !== undefined       && { status: parsed.data.status }),
+      ...(parsed.data.admin_note !== undefined   && { admin_note: parsed.data.admin_note }),
+      ...(parsed.data.expires_at                 && { expires_at: parsed.data.expires_at }),
     }
 
     // When approving (trial → active), reset billing window from now
-    if (body.status === 'active') {
+    if (parsed.data.status === 'active') {
       const [sub, plans] = await Promise.all([
-        getSubscriptionById(body.id),
+        getSubscriptionById(parsed.data.id),
         getSubscriptionPlans(),
       ])
       const plan = sub ? plans.find((p) => p.id === sub.plan_id) : null
@@ -85,19 +88,20 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    await updateVendorSubscription(body.id, updates)
+    await updateVendorSubscription(parsed.data.id, updates)
 
     const auditAction =
-      body.status === 'active'    ? 'subscription_approved' :
-      body.status === 'cancelled' ? 'subscription_rejected' :
+      parsed.data.status === 'active'    ? 'subscription_approved' :
+      parsed.data.status === 'cancelled' ? 'subscription_rejected' :
       'subscription_updated'
     await writeAuditLog({
       action: auditAction, ip, userAgent: ua, result: 'success',
-      meta: { subscription_id: body.id, status: body.status },
+      meta: { subscription_id: parsed.data.id, status: parsed.data.status },
     })
 
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
+    logger.error('[PATCH /api/admin/subscriptions]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

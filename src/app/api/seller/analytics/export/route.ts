@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   )
   const routeClient = createRouteClient(req)
   const { data: { user } } = await routeClient.auth.getUser()
-  if (!user) return new NextResponse('Non authentifié', { status: 401 })
+  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
   const userRl = await checkUserRateLimit(user.id, 'analytics_export', 3, 3600)
   if (!userRl.allowed) return NextResponse.json(
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   )
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return new NextResponse('Vendeur introuvable', { status: 403 })
+  if (!vendor) return NextResponse.json({ error: 'Vendeur introuvable' }, { status: 403 })
 
   const supabase = createAdminClient()
 
@@ -35,10 +35,7 @@ export async function GET(req: NextRequest) {
     .limit(2000)
 
   if (itemsError) {
-    return NextResponse.json(
-      { error: itemsError.message, code: itemsError.code },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   const orderIds = [...new Set((items ?? []).map((i) => i.order_id))].filter(Boolean)
@@ -53,10 +50,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (ordersError) {
-      return NextResponse.json(
-        { error: ordersError.message, code: ordersError.code },
-        { status: 500 },
-      )
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
     orders = ordersData ?? []
   }

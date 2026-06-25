@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const pg = err as { code?: string; message?: string }
     const msg = pg?.message ?? (err instanceof Error ? err.message : String(err))
     logger.error('[POST /api/admin/niches]', { error: msg })
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

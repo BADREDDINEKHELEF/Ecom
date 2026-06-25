@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit2, Trash2, Loader2, RefreshCw, Layers, AlertCircle } from 'lucide-react'
 import { Niche } from '@/types'
 import { niches as staticNiches } from '@/lib/data/niches'
+import { toast } from 'sonner'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 // Tailwind-safe preset classes (purge-safe: all used elsewhere in the project)
 const GRADIENT_PRESETS = [

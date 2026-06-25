@@ -38,6 +38,19 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/seller/sponsored — submit a new sponsored product request
+const CreateSponsoredSchema = z.object({
+  product_id:        z.string().uuid(),
+  placement:         z.string().max(50).optional().default('homepage'),
+  duration_days:     z.number().int().min(1).max(90).optional().default(7),
+  amount_dzd:        z.number().min(0).optional().default(0),
+  payment_reference: z.string().max(200).optional().nullable(),
+})
+
+const PatchSponsoredSchema = z.object({
+  id:     z.string().uuid(),
+  status: z.enum(['paused', 'pending']),
+})
+
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req)
@@ -59,15 +72,15 @@ export async function POST(req: NextRequest) {
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const body = await req.json().catch(() => ({})) as {
-      product_id?: string
-      placement?: string
-      duration_days?: number
-      amount_dzd?: number
-      payment_reference?: string
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    if (!body.product_id) return NextResponse.json({ error: 'product_id is required' }, { status: 400 })
+    const parsed = CreateSponsoredSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'product_id is required' }, { status: 400 })
+
+    const { product_id, placement, duration_days, amount_dzd, payment_reference } = parsed.data
 
     const admin = createAdminClient()
 
@@ -75,28 +88,27 @@ export async function POST(req: NextRequest) {
     const { data: product } = await admin
       .from('products')
       .select('id, vendor_id')
-      .eq('id', body.product_id)
+      .eq('id', product_id)
       .eq('vendor_id', vendor.id)
       .single()
 
     if (!product) return NextResponse.json({ error: 'Product not found or not yours' }, { status: 404 })
 
-    const durationDays = Math.max(1, Math.min(90, body.duration_days ?? 7))
     const startsAt = new Date()
     const endsAt = new Date(startsAt)
-    endsAt.setDate(endsAt.getDate() + durationDays)
+    endsAt.setDate(endsAt.getDate() + duration_days)
 
     const { data, error } = await admin
       .from('sponsored_products')
       .insert({
         vendor_id: vendor.id,
-        product_id: body.product_id,
-        placement: body.placement ?? 'homepage',
+        product_id,
+        placement,
         status: 'pending',
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
-        amount_dzd: body.amount_dzd ?? 0,
-        payment_reference: body.payment_reference ?? null,
+        amount_dzd,
+        payment_reference: payment_reference ?? null,
       })
       .select()
       .single()
@@ -126,19 +138,19 @@ export async function PATCH(req: NextRequest) {
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const body = await req.json().catch(() => ({})) as { id?: string; status?: string }
-    if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
-
-    const allowedStatuses = ['paused', 'pending']
-    if (body.status && !allowedStatuses.includes(body.status)) {
-      return NextResponse.json({ error: 'Vendors can only pause or re-submit promotions' }, { status: 400 })
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
+
+    const parsed = PatchSponsoredSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     const admin = createAdminClient()
     const { error } = await admin
       .from('sponsored_products')
-      .update({ status: body.status })
-      .eq('id', body.id)
+      .update({ status: parsed.data.status })
+      .eq('id', parsed.data.id)
       .eq('vendor_id', vendor.id)
       .in('status', ['pending', 'paused'])
 

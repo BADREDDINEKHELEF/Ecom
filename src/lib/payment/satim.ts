@@ -1,14 +1,4 @@
-/**
- * Satim payment gateway integration — Algeria's national payment switch.
- * Handles CIB (interbank) and Edahabia cards.
- * Docs: https://satim.dz (requires merchant account from a member bank)
- *
- * Required env vars:
- *   SATIM_USERNAME   — merchant username (from Satim member bank)
- *   SATIM_PASSWORD   — merchant password
- *   SATIM_BASE_URL   — usually https://satim.dz (or test URL for sandbox)
- *   NEXT_PUBLIC_APP_URL — your app's base URL for callbacks
- */
+import { logger } from '@/lib/logger'
 
 export interface SatimRegisterResult {
   satimOrderId: string
@@ -16,6 +6,15 @@ export interface SatimRegisterResult {
 }
 
 export interface SatimOrderStatus {
+  orderStatus: number
+  orderNumber: string
+  amount: number
+  currency: string
+  errorCode?: string
+  errorMessage?: string
+}
+
+interface SatimOrderStatusRaw {
   orderStatus: number
   orderNumber: string
   amount: number
@@ -37,7 +36,6 @@ function satimParams(extra: Record<string, string>): string {
   return new URLSearchParams(base).toString()
 }
 
-/** Register an order with Satim and get the redirect URL. Amount must be in centimes (DZD × 100). */
 export async function satimRegisterOrder(params: {
   orderNumber: string
   amountCentimes: number
@@ -58,32 +56,82 @@ export async function satimRegisterOrder(params: {
     description: params.description,
   })
 
-  const res = await fetch(`${process.env.SATIM_BASE_URL}/payment/rest/register.do?${qs}`)
-  if (!res.ok) throw new Error(`Satim register failed: ${res.status}`)
+  let res: Response
+  try {
+    res = await fetch(`${process.env.SATIM_BASE_URL}/payment/rest/register.do?${qs}`)
+  } catch (err) {
+    logger.error('[satim] registerOrder network error', { error: err instanceof Error ? err.message : String(err) })
+    throw new Error('Satim register failed: network error')
+  }
 
-  const data = await res.json()
+  if (!res.ok) {
+    logger.error('[satim] registerOrder non-ok status', { status: res.status })
+    throw new Error(`Satim register failed: ${res.status}`)
+  }
+
+  let data: Record<string, unknown>
+  try {
+    data = await res.json()
+  } catch {
+    logger.error('[satim] registerOrder invalid JSON response')
+    throw new Error('Satim register failed: invalid response')
+  }
+
   if (data.errorCode && data.errorCode !== '0') {
+    logger.error('[satim] registerOrder error', { errorCode: data.errorCode, errorMessage: data.errorMessage })
     throw new Error(`Satim error ${data.errorCode}: ${data.errorMessage ?? 'unknown'}`)
   }
 
-  return { satimOrderId: data.orderId, formUrl: data.formUrl }
+  return { satimOrderId: String(data.orderId ?? ''), formUrl: String(data.formUrl ?? '') }
 }
 
-/** Get order payment status from Satim. orderStatus 2 = paid successfully. */
 export async function satimGetOrderStatus(satimOrderId: string): Promise<SatimOrderStatus> {
   if (!satimConfigured()) throw new Error('Satim not configured')
 
   const qs = satimParams({ orderId: satimOrderId })
-  const res = await fetch(`${process.env.SATIM_BASE_URL}/payment/rest/getOrderStatus.do?${qs}`)
-  if (!res.ok) throw new Error(`Satim status check failed: ${res.status}`)
 
-  return res.json()
+  let res: Response
+  try {
+    res = await fetch(`${process.env.SATIM_BASE_URL}/payment/rest/getOrderStatus.do?${qs}`)
+  } catch (err) {
+    logger.error('[satim] getOrderStatus network error', { error: err instanceof Error ? err.message : String(err) })
+    throw new Error('Satim status check failed: network error')
+  }
+
+  if (!res.ok) {
+    logger.error('[satim] getOrderStatus non-ok status', { status: res.status, satimOrderId })
+    throw new Error(`Satim status check failed: ${res.status}`)
+  }
+
+  let data: SatimOrderStatusRaw
+  try {
+    data = await res.json()
+  } catch {
+    logger.error('[satim] getOrderStatus invalid JSON response', { satimOrderId })
+    throw new Error('Satim status check failed: invalid response')
+  }
+
+  return {
+    orderStatus: data.orderStatus,
+    orderNumber: data.orderNumber,
+    amount:      data.amount,
+    currency:    data.currency,
+    errorCode:   data.errorCode,
+    errorMessage: data.errorMessage,
+  }
 }
 
-/** Confirm/capture a paid order (required by some Satim configurations). */
 export async function satimConfirmOrder(satimOrderId: string): Promise<void> {
   if (!satimConfigured()) return
 
   const qs = satimParams({ mdOrder: satimOrderId })
-  await fetch(`${process.env.SATIM_BASE_URL}/payment/rest/confirmOrder.do?${qs}`)
+
+  try {
+    const res = await fetch(`${process.env.SATIM_BASE_URL}/payment/rest/confirmOrder.do?${qs}`)
+    if (!res.ok) {
+      logger.error('[satim] confirmOrder failed', { status: res.status, satimOrderId })
+    }
+  } catch (err) {
+    logger.error('[satim] confirmOrder network error', { error: err instanceof Error ? err.message : String(err), satimOrderId })
+  }
 }

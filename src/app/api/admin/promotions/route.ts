@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
+
+const PatchPromotionSchema = z.object({
+  id:         z.string().min(1),
+  status:     z.enum(['pending', 'active', 'paused', 'rejected', 'expired']).optional(),
+  admin_note: z.string().optional(),
+  placement:  z.string().max(50).optional(),
+})
 
 // GET /api/admin/promotions?status=pending&page=0
 export async function GET(req: NextRequest) {
@@ -59,40 +68,35 @@ export async function PATCH(req: NextRequest) {
   )
 
   try {
-    const body = await req.json().catch(() => ({})) as {
-      id?: string
-      status?: string
-      admin_note?: string
-      placement?: string
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
-
-    const validStatuses = ['pending', 'active', 'paused', 'rejected', 'expired']
-    if (body.status && !validStatuses.includes(body.status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
-    }
+    const parsed = PatchPromotionSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     const admin = createAdminClient()
     const updates: Record<string, unknown> = {}
-    if (body.status)     updates.status     = body.status
-    if (body.admin_note !== undefined) updates.admin_note = body.admin_note
-    if (body.placement)  updates.placement  = body.placement
-    if (body.status === 'active') {
+    if (parsed.data.status)     updates.status     = parsed.data.status
+    if (parsed.data.admin_note !== undefined) updates.admin_note = parsed.data.admin_note
+    if (parsed.data.placement)  updates.placement  = parsed.data.placement
+    if (parsed.data.status === 'active') {
       updates.approved_at = new Date().toISOString()
     }
-    if (body.status === 'rejected') {
+    if (parsed.data.status === 'rejected') {
       updates.rejected_at = new Date().toISOString()
     }
 
     const { error } = await admin
       .from('sponsored_products')
       .update(updates)
-      .eq('id', body.id)
+      .eq('id', parsed.data.id)
 
     if (error) throw error
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
+    logger.error('[PATCH /api/admin/promotions]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

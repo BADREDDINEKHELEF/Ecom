@@ -14,7 +14,7 @@ export function getAdminCookieOptions(maxAgeSeconds: number): {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict',
     path: '/',
     maxAge: maxAgeSeconds,
   }

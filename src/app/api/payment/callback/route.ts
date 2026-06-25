@@ -4,9 +4,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
+import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 
 export async function GET(req: NextRequest) {
-  // Rate-limit payment callbacks: 20 per minute per IP (prevents callback flooding/replay attacks)
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'payment_callback')
   if (!rl.allowed) {
@@ -15,9 +15,9 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  const result  = searchParams.get('result')   // 'success' | 'fail'
-  const orderId = searchParams.get('orderId')   // our internal order ID (orderNumber we sent to Satim)
-  const satimId = searchParams.get('mdOrder')   // Satim's own reference
+  const result  = searchParams.get('result')
+  const orderId = searchParams.get('orderId')
+  const satimId = searchParams.get('mdOrder')
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`
 
@@ -30,9 +30,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}`)
   }
 
-  // Server-side verification is mandatory — never trust client-supplied result param alone.
-  // An attacker could craft ?result=success&orderId=<anything> to mark orders as paid.
-  // We require a valid mdOrder (Satim reference) and confirm it server-side.
   if (!satimId) {
     logger.warn('[payment/callback] No mdOrder param — possible tamper attempt', { orderId })
     await markOrderFailed(orderId)
@@ -40,10 +37,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch the order first to verify amount and detect replay
     const { data: order, error: orderErr } = await createAdminClient()
       .from('orders')
-      .select('id, status, total, satim_order_id')
+      .select('id, status, total, satim_order_id, email, full_name, wilaya, is_stopdesk')
       .eq('id', orderId)
       .single()
 
@@ -52,10 +48,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${appUrl}/payment/failure?reason=order_not_found`)
     }
 
-    // Replay attack guard: if satim_order_id is already set, this payment was processed
     if (order.satim_order_id && order.satim_order_id === satimId) {
       logger.warn('[payment/callback] duplicate callback — already processed', { orderId, satimId })
-      // Already paid → redirect to success rather than re-processing
       return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
     }
 
@@ -65,7 +59,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=not_paid`)
     }
 
-    // Amount verification — Satim reports in centimes (DZD × 100)
     const expectedCentimes = Math.round(order.total * 100)
     if (status.amount !== expectedCentimes) {
       logger.error('[payment/callback] AMOUNT MISMATCH — possible tampering', {
@@ -73,31 +66,47 @@ export async function GET(req: NextRequest) {
         expected: expectedCentimes,
         received: status.amount,
       })
-      // Do NOT fulfil the order if the amount does not match. Fail safe.
       return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=amount_mismatch`)
     }
 
     await satimConfirmOrder(satimId)
     await markOrderPaid(orderId, satimId)
+
+    if (order.email) {
+      const { count } = await createAdminClient()
+        .from('order_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('order_id', orderId)
+
+      sendOrderConfirmationEmail({
+        to: order.email,
+        fullName: order.full_name,
+        orderId,
+        total: order.total,
+        wilaya: order.wilaya,
+        itemCount: count ?? 0,
+        isStopDesk: order.is_stopdesk ?? false,
+      }).catch((err) => logger.error('[email callback] confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+
     return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
   } catch (err) {
     logger.error('[payment/callback] Satim verification failed', { error: err instanceof Error ? err.message : String(err) })
-    // Do NOT mark as paid when we cannot verify. Fail safe.
     return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=verification_error`)
   }
 }
 
-async function markOrderPaid(orderId: string, satimOrderId?: string) {
+async function markOrderPaid(orderId: string, satimOrderId: string) {
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('orders')
     .update({
       status: 'confirmed',
       payment_status: 'paid',
-      ...(satimOrderId ? { satim_order_id: satimOrderId } : {}),
+      satim_order_id: satimOrderId,
     })
     .eq('id', orderId)
-    .eq('status', 'pending_payment') // Only mark paid if still awaiting payment (idempotency guard)
+    .eq('status', 'pending_payment')
   if (error) logger.error('[payment/callback] markOrderPaid failed', { orderId, error: error.message })
 }
 
@@ -107,6 +116,6 @@ async function markOrderFailed(orderId: string) {
     .from('orders')
     .update({ status: 'cancelled', payment_status: 'failed' })
     .eq('id', orderId)
-    .eq('status', 'pending_payment') // Idempotency guard — never cancel a confirmed/delivered order
+    .eq('status', 'pending_payment')
   if (error) logger.error('[payment/callback] markOrderFailed failed', { orderId, error: error.message })
 }

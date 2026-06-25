@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { timingSafeEqual } from 'crypto'
@@ -38,25 +39,31 @@ function otpEqual(a: string, b: string): boolean {
   } catch { return false }
 }
 
+const VerifyOtpSchema = z.object({
+  email:       z.string().email().optional(),
+  phone:       z.string().optional(),
+  otp:         z.string().min(1),
+  newPassword: z.string().min(8),
+})
+
 export async function POST(req: NextRequest) {
   try {
-    // The 'phone' field here is actually the user's email for this flow.
-    const { email: emailInput, phone, otp: otpInput, newPassword } = await req.json() as {
-      email?: string
-      phone?: string
-      otp?: string
-      newPassword?: string
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
-    const rawEmail = emailInput || phone
 
-    if (!rawEmail || !otpInput || !newPassword) {
+    const parsed = VerifyOtpSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
+    }
+
+    const rawEmail = parsed.data.email || parsed.data.phone
+    if (!rawEmail) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
     const email = rawEmail.trim().toLowerCase()
-    const otp = otpInput.trim()
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères.' }, { status: 400 })
-    }
+    const otp = parsed.data.otp.trim()
 
     const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {

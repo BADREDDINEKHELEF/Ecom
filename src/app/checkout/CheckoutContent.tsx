@@ -69,7 +69,7 @@ export default function CheckoutContent() {
   const [submitted, setSubmitted] = useState(false)
   const [confettiDone, setConfettiDone] = useState(false)
   const [form, setForm] = useState({
-    fullName: '', phone: '', address: '', city: '', wilaya: '', notes: '',
+    fullName: '', email: '', phone: '', address: '', city: '', wilaya: '', notes: '',
   })
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
@@ -112,6 +112,7 @@ export default function CheckoutContent() {
   const [liveDeliveryRates, setLiveDeliveryRates] = useState<{ home: number | null; desk: number | null }>({ home: null, desk: null })
   const [isStopDesk, setIsStopDesk] = useState(false)
   const [deliveryFetching, setDeliveryFetching] = useState(false)
+  const [isLiveRates, setIsLiveRates] = useState(false)
 
   useEffect(() => {
     fetch('/api/loyalty')
@@ -129,6 +130,7 @@ export default function CheckoutContent() {
     if (!form.wilaya) {
       setLiveDeliveryRates({ home: null, desk: null })
       setIsStopDesk(false)
+      setIsLiveRates(false)
       return
     }
     setDeliveryFetching(true)
@@ -143,16 +145,19 @@ export default function CheckoutContent() {
             home: typeof data.homeDelivery === 'number' ? data.homeDelivery : null,
             desk: typeof data.deskDelivery === 'number' ? data.deskDelivery : null,
           })
+          setIsLiveRates(data.live === true)
           if (typeof data.deskDelivery !== 'number') {
             setIsStopDesk(false)
           }
         } else {
           setLiveDeliveryRates({ home: null, desk: null })
           setIsStopDesk(false)
+          setIsLiveRates(false)
         }
       } catch {
         setLiveDeliveryRates({ home: null, desk: null })
         setIsStopDesk(false)
+        setIsLiveRates(false)
       } finally {
         setDeliveryFetching(false)
       }
@@ -227,6 +232,7 @@ export default function CheckoutContent() {
           expired: t.checkout.promoExpired,
           maxed: t.checkout.promoMaxed,
           min_order: t.checkout.promoMinOrder,
+          already_used: 'Vous avez déjà utilisé ce code.',
         }
         setPromoError(msgMap[data.message] ?? t.checkout.promoInvalid)
       }
@@ -307,6 +313,7 @@ export default function CheckoutContent() {
 
     const orderPayload = {
       fullName:       form.fullName,
+      email:          form.email,
       phone:          form.phone,
       wilaya:         form.wilaya,
       city:           resolvedCity,
@@ -417,6 +424,7 @@ export default function CheckoutContent() {
     setForm(next)
     saveAbandoned({
       name: next.fullName,
+      email: next.email,
       phone: next.phone,
       wilaya: next.wilaya,
       address: next.address,
@@ -555,6 +563,19 @@ export default function CheckoutContent() {
                   inputMode="text"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">E-mail</label>
+                <input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => f('email', e.target.value)}
+                  placeholder="vous@exemple.com"
+                  autoComplete="email"
+                  inputMode="email"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
+                />
+              </div>
               <div>
                 <PhoneInput
                   value={form.phone}
@@ -566,6 +587,14 @@ export default function CheckoutContent() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.email}</label>
+                <input type="email" value={form.email} onChange={(e) => f('email', e.target.value)}
+                  placeholder="exemple@email.com"
+                  autoComplete="email"
+                  inputMode="email"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.wilaya}</label>
                 <select required value={form.wilaya}
@@ -608,7 +637,17 @@ export default function CheckoutContent() {
               </div>
               {form.wilaya && liveDeliveryRates.desk !== null && (
                 <div className="sm:col-span-2 space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">{t.checkout.deliveryMethod}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-semibold text-gray-700">{t.checkout.deliveryMethod}</label>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                      isLiveRates
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isLiveRates ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                      {isLiveRates ? t.checkout.liveRates : t.checkout.staticRates}
+                    </span>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"

@@ -6,9 +6,11 @@ import { getClientIp } from '@/lib/utils/ip'
 import { dispatchGetRate } from '@/lib/delivery/dispatch'
 import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
 
-function staticRate(wilaya: string): { homeDelivery: number; provider: string; live: boolean } {
+function staticRate(wilaya: string): { homeDelivery: number; deskDelivery: number; provider: string; live: boolean } {
   const zone = WILAYA_DATA[wilaya]?.zone ?? 3
-  return { homeDelivery: ZONE_CONFIG[zone].cost, provider: 'static', live: false }
+  const home = ZONE_CONFIG[zone].cost
+  const desk = Math.max(150, home - 200)
+  return { homeDelivery: home, deskDelivery: desk, provider: 'static', live: false }
 }
 
 export async function GET(req: NextRequest) {

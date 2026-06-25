@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { createHash } from 'crypto'
@@ -81,25 +82,29 @@ export async function GET(req: NextRequest) {
   return response
 }
 
+const PixelCollectSchema = z.object({
+  pixelId:  z.string().regex(UUID_RE),
+  event:    z.string().min(1).max(50),
+  url:      z.string().max(2000).optional(),
+  referrer: z.string().max(500).optional(),
+  meta:     z.record(z.string(), z.unknown()).optional(),
+})
+
 export async function POST(req: NextRequest) {
   // Rate-limit pixel events: 60/min per IP (normal visitor activity)
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? req.headers.get('x-real-ip') ?? 'unknown'
   const rl = await checkPublicRateLimit(clientIp, 'pixel_collect')
   if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
 
-  try {
-    const body = await req.json()
-    const { pixelId, event, url, referrer, meta } = body as {
-      pixelId: string
-      event:   string
-      url?:    string
-      referrer?: string
-      meta?:   Record<string, unknown>
-    }
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ ok: false }, { status: 400 })
+  }
 
-    if (!pixelId || !event || !UUID_RE.test(pixelId)) {
-      return NextResponse.json({ ok: false }, { status: 400 })
-    }
+  const parsed = PixelCollectSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
+
+  const { pixelId, event, url, referrer, meta } = parsed.data
 
     const supabase = createAdminClient()
     const { data: vendor } = await supabase

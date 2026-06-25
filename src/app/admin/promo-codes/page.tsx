@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, Pencil, Tag, CheckCircle, XCircle, Loader2, X, RefreshCw } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface PromoCode {
   id: string

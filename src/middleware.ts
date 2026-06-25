@@ -16,7 +16,19 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
     const secret = process.env.ADMIN_JWT_SECRET
     if (!secret) return false
     const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
-    return payload.role === 'admin'
+    if (payload.role !== 'admin') return false
+    const jti = payload.jti as string | undefined
+    if (!jti) return false
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+      const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${jti}`
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
+      })
+      if (!res.ok) return false
+      const data = await res.json() as { result: string | null }
+      if (data.result !== 'valid') return false
+    }
+    return true
   } catch {
     return false
   }

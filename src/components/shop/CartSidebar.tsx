@@ -109,7 +109,7 @@ export default function CartSidebar() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {items.map(({ product, quantity, selectedColor }) => {
+              {items.map(({ product, quantity, selectedColor, storeSlug }) => {
                 const COLOR_HEX: Record<string, string> = {
                   Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
                   Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
@@ -137,7 +137,7 @@ export default function CartSidebar() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <Link
-                      href={`/${product.nicheId}/${product.id}`}
+                      href={storeSlug ? `/store/${storeSlug}/${product.id}` : `/${product.nicheId}/${product.id}`}
                       onClick={closeCart}
                       className="text-sm font-semibold text-gray-900 line-clamp-2 hover:text-indigo-600 transition-colors"
                     >

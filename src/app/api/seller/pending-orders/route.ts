@@ -4,6 +4,7 @@ import { getVendorPendingOrders } from '@/lib/supabase/orders'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,7 +35,8 @@ export async function GET(req: NextRequest) {
 
     const orders = await getVendorPendingOrders(vendor.id)
     return NextResponse.json({ orders })
-  } catch {
+  } catch (err) {
+    logger.error('[GET /api/seller/pending-orders]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -1,13 +1,4 @@
-/**
- * BaridiMob / CCP payment integration — Algeria Post mobile payment.
- * Uses Algeria Post's merchant API (requires partnership with La Poste Algérienne).
- *
- * Required env vars:
- *   BARIDIMOB_MERCHANT_ID  — your merchant ID from Algeria Post
- *   BARIDIMOB_API_KEY      — your API key
- *   BARIDIMOB_BASE_URL     — API base URL (provided on merchant onboarding)
- *   NEXT_PUBLIC_APP_URL    — your app's base URL
- */
+import { logger } from '@/lib/logger'
 
 export interface BaridiMobPaymentResult {
   paymentId: string
@@ -16,11 +7,26 @@ export interface BaridiMobPaymentResult {
   expiresAt: string
 }
 
+interface BaridiMobInitiateResponse {
+  payment_id?: string
+  id?: string
+  qr_code?: string
+  qrcode?: string
+  deep_link?: string
+  deeplink?: string
+  expires_at?: string
+  expiry?: string
+}
+
+interface BaridiMobStatusResponse {
+  status: string
+  paid?: boolean
+}
+
 export function baridimobConfigured(): boolean {
   return !!(process.env.BARIDIMOB_MERCHANT_ID && process.env.BARIDIMOB_API_KEY && process.env.BARIDIMOB_BASE_URL)
 }
 
-/** Initiate a BaridiMob payment. Returns QR code data and deep link for the BaridiMob app. */
 export async function baridimobInitiatePayment(params: {
   orderNumber: string
   amountDZD: number
@@ -29,48 +35,84 @@ export async function baridimobInitiatePayment(params: {
 }): Promise<BaridiMobPaymentResult> {
   if (!baridimobConfigured()) throw new Error('BaridiMob not configured')
 
-  const res = await fetch(`${process.env.BARIDIMOB_BASE_URL}/payment/initiate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Merchant-ID': process.env.BARIDIMOB_MERCHANT_ID!,
-      'X-API-Key':     process.env.BARIDIMOB_API_KEY!,
-    },
-    body: JSON.stringify({
-      order_number: params.orderNumber,
-      amount:       params.amountDZD,
-      currency:     'DZD',
-      description:  params.description,
-      callback_url: params.callbackUrl,
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch(`${process.env.BARIDIMOB_BASE_URL}/payment/initiate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Merchant-ID': process.env.BARIDIMOB_MERCHANT_ID!,
+        'X-API-Key':     process.env.BARIDIMOB_API_KEY!,
+      },
+      body: JSON.stringify({
+        order_number: params.orderNumber,
+        amount:       params.amountDZD,
+        currency:     'DZD',
+        description:  params.description,
+        callback_url: params.callbackUrl,
+      }),
+    })
+  } catch (err) {
+    logger.error('[baridimob] initiatePayment network error', { error: err instanceof Error ? err.message : String(err) })
+    throw new Error('BaridiMob initiate failed: network error')
+  }
 
   if (!res.ok) {
-    const text = await res.text()
+    let text = ''
+    try { text = await res.text() } catch { /* ignore */ }
+    logger.error('[baridimob] initiatePayment non-ok status', { status: res.status, body: text })
     throw new Error(`BaridiMob initiate failed ${res.status}: ${text}`)
   }
 
-  const data = await res.json()
-  return {
-    paymentId:  data.payment_id ?? data.id,
-    qrCodeData: data.qr_code ?? data.qrcode,
-    deepLink:   data.deep_link ?? data.deeplink,
-    expiresAt:  data.expires_at ?? data.expiry,
+  let data: BaridiMobInitiateResponse
+  try {
+    data = await res.json()
+  } catch {
+    logger.error('[baridimob] initiatePayment invalid JSON response')
+    throw new Error('BaridiMob initiate failed: invalid response')
   }
+
+  const paymentId  = data.payment_id ?? data.id
+  const qrCodeData = data.qr_code ?? data.qrcode
+  const deepLink   = data.deep_link ?? data.deeplink
+  const expiresAt  = data.expires_at ?? data.expiry
+
+  if (!paymentId || !qrCodeData) {
+    logger.error('[baridimob] initiatePayment missing fields in response', { data })
+    throw new Error('BaridiMob initiate failed: incomplete response')
+  }
+
+  return { paymentId, qrCodeData, deepLink: deepLink ?? '', expiresAt: expiresAt ?? '' }
 }
 
-/** Verify a BaridiMob payment status by payment ID. */
 export async function baridimobVerifyPayment(paymentId: string): Promise<{ paid: boolean; status: string }> {
   if (!baridimobConfigured()) throw new Error('BaridiMob not configured')
 
-  const res = await fetch(`${process.env.BARIDIMOB_BASE_URL}/payment/${paymentId}/status`, {
-    headers: {
-      'X-Merchant-ID': process.env.BARIDIMOB_MERCHANT_ID!,
-      'X-API-Key':     process.env.BARIDIMOB_API_KEY!,
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${process.env.BARIDIMOB_BASE_URL}/payment/${paymentId}/status`, {
+      headers: {
+        'X-Merchant-ID': process.env.BARIDIMOB_MERCHANT_ID!,
+        'X-API-Key':     process.env.BARIDIMOB_API_KEY!,
+      },
+    })
+  } catch (err) {
+    logger.error('[baridimob] verifyPayment network error', { error: err instanceof Error ? err.message : String(err), paymentId })
+    throw new Error('BaridiMob status check failed: network error')
+  }
 
-  if (!res.ok) throw new Error(`BaridiMob status check failed: ${res.status}`)
-  const data = await res.json()
+  if (!res.ok) {
+    logger.error('[baridimob] verifyPayment non-ok status', { status: res.status, paymentId })
+    throw new Error(`BaridiMob status check failed: ${res.status}`)
+  }
+
+  let data: BaridiMobStatusResponse
+  try {
+    data = await res.json()
+  } catch {
+    logger.error('[baridimob] verifyPayment invalid JSON response', { paymentId })
+    throw new Error('BaridiMob status check failed: invalid response')
+  }
+
   return { paid: data.status === 'paid' || data.paid === true, status: data.status }
 }

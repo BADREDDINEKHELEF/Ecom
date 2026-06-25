@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { writeAuditLog, type AuditAction } from '@/lib/auth/auditLog'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAllVendors } from '@/lib/supabase/vendors'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
+
+const PatchVendorSchema = z.object({
+  id:         z.string().uuid(),
+  action:     z.enum(['approve', 'decline', 'suspend', 'reactivate']),
+  admin_note: z.string().max(1000).optional(),
+})
 
 // GET /api/admin/vendors?filter=pending|approved|all&page=0
 export async function GET(req: NextRequest) {
@@ -42,34 +50,31 @@ export async function PATCH(req: NextRequest) {
   const ua = req.headers.get('user-agent') ?? 'unknown'
 
   try {
-    const body = await req.json().catch(() => ({})) as {
-      id?:         string
-      action?:     'approve' | 'decline' | 'suspend' | 'reactivate'
-      admin_note?: string
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!body.id || !UUID_RE.test(body.id)) return NextResponse.json({ error: 'id is required' }, { status: 400 })
-    if (!body.action) return NextResponse.json({ error: 'action is required' }, { status: 400 })
-    if (!['approve', 'decline', 'suspend', 'reactivate'].includes(body.action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-    }
-    if (body.admin_note && body.admin_note.length > 1000) {
-      return NextResponse.json({ error: 'admin_note trop long' }, { status: 400 })
+    const parsed = PatchVendorSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]
+      if (issue?.path[0] === 'id') return NextResponse.json({ error: 'id is required' }, { status: 400 })
+      if (issue?.path[0] === 'action') return NextResponse.json({ error: 'action is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
     }
 
     const admin = createAdminClient()
 
     const updates: Record<string, unknown> =
-      body.action === 'approve'
+      parsed.data.action === 'approve'
         ? { is_approved: true,  is_active: true,  admin_note: null }
-        : body.action === 'decline'
-        ? { is_approved: false, is_active: false, admin_note: body.admin_note ?? null }
-        : body.action === 'suspend'
+        : parsed.data.action === 'decline'
+        ? { is_approved: false, is_active: false, admin_note: parsed.data.admin_note ?? null }
+        : parsed.data.action === 'suspend'
         ? { is_active: false }
         : { is_active: true }
 
-    const { error, count } = await admin.from('vendors').update(updates, { count: 'exact' }).eq('id', body.id)
+    const { error, count } = await admin.from('vendors').update(updates, { count: 'exact' }).eq('id', parsed.data.id)
     if (error) throw error
     if (count === 0) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 })
@@ -82,13 +87,14 @@ export async function PATCH(req: NextRequest) {
       reactivate: 'vendor_reactivated',
     }
     await writeAuditLog({
-      action:    actionMap[body.action],
+      action:    actionMap[parsed.data.action],
       ip, userAgent: ua, result: 'success',
-      meta: { vendor_id: body.id, admin_note: body.admin_note },
+      meta: { vendor_id: parsed.data.id, admin_note: parsed.data.admin_note },
     })
 
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
+    logger.error('[PATCH /api/admin/vendors]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -15,7 +15,8 @@ export interface PromoCode {
 
 export async function validatePromoCode(
   code: string,
-  orderTotal: number
+  orderTotal: number,
+  userId?: string
 ): Promise<
   | { valid: true; promo: PromoCode; discountAmount: number }
   | { valid: false; message: string }
@@ -23,20 +24,33 @@ export async function validatePromoCode(
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('promo_codes')
-    .select('id,code,discount_type,discount_value,min_order,max_uses,uses_count,expires_at,is_active,created_at')
+    .select('id,code,discount_type,discount_value,min_order,max_uses,uses_count,expires_at,is_active,one_per_buyer,created_at')
     .eq('code', code.toUpperCase().trim())
     .eq('is_active', true)
     .single()
 
   if (error || !data) return { valid: false, message: 'invalid' }
 
-  const promo = data as PromoCode
+  const promo = data as PromoCode & { one_per_buyer?: boolean }
 
   if (promo.expires_at && new Date(promo.expires_at) < new Date())
     return { valid: false, message: 'expired' }
 
   if (promo.max_uses !== null && promo.uses_count >= promo.max_uses)
     return { valid: false, message: 'maxed' }
+
+  if (promo.one_per_buyer && userId) {
+    const { data: usedOrder } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('promo_code_id', promo.id)
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle()
+    if (usedOrder) {
+      return { valid: false, message: 'already_used' }
+    }
+  }
 
   if (orderTotal < promo.min_order)
     return { valid: false, message: 'min_order' }

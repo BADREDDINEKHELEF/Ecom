@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import {
@@ -9,6 +10,11 @@ import {
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+
+const PatchNotificationSchema = z.object({
+  id:      z.string().optional(),
+  markAll: z.boolean().optional(),
+})
 
 export async function GET(req: NextRequest) {
   try {
@@ -48,12 +54,18 @@ export async function PATCH(req: NextRequest) {
     const vendor = await getVendorByUserIdServer(user.id)
     if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-    const { id, markAll } = await req.json().catch(() => ({}))
+    let patchBody: unknown
+    try { patchBody = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
 
-    if (markAll) {
+    const parsed = PatchNotificationSchema.safeParse(patchBody)
+    if (!parsed.success) return NextResponse.json({ error: 'Provide id or markAll' }, { status: 400 })
+
+    if (parsed.data.markAll) {
       await markAllRead(vendor.id)
-    } else if (id && typeof id === 'string') {
-      await markNotificationRead(id, vendor.id)
+    } else if (parsed.data.id) {
+      await markNotificationRead(parsed.data.id, vendor.id)
     } else {
       return NextResponse.json({ error: 'Provide id or markAll' }, { status: 400 })
     }

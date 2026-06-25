@@ -21,6 +21,7 @@ export interface OrderRow {
   id:                  string
   full_name:           string
   phone:               string
+  email?:              string | null
   wilaya:              string
   city:                string
   address:             string
@@ -30,11 +31,21 @@ export interface OrderRow {
   shipping_cost:       number
   total:               number
   discount_amount?:    number
-  delivery_outcome?:   string | null
-  delivery_provider?:  string | null
-  yalidine_tracking?:  string | null
-  yalidine_label_url?: string | null
-  is_stopdesk?:        boolean
+  delivery_outcome?:    string | null
+  delivery_provider?:   string | null
+  yalidine_tracking?:   string | null
+  yalidine_label_url?:  string | null
+  procolis_tracking?:   string | null
+  procolis_label_url?:  string | null
+  zr_tracking?:         string | null
+  zr_label_url?:        string | null
+  colivraison_tracking?: string | null
+  colivraison_label_url?: string | null
+  maystro_tracking?:    string | null
+  maystro_label_url?:   string | null
+  rex_tracking?:        string | null
+  rex_label_url?:       string | null
+  is_stopdesk?:         boolean
   created_at:          string
   order_items?:        OrderItemRow[]
 }
@@ -58,6 +69,7 @@ export interface CreateOrderInput {
   nis?:               string | null
   rc?:                string | null
   isStopDesk?:        boolean
+  email?:             string | null
   items: {
     productId:     string
     productName:   string
@@ -88,7 +100,9 @@ async function resolveShippingCost(
   // Static zone fallback — always available
   const zone   = WILAYA_DATA[wilaya]?.zone ?? 3
   const zoneCfg = ZONE_CONFIG[zone]
-  const staticCost = subtotal >= zoneCfg.freeFrom ? 0 : zoneCfg.cost
+  const staticHomeCost = subtotal >= zoneCfg.freeFrom ? 0 : zoneCfg.cost
+  const staticDeskCost = staticHomeCost === 0 ? 0 : Math.max(150, staticHomeCost - 200)
+  const staticCost = isStopDesk ? staticDeskCost : staticHomeCost
 
   // Try live provider rate for the first vendor found in the cart
   const vendorId = items.find((i) => i.vendorId)?.vendorId ?? null
@@ -267,6 +281,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       nis:             input.nis ?? null,
       rc:              input.rc ?? null,
       is_stopdesk:     input.isStopDesk ?? false,
+      email:           input.email ?? null,
     })
     .select('id')
     .single()
@@ -314,7 +329,7 @@ export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
   const variants = getPhoneVariants(normalizePhone(phone))
   const { data, error } = await supabase
     .from('orders')
-    .select('id,full_name,phone,wilaya,city,address,status,total,delivery_outcome,yalidine_tracking,delivery_provider,is_stopdesk,payment_method,created_at,order_items(id,product_name,quantity,subtotal,product_image,product_price)')
+    .select('id,full_name,phone,wilaya,city,address,status,total,delivery_outcome,yalidine_tracking,procolis_tracking,zr_tracking,colivraison_tracking,maystro_tracking,rex_tracking,delivery_provider,is_stopdesk,payment_method,created_at,order_items(id,product_name,quantity,subtotal,product_image,product_price)')
     .in('phone', variants)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -399,13 +414,18 @@ export async function updateShippingInfo(
   labelUrl?: string
 ): Promise<void> {
   const supabase = createAdminClient()
+  const trackingColumn = `${provider}_tracking`
+  const labelColumn = `${provider}_label_url`
+  const update: Record<string, unknown> = {
+    [trackingColumn]: tracking,
+    delivery_provider: provider,
+  }
+  if (labelUrl) {
+    update[labelColumn] = labelUrl
+  }
   const { error } = await supabase
     .from('orders')
-    .update({
-      yalidine_tracking:  tracking,
-      delivery_provider:  provider,
-      ...(labelUrl ? { yalidine_label_url: labelUrl } : {}),
-    })
+    .update(update)
     .eq('id', id)
   if (error) throw error
 }

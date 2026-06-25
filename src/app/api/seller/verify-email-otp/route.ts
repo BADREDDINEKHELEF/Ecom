@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { timingSafeEqual } from 'crypto'
@@ -15,16 +16,25 @@ function otpEqual(a: string, b: string): boolean {
   } catch { return false }
 }
 
+const VerifyEmailOtpSchema = z.object({
+  email: z.string().email(),
+  otp:   z.string().min(1),
+})
+
 export async function POST(req: NextRequest) {
   try {
-    const { email: emailInput, otp: otpInput } = await req.json() as { email?: string; otp?: string }
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
 
-    if (!emailInput || !otpInput) {
+    const parsed = VerifyEmailOtpSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
 
-    const email = emailInput.trim().toLowerCase()
-    const otp = otpInput.trim()
+    const email = parsed.data.email.trim().toLowerCase()
+    const otp = parsed.data.otp.trim()
 
     const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {

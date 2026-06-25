@@ -4,6 +4,8 @@ import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 import { revalidateTag } from 'next/cache'
+import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { getClientIp } from '@/lib/utils/ip'
 
 const UpdateSchema = z.object({
   productId: z.string().uuid(),
@@ -12,16 +14,34 @@ const UpdateSchema = z.object({
 
 export async function PATCH(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const rl = await checkSellerRateLimit(ip, 'inventory_stock', 30, 60)
+    if (!rl.allowed) return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    )
+
     const supabase = createRouteClient(req)
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const userRl = await checkUserRateLimit(user.id, 'inventory_stock', 60, 3600)
+    if (!userRl.allowed) return NextResponse.json(
+      { error: 'Limite atteinte. Réessayez plus tard.' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+    )
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return new Response('Not a vendor', { status: 403 })
+    if (!vendor) return NextResponse.json({ error: 'Not a vendor' }, { status: 403 })
 
-    const parsed = UpdateSchema.safeParse(await req.json())
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+
+    const parsed = UpdateSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
@@ -33,7 +53,7 @@ export async function PATCH(req: NextRequest) {
       .from('products')
       .update({ stock: newStock, updated_at: new Date().toISOString() })
       .eq('id', productId)
-      .eq('vendor_id', vendor.id) // Critical ownership check
+      .eq('vendor_id', vendor.id)
 
     if (error) throw error
 
@@ -42,8 +62,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to update stock'
-    logger.error('[PATCH /api/seller/inventory/stock]', { error: message })
-    return new Response(message, { status: 500 })
+    logger.error('[PATCH /api/seller/inventory/stock]', { error: err instanceof Error ? err.message : String(err) })
+    return NextResponse.json({ error: 'Erreur serveur. Réessayez.' }, { status: 500 })
   }
 }

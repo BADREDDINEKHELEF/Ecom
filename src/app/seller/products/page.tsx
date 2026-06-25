@@ -16,6 +16,7 @@ import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import VariantBuilder, { type ProductVariant } from '@/components/seller/VariantBuilder'
 import type { Product, ColorVariant } from '@/types'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',

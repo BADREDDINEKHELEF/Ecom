@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
+
+const AbandonedPatchSchema = z.object({
+  id:     z.string().min(1),
+  status: z.string().min(1),
+})
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req)
@@ -47,8 +53,16 @@ export async function PATCH(req: NextRequest) {
     { error: 'Trop de requêtes.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
   )
-  const { id, status } = await req.json().catch(() => ({}))
-  if (!id || !status) return NextResponse.json({ error: 'id and status required' }, { status: 400 })
+
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const parsed = AbandonedPatchSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ error: 'id and status required' }, { status: 400 })
+
+  const { id, status } = parsed.data
   const supabase = createAdminClient()
   const { error } = await supabase.from('abandoned_checkouts').update({
     status,

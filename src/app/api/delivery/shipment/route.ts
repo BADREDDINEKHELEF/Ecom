@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
         wilaya:   orderData?.wilaya   ?? order.wilaya,
         total:    orderData?.total    ?? order.total,
         items:    orderData?.items ?? fetchedItemsString,
+        isStopDesk: order.is_stopdesk ?? false,
       }
       const creds = vendorConfig ? {
         yalidine_api_id:    vendorConfig.yalidine_api_id    ?? undefined,

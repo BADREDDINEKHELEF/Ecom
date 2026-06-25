@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Tag, Plus, Trash2, ToggleLeft, ToggleRight, Loader2, X, Check } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import type { PromoCode } from '@/lib/supabase/queries'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 const EMPTY_FORM = {
   code: '', discount_type: 'percentage' as 'percentage' | 'fixed',

@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { validatePromoCode } from '@/lib/supabase/queries'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { createRouteClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/logger'
+
+const PromoValidateSchema = z.object({
+  code:       z.string().min(1).max(100),
+  orderTotal: z.number().min(0),
+})
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
@@ -13,16 +21,21 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ valid: false, message: 'invalid' }, { status: 400 })
+  }
+
+  const parsed = PromoValidateSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ valid: false, message: 'invalid' }, { status: 400 })
+
   try {
-    const body = await req.json().catch(() => null)
-    if (!body) return NextResponse.json({ valid: false, message: 'invalid' }, { status: 400 })
-    const { code, orderTotal } = body
-    if (!code || typeof code !== 'string' || typeof orderTotal !== 'number' || orderTotal < 0) {
-      return NextResponse.json({ valid: false, message: 'invalid' }, { status: 400 })
-    }
-    const result = await validatePromoCode(code, orderTotal)
+    const routeClient = createRouteClient(req)
+    const { data: { user } } = await routeClient.auth.getUser()
+    const result = await validatePromoCode(parsed.data.code, parsed.data.orderTotal, user?.id)
     return NextResponse.json(result)
-  } catch {
+  } catch (err) {
+    logger.error('[POST /api/promo/validate]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ valid: false, message: 'invalid' }, { status: 500 })
   }
 }
