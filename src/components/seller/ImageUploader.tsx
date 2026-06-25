@@ -151,7 +151,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     try {
       const compressed = await compressToWebP(file)
       const fd = new FormData()
-      fd.append('file', new File([compressed], file.name, { type: 'image/webp' }))
+      fd.append('file', new File([compressed], file.name, { type: compressed.type }))
 
       const res = await fetch('/api/seller/upload', { method: 'POST', body: fd })
       if (!res.ok) {

@@ -24,7 +24,7 @@ export default function LogoUploader({ value, onChange, size = 96 }: Props) {
     try {
       const compressed = await compressSquare(file, 400)
       const fd = new FormData()
-      fd.append('file', new File([compressed], file.name, { type: 'image/webp' }))
+      fd.append('file', new File([compressed], file.name, { type: compressed.type }))
       const res = await fetch('/api/seller/upload', { method: 'POST', body: fd })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
