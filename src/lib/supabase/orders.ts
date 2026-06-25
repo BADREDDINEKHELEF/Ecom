@@ -101,8 +101,7 @@ async function resolveShippingCost(
     const rate = await dispatchGetRate(provider, wilaya, config, true)
     if (!rate) return staticCost
     const deliveryRate = (isStopDesk && rate.deskDelivery != null) ? rate.deskDelivery : rate.homeDelivery
-    // Free shipping still applies on top of the live rate
-    return subtotal >= zoneCfg.freeFrom ? 0 : deliveryRate
+    return deliveryRate
   } catch {
     return staticCost
   }

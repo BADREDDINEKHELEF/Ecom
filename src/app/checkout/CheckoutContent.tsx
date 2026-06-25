@@ -198,7 +198,7 @@ export default function CheckoutContent() {
   const pointsDeduction = (usePoints && loyaltyBalance) ? Math.min(loyaltyBalance, Math.max(0, cartTotal - discountAmount - giftCardDeduction)) : 0
   // Live rate from provider API; falls back to static zone pricing
   const chosenLiveRate = isStopDesk ? liveDeliveryRates.desk : liveDeliveryRates.home
-  const shippingCost = delivery.isFree ? 0 : (chosenLiveRate ?? delivery.cost)
+  const shippingCost = chosenLiveRate ?? (delivery.isFree ? 0 : delivery.cost)
   const orderTotal = Math.max(0, cartTotal - discountAmount - giftCardDeduction - pointsDeduction + shippingCost)
 
   const handleApplyPromo = async () => {
@@ -621,7 +621,11 @@ export default function CheckoutContent() {
                         {t.checkout.homeDelivery}
                       </span>
                       <span className="text-xs text-gray-500 mt-1">
-                        {delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(liveDeliveryRates.home ?? delivery.cost)}
+                        {liveDeliveryRates.home !== null ? (
+                          liveDeliveryRates.home === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.home)
+                        ) : (
+                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
+                        )}
                       </span>
                     </button>
                     <button
@@ -635,7 +639,11 @@ export default function CheckoutContent() {
                         {t.checkout.stopDesk}
                       </span>
                       <span className="text-xs text-gray-500 mt-1">
-                        {delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(liveDeliveryRates.desk)}
+                        {liveDeliveryRates.desk !== null ? (
+                          liveDeliveryRates.desk === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.desk)
+                        ) : (
+                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
+                        )}
                       </span>
                     </button>
                   </div>
@@ -648,7 +656,7 @@ export default function CheckoutContent() {
                   <div className="text-sm">
                     <span className="font-semibold text-indigo-800">{t.checkout.estimatedDelivery} </span>
                     <span className="text-indigo-700">{delivery.days}</span>
-                    {delivery.isFree ? (
+                    {shippingCost === 0 ? (
                       <span className="ml-2 text-green-600 font-bold">— {t.cart.freeShipping}!</span>
                     ) : deliveryFetching ? (
                       <span className="ml-2 text-gray-400">…</span>
@@ -889,8 +897,8 @@ export default function CheckoutContent() {
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>{t.cart.shipping}</span>
-                <span className={delivery.isFree ? 'text-green-600 font-bold' : ''}>
-                  {delivery.isFree ? t.cart.freeShipping : form.wilaya ? (deliveryFetching ? '…' : formatPrice(shippingCost)) : '—'}
+                <span className={form.wilaya && shippingCost === 0 ? 'text-green-600 font-bold' : ''}>
+                  {!form.wilaya ? '—' : deliveryFetching ? '…' : (shippingCost === 0 ? t.cart.freeShipping : formatPrice(shippingCost))}
                 </span>
               </div>
               {!form.wilaya && (
