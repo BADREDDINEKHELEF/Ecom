@@ -166,6 +166,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     return {
       ...item,
       productPrice: product.price,
+      vendorId: product.vendorId,
       subtotal,
     }
   })
@@ -206,7 +207,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   }
 
   // BUGFIX (C-01): Compute shipping server-side to prevent client-side manipulation.
-  const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, input.items, input.isStopDesk)
+  const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, validatedItems, input.isStopDesk)
 
   const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
   const subtotalAfterDiscounts = computedSubtotal + shippingCost - discountAmount - pointsDeduction
