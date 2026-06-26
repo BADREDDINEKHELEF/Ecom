@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, Upload, ImagePlus, Tag, FileText, ChevronDown, Sparkles } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, Upload, ImagePlus, Tag, FileText, ChevronDown, Sparkles, Megaphone, Copy } from 'lucide-react'
 import CsvImportModal from '@/components/seller/CsvImportModal'
 import ImageUploader from '@/components/seller/ImageUploader'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
@@ -46,6 +46,148 @@ export default function SellerProductsPage() {
   const [formError, setFormError] = useState('')
   const [variants, setVariants] = useState<ProductVariant[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  // AI Description & SEO state
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiResult, setAiResult] = useState<{ fr: string; ar: string; en: string } | null>(null)
+  const [aiActiveTab, setAiActiveTab] = useState<'fr' | 'ar' | 'en'>('fr')
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [seoLoading, setSeoLoading] = useState(false)
+
+  // AI Translation & Marketing Copy state
+  const [translatingField, setTranslatingField] = useState<{ field: 'name' | 'description', lang: string } | null>(null)
+  const [showMarketingModal, setShowMarketingModal] = useState(false)
+  const [marketingProduct, setMarketingProduct] = useState<Product | null>(null)
+  const [marketingLoading, setMarketingLoading] = useState(false)
+  const [marketingResult, setMarketingResult] = useState<{
+    sms: { fr: string; ar: string; en: string }
+    instagram: { fr: string; ar: string; en: string }
+  } | null>(null)
+  const [marketingActiveTab, setMarketingActiveTab] = useState<'fr' | 'ar' | 'en'>('fr')
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  const handleTranslateField = async (field: 'name' | 'description', targetLang: 'fr' | 'ar' | 'en') => {
+    const textToTranslate = field === 'name' ? form.name : form.description
+    if (!textToTranslate.trim()) return
+    
+    setTranslatingField({ field, lang: targetLang })
+    try {
+      const res = await fetch('/api/seller/ai/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToTranslate, targetLang }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error || 'Failed to translate')
+      }
+      const data = await res.json()
+      setForm((prev) => ({ ...prev, [field]: data.translation }))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la traduction.')
+    } finally {
+      setTranslatingField(null)
+    }
+  }
+
+  const handleGenerateMarketingCopy = async (p: Product) => {
+    setMarketingProduct(p)
+    setShowMarketingModal(true)
+    setMarketingLoading(true)
+    setMarketingResult(null)
+    try {
+      const res = await fetch('/api/seller/ai/marketing-copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: p.name,
+          category: p.category || p.nicheId || 'Produit',
+          description: p.description,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error || 'Failed to generate marketing copy')
+      }
+      const data = await res.json()
+      setMarketingResult(data)
+      setMarketingActiveTab('fr')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération.')
+      setShowMarketingModal(false)
+    } finally {
+      setMarketingLoading(false)
+    }
+  }
+
+  const handleCopyText = (text: string, fieldId: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedField(fieldId)
+    setTimeout(() => setCopiedField(null), 2050)
+  }
+
+  const handleGenerateDescription = async () => {
+    if (!aiPrompt.trim()) return
+    setAiLoading(true)
+    try {
+      const res = await fetch('/api/seller/ai/generate-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name || 'Produit',
+          category: form.category || form.nicheId,
+          nicheId: form.nicheId,
+          features: aiPrompt,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error || 'Failed to generate description')
+      }
+      const data = await res.json()
+      setAiResult(data)
+      setAiActiveTab('fr')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleGenerateSEO = async () => {
+    if (!form.name) {
+      alert('Veuillez d\'abord saisir un nom pour le produit.')
+      return
+    }
+    setSeoLoading(true)
+    try {
+      const res = await fetch('/api/seller/ai/generate-seo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          category: form.category || form.nicheId,
+          description: form.description,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error || 'Failed to generate SEO metadata')
+      }
+      const data = await res.json()
+      setForm((prev) => ({
+        ...prev,
+        metaTitle: data.metaTitle.slice(0, 120),
+        metaDescription: data.metaDescription.slice(0, 200),
+        tags: Array.isArray(data.tags) ? data.tags.join(', ') : prev.tags,
+      }))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération SEO.')
+    } finally {
+      setSeoLoading(false)
+    }
+  }
 
   const COLOR_HEX: Record<string, string> = {
     Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
@@ -267,14 +409,59 @@ export default function SellerProductsPage() {
 
                 {/* Title — underline style, big and clear */}
                 <div>
-                  <input
-                    required
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Nom du produit…"
-                    className="w-full border-0 border-b-2 border-gray-100 focus:border-emerald-400 px-0 py-2 text-xl font-bold text-gray-900 placeholder:text-gray-300 focus:outline-none bg-transparent transition-colors"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      required
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="Nom du produit…"
+                      className="w-full border-0 border-b-2 border-gray-100 focus:border-emerald-400 px-0 py-2 text-xl font-bold text-gray-900 placeholder:text-gray-300 focus:outline-none bg-transparent transition-colors"
+                    />
+                    {form.name && (
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          disabled={translatingField !== null}
+                          onClick={() => handleTranslateField('name', 'ar')}
+                          title="Traduire en Arabe"
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
+                        >
+                          {translatingField?.field === 'name' && translatingField?.lang === 'ar' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            '🇩🇿 AR'
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={translatingField !== null}
+                          onClick={() => handleTranslateField('name', 'fr')}
+                          title="Traduire en Français"
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
+                        >
+                          {translatingField?.field === 'name' && translatingField?.lang === 'fr' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            '🇫🇷 FR'
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={translatingField !== null}
+                          onClick={() => handleTranslateField('name', 'en')}
+                          title="Traduire en Anglais"
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
+                        >
+                          {translatingField?.field === 'name' && translatingField?.lang === 'en' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            '🇬🇧 EN'
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Price / Compare / Stock in one row */}
@@ -333,15 +520,70 @@ export default function SellerProductsPage() {
 
               {/* ── Section 3: Description ── */}
               <div className="px-6 py-5">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-3.5 h-3.5 text-purple-600" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-3.5 h-3.5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm leading-tight">
+                        Description <span className="font-normal text-gray-400">(optionnel)</span>
+                      </p>
+                      <p className="text-xs text-gray-400">Astuce : utilisez une ligne par caractéristique</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm leading-tight">
-                      Description <span className="font-normal text-gray-400">(optionnel)</span>
-                    </p>
-                    <p className="text-xs text-gray-400">Astuce : utilisez une ligne par caractéristique</p>
+                  <div className="flex items-center gap-2">
+                    {form.description && (
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          disabled={translatingField !== null}
+                          onClick={() => handleTranslateField('description', 'ar')}
+                          title="Traduire en Arabe"
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
+                        >
+                          {translatingField?.field === 'description' && translatingField?.lang === 'ar' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            '🇩🇿 AR'
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={translatingField !== null}
+                          onClick={() => handleTranslateField('description', 'fr')}
+                          title="Traduire en Français"
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
+                        >
+                          {translatingField?.field === 'description' && translatingField?.lang === 'fr' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            '🇫🇷 FR'
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={translatingField !== null}
+                          onClick={() => handleTranslateField('description', 'en')}
+                          title="Traduire en Anglais"
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
+                        >
+                          {translatingField?.field === 'description' && translatingField?.lang === 'en' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            '🇬🇧 EN'
+                          )}
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowAiModal(true)}
+                      className="flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100 transition-colors"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      Générer avec l&apos;IA
+                    </button>
                   </div>
                 </div>
                 <textarea
@@ -449,6 +691,22 @@ export default function SellerProductsPage() {
                     )}
 
                     {/* SEO */}
+                    <div className="flex items-center justify-between mb-3 border-t border-gray-100 pt-4">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Optimisation SEO</p>
+                      <button
+                        type="button"
+                        disabled={seoLoading}
+                        onClick={handleGenerateSEO}
+                        className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 transition-colors disabled:opacity-50"
+                      >
+                        {seoLoading ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3 h-3" />
+                        )}
+                        Optimiser avec l&apos;IA
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Titre SEO</label>
@@ -537,6 +795,9 @@ export default function SellerProductsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => handleGenerateMarketingCopy(p)} className="p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Kit Marketing IA">
+                        <Megaphone className="w-4 h-4" />
+                      </button>
                       <button onClick={() => openEdit(p)} className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -588,6 +849,9 @@ export default function SellerProductsPage() {
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex gap-2">
+                            <button onClick={() => handleGenerateMarketingCopy(p)} className="text-gray-400 hover:text-amber-500 transition-colors p-1" title="Kit Marketing IA">
+                              <Megaphone className="w-4 h-4" />
+                            </button>
                             <button onClick={() => openEdit(p)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1">
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -607,6 +871,210 @@ export default function SellerProductsPage() {
 
         {showImport && (
           <CsvImportModal onClose={() => setShowImport(false)} onImported={load} />
+        )}
+
+        {showAiModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
+                  <h3 className="font-black text-gray-900">Générer la description avec l&apos;IA</h3>
+                </div>
+                <button type="button" onClick={() => { setShowAiModal(false); setAiResult(null); setAiPrompt(''); }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                {!aiResult ? (
+                  <div className="space-y-4">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Décrivez votre produit en quelques mots (en français ou arabe/darija) :
+                    </label>
+                    <textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      rows={4}
+                      placeholder="ex: Robe kabyle moderne avec broderie fine bleu et blanc, tissu en lin léger, confortable..."
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500"
+                    />
+                    <button
+                      type="button"
+                      disabled={aiLoading || !aiPrompt.trim()}
+                      onClick={handleGenerateDescription}
+                      className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-purple-100"
+                    >
+                      {aiLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Génération en cours...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          Générer la description
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Tabs header */}
+                    <div className="flex border-b border-gray-100">
+                      {(['fr', 'ar', 'en'] as const).map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => setAiActiveTab(lang)}
+                          className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition-colors ${
+                            aiActiveTab === lang
+                              ? 'border-purple-600 text-purple-600'
+                              : 'border-transparent text-gray-400 hover:text-gray-600'
+                          }`}
+                        >
+                          {lang === 'fr' ? 'Français' : lang === 'ar' ? 'العربية' : 'English'}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {/* Tab content editor */}
+                    <div>
+                      <textarea
+                        value={aiResult[aiActiveTab]}
+                        onChange={(e) => setAiResult({ ...aiResult, [aiActiveTab]: e.target.value })}
+                        rows={6}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setAiResult(null)}
+                        className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50 text-gray-600"
+                      >
+                        Réécrire / Retour
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, description: aiResult[aiActiveTab] });
+                          setShowAiModal(false);
+                          setAiResult(null);
+                          setAiPrompt('');
+                        }}
+                        className="flex-grow py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md shadow-purple-100"
+                      >
+                        Insérer cette version
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showMarketingModal && marketingProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-amber-500 animate-pulse" />
+                  <h3 className="font-black text-gray-900">Kit Marketing IA : {marketingProduct.name}</h3>
+                </div>
+                <button type="button" onClick={() => { setShowMarketingModal(false); setMarketingResult(null); setMarketingProduct(null); }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+                {marketingLoading ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
+                    <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                    <p className="font-semibold text-sm">Génération du kit marketing en cours...</p>
+                  </div>
+                ) : marketingResult ? (
+                  <div className="space-y-4">
+                    {/* Language Tabs */}
+                    <div className="flex border-b border-gray-100">
+                      {(['fr', 'ar', 'en'] as const).map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => setMarketingActiveTab(lang)}
+                          className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition-colors ${
+                            marketingActiveTab === lang
+                              ? 'border-amber-500 text-amber-500'
+                              : 'border-transparent text-gray-400 hover:text-gray-600'
+                          }`}
+                        >
+                          {lang === 'fr' ? 'Français' : lang === 'ar' ? 'العربية' : 'English'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* SMS/WhatsApp Section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest font-mono">Message SMS / WhatsApp</label>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(marketingResult.sms[marketingActiveTab], 'sms')}
+                          className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded"
+                        >
+                          {copiedField === 'sms' ? (
+                            <>
+                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> Copié !
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" /> Copier
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <textarea
+                        readOnly
+                        value={marketingResult.sms[marketingActiveTab]}
+                        rows={3}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    {/* Instagram/Facebook Section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest font-mono">Publication Réseaux Sociaux</label>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(marketingResult.instagram[marketingActiveTab], 'insta')}
+                          className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded"
+                        >
+                          {copiedField === 'insta' ? (
+                            <>
+                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> Copié !
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" /> Copier
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <textarea
+                        readOnly
+                        value={marketingResult.instagram[marketingActiveTab]}
+                        rows={7}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

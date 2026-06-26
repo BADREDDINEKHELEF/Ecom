@@ -52,6 +52,9 @@ export async function middleware(req: NextRequest) {
   if (!isPublicAdminPath) {
     const adminToken = req.cookies.get(getAdminCookieName())?.value
     if (!adminToken || !(await verifyAdminJwt(adminToken))) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
       const loginUrl = new URL('/admin/login', req.url)
       const next = pathname.startsWith('/') && !pathname.startsWith('//') ? pathname : '/admin/login'
       loginUrl.searchParams.set('next', next)

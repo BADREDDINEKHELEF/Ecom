@@ -69,6 +69,7 @@ export interface CreateOrderInput {
   nis?:               string | null
   rc?:                string | null
   isStopDesk?:        boolean
+  deliveryType?:      'home' | 'office' | 'stop_desk'
   email?:             string | null
   items: {
     productId:     string
@@ -281,7 +282,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       nif:             input.nif ?? null,
       nis:             input.nis ?? null,
       rc:              input.rc ?? null,
-      is_stopdesk:     input.isStopDesk ?? false,
+      is_stopdesk:     input.isStopDesk ?? (input.deliveryType === 'stop_desk'),
+      delivery_type:   input.deliveryType ?? 'home',
       email:           input.email ?? null,
     })
     .select('id')
@@ -468,7 +470,7 @@ export async function getVendorOrders(
     .from('order_items')
     .select(
       'id,order_id,product_id,product_name,product_image,product_price,quantity,subtotal,' +
-      'orders(id,full_name,phone,wilaya,city,status,total,payment_method,created_at)'
+      'orders(id,full_name,phone,wilaya,city,address,delivery_type,is_stopdesk,status,total,payment_method,created_at)'
     )
     .eq('vendor_id', vendorId)
     .order('created_at', { ascending: false })

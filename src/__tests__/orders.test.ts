@@ -182,3 +182,23 @@ describe('Shipping cost resolution', () => {
   })
 })
 
+describe('Shipping cost resolution with deliveryType', () => {
+  const rates = { homeDelivery: 500, deskDelivery: 300 }
+
+  it('resolves homeDelivery for "home" type', () => {
+    const isStopDesk = false // derived from "home"
+    expect(mockResolveShippingCost(isStopDesk, rates, 450)).toBe(500)
+  })
+
+  it('resolves homeDelivery for "office" type', () => {
+    const isStopDesk = false // derived from "office"
+    expect(mockResolveShippingCost(isStopDesk, rates, 450)).toBe(500)
+  })
+
+  it('resolves deskDelivery for "stop_desk" type', () => {
+    const isStopDesk = true // derived from "stop_desk"
+    expect(mockResolveShippingCost(isStopDesk, rates, 450)).toBe(300)
+  })
+})
+
+

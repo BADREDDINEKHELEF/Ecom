@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Cairo } from 'next/font/google'
 import './globals.css'
 import Footer from '@/components/layout/Footer'
+import Header from '@/components/layout/Header'
 import CartSidebar from '@/components/shop/CartSidebar'
 import Toaster from '@/components/ui/Toast'
 import RTLWrapper from '@/components/layout/RTLWrapper'
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <RTLWrapper>
           <CartSidebar />
           <Toaster />
+          <HideOnStore><Header /></HideOnStore>
           <main className="pb-16 md:pb-0">{children}</main>
           <ScrollToTop />
           <HideOnStore><Footer /></HideOnStore>

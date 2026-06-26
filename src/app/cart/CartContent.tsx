@@ -5,13 +5,7 @@ import Link from 'next/link'
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Truck } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT } from '@/lib/store/langStore'
-import { formatPrice } from '@/lib/utils'
-
-const COLOR_HEX: Record<string, string> = {
-  Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
-  Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
-  Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
-}
+import { formatPrice, COLOR_HEX } from '@/lib/utils'
 
 function colorImage(product: { images: string[]; imageColors?: string[]; colorVariants?: { name: string; images: string[] }[] }, color: string | undefined): string {
   if (!color) return product.images[0]

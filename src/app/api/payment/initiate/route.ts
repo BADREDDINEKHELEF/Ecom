@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { satimRegisterOrder, satimConfigured } from '@/lib/payment/satim'
 import { baridimobInitiatePayment, baridimobConfigured } from '@/lib/payment/baridimob'
@@ -24,7 +24,7 @@ const InitiateSchema = z.object({
   email:            z.string().email().max(320).optional().nullable(),
   wilaya:           z.string().min(1).max(100),
   city:             z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
-  address:          z.string().min(5).max(500),
+  address:          z.string().min(2).max(500),
   promoCodeId:      z.string().uuid().optional().nullable(),
   discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
   giftCardCode:     z.string().max(100).optional().nullable(),
@@ -37,6 +37,7 @@ const InitiateSchema = z.object({
   rc:               z.string().max(50).optional().nullable(),
   gaClientId:       z.string().max(100).optional().nullable(),
   isStopDesk:       z.boolean().optional().default(false),
+  deliveryType:     z.enum(['home', 'office', 'stop_desk']).optional().default('home'),
   items:            z.array(OrderItemSchema).min(1).max(50),
   selectedColor:    z.string().max(100).nullable().optional(),
 })
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
     nis,
     rc,
     isStopDesk,
+    deliveryType,
     ...rest
   } = parsed.data
   const phone = normalizePhone(rest.phone)
@@ -103,7 +105,8 @@ export async function POST(req: NextRequest) {
       nif: nif ?? null,
       nis: nis ?? null,
       rc: rc ?? null,
-      isStopDesk: isStopDesk ?? false,
+      isStopDesk: isStopDesk ?? (deliveryType === 'stop_desk'),
+      deliveryType: deliveryType ?? 'home',
       email:    buyerEmail,
       status: 'pending_payment',
     })

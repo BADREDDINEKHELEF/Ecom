@@ -35,7 +35,9 @@ const CreateOrderSchema = z.object({
   email:         z.string().email().max(320).optional().nullable(),
   wilaya:        z.string().min(1).max(100),
   city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
-  address:       z.string().min(5).max(500),
+  address:       z.string().min(2).max(500),
+  isStopDesk:    z.boolean().optional().default(false),
+  deliveryType:  z.enum(['home', 'office', 'stop_desk']).optional().default('home'),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
   // shippingCost is intentionally removed to prevent client-side manipulation (C-01)
   promoCodeId:      z.string().uuid().optional().nullable(),
@@ -49,7 +51,6 @@ const CreateOrderSchema = z.object({
   nis:              z.string().max(50).optional().nullable(),
   rc:               z.string().max(50).optional().nullable(),
   gaClientId:       z.string().max(100).optional().nullable(),
-  isStopDesk:       z.boolean().optional().default(false),
   items:            z.array(OrderItemSchema).min(1).max(50),
 })
 
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
     rc,
     gaClientId,
     isStopDesk,
+    deliveryType,
     ...rest
   } = parsed.data
   const input = {
@@ -104,7 +106,8 @@ export async function POST(req: NextRequest) {
     nis: nis ?? null,
     rc: rc ?? null,
     pointsRedeemed,
-    isStopDesk: isStopDesk ?? false,
+    isStopDesk: isStopDesk ?? (deliveryType === 'stop_desk'),
+    deliveryType: deliveryType ?? 'home',
   }
   const buyerEmail = rawEmail ?? null
 

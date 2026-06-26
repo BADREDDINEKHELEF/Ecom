@@ -10,7 +10,7 @@ import PhoneInput from '@/components/checkout/PhoneInput'
 import B2BInvoiceFields, { type B2BFields } from '@/components/checkout/B2BInvoiceFields'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, COLOR_HEX } from '@/lib/utils'
 import { getDeliveryInfo, ALL_WILAYAS } from '@/lib/data/wilayas'
 import { getCommunesForWilaya } from '@/lib/data/communes'
 import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
@@ -110,7 +110,8 @@ export default function CheckoutContent() {
   const [usePoints, setUsePoints] = useState(false)
 
   const [liveDeliveryRates, setLiveDeliveryRates] = useState<{ home: number | null; desk: number | null }>({ home: null, desk: null })
-  const [isStopDesk, setIsStopDesk] = useState(false)
+  const [deliveryType, setDeliveryType] = useState<'home' | 'office' | 'stop_desk'>('home')
+  const isStopDesk = deliveryType === 'stop_desk'
   const [deliveryFetching, setDeliveryFetching] = useState(false)
   const [isLiveRates, setIsLiveRates] = useState(false)
 
@@ -129,7 +130,7 @@ export default function CheckoutContent() {
   useEffect(() => {
     if (!form.wilaya) {
       setLiveDeliveryRates({ home: null, desk: null })
-      setIsStopDesk(false)
+      setDeliveryType('home')
       setIsLiveRates(false)
       return
     }
@@ -147,16 +148,16 @@ export default function CheckoutContent() {
           })
           setIsLiveRates(data.live === true)
           if (typeof data.deskDelivery !== 'number') {
-            setIsStopDesk(false)
+            setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
           }
         } else {
           setLiveDeliveryRates({ home: null, desk: null })
-          setIsStopDesk(false)
+          setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
           setIsLiveRates(false)
         }
       } catch {
         setLiveDeliveryRates({ home: null, desk: null })
-        setIsStopDesk(false)
+        setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
         setIsLiveRates(false)
       } finally {
         setDeliveryFetching(false)
@@ -332,6 +333,7 @@ export default function CheckoutContent() {
       rc:             b2b.isB2B ? b2b.rc  || null : null,
       gaClientId:     gaClientId ?? null,
       isStopDesk,
+      deliveryType,
       items: items.map(({ product, quantity, selectedColor }) => ({
         productId:     product.id,
         productName:   product.name,
@@ -492,8 +494,20 @@ export default function CheckoutContent() {
         <div className="bg-gray-50 rounded-2xl p-5 text-left mb-8 space-y-2 text-sm text-gray-700">
           <p><span className="font-semibold">{t.checkout.fullName}:</span> {form.fullName}</p>
           <p><span className="font-semibold">{t.checkout.phone}:</span> {form.phone}</p>
-          <p><span className="font-semibold">{t.checkout.address}:</span> {form.address}, {form.city === '__autre__' ? customCommune : form.city}, {form.wilaya}{isStopDesk ? ` (${t.checkout.stopDesk})` : ''}</p>
-          <p><span className="font-semibold">{t.checkout.deliveryMethod}:</span> {isStopDesk ? t.checkout.stopDesk : t.checkout.homeDelivery}</p>
+          <p><span className="font-semibold">{t.checkout.address}:</span> {form.address}, {form.city === '__autre__' ? customCommune : form.city}, {form.wilaya}{
+            deliveryType === 'office' 
+              ? ` (${t.checkout.officeDelivery})` 
+              : isStopDesk 
+                ? ` (${t.checkout.stopDesk})` 
+                : ''
+          }</p>
+          <p><span className="font-semibold">{t.checkout.deliveryMethod}:</span> {
+            deliveryType === 'office' 
+              ? t.checkout.officeDelivery 
+              : isStopDesk 
+                ? t.checkout.stopDesk 
+                : t.checkout.homeDelivery
+          }</p>
           <p><span className="font-semibold">{t.checkout.payment}:</span> {
             payment === 'cash' ? t.checkout.cash :
             payment === 'edahabia' ? t.checkout.edahabia :
@@ -626,7 +640,7 @@ export default function CheckoutContent() {
                   />
                 )}
               </div>
-              {form.wilaya && liveDeliveryRates.desk !== null && (
+              {form.wilaya && (
                 <div className="sm:col-span-2 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="block text-sm font-semibold text-gray-700">{t.checkout.deliveryMethod}</label>
@@ -639,15 +653,15 @@ export default function CheckoutContent() {
                       {isLiveRates ? t.checkout.liveRates : t.checkout.staticRates}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid grid-cols-1 ${liveDeliveryRates.desk !== null ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
                     <button
                       type="button"
-                      onClick={() => setIsStopDesk(false)}
+                      onClick={() => setDeliveryType('home')}
                       className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
-                        !isStopDesk ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                        deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                     >
-                      <span className={`text-sm font-bold ${!isStopDesk ? 'text-indigo-700' : 'text-gray-900'}`}>
+                      <span className={`text-sm font-bold ${deliveryType === 'home' ? 'text-indigo-700' : 'text-gray-900'}`}>
                         {t.checkout.homeDelivery}
                       </span>
                       <span className="text-xs text-gray-500 mt-1">
@@ -660,23 +674,50 @@ export default function CheckoutContent() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsStopDesk(true)}
+                      onClick={() => setDeliveryType('office')}
                       className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
-                        isStopDesk ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                        deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                     >
-                      <span className={`text-sm font-bold ${isStopDesk ? 'text-indigo-700' : 'text-gray-900'}`}>
-                        {t.checkout.stopDesk}
+                      <span className={`text-sm font-bold ${deliveryType === 'office' ? 'text-indigo-700' : 'text-gray-900'}`}>
+                        {t.checkout.officeDelivery}
                       </span>
                       <span className="text-xs text-gray-500 mt-1">
-                        {liveDeliveryRates.desk !== null ? (
-                          liveDeliveryRates.desk === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.desk)
+                        {liveDeliveryRates.home !== null ? (
+                          liveDeliveryRates.home === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.home)
                         ) : (
                           delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
                         )}
                       </span>
                     </button>
+                    {liveDeliveryRates.desk !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryType('stop_desk')}
+                        className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
+                          deliveryType === 'stop_desk' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <span className={`text-sm font-bold ${deliveryType === 'stop_desk' ? 'text-indigo-700' : 'text-gray-900'}`}>
+                          {t.checkout.stopDesk}
+                        </span>
+                        <span className="text-xs text-gray-500 mt-1">
+                          {liveDeliveryRates.desk !== null ? (
+                            liveDeliveryRates.desk === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.desk)
+                          ) : (
+                            delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
+                          )}
+                        </span>
+                      </button>
+                    )}
                   </div>
+                </div>
+              )}
+
+              {isStopDesk && (
+                <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-amber-800">{t.checkout.stopDeskInfo}</p>
                 </div>
               )}
 
@@ -697,12 +738,28 @@ export default function CheckoutContent() {
                 </div>
               )}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.address}</label>
-                <input required type="text" value={form.address} onChange={(e) => f('address', e.target.value)}
-                  placeholder="123 Rue Didouche Mourad"
-                  autoComplete="street-address"
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  {t.checkout.address}
+                  {deliveryType === 'office' && <span className="text-gray-400 font-normal text-xs ml-2">({t.checkout.officeDelivery})</span>}
+                  {isStopDesk && <span className="text-gray-400 font-normal text-xs ml-2">({t.checkout.addressStopDesk})</span>}
+                </label>
+                <input type="text" value={form.address} onChange={(e) => f('address', e.target.value)}
+                  placeholder={
+                    isStopDesk 
+                      ? t.checkout.addressStopDeskPlaceholder 
+                      : deliveryType === 'office' 
+                        ? t.checkout.addressOfficePlaceholder 
+                        : t.checkout.addressHomePlaceholder
+                  }
+                  autoComplete={isStopDesk ? 'off' : 'street-address'}
                   inputMode="text"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
+                {isStopDesk && (
+                  <p className="text-xs text-indigo-500 mt-1.5 flex items-center gap-1">
+                    <Truck className="w-3 h-3" />
+                    {t.checkout.stopDeskInfo}
+                  </p>
+                )}
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -889,11 +946,6 @@ export default function CheckoutContent() {
 
             <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
               {items.map(({ product, quantity, selectedColor }) => {
-                const COLOR_HEX: Record<string, string> = {
-                  Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
-                  Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
-                  Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
-                }
                 const variant = selectedColor ? (product.colorVariants ?? []).find(v => v.name === selectedColor) : null
                 const colorIdx = !variant && selectedColor ? (product.imageColors ?? []).indexOf(selectedColor) : -1
                 const displayImg = variant?.images?.[0] ?? (colorIdx !== -1 ? product.images[colorIdx] : product.images?.[0])

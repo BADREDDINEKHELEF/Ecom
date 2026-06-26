@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { X, Minus, Plus, ShoppingBag, Trash2, Shield, Tag, AlertTriangle } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useRTL } from '@/lib/store/langStore'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, COLOR_HEX } from '@/lib/utils'
 
 export default function CartSidebar() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, total, savings, itemCount, cartStoreSlug, storeConflict, confirmStoreSwitch, cancelStoreSwitch } = useCartStore()
@@ -110,11 +110,6 @@ export default function CartSidebar() {
           <>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {items.map(({ product, quantity, selectedColor, storeSlug }) => {
-                const COLOR_HEX: Record<string, string> = {
-                  Blanc: '#F9FAFB', Noir: '#111827', Gris: '#9CA3AF', Beige: '#D4B896',
-                  Marron: '#92400E', Rouge: '#EF4444', Rose: '#EC4899', Orange: '#F97316',
-                  Jaune: '#EAB308', Vert: '#22C55E', Bleu: '#3B82F6', Violet: '#8B5CF6',
-                }
                 const variant = selectedColor ? (product.colorVariants ?? []).find(v => v.name === selectedColor) : null
                 const colorIdx = !variant && selectedColor ? (product.imageColors ?? []).indexOf(selectedColor) : -1
                 const displayImg = variant?.images?.[0] ?? (colorIdx !== -1 ? product.images[colorIdx] : product.images?.[0])

@@ -15,7 +15,7 @@ export default function PriceRangeSlider({ min, max, value, onChange, step = 500
 
   const pct = (v: number) => ((v - min) / (max - min)) * 100
 
-  const clamp = (v: number) => Math.max(min, Math.min(max, Math.round(v / step) * step))
+  const clamp = useCallback((v: number) => Math.max(min, Math.min(max, Math.round(v / step) * step)), [min, max, step])
 
   const handleMin = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const next = clamp(Number(e.target.value))

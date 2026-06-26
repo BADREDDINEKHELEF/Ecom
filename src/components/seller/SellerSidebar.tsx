@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store,
   ExternalLink, Truck, BarChart2, MessageSquare, CreditCard,
-  Tag, BookOpen, ChevronDown, Zap, Crown, Layers, X,
+  Tag, BookOpen, ChevronDown, Zap, Crown, Layers, X, RotateCcw,
 } from 'lucide-react'
 import { useT, useRTL, useLangStore } from '@/lib/store/langStore'
 import { useState } from 'react'
@@ -141,6 +141,7 @@ export default function SellerSidebar({
             </div>
             <LinkItem href="/seller/orders"     label={sd.myOrders}    icon={ShoppingBag} badge={pendingOrders} />
             <LinkItem href="/seller/deliveries" label={sd.deliveries}  icon={Truck} />
+            <LinkItem href="/seller/returns"    label={sd.myReturns}   icon={RotateCcw} />
             <LinkItem href="/seller/messages"   label={sd.messages}    icon={MessageSquare} badge={unreadMessages} />
             <LinkItem href="/seller/payouts"    label={sd.payouts}     icon={CreditCard} />
 

@@ -34,7 +34,7 @@ export async function yassirCreateShipmentWithKey(
       value:       input.total,
       weight:      1,
     },
-    notes: '',
+    notes: input.isStopDesk ? 'Livraison en agence (stop desk) — prévenir le destinataire' : '',
   }
 
   const res = await fetch(`${BASE_URL}/deliveries`, {

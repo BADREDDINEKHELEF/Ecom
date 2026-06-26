@@ -59,12 +59,4 @@ export interface Address {
   wilaya: string
 }
 
-export interface Order {
-  id: string
-  items: CartItem[]
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
-  total: number
-  shippingAddress: Address
-  paymentMethod: 'cash' | 'card'
-  createdAt: string
-}
+

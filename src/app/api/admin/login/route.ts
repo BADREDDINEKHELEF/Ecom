@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   // Layer 1 — Rate limiting (5 attempts / 15 min / IP)
   const rateCheck = await checkRateLimit(ip)
   if (!rateCheck.allowed) {
-    await writeAuditLog({
+    void writeAuditLog({
       action: 'admin_login_failure', ip, userAgent: ua,
       result: 'failure', meta: { reason: 'rate_limited' },
     })
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     passwordMatch = false
   }
   if (!password || !passwordMatch) {
-    await writeAuditLog({
+    void writeAuditLog({
       action: 'admin_login_failure', ip, userAgent: ua,
       result: 'failure', meta: { reason: 'wrong_password' },
     })
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     // Validate the TOTP code and get the matching counter value
     const matchedCounter = verifyTotpGetCounter(totpCode, totpSecret)
     if (matchedCounter === null) {
-      await writeAuditLog({
+      void writeAuditLog({
         action: 'admin_login_failure', ip, userAgent: ua,
         result: 'failure', meta: { reason: 'wrong_totp' },
       })
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     // same window (up to 90 seconds with window=1).
     const alreadyUsed = await isTotpCounterUsed(matchedCounter)
     if (alreadyUsed) {
-      await writeAuditLog({
+      void writeAuditLog({
         action: 'admin_login_failure', ip, userAgent: ua,
         result: 'failure', meta: { reason: 'totp_replay' },
       })
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
   const expiresAt = new Date(Date.now() + ADMIN_TOKEN_MAX_AGE_SECONDS * 1000)
 
   await createSession({ jti, userAgent: ua, ip, expiresAt })
-  await writeAuditLog({ action: 'admin_login_success', ip, userAgent: ua, result: 'success' })
+  void writeAuditLog({ action: 'admin_login_success', ip, userAgent: ua, result: 'success' })
 
   const res = NextResponse.json({ ok: true })
   const cookieName = getAdminCookieName()
