@@ -26,6 +26,7 @@ export async function upsertProduct(
     tags:          product.tags,
     is_new:        product.isNew ?? false,
     is_featured:   product.isFeatured ?? false,
+    vendor_id:     product.vendorId ?? null,
     updated_at:    new Date().toISOString(),
   }).select().single() // Chain .select() to return the upserted row
   if (error) throw error

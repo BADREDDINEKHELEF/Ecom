@@ -30,6 +30,7 @@ export function dbToProduct(row: Record<string, unknown>): Product {
     isBundle:          Boolean(row.is_bundle),
     colorVariants:     Array.isArray(row.color_variants) ? (row.color_variants as ColorVariant[]) : [],
     totalOrders:       row.total_orders != null ? Number(row.total_orders) : undefined,
+    vendorId:          row.vendor_id != null ? String(row.vendor_id) : undefined,
   }
 }
 

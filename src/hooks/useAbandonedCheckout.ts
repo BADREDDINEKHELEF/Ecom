@@ -14,6 +14,7 @@ function getSessionId(): string {
 
 interface AbandonedPayload {
   name?: string
+  email?: string
   phone?: string
   wilaya?: string
   address?: string

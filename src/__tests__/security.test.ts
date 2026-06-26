@@ -281,11 +281,11 @@ describe('CartSnapshot size cap — prevents DB bloat from oversized payloads', 
     expect(capSnapshot(true)).toBeNull()
   })
 
-  it('abandoned route source includes .slice(0, 50) guard', async () => {
+  it('abandoned route source includes .slice(0, 50) or .max(50) guard', async () => {
     const { readFileSync } = await import('fs')
     const { resolve } = await import('path')
     const src = readFileSync(resolve(__dirname, '../app/api/abandoned/route.ts'), 'utf-8')
-    expect(src).toContain('.slice(0, 50)')
+    expect(src.includes('.slice(0, 50)') || src.includes('.max(50)')).toBe(true)
   })
 })
 

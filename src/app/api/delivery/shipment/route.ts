@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const [orderRes, itemsRes] = await Promise.all([
       admin
         .from('orders')
-        .select('full_name, phone, wilaya, city, address, total, status')
+        .select('full_name, phone, wilaya, city, address, total, status, is_stopdesk')
         .eq('id', orderId)
         .single(),
       admin

@@ -564,13 +564,13 @@ export default function CheckoutContent() {
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">E-mail</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.email}</label>
                 <input
                   required
                   type="email"
                   value={form.email}
                   onChange={(e) => f('email', e.target.value)}
-                  placeholder="vous@exemple.com"
+                  placeholder="exemple@email.com"
                   autoComplete="email"
                   inputMode="email"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
@@ -585,15 +585,6 @@ export default function CheckoutContent() {
                   label={t.checkout.phone}
                   disabled={saving}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.email}</label>
-                <input type="email" value={form.email} onChange={(e) => f('email', e.target.value)}
-                  placeholder="exemple@email.com"
-                  autoComplete="email"
-                  inputMode="email"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.wilaya}</label>

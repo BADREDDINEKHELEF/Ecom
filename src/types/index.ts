@@ -41,6 +41,7 @@ export interface Product {
   isBundle?: boolean
   colorVariants?: ColorVariant[]
   totalOrders?: number
+  vendorId?: string
 }
 
 export interface CartItem {

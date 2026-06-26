@@ -144,8 +144,7 @@ export default function SellerProductsPage() {
         tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean),
         isNew: form.isNew,
         isFeatured: form.isFeatured,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(({ vendor_id: vendor.id } as any)),
+        vendorId: vendor.id,
       })
       await updateProductExtras(productId, {
         vendor_id:          vendor.id,

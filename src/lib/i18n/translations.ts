@@ -48,7 +48,7 @@ export const translations = {
     },
     checkout: {
       title: 'Checkout', shippingInfo: 'Delivery Information',
-      fullName: 'Full Name', phone: 'Phone Number', city: 'City',
+      fullName: 'Full Name', email: 'Email Address', phone: 'Phone Number', city: 'City',
       commune: 'Commune (Baladiya)', selectCommune: 'Select commune…',
       wilaya: 'Wilaya', address: 'Street Address', selectWilaya: 'Select wilaya…',
       payment: 'Payment Method',
@@ -681,7 +681,7 @@ export const translations = {
     },
     checkout: {
       title: 'Paiement', shippingInfo: 'Informations de livraison',
-      fullName: 'Nom complet', phone: 'Numéro de téléphone', city: 'Ville',
+      fullName: 'Nom complet', email: 'Adresse e-mail', phone: 'Numéro de téléphone', city: 'Ville',
       commune: 'Commune (Baladiya)', selectCommune: 'Choisir une commune…',
       wilaya: 'Wilaya', address: 'Adresse', selectWilaya: 'Choisir une wilaya…',
       payment: 'Mode de paiement',
@@ -1314,7 +1314,7 @@ export const translations = {
     },
     checkout: {
       title: 'إتمام الطلب', shippingInfo: 'معلومات التوصيل',
-      fullName: 'الاسم الكامل', phone: 'رقم الهاتف', city: 'المدينة',
+      fullName: 'الاسم الكامل', email: 'البريد الإلكتروني', phone: 'رقم الهاتف', city: 'المدينة',
       commune: 'البلدية', selectCommune: 'اختر البلدية...',
       wilaya: 'الولاية', address: 'العنوان التفصيلي', selectWilaya: 'اختر الولاية...',
       payment: 'طريقة الدفع',

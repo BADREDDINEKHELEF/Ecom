@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { hashOtp } from '@/lib/auth/otp'
 
 // Mock local dependencies of the API routes to prevent real SMTP or network calls
 vi.mock('@/lib/auth/rateLimit', () => ({
@@ -112,13 +113,13 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     expect(mockInsert.mock.calls[0][0]).toEqual({
       phone: 'user@example.com',
       email: 'user@example.com',
-      otp: expect.any(String),
+      otp_hash: expect.any(String),
       expires_at: expect.any(String),
     })
     // Second try fallback with phone only
     expect(mockInsert.mock.calls[1][0]).toEqual({
       phone: 'user@example.com',
-      otp: expect.any(String),
+      otp_hash: expect.any(String),
       expires_at: expect.any(String),
     })
   })
@@ -132,7 +133,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
       .mockResolvedValueOnce({ data: null, error: null })
       // Second call (fallback: querying phone column on password_reset_otps) -> valid record
       .mockResolvedValueOnce({
-        data: { id: 'otp-1', otp: '123456', expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
+        data: { id: 'otp-1', otp_hash: hashOtp('123456'), expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
         error: null,
       })
       // Third call (querying email on vendors) -> returns vendor
@@ -188,7 +189,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
       .mockResolvedValueOnce({ data: null, error: null })
       // Second call (fallback: querying phone column on password_reset_otps) -> valid record
       .mockResolvedValueOnce({
-        data: { id: 'otp-2', otp: '654321', expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
+        data: { id: 'otp-2', otp_hash: hashOtp('654321'), expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
         error: null,
       })
 
@@ -268,7 +269,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     const mockMaybeSingle = vi.fn()
       // First call (querying email column on password_reset_otps) -> valid record
       .mockResolvedValueOnce({
-        data: { id: 'otp-1', otp: '123456', expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
+        data: { id: 'otp-1', otp_hash: hashOtp('123456'), expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
         error: null,
       })
       // Second call (querying email on vendors) -> returns null
