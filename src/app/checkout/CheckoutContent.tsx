@@ -114,6 +114,7 @@ export default function CheckoutContent() {
   const isStopDesk = deliveryType === 'stop_desk'
   const [deliveryFetching, setDeliveryFetching] = useState(false)
   const [isLiveRates, setIsLiveRates] = useState(false)
+  const [rateError, setRateError] = useState('')
 
   useEffect(() => {
     fetch('/api/loyalty')
@@ -132,6 +133,7 @@ export default function CheckoutContent() {
       setLiveDeliveryRates({ home: null, desk: null })
       setDeliveryType('home')
       setIsLiveRates(false)
+      setRateError('')
       return
     }
     setDeliveryFetching(true)
@@ -151,18 +153,22 @@ export default function CheckoutContent() {
             desk: typeof data.deskDelivery === 'number' ? data.deskDelivery : null,
           })
           setIsLiveRates(data.live === true)
+          setRateError('')
           if (typeof data.deskDelivery !== 'number') {
             setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
           }
         } else {
+          const data = await res.json().catch(() => ({}))
           setLiveDeliveryRates({ home: null, desk: null })
           setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
           setIsLiveRates(false)
+          setRateError(data.error || 'Impossible de calculer les frais de livraison. Veuillez réessayer.')
         }
       } catch {
         setLiveDeliveryRates({ home: null, desk: null })
         setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
         setIsLiveRates(false)
+        setRateError('Erreur de connexion. Impossible de charger les tarifs.')
       } finally {
         setDeliveryFetching(false)
       }
@@ -287,6 +293,10 @@ export default function CheckoutContent() {
     e.preventDefault()
     if (saving) return
     if (phoneError) return
+    if (rateError) {
+      setSaveError(rateError)
+      return
+    }
     setSaving(true)
     setSaveError('')
 
@@ -715,6 +725,13 @@ export default function CheckoutContent() {
                       </button>
                     )}
                   </div>
+                </div>
+              )}
+
+              {rateError && (
+                <div className="sm:col-span-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                  <div className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-rose-800">{rateError}</p>
                 </div>
               )}
 

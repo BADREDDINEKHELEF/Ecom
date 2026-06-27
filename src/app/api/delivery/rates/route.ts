@@ -56,11 +56,31 @@ export async function GET(req: NextRequest) {
     if (!config) return NextResponse.json(staticRate(wilaya))
 
     const provider = config.default_provider ?? 'yalidine'
-    const rate = await dispatchGetRate(provider, wilaya, config, false)
+    const isLiveProvider = provider !== 'manual' && provider !== 'yassir'
 
-    if (!rate) return NextResponse.json(staticRate(wilaya))
+    try {
+      const rate = await dispatchGetRate(provider, wilaya, config, false)
 
-    return NextResponse.json({ homeDelivery: rate.homeDelivery, deskDelivery: rate.deskDelivery, provider, live: true })
+      if (!rate) {
+        if (isLiveProvider) {
+          return NextResponse.json(
+            { error: `Could not calculate shipping cost from ${provider} API. Please check your credentials or try again later.`, code: 'SHIPPING_CALCULATION_FAILED' },
+            { status: 502 }
+          )
+        }
+        return NextResponse.json(staticRate(wilaya))
+      }
+
+      return NextResponse.json({ homeDelivery: rate.homeDelivery, deskDelivery: rate.deskDelivery, provider, live: true })
+    } catch {
+      if (isLiveProvider) {
+        return NextResponse.json(
+          { error: `Unexpected error calculating shipping from ${provider} API.`, code: 'SHIPPING_CALCULATION_FAILED' },
+          { status: 502 }
+        )
+      }
+      return NextResponse.json(staticRate(wilaya))
+    }
   } catch {
     return NextResponse.json(staticRate(wilaya))
   }
