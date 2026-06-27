@@ -1,6 +1,17 @@
+import fs from 'fs'
+import path from 'path'
 import { ShipmentInput, ShipmentResult } from './types'
 import { extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+
+function writeDebugLog(message: string) {
+  try {
+    const logPath = 'c:\\Users\\ASUS\\Desktop\\E commerce 2.0\\ecom-rates.log'
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}\n`)
+  } catch {
+    // Ignore log write errors
+  }
+}
 
 const BASE_URL = 'https://ecom-dz.net/api/v1'
 
@@ -80,16 +91,37 @@ export async function ecomGetRateWithToken(
   wilayaName: string,
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
-  if (!isValidWilaya(wilayaName)) return null
+  writeDebugLog(`ecomGetRateWithToken start for wilaya=${wilayaName}`)
+  if (!isValidWilaya(wilayaName)) {
+    writeDebugLog(`Invalid wilaya: ${wilayaName}`)
+    return null
+  }
   try {
-    const res = await deliveryFetch(`${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`, {
+    const url = `${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`
+    writeDebugLog(`Fetching from URL: ${url}`)
+    const res = await deliveryFetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    
+    writeDebugLog(`Response status: ${res.status}`)
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      writeDebugLog(`Response not OK. Body: ${body}`)
+      return null
+    }
+    
     const data = await res.json()
+    writeDebugLog(`Response JSON: ${JSON.stringify(data)}`)
+    
     const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
+    writeDebugLog(`Found row: ${JSON.stringify(row)}`)
+    
+    const rate = extractRates(row)
+    writeDebugLog(`Extracted rate: ${JSON.stringify(rate)}`)
+    
+    return rate
+  } catch (err: any) {
+    writeDebugLog(`Error occurred: ${err.message || String(err)}`)
     return null
   }
 }
