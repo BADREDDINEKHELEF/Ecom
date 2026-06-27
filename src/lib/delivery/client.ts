@@ -51,13 +51,14 @@ export async function deliveryFetch(
       }
 
       return response
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId)
 
-      const isTimeout = err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('aborted')
+      const error = err instanceof Error ? err : new Error(String(err))
+      const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout') || error.message?.includes('aborted')
       
       if (attempt < maxRetries) {
-        logger.warn(`[deliveryFetch] attempt ${attempt} failed with error: ${err.message ?? err} for URL: ${url}. Retrying in ${delay}ms...`)
+        logger.warn(`[deliveryFetch] attempt ${attempt} failed with error: ${error.message} for URL: ${url}. Retrying in ${delay}ms...`)
         await new Promise((resolve) => setTimeout(resolve, delay))
         delay *= backoffFactor
         continue
@@ -68,7 +69,7 @@ export async function deliveryFetch(
         throw new Error(`Connection timeout after ${timeoutMs}ms`)
       }
 
-      logger.error(`[deliveryFetch] request failed after ${attempt} attempts for URL: ${url}`, { error: err.message ?? err })
+      logger.error(`[deliveryFetch] request failed after ${attempt} attempts for URL: ${url}`, { error: error.message })
       throw err
     }
   }

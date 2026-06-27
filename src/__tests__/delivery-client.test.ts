@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest'
 import { deliveryFetch } from '@/lib/delivery/client'
 import { splitName, extractRates, normalizeAlgiersPhone } from '@/lib/delivery/utils'
 
@@ -14,7 +14,7 @@ import { ecomCreateShipmentWithToken, ecomGetRateWithToken } from '@/lib/deliver
 import { apecCreateShipmentWithCreds, apecGetRateWithCreds } from '@/lib/delivery/apec'
 
 describe('deliveryFetch client tests', () => {
-  let fetchSpy: any
+  let fetchSpy: MockInstance
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(global, 'fetch')
@@ -136,7 +136,7 @@ describe('Delivery utility tests', () => {
 })
 
 describe('E2E Provider Payload Mapping', () => {
-  let fetchSpy: any
+  let fetchSpy: MockInstance
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(global, 'fetch')

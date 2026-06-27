@@ -11,40 +11,37 @@ export function splitName(fullName: string): { firstname: string; familyname: st
   return { firstname: parts[0], familyname: parts.slice(1).join(' ') }
 }
 
-export function extractRates(row: any): { homeDelivery: number; deskDelivery?: number } | null {
+export function extractRates(
+  row: Record<string, unknown> | null | undefined
+): { homeDelivery: number; deskDelivery?: number } | null {
   if (!row) return null
 
-  const home = Number(
-    row.home_fee ??
-    row.tarif_a_domicile ??
-    row.domicile_fee ??
-    row.tarif_domicile ??
-    row.TarifDomicile ??
-    row.Tarif ??
-    row.domicile ??
-    row.fee ??
-    row.tarif ??
-    row.prix ??
-    row.price ??
-    row.home_delivery_fee
-  )
+  const getVal = (keys: string[]): unknown => {
+    for (const key of keys) {
+      if (row[key] !== undefined) return row[key]
+    }
+    return undefined
+  }
 
-  const desk = Number(
-    row.desk_fee ??
-    row.tarif_stopdesk ??
-    row.stop_desk_fee ??
-    row.tarif_bureau ??
-    row.TarifBureau ??
-    row.bureau_fee ??
-    row.bureau ??
-    row.desk_delivery_fee
-  )
+  const homeVal = getVal([
+    'home_fee', 'tarif_a_domicile', 'domicile_fee', 'tarif_domicile',
+    'TarifDomicile', 'Tarif', 'domicile', 'fee', 'tarif', 'prix', 'price',
+    'home_delivery_fee'
+  ])
 
-  if (home === undefined || home === null || isNaN(home)) return null
+  const deskVal = getVal([
+    'desk_fee', 'tarif_stopdesk', 'stop_desk_fee', 'tarif_bureau',
+    'TarifBureau', 'bureau_fee', 'bureau', 'desk_delivery_fee'
+  ])
+
+  const home = homeVal !== undefined && homeVal !== null && homeVal !== '' ? Number(homeVal) : NaN
+  const desk = deskVal !== undefined && deskVal !== null && deskVal !== '' ? Number(deskVal) : NaN
+
+  if (isNaN(home)) return null
 
   return {
     homeDelivery: home,
-    ...(desk !== null && desk !== undefined && !isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
+    ...(!isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
   }
 }
 
