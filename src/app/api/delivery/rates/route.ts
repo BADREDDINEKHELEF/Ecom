@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     if (!config) return NextResponse.json(staticRate(wilaya))
 
     const provider = config.default_provider ?? 'yalidine'
-    const rate = await dispatchGetRate(provider, wilaya, config, true)
+    const rate = await dispatchGetRate(provider, wilaya, config, false)
 
     if (!rate) return NextResponse.json(staticRate(wilaya))
 
