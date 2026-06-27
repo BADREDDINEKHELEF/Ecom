@@ -191,6 +191,15 @@ export default function SellerSidebar({
                 >
                   <Truck className="w-3 h-3" /> {sd.settingsDelivery}
                 </Link>
+                <Link
+                  href="/seller/settings/integrations"
+                  onClick={onMobileClose}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    pathname === '/seller/settings/integrations' ? 'text-emerald-400 bg-emerald-600/10' : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  }`}
+                >
+                  <Zap className="w-3 h-3" /> {lang === 'ar' ? 'التحقق من الربط' : 'Vérification du lien'}
+                </Link>
               </div>
             )}
           </div>

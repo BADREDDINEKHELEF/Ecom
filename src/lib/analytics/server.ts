@@ -48,17 +48,16 @@ export async function fireMetaPurchase(opts: {
   phone?:          string | null
   clientIp?:       string
   clientUserAgent?: string
-}): Promise<void> {
+}): Promise<{ ok: boolean; status: number; message: string; raw?: any }> {
   const { pixelId, accessToken, orderId, total, email, phone, clientIp, clientUserAgent } = opts
   try {
-    // Meta CAPI requires scalar hashed strings, NOT arrays — arrays are silently ignored
     const userData: Record<string, unknown> = {}
     if (email)            userData.em  = sha256(email)
     if (phone)            userData.ph  = sha256(normalizePhone(phone))
     if (clientIp)         userData.client_ip_address  = anonymizeIp(clientIp)
     if (clientUserAgent)  userData.client_user_agent  = clientUserAgent
 
-    await fetch(
+    const res = await fetch(
       `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`,
       {
         method: 'POST',
@@ -75,7 +74,16 @@ export async function fireMetaPurchase(opts: {
         }),
       }
     )
-  } catch { /* best-effort */ }
+    const status = res.status
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      return { ok: false, status, message: body?.error?.message ?? `HTTP Error ${status}`, raw: body }
+    }
+    return { ok: true, status, message: 'Event accepted by Meta', raw: body }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, status: 0, message: msg }
+  }
 }
 
 // ── TikTok Events API ───────────────────────────────────────────────────────
@@ -91,7 +99,7 @@ export async function fireTikTokPurchase(opts: {
   phone?:       string | null
   clientIp?:    string
   clientUserAgent?: string
-}): Promise<void> {
+}): Promise<{ ok: boolean; status: number; message: string; raw?: any }> {
   const { pixelId, accessToken, orderId, total, items, email, phone, clientIp, clientUserAgent } = opts
   try {
     const user: Record<string, string> = {}
@@ -100,8 +108,7 @@ export async function fireTikTokPurchase(opts: {
     if (email) user.email        = sha256(email)
     if (phone) user.phone_number = sha256(normalizePhone(phone))
 
-    // TikTok Events API v1.3 requires events wrapped in an array
-    await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
+    const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Access-Token': accessToken },
       body: JSON.stringify({
@@ -125,7 +132,16 @@ export async function fireTikTokPurchase(opts: {
         }],
       }),
     })
-  } catch { /* best-effort */ }
+    const status = res.status
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      return { ok: false, status, message: body?.message ?? `HTTP Error ${status}`, raw: body }
+    }
+    return { ok: true, status, message: 'Event accepted by TikTok', raw: body }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, status: 0, message: msg }
+  }
 }
 
 // ── Google GA4 Measurement Protocol ────────────────────────────────────────
@@ -138,14 +154,11 @@ export async function fireGA4Purchase(opts: {
   total:         number
   items:         Array<{ id: string; name: string; price: number; quantity: number }>
   clientId?:     string
-}): Promise<void> {
-  // clientId is the browser's GA4 _ga cookie value (parsed to "XXXXXXXXXX.XXXXXXXXXX" format).
-  // Fall back to a deterministic orderId-based value so the hit is accepted by the API.
-  // Without the real clientId the purchase won't be attributed to the user's acquisition source.
+}): Promise<{ ok: boolean; status: number; message: string; raw?: any }> {
   const { measurementId, apiSecret, orderId, total, items, clientId } = opts
   const effectiveClientId = clientId ?? `sv.${orderId.replace(/-/g, '').slice(0, 16)}`
   try {
-    await fetch(
+    const res = await fetch(
       `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
       {
         method:  'POST',
@@ -169,7 +182,16 @@ export async function fireGA4Purchase(opts: {
         }),
       }
     )
-  } catch { /* best-effort */ }
+    const status = res.status
+    const body = await res.text().catch(() => '')
+    if (!res.ok) {
+      return { ok: false, status, message: body || `HTTP Error ${status}`, raw: body }
+    }
+    return { ok: true, status, message: 'Event sent to GA4', raw: body || null }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, status: 0, message: msg }
+  }
 }
 
 // ── Batch helper — fires all three for a given set of credentials ───────────
@@ -190,7 +212,7 @@ export async function firePurchaseCAPI(opts: {
   clientUserAgent?:  string
   gaClientId?:       string
 }): Promise<void> {
-  const calls: Promise<void>[] = []
+  const calls: Promise<any>[] = []
 
   if (opts.metaPixelId && opts.metaCAPIToken) {
     calls.push(fireMetaPurchase({
