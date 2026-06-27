@@ -1,12 +1,8 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { WILAYA_DATA } from '@/lib/data/wilayas'
+import { splitName, extractRates, isValidWilaya } from './utils'
+import { deliveryFetch } from './client'
 
 const BASE_URL = 'https://api.apec.dz/v1'
-const TIMEOUT  = 15_000
-
-function isValidWilaya(wilayaName: string): boolean {
-  return wilayaName in WILAYA_DATA
-}
 
 export function apecConfigured(): boolean {
   return !!(process.env.APEC_API_ID && process.env.APEC_API_TOKEN)
@@ -18,12 +14,6 @@ function buildHeaders(apiId: string, apiToken: string) {
     'X-API-ID':      apiId,
     'X-API-TOKEN':   apiToken,
   }
-}
-
-function splitName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/)
-  if (parts.length === 1) return { firstname: parts[0], familyname: parts[0] }
-  return { firstname: parts[0], familyname: parts.slice(1).join(' ') }
 }
 
 export async function apecCreateShipmentWithCreds(
@@ -51,11 +41,10 @@ export async function apecCreateShipmentWithCreds(
     weight: 1,
   }
 
-  const res = await fetch(`${BASE_URL}/parcels/`, {
+  const res = await deliveryFetch(`${BASE_URL}/parcels/`, {
     method: 'POST',
     headers: buildHeaders(apiId, apiToken),
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -77,9 +66,8 @@ export async function apecCreateShipment(input: ShipmentInput): Promise<Shipment
 
 export async function apecListParcels(apiId: string, apiToken: string, pageSize = 100) {
   try {
-    const res = await fetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
+    const res = await deliveryFetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
       headers: buildHeaders(apiId, apiToken),
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -88,9 +76,8 @@ export async function apecListParcels(apiId: string, apiToken: string, pageSize 
 
 export async function apecTrack(trackingNumber: string, apiId: string, apiToken: string) {
   try {
-    const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
       headers: buildHeaders(apiId, apiToken),
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -104,43 +91,13 @@ export async function apecGetRateWithCreds(
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
   try {
-    const res = await fetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
       headers: buildHeaders(apiId, apiToken),
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     const data = await res.json()
     const row = Array.isArray(data) ? data[0] : (Array.isArray(data?.data) ? data.data[0] : (data?.data ?? data))
-    if (!row) return null
-    const home = Number(
-      row.home_fee ??
-      row.tarif_a_domicile ??
-      row.domicile_fee ??
-      row.tarif_domicile ??
-      row.TarifDomicile ??
-      row.Tarif ??
-      row.domicile ??
-      row.fee ??
-      row.tarif ??
-      row.prix ??
-      row.price ??
-      row.home_delivery_fee
-    )
-    const desk = Number(
-      row.desk_fee ??
-      row.tarif_stopdesk ??
-      row.stop_desk_fee ??
-      row.tarif_bureau ??
-      row.TarifBureau ??
-      row.bureau_fee ??
-      row.bureau ??
-      row.desk_delivery_fee
-    )
-    if (home === undefined || home === null || isNaN(home)) return null
-    return {
-      homeDelivery: home,
-      ...(desk !== null && desk !== undefined && !isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
-    }
+    return extractRates(row)
   } catch {
     return null
   }

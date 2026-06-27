@@ -1,12 +1,8 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { WILAYA_DATA } from '@/lib/data/wilayas'
+import { extractRates, isValidWilaya } from './utils'
+import { deliveryFetch } from './client'
 
 const BASE_URL = 'https://ecom-dz.net/api/v1'
-const TIMEOUT  = 15_000
-
-function isValidWilaya(wilayaName: string): boolean {
-  return wilayaName in WILAYA_DATA
-}
 
 export function ecomConfigured(): boolean {
   return !!process.env.ECOM_TOKEN
@@ -31,7 +27,7 @@ export async function ecomCreateShipmentWithToken(
 
   let res: Response
   try {
-    res = await fetch(`${BASE_URL}/parcels`, {
+    res = await deliveryFetch(`${BASE_URL}/parcels`, {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',
@@ -39,7 +35,6 @@ export async function ecomCreateShipmentWithToken(
         'Accept':        'application/json',
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT),
     })
   } catch (networkErr) {
     throw new Error(`Ecom Delivery network error: ${networkErr instanceof Error ? networkErr.message : String(networkErr)}`)
@@ -73,9 +68,8 @@ export async function ecomCreateShipment(input: ShipmentInput): Promise<Shipment
 
 export async function ecomListParcels(token: string, pageSize = 100) {
   try {
-    const res = await fetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
+    const res = await deliveryFetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -88,43 +82,13 @@ export async function ecomGetRateWithToken(
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
   try {
-    const res = await fetch(`${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     const data = await res.json()
     const row = Array.isArray(data) ? data[0] : (Array.isArray(data?.data) ? data.data[0] : (data?.data ?? data))
-    if (!row) return null
-    const home = Number(
-      row.home_fee ??
-      row.tarif_a_domicile ??
-      row.domicile_fee ??
-      row.tarif_domicile ??
-      row.TarifDomicile ??
-      row.Tarif ??
-      row.domicile ??
-      row.fee ??
-      row.tarif ??
-      row.prix ??
-      row.price ??
-      row.home_delivery_fee
-    )
-    const desk = Number(
-      row.desk_fee ??
-      row.tarif_stopdesk ??
-      row.stop_desk_fee ??
-      row.tarif_bureau ??
-      row.TarifBureau ??
-      row.bureau_fee ??
-      row.bureau ??
-      row.desk_delivery_fee
-    )
-    if (home === undefined || home === null || isNaN(home)) return null
-    return {
-      homeDelivery: home,
-      ...(desk !== null && desk !== undefined && !isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
-    }
+    return extractRates(row)
   } catch {
     return null
   }
@@ -132,12 +96,11 @@ export async function ecomGetRateWithToken(
 
 export async function ecomTrack(trackingNumber: string, token: string) {
   try {
-    const res = await fetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
       },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

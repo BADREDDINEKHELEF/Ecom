@@ -1,12 +1,8 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { WILAYA_DATA } from '@/lib/data/wilayas'
+import { extractRates, isValidWilaya } from './utils'
+import { deliveryFetch } from './client'
 
 const BASE_URL = 'https://api.colivraison.com/api'
-const TIMEOUT  = 15_000
-
-function isValidWilaya(wilayaName: string): boolean {
-  return wilayaName in WILAYA_DATA
-}
 
 export function colivraisonConfigured(): boolean {
   return !!process.env.COLIVRAISON_TOKEN
@@ -29,14 +25,13 @@ export async function colivraisonCreateShipmentWithToken(
     can_open:   0,
   }
 
-  const res = await fetch(`${BASE_URL}/orders`, {
+  const res = await deliveryFetch(`${BASE_URL}/orders`, {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -61,9 +56,8 @@ export async function colivraisonCreateShipment(input: ShipmentInput): Promise<S
 
 export async function colivraisonListParcels(token: string, pageSize = 100) {
   try {
-    const res = await fetch(`${BASE_URL}/orders?page=1&per_page=${pageSize}`, {
+    const res = await deliveryFetch(`${BASE_URL}/orders?page=1&per_page=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -76,43 +70,13 @@ export async function colivraisonGetRateWithToken(
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   try {
     if (!isValidWilaya(wilayaName)) return null
-    const res = await fetch(`${BASE_URL}/pricing?wilaya=${encodeURIComponent(wilayaName)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/pricing?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     const data = await res.json()
     const row = Array.isArray(data) ? data[0] : (Array.isArray(data?.data) ? data.data[0] : (data?.data ?? data))
-    if (!row) return null
-    const home = Number(
-      row.home_fee ??
-      row.tarif_a_domicile ??
-      row.domicile_fee ??
-      row.tarif_domicile ??
-      row.TarifDomicile ??
-      row.Tarif ??
-      row.domicile ??
-      row.fee ??
-      row.tarif ??
-      row.prix ??
-      row.price ??
-      row.home_delivery_fee
-    )
-    const desk = Number(
-      row.desk_fee ??
-      row.tarif_stopdesk ??
-      row.stop_desk_fee ??
-      row.tarif_bureau ??
-      row.TarifBureau ??
-      row.bureau_fee ??
-      row.bureau ??
-      row.desk_delivery_fee
-    )
-    if (home === undefined || home === null || isNaN(home)) return null
-    return {
-      homeDelivery: home,
-      ...(desk !== null && desk !== undefined && !isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
-    }
+    return extractRates(row)
   } catch {
     return null
   }
@@ -120,9 +84,8 @@ export async function colivraisonGetRateWithToken(
 
 export async function colivraisonTrack(trackingCode: string, token: string) {
   try {
-    const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
       headers: { 'Authorization': `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

@@ -4,21 +4,21 @@ test.describe('Homepage & navigation', () => {
   test('homepage loads and shows key UI sections', async ({ page }) => {
     await page.goto('/')
     // Logo / brand name visible
-    await expect(page.locator('text=/ShopDZ/i').first()).toBeVisible()
+    await expect(page.locator('text=/StoreDz/i').first()).toBeVisible()
     // Language switcher
     await expect(page.locator('[aria-label*="lang"], [aria-label*="language"], button:has-text("EN"), button:has-text("FR"), button:has-text("AR")').first()).toBeVisible()
   })
 
   test('privacy policy page renders', async ({ page }) => {
     await page.goto('/privacy')
-    await expect(page.getByRole('heading', { name: /Privacy Policy/i })).toBeVisible()
-    await expect(page.locator('text=/Last updated/i')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Politique de confidentialité/i })).toBeVisible()
+    await expect(page.locator('text=/Dernière mise à jour/i')).toBeVisible()
   })
 
   test('terms of service page renders', async ({ page }) => {
     await page.goto('/terms')
-    await expect(page.getByRole('heading', { name: /Terms of Service/i })).toBeVisible()
-    await expect(page.locator('text=/Last updated/i')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Conditions générales d'utilisation/i })).toBeVisible()
+    await expect(page.locator('text=/Dernière mise à jour/i')).toBeVisible()
   })
 })
 

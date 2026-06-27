@@ -1,7 +1,8 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { extractRates } from './utils'
+import { deliveryFetch } from './client'
 
 const BASE_URL = 'https://www.zrexpress.dz/api'
-const TIMEOUT  = 15_000
 
 // ZR Express uses numeric wilaya IDs (1–58) matching the official DZ order
 const WILAYA_NAME_TO_ZR_ID: Record<string, number> = {
@@ -25,8 +26,6 @@ function wilayaToZrId(name: string): number {
   return id
 }
 
-// Returns null when the wilaya name is not in the map — used for rates so we
-// don't silently return Alger's price for an unknown/differently-spelled wilaya.
 function wilayaToZrIdOrNull(name: string): number | null {
   return WILAYA_NAME_TO_ZR_ID[name] ?? WILAYA_NAME_TO_ZR_ID[name.trim()] ?? null
 }
@@ -56,14 +55,13 @@ export async function zrCreateShipmentWithToken(
     Source: 0,
   }
 
-  const res = await fetch(`${BASE_URL}/parcel`, {
+  const res = await deliveryFetch(`${BASE_URL}/parcel`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Token ${token}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -84,9 +82,8 @@ export async function zrCreateShipment(input: ShipmentInput): Promise<ShipmentRe
 
 export async function zrListParcels(token: string, pageSize = 100) {
   try {
-    const res = await fetch(`${BASE_URL}/parcel?page=1&page_size=${pageSize}`, {
+    const res = await deliveryFetch(`${BASE_URL}/parcel?page=1&page_size=${pageSize}`, {
       headers: { Authorization: `Token ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -98,45 +95,15 @@ export async function zrGetRateWithToken(
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   const id = wilayaToZrIdOrNull(wilayaName)
-  if (id === null) return null  // unknown wilaya → caller falls back to static
+  if (id === null) return null
   try {
-    const res = await fetch(`${BASE_URL}/tarif?IDWilaya=${id}`, {
+    const res = await deliveryFetch(`${BASE_URL}/tarif?IDWilaya=${id}`, {
       headers: { Authorization: `Token ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     const data = await res.json()
     const row = Array.isArray(data) ? data[0] : (Array.isArray(data?.data) ? data.data[0] : (data?.data ?? data))
-    if (!row) return null
-    const home = Number(
-      row.home_fee ??
-      row.tarif_a_domicile ??
-      row.domicile_fee ??
-      row.tarif_domicile ??
-      row.TarifDomicile ??
-      row.Tarif ??
-      row.domicile ??
-      row.fee ??
-      row.tarif ??
-      row.prix ??
-      row.price ??
-      row.home_delivery_fee
-    )
-    const desk = Number(
-      row.desk_fee ??
-      row.tarif_stopdesk ??
-      row.stop_desk_fee ??
-      row.tarif_bureau ??
-      row.TarifBureau ??
-      row.bureau_fee ??
-      row.bureau ??
-      row.desk_delivery_fee
-    )
-    if (home === undefined || home === null || isNaN(home)) return null
-    return {
-      homeDelivery: home,
-      ...(desk !== null && desk !== undefined && !isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
-    }
+    return extractRates(row)
   } catch {
     return null
   }
@@ -144,9 +111,8 @@ export async function zrGetRateWithToken(
 
 export async function zrTrack(trackingNumber: string, token: string) {
   try {
-    const res = await fetch(`${BASE_URL}/parcel/${encodeURIComponent(trackingNumber)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/parcel/${encodeURIComponent(trackingNumber)}`, {
       headers: { Authorization: `Token ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

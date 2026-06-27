@@ -1,7 +1,8 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { extractRates } from './utils'
+import { deliveryFetch } from './client'
 
 const BASE_URL = 'https://maystro-delivery.com/api/v1'
-const TIMEOUT  = 15_000
 
 // Maystro API requires numeric wilaya codes, not name strings
 const WILAYA_TO_ID: Record<string, number> = {
@@ -49,14 +50,13 @@ export async function maystroCreateShipmentWithToken(
     is_stopdesk:      !!input.isStopDesk,
   }
 
-  const res = await fetch(`${BASE_URL}/orders/`, {
+  const res = await deliveryFetch(`${BASE_URL}/orders/`, {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -80,9 +80,8 @@ export async function maystroCreateShipment(input: ShipmentInput): Promise<Shipm
 
 export async function maystroListParcels(token: string, pageSize = 100) {
   try {
-    const res = await fetch(`${BASE_URL}/orders/?page=1&page_size=${pageSize}`, {
+    const res = await deliveryFetch(`${BASE_URL}/orders/?page=1&page_size=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -94,45 +93,15 @@ export async function maystroGetRateWithToken(
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   const wilayaId = wilayaToId(wilayaName)
-  if (!wilayaId) return null  // unknown wilaya → caller falls back to static
+  if (!wilayaId) return null
   try {
-    const res = await fetch(`${BASE_URL}/shipping-prices/?wilaya=${wilayaId}`, {
+    const res = await deliveryFetch(`${BASE_URL}/shipping-prices/?wilaya=${wilayaId}`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     const data = await res.json()
     const row = Array.isArray(data) ? data[0] : (data?.results?.[0] ?? data)
-    if (!row) return null
-    const home = Number(
-      row.home_fee ??
-      row.tarif_a_domicile ??
-      row.domicile_fee ??
-      row.tarif_domicile ??
-      row.TarifDomicile ??
-      row.Tarif ??
-      row.domicile ??
-      row.fee ??
-      row.tarif ??
-      row.prix ??
-      row.price ??
-      row.home_delivery_fee
-    )
-    const desk = Number(
-      row.desk_fee ??
-      row.tarif_stopdesk ??
-      row.stop_desk_fee ??
-      row.tarif_bureau ??
-      row.TarifBureau ??
-      row.bureau_fee ??
-      row.bureau ??
-      row.desk_delivery_fee
-    )
-    if (home === undefined || home === null || isNaN(home)) return null
-    return {
-      homeDelivery: home,
-      ...(desk !== null && desk !== undefined && !isNaN(desk) && desk >= 0 ? { deskDelivery: desk } : {})
-    }
+    return extractRates(row)
   } catch {
     return null
   }
@@ -140,9 +109,8 @@ export async function maystroGetRateWithToken(
 
 export async function maystroTrack(trackingCode: string, token: string) {
   try {
-    const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}/`, {
+    const res = await deliveryFetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}/`, {
       headers: { 'Authorization': `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, RefreshCw, RotateCcw, ChevronDown, Check, X, Clipboard, Edit, AlertCircle } from 'lucide-react'
+import { Loader2, RefreshCw, RotateCcw, ChevronDown, Check, Clipboard, AlertCircle } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import SellerSidebar from '@/components/seller/SellerSidebar'
-import { useT, useLangStore, useRTL } from '@/lib/store/langStore'
+import { useLangStore, useRTL } from '@/lib/store/langStore'
 
 type ReturnStatus = 'requested' | 'approved' | 'rejected' | 'refunded' | 'returned'
 
@@ -52,7 +52,6 @@ const STATUS_CONFIG: Record<ReturnStatus, { label: Record<string, string>; style
 
 export default function SellerReturnsPage() {
   const { vendor, loading: authLoading, signOut } = useSellerAuth()
-  const t = useT()
   const { lang } = useLangStore()
   const isRTL = useRTL()
 

@@ -1,8 +1,8 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { deliveryFetch } from './client'
 
 // Yassir Express Business API — package delivery
 const BASE_URL = 'https://api.yassir.com/v1'
-const TIMEOUT  = 15_000
 
 export function yassirConfigured(): boolean {
   return !!process.env.YASSIR_API_KEY
@@ -37,14 +37,13 @@ export async function yassirCreateShipmentWithKey(
     notes: input.isStopDesk ? 'Livraison en agence (stop desk) — prévenir le destinataire' : '',
   }
 
-  const res = await fetch(`${BASE_URL}/deliveries`, {
+  const res = await deliveryFetch(`${BASE_URL}/deliveries`, {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
       'x-api-key':     apiKey,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT),
   })
 
   if (!res.ok) {
@@ -68,9 +67,8 @@ export async function yassirCreateShipment(input: ShipmentInput): Promise<Shipme
 
 export async function yassirListParcels(apiKey: string, pageSize = 100) {
   try {
-    const res = await fetch(`${BASE_URL}/deliveries?page=1&limit=${pageSize}`, {
+    const res = await deliveryFetch(`${BASE_URL}/deliveries?page=1&limit=${pageSize}`, {
       headers: { 'x-api-key': apiKey },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()
@@ -79,9 +77,8 @@ export async function yassirListParcels(apiKey: string, pageSize = 100) {
 
 export async function yassirTrack(trackingNumber: string, apiKey: string) {
   try {
-    const res = await fetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
       headers: { 'x-api-key': apiKey },
-      signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) return null
     return res.json()

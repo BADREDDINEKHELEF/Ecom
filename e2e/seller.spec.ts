@@ -6,7 +6,7 @@ test.describe('Seller auth & portal', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByPlaceholder('you@example.com')).toBeVisible()
     await expect(page.locator('input[type="password"]')).toBeVisible()
-    await expect(page.getByRole('button', { name: /login|sign in|connexion|دخول/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /login|sign in|connexion|connecter|دخول/i })).toBeVisible()
   })
 
   test('unauthenticated access to /seller/dashboard redirects to login', async ({ page }) => {
@@ -19,7 +19,7 @@ test.describe('Seller auth & portal', () => {
     await page.goto('/seller/login')
     await page.getByPlaceholder('you@example.com').fill('notaseller@example.com')
     await page.locator('input[type="password"]').fill('badpassword123')
-    await page.getByRole('button', { name: /login|sign in|connexion|دخول/i }).click()
+    await page.getByRole('button', { name: /login|sign in|connexion|connecter|دخول/i }).click()
     await expect(page.locator('[class*="red"], [class*="error"]').first()).toBeVisible({
       timeout: 10_000,
     })
