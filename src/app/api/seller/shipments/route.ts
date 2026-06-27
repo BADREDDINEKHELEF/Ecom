@@ -22,6 +22,7 @@ const CreateShipmentSchema = z.object({
   provider:       z.enum(SUPPORTED_PROVIDERS),
   trackingNumber: z.string().regex(TRACKING_REGEX).optional(),
   isStopDesk:     z.boolean().optional(),
+  stopDeskCause:  z.string().max(300).optional().nullable(),
   autoCreate:     z.boolean().optional().default(false),
   notes:          z.string().max(500).optional(),
 })
@@ -67,14 +68,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
   }
 
-  const { orderId, provider, trackingNumber, isStopDesk, autoCreate, notes } = parsed.data
+  const { orderId, provider, trackingNumber, isStopDesk, stopDeskCause, autoCreate, notes } = parsed.data
 
   try {
     const admin = createAdminClient()
 
     // Verify the order exists and contains at least one item from this vendor
     const [{ data: order }, { data: vendorItems }] = await Promise.all([
-      admin.from('orders').select('full_name, phone, wilaya, city, address, total, status, is_stopdesk').eq('id', orderId).single(),
+      admin.from('orders').select('full_name, phone, wilaya, city, address, total, status, is_stopdesk, stop_desk_cause').eq('id', orderId).single(),
       admin.from('order_items').select('product_name, quantity').eq('order_id', orderId).eq('vendor_id', vendor.id),
     ])
 
@@ -119,6 +120,7 @@ export async function POST(req: NextRequest) {
             total:    order.total,
             items:    itemsString,
             isStopDesk: isStopDesk ?? order.is_stopdesk ?? false,
+            stopDeskCause: stopDeskCause ?? (order as typeof order & { stop_desk_cause?: string | null }).stop_desk_cause ?? null,
           },
           {
             yalidine_api_id:    config?.yalidine_api_id    ?? undefined,

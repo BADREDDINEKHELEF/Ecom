@@ -24,7 +24,7 @@ export async function procolisCreateShipmentWithToken(
         Wilaya: input.wilaya,
         produit: input.items || 'Colis',
         prix: input.total,
-        remarque: '',
+        remarque: input.isStopDesk && input.stopDeskCause ? input.stopDeskCause : '',
       },
     ],
   }

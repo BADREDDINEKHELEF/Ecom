@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data: order, error: orderErr } = await createAdminClient()
       .from('orders')
-      .select('id, status, total, satim_order_id, email, full_name, wilaya, is_stopdesk')
+      .select('id, status, total, satim_order_id, email, full_name, wilaya, is_stopdesk, stop_desk_cause')
       .eq('id', orderId)
       .single()
 
@@ -86,6 +86,7 @@ export async function GET(req: NextRequest) {
         wilaya: order.wilaya,
         itemCount: count ?? 0,
         isStopDesk: order.is_stopdesk ?? false,
+        stopDeskCause: (order as typeof order & { stop_desk_cause?: string | null }).stop_desk_cause ?? null,
       }).catch((err) => logger.error('[email callback] confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
     }
 

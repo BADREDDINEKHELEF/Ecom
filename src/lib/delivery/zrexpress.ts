@@ -49,7 +49,7 @@ export async function zrCreateShipmentWithToken(
     IDWilaya: wilayaToZrId(input.wilaya),
     Commune: input.city,
     Total: input.total,
-    Note: input.items || '',
+    Note: input.isStopDesk && input.stopDeskCause ? `${input.items || ''} — ${input.stopDeskCause}` : (input.items || ''),
     TProduit: 'N/A',
     id_Externe: input.orderId ?? '',
     Source: 0,

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-  let body: any
+  let body: { integrationName?: string; action?: string; params?: any }
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid body' }, { status: 400 }) }
   const { integrationName, action, params } = body
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   const config = await getVendorDeliveryConfig(vendor.id)
   
-  const recordResult = async (ok: boolean, details: any) => {
+  const recordResult = async (ok: boolean, details: { error?: string | null; status?: number | null; accountName?: string | null; quoteFee?: number | null; quoteDuration?: string | null; quoteResponse?: any }) => {
     const health_status = ok ? 'connected' : 'failed'
     const update: any = {
       health_status,

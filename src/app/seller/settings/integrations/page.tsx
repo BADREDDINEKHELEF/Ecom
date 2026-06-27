@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Check, X, Zap, Play, AlertTriangle, Gauge, Code, Eye, EyeOff, Menu, Info, RefreshCw } from 'lucide-react'
+import { Loader2, Check, X, Zap, Play, Gauge, Code, Menu, RefreshCw } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { useT, useRTL } from '@/lib/store/langStore'
+import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 
@@ -17,7 +17,7 @@ interface HealthRecord {
   last_account_name: string | null
   last_quote_fee: number | null
   last_quote_duration: string | null
-  last_quote_response: any | null
+  last_quote_response: unknown | null
 }
 
 const INTEGRATION_KEYS = [
@@ -38,7 +38,6 @@ const INTEGRATION_KEYS = [
 export default function IntegrationsHealthPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
-  const t = useT()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [healthData, setHealthData] = useState<Record<string, HealthRecord>>({})
   const [loadingHealth, setLoadingHealth] = useState(true)
@@ -71,7 +70,7 @@ export default function IntegrationsHealthPage() {
     loadHealth()
   }, [vendor])
 
-  const runTest = async (integrationName: string, action: string, extraParams?: any) => {
+  const runTest = async (integrationName: string, action: string, extraParams?: unknown) => {
     setTesting((prev) => ({ ...prev, [`${integrationName}-${action}`]: true }))
     try {
       const res = await fetch('/api/seller/test-integration', {
@@ -328,7 +327,7 @@ export default function IntegrationsHealthPage() {
                           {connResult.ok ? <Check className="w-4 h-4 text-green-600" /> : <X className="w-4 h-4 text-red-600" />}
                           <span className="font-bold">{connResult.message || (connResult.ok ? 'Succès' : 'Échec')}</span>
                         </div>
-                        {devMode && connResult.raw && (
+                        {devMode && !!connResult.raw && (
                           <div className="mt-2">
                             <p className="font-bold text-gray-500 uppercase text-[9px] mb-1">Réponse brute de l&apos;API (JSON)</p>
                             <pre className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto font-mono text-[10px] whitespace-pre-wrap max-h-48 leading-relaxed">

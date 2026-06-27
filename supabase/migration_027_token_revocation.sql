@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.admin_revoked_tokens (
 );
 
 -- Server-only table — accessed exclusively via service role client
-ALTER TABLE public.admin_revoked_tokens DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_revoked_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Fast lookup when checking revocation at request time
 CREATE INDEX IF NOT EXISTS idx_admin_revoked_tokens_expires

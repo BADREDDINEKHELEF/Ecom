@@ -48,7 +48,7 @@ export async function fireMetaPurchase(opts: {
   phone?:          string | null
   clientIp?:       string
   clientUserAgent?: string
-}): Promise<{ ok: boolean; status: number; message: string; raw?: any }> {
+}): Promise<{ ok: boolean; status: number; message: string; raw?: unknown }> {
   const { pixelId, accessToken, orderId, total, email, phone, clientIp, clientUserAgent } = opts
   try {
     const userData: Record<string, unknown> = {}
@@ -99,7 +99,7 @@ export async function fireTikTokPurchase(opts: {
   phone?:       string | null
   clientIp?:    string
   clientUserAgent?: string
-}): Promise<{ ok: boolean; status: number; message: string; raw?: any }> {
+}): Promise<{ ok: boolean; status: number; message: string; raw?: unknown }> {
   const { pixelId, accessToken, orderId, total, items, email, phone, clientIp, clientUserAgent } = opts
   try {
     const user: Record<string, string> = {}
@@ -154,7 +154,7 @@ export async function fireGA4Purchase(opts: {
   total:         number
   items:         Array<{ id: string; name: string; price: number; quantity: number }>
   clientId?:     string
-}): Promise<{ ok: boolean; status: number; message: string; raw?: any }> {
+}): Promise<{ ok: boolean; status: number; message: string; raw?: unknown }> {
   const { measurementId, apiSecret, orderId, total, items, clientId } = opts
   const effectiveClientId = clientId ?? `sv.${orderId.replace(/-/g, '').slice(0, 16)}`
   try {
@@ -212,7 +212,7 @@ export async function firePurchaseCAPI(opts: {
   clientUserAgent?:  string
   gaClientId?:       string
 }): Promise<void> {
-  const calls: Promise<any>[] = []
+  const calls: Promise<unknown>[] = []
 
   if (opts.metaPixelId && opts.metaCAPIToken) {
     calls.push(fireMetaPurchase({

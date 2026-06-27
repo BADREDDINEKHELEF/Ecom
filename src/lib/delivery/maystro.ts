@@ -43,7 +43,7 @@ export async function maystroCreateShipmentWithToken(
     wilaya:           wilayaId,
     commune:          input.city,
     product_price:    input.total,
-    note:             input.items || '',
+    note:             input.isStopDesk && input.stopDeskCause ? `${input.items || 'Colis'} — ${input.stopDeskCause}` : (input.items || ''),
     product_name:     input.items || 'Colis',
     can_open_package: false,
     is_exchange:      false,

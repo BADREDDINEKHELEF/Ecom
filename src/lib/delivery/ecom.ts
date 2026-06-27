@@ -20,7 +20,7 @@ export async function ecomCreateShipmentWithToken(
     commune:      input.city,
     price:        input.total,
     product:      input.items || 'Colis',
-    note:         '',
+    note:         input.isStopDesk && input.stopDeskCause ? input.stopDeskCause : '',
     is_stopdesk:  input.isStopDesk ? 1 : 0,
     can_open:     false,
   }

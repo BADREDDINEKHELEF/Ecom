@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const [orderRes, itemsRes] = await Promise.all([
       admin
         .from('orders')
-        .select('full_name, phone, wilaya, city, address, total, status, is_stopdesk')
+        .select('full_name, phone, wilaya, city, address, total, status, is_stopdesk, stop_desk_cause')
         .eq('id', orderId)
         .single(),
       admin
@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
         total:    orderData?.total    ?? order.total,
         items:    orderData?.items ?? fetchedItemsString,
         isStopDesk: order.is_stopdesk ?? false,
+        stopDeskCause: (order as typeof order & { stop_desk_cause?: string | null }).stop_desk_cause ?? null,
       }
       const creds = vendorConfig ? {
         yalidine_api_id:    vendorConfig.yalidine_api_id    ?? undefined,

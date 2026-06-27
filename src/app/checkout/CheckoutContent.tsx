@@ -69,7 +69,7 @@ export default function CheckoutContent() {
   const [submitted, setSubmitted] = useState(false)
   const [confettiDone, setConfettiDone] = useState(false)
   const [form, setForm] = useState({
-    fullName: '', email: '', phone: '', address: '', city: '', wilaya: '', notes: '',
+    fullName: '', email: '', phone: '', address: '', city: '', wilaya: '', notes: '', stopDeskCause: '',
   })
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
@@ -348,6 +348,7 @@ export default function CheckoutContent() {
       gaClientId:     gaClientId ?? null,
       isStopDesk,
       deliveryType,
+      stopDeskCause: isStopDesk ? form.stopDeskCause.trim() || null : null,
       items: items.map(({ product, quantity, selectedColor }) => ({
         productId:     product.id,
         productName:   product.name,
@@ -739,6 +740,22 @@ export default function CheckoutContent() {
                 <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2">
                   <Truck className="w-4 h-4 text-amber-600 flex-shrink-0" />
                   <p className="text-xs font-semibold text-amber-800">{t.checkout.stopDeskInfo}</p>
+                </div>
+              )}
+
+              {isStopDesk && (
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    {t.checkout.stopDeskCause} <span className="text-gray-400 font-normal">{t.checkout.stopDeskCauseOptional}</span>
+                  </label>
+                  <textarea
+                    value={form.stopDeskCause}
+                    onChange={(e) => f('stopDeskCause', e.target.value)}
+                    rows={2}
+                    maxLength={300}
+                    placeholder={t.checkout.stopDeskCausePlaceholder}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
+                  />
                 </div>
               )}
 

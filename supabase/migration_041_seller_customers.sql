@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.seller_data_access_log (
 );
 
 -- Service-role only — sellers read via API, never directly
-ALTER TABLE public.seller_data_access_log DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.seller_data_access_log ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_seller_audit_vendor_id   ON public.seller_data_access_log(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_seller_audit_created_at  ON public.seller_data_access_log(created_at DESC);

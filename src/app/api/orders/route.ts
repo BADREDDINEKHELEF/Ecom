@@ -38,6 +38,7 @@ const CreateOrderSchema = z.object({
   address:       z.string().min(2).max(500),
   isStopDesk:    z.boolean().optional().default(false),
   deliveryType:  z.enum(['home', 'office', 'stop_desk']).optional().default('home'),
+  stopDeskCause: z.string().max(300).optional().nullable(),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
   // shippingCost is intentionally removed to prevent client-side manipulation (C-01)
   promoCodeId:      z.string().uuid().optional().nullable(),
@@ -92,6 +93,7 @@ export async function POST(req: NextRequest) {
     gaClientId,
     isStopDesk,
     deliveryType,
+    stopDeskCause,
     ...rest
   } = parsed.data
   const input = {
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest) {
     pointsRedeemed,
     isStopDesk: isStopDesk ?? (deliveryType === 'stop_desk'),
     deliveryType: deliveryType ?? 'home',
+    stopDeskCause: stopDeskCause ?? null,
   }
   const buyerEmail = rawEmail ?? null
 
@@ -159,6 +162,7 @@ export async function POST(req: NextRequest) {
         wilaya:    input.wilaya,
         itemCount: input.items.length,
         isStopDesk: input.isStopDesk,
+        stopDeskCause: input.stopDeskCause,
       }).catch((err) => logger.error('[email] order confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
     }
 

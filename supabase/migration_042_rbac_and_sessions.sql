@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.vendor_members (
 );
 
 -- Service-role only — all reads/writes go through API, not client SDK
-ALTER TABLE public.vendor_members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vendor_members ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_vendor_members_user     ON public.vendor_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_vendor_members_vendor   ON public.vendor_members(vendor_id);
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS public.seller_sessions (
   UNIQUE(user_id, device_hash)
 );
 
-ALTER TABLE public.seller_sessions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.seller_sessions ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_seller_sessions_user_id   ON public.seller_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_seller_sessions_vendor_id ON public.seller_sessions(vendor_id);
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS public.security_events (
 );
 
 -- Append-only: disable RLS, service-role inserts only
-ALTER TABLE public.security_events DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_security_events_actor     ON public.security_events(actor_id);
 CREATE INDEX IF NOT EXISTS idx_security_events_action    ON public.security_events(action);

@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS public.admin_sessions (
   is_active         BOOLEAN     NOT NULL DEFAULT true
 );
 
--- No RLS — server-only table, accessed exclusively via the service_role client
-ALTER TABLE public.admin_sessions DISABLE ROW LEVEL SECURITY;
+-- Server-only table, accessed exclusively via the service_role client
+ALTER TABLE public.admin_sessions ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_admin_sessions_jti
   ON public.admin_sessions(jti);
@@ -34,8 +34,8 @@ CREATE TABLE IF NOT EXISTS public.admin_used_totp_counters (
   used_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- No RLS — server-only table
-ALTER TABLE public.admin_used_totp_counters DISABLE ROW LEVEL SECURITY;
+-- Server-only table
+ALTER TABLE public.admin_used_totp_counters ENABLE ROW LEVEL SECURITY;
 
 -- ── Cleanup helpers ──────────────────────────────────────────────────────────
 

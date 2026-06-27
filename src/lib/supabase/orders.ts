@@ -46,6 +46,7 @@ export interface OrderRow {
   rex_tracking?:        string | null
   rex_label_url?:       string | null
   is_stopdesk?:         boolean
+  stop_desk_cause?:     string | null
   created_at:          string
   order_items?:        OrderItemRow[]
 }
@@ -70,6 +71,7 @@ export interface CreateOrderInput {
   rc?:                string | null
   isStopDesk?:        boolean
   deliveryType?:      'home' | 'office' | 'stop_desk'
+  stopDeskCause?:     string | null
   email?:             string | null
   items: {
     productId:     string
@@ -284,6 +286,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       rc:              input.rc ?? null,
       is_stopdesk:     input.isStopDesk ?? (input.deliveryType === 'stop_desk'),
       delivery_type:   input.deliveryType ?? 'home',
+      stop_desk_cause: input.stopDeskCause ?? null,
       email:           input.email ?? null,
     })
     .select('id')

@@ -92,6 +92,7 @@ export async function sendOrderConfirmationEmail(opts: {
   wilaya: string
   itemCount: number
   isStopDesk?: boolean
+  stopDeskCause?: string | null
 }): Promise<void> {
   try {
     await sendEmail(
@@ -106,6 +107,7 @@ export async function sendOrderConfirmationEmail(opts: {
           <tr><td style="color:#6b7280;padding:4px 0">Numéro de commande</td><td><strong>#${opts.orderId.slice(0, 8).toUpperCase()}</strong></td></tr>
           <tr><td style="color:#6b7280;padding:4px 0">Wilaya</td><td><strong>${esc(opts.wilaya)}</strong></td></tr>
           <tr><td style="color:#6b7280;padding:4px 0">Mode de livraison</td><td><strong>${opts.isStopDesk ? 'Point Relais (Stop Desk)' : 'Livraison à domicile'}</strong></td></tr>
+          ${opts.isStopDesk && opts.stopDeskCause ? `<tr><td style="color:#6b7280;padding:4px 0">Motif</td><td><strong>${esc(opts.stopDeskCause)}</strong></td></tr>` : ''}
           <tr><td style="color:#6b7280;padding:4px 0">Total</td><td><strong>${opts.total.toLocaleString('fr-DZ')} DA</strong></td></tr>
         </table>
         <p>Vous recevrez une notification dès que votre commande est expédiée.</p>

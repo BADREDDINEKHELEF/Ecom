@@ -38,6 +38,7 @@ const InitiateSchema = z.object({
   gaClientId:       z.string().max(100).optional().nullable(),
   isStopDesk:       z.boolean().optional().default(false),
   deliveryType:     z.enum(['home', 'office', 'stop_desk']).optional().default('home'),
+  stopDeskCause:    z.string().max(300).optional().nullable(),
   items:            z.array(OrderItemSchema).min(1).max(50),
   selectedColor:    z.string().max(100).nullable().optional(),
 })
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
     rc,
     isStopDesk,
     deliveryType,
+    stopDeskCause,
     ...rest
   } = parsed.data
   const phone = normalizePhone(rest.phone)
@@ -107,6 +109,7 @@ export async function POST(req: NextRequest) {
       rc: rc ?? null,
       isStopDesk: isStopDesk ?? (deliveryType === 'stop_desk'),
       deliveryType: deliveryType ?? 'home',
+      stopDeskCause: stopDeskCause ?? null,
       email:    buyerEmail,
       status: 'pending_payment',
     })

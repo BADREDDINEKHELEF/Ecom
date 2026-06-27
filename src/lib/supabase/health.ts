@@ -12,7 +12,7 @@ export interface IntegrationHealth {
   last_account_name: string | null
   last_quote_fee: number | null
   last_quote_duration: string | null
-  last_quote_response: any | null
+  last_quote_response: unknown | null
 }
 
 export async function getIntegrationHealth(vendorId: string): Promise<IntegrationHealth[]> {

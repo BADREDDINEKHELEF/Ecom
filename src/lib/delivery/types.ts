@@ -28,6 +28,7 @@ export interface ShipmentInput {
   total: number
   items?: string
   isStopDesk?: boolean
+  stopDeskCause?: string | null
 }
 
 export interface ShipmentResult {
