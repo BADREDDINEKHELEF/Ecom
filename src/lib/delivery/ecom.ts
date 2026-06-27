@@ -97,8 +97,9 @@ export async function ecomGetRateWithToken(
     const row = findWilayaRow(data, wilayaName)
     const rate = extractRates(row)
     return rate
-  } catch (err: any) {
-    console.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}:`, err.message || err)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}:`, msg)
     return null
   }
 }
