@@ -18,7 +18,7 @@ export function extractRates(
 
   const getVal = (keys: string[]): unknown => {
     for (const key of keys) {
-      if (row[key] !== undefined) return row[key]
+      if (row[key] !== undefined && row[key] !== null) return row[key]
     }
     return undefined
   }
