@@ -224,8 +224,8 @@ describe('migration_041 — seller_data_access_log', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.seller_data_access_log')
   })
 
-  it('disables RLS so only service role can write audit entries', () => {
-    expect(sql).toContain('DISABLE ROW LEVEL SECURITY')
+  it('enables RLS so only service role can write audit entries', () => {
+    expect(sql).toContain('ENABLE ROW LEVEL SECURITY')
   })
 
   it('has index on vendor_id for fast per-vendor audit queries', () => {
