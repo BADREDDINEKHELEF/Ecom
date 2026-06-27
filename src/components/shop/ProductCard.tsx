@@ -47,7 +47,7 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
-    addItem(product)
+    addItem(product, 1, undefined, storeSlug ?? undefined)
     addToast(`${product.name} ${t.product.addedMsg}`)
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: 1 })
     triggerPop(imgRef)

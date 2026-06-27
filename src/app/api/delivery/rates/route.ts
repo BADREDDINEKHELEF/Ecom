@@ -20,23 +20,35 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const storeSlug = searchParams.get('storeSlug')?.trim()
+  const vendorId  = searchParams.get('vendorId')?.trim()
   const wilaya    = searchParams.get('wilaya')?.trim()
 
   if (!wilaya) return NextResponse.json({ error: 'wilaya required' }, { status: 400 })
 
-  // No storeSlug → return static zone pricing immediately
-  if (!storeSlug) {
+  // No storeSlug or vendorId → return static zone pricing immediately
+  if (!storeSlug && !vendorId) {
     return NextResponse.json(staticRate(wilaya))
   }
 
   try {
     const supabase = createAdminClient()
 
-    const { data: vendor } = await supabase
-      .from('vendors')
-      .select('id')
-      .eq('store_slug', storeSlug)
-      .maybeSingle()
+    let vendor = null
+    if (storeSlug) {
+      const { data } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('store_slug', storeSlug)
+        .maybeSingle()
+      vendor = data
+    } else if (vendorId) {
+      const { data } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('id', vendorId)
+        .maybeSingle()
+      vendor = data
+    }
 
     if (!vendor) return NextResponse.json(staticRate(wilaya))
 

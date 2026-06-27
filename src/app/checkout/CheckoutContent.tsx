@@ -138,7 +138,11 @@ export default function CheckoutContent() {
     const timer = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ wilaya: form.wilaya })
-        if (cartStoreSlug) params.set('storeSlug', cartStoreSlug)
+        if (cartStoreSlug) {
+          params.set('storeSlug', cartStoreSlug)
+        } else if (items.length > 0 && items[0].product.vendorId) {
+          params.set('vendorId', items[0].product.vendorId)
+        }
         const res = await fetch(`/api/delivery/rates?${params}`)
         if (res.ok) {
           const data = await res.json()

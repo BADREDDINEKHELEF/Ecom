@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger'
 const AbandonedPostSchema = z.object({
   sessionId:    z.string().min(1).max(64),
   name:         z.string().max(200).optional().nullable(),
-  email:        z.string().email().max(320).optional().nullable(),
+  email:        z.string().email().or(z.literal('')).optional().nullable(),
   phone:        z.string().max(20).optional().nullable(),
   wilaya:       z.string().max(100).optional().nullable(),
   address:      z.string().max(500).optional().nullable(),
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const payload: Record<string, unknown> = {
       session_id:   sessionId,
       name:         name ?? null,
-      email:        email ?? null,
+      email:        email || null,
       phone:        phone ?? null,
       wilaya:       wilaya ?? null,
       address:      address ?? null,
