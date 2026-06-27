@@ -239,14 +239,15 @@ export async function POST(req: NextRequest) {
       }
 
       case 'ecom': {
-        const token = config?.ecom_token
-        if (!token) {
+        const key = config?.ecom_api_key
+        const tk = config?.ecom_api_token
+        if (!key || !tk) {
           await saveIntegrationHealth(vendor.id, 'ecom', { health_status: 'needs_configuration' })
           return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
         }
         if (action === 'test_connection') {
-          const res = await fetch('https://ecom-dz.net/api/v1/delivery-fees?wilaya=Alger', {
-            headers: { 'Authorization': `Bearer ${token}` },
+          const res = await fetch('https://ecom-dz.net/Api_v1/delivery-fees?wilaya=Alger', {
+            headers: { 'Key': key, 'Token': tk },
             signal: AbortSignal.timeout(10_000)
           })
           const ok = res.ok

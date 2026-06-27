@@ -81,7 +81,8 @@ export async function GET(req: NextRequest) {
           maystro_token:      config.maystro_token      ?? undefined,
           rex_token:          config.rex_token          ?? undefined,
           yassir_api_key:     config.yassir_api_key     ?? undefined,
-          ecom_token:         config.ecom_token         ?? undefined,
+          ecom_api_key:       config.ecom_api_key       ?? undefined,
+          ecom_api_token:      config.ecom_api_token      ?? undefined,
           apec_api_id:        config.apec_api_id        ?? undefined,
           apec_api_token:     config.apec_api_token     ?? undefined,
         }

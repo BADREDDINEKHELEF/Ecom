@@ -58,9 +58,9 @@ describe('Delivery API Integration', () => {
 
       const wilaya = 'Alger'
       
-      if (config?.default_provider === 'ecom' && config.ecom_token) {
+      if (config?.default_provider === 'ecom' && config.ecom_api_key && config.ecom_api_token) {
         console.log(`Calling Ecom API for wilaya: ${wilaya}`)
-        const rate = await ecomGetRateWithToken(wilaya, config.ecom_token)
+        const rate = await ecomGetRateWithToken(wilaya, config.ecom_api_key, config.ecom_api_token)
         console.log('Ecom Rate Response:', rate)
         if (rate) {
           expect(rate.homeDelivery).toBeGreaterThan(0)
@@ -80,7 +80,7 @@ describe('Delivery API Integration', () => {
     }
   }, 30000)
 
-  it('should test Ecom API directly if ECOM_TOKEN is set in process.env', async () => {
+  it('should test Ecom API directly if ECOM_API_KEY and ECOM_API_TOKEN are set in process.env', async () => {
     try {
       const envPath = path.resolve(__dirname, '../../.env.local')
       if (fs.existsSync(envPath)) {
@@ -99,18 +99,19 @@ describe('Delivery API Integration', () => {
       console.warn('Could not load .env.local:', e)
     }
 
-    const token = process.env.ECOM_TOKEN
-    if (!token) {
-      console.log('No ECOM_TOKEN in env. Skipping direct Ecom test.')
+    const key = process.env.ECOM_API_KEY
+    const token = process.env.ECOM_API_TOKEN
+    if (!key || !token) {
+      console.log('No ECOM_API_KEY/TOKEN in env. Skipping direct Ecom test.')
       return
     }
-    console.log('Testing Ecom API directly using ECOM_TOKEN env variable...')
-    const rate = await ecomGetRateWithToken('Alger', token)
+    console.log('Testing Ecom API directly using ECOM_API_KEY and ECOM_API_TOKEN env variables...')
+    const rate = await ecomGetRateWithToken('Alger', key, token)
     console.log('Direct Ecom Rate result:', rate)
     if (rate) {
       expect(rate.homeDelivery).toBeGreaterThan(0)
     } else {
-      console.warn('Ecom API returned null rate (could be due to invalid/sandbox token)')
+      console.warn('Ecom API returned null rate (could be due to invalid/sandbox credentials)')
     }
   })
 

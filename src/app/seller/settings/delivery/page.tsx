@@ -24,7 +24,8 @@ export default function DeliverySettingsPage() {
     colivraison_token:    '',
     rex_token:            '',
     yassir_api_key:       '',
-    ecom_token:           '',
+    ecom_api_key:         '',
+    ecom_api_token:        '',
     apec_api_id:          '',
     apec_api_token:       '',
     auto_create_shipment: false,
@@ -59,7 +60,8 @@ export default function DeliverySettingsPage() {
             colivraison_token:    cfg.colivraison_token ?? '',
             rex_token:            cfg.rex_token ?? '',
             yassir_api_key:       cfg.yassir_api_key ?? '',
-            ecom_token:           cfg.ecom_token ?? '',
+            ecom_api_key:         cfg.ecom_api_key ?? '',
+            ecom_api_token:        cfg.ecom_api_token ?? '',
             apec_api_id:          cfg.apec_api_id ?? '',
             apec_api_token:       cfg.apec_api_token ?? '',
             auto_create_shipment: cfg.auto_create_shipment ?? false,
@@ -96,7 +98,8 @@ export default function DeliverySettingsPage() {
           colivraison_token:    form.colivraison_token || null,
           rex_token:            form.rex_token || null,
           yassir_api_key:       form.yassir_api_key || null,
-          ecom_token:           form.ecom_token || null,
+          ecom_api_key:         form.ecom_api_key || null,
+          ecom_api_token:        form.ecom_api_token || null,
           apec_api_id:          form.apec_api_id || null,
           apec_api_token:       form.apec_api_token || null,
           auto_create_shipment: form.auto_create_shipment,
@@ -445,9 +448,14 @@ export default function DeliverySettingsPage() {
                     <ExternalLink className="w-3 h-3" /> {a.openDashboard}
                   </a>
                 </p>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
-                <input type="password" value={form.ecom_token}
-                  onChange={(e) => setForm({ ...form, ecom_token: e.target.value })}
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Key</label>
+                <input type="password" value={form.ecom_api_key}
+                  onChange={(e) => setForm({ ...form, ecom_api_key: e.target.value })}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono mb-3" />
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Token</label>
+                <input type="password" value={form.ecom_api_token}
+                  onChange={(e) => setForm({ ...form, ecom_api_token: e.target.value })}
                   placeholder="••••••••••••••••••••"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}

@@ -105,7 +105,8 @@ export async function POST(req: NextRequest) {
         maystro_token:      vendorConfig.maystro_token      ?? undefined,
         rex_token:          vendorConfig.rex_token          ?? undefined,
         yassir_api_key:     vendorConfig.yassir_api_key     ?? undefined,
-        ecom_token:         vendorConfig.ecom_token         ?? undefined,
+        ecom_api_key:       vendorConfig.ecom_api_key       ?? undefined,
+        ecom_api_token:      vendorConfig.ecom_api_token      ?? undefined,
         apec_api_id:        vendorConfig.apec_api_id        ?? undefined,
         apec_api_token:     vendorConfig.apec_api_token     ?? undefined,
       } : undefined

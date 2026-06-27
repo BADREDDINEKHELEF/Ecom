@@ -16,7 +16,8 @@ const PatchSchema = z.object({
   maystro_token:       z.string().max(500).nullable().optional(),
   rex_token:           z.string().max(500).nullable().optional(),
   yassir_api_key:      z.string().max(500).nullable().optional(),
-  ecom_token:          z.string().max(500).nullable().optional(),
+  ecom_api_key:        z.string().max(500).nullable().optional(),
+  ecom_api_token:       z.string().max(500).nullable().optional(),
   apec_api_id:         z.string().max(200).nullable().optional(),
   apec_api_token:      z.string().max(500).nullable().optional(),
   auto_create_shipment: z.boolean().optional(),
@@ -54,7 +55,8 @@ export async function GET(req: NextRequest) {
       maystro_token:        mask(config.maystro_token),
       rex_token:            mask(config.rex_token),
       yassir_api_key:       mask(config.yassir_api_key),
-      ecom_token:           mask(config.ecom_token),
+      ecom_api_key:         mask(config.ecom_api_key),
+      ecom_api_token:        mask(config.ecom_api_token),
       apec_api_id:          mask(config.apec_api_id),
       apec_api_token:       mask(config.apec_api_token),
       has_yalidine:         !!(config.yalidine_api_id && config.yalidine_api_token),
@@ -64,7 +66,7 @@ export async function GET(req: NextRequest) {
       has_maystro:          !!config.maystro_token,
       has_rex:              !!config.rex_token,
       has_yassir:           !!config.yassir_api_key,
-      has_ecom:             !!config.ecom_token,
+      has_ecom:             !!(config.ecom_api_key && config.ecom_api_token),
       has_apec:             !!(config.apec_api_id && config.apec_api_token),
     } : null
     return NextResponse.json({ config: redacted })
@@ -118,7 +120,8 @@ export async function PATCH(req: NextRequest) {
       if (updates.maystro_token !== undefined)      updates.maystro_token      = merge(updates.maystro_token, existing.maystro_token)
       if (updates.rex_token !== undefined)          updates.rex_token          = merge(updates.rex_token, existing.rex_token)
       if (updates.yassir_api_key !== undefined)     updates.yassir_api_key     = merge(updates.yassir_api_key, existing.yassir_api_key)
-      if (updates.ecom_token !== undefined)         updates.ecom_token         = merge(updates.ecom_token, existing.ecom_token)
+      if (updates.ecom_api_key !== undefined)       updates.ecom_api_key       = merge(updates.ecom_api_key, existing.ecom_api_key)
+      if (updates.ecom_api_token !== undefined)     updates.ecom_api_token     = merge(updates.ecom_api_token, existing.ecom_api_token)
       if (updates.apec_api_id !== undefined)        updates.apec_api_id        = merge(updates.apec_api_id, existing.apec_api_id)
       if (updates.apec_api_token !== undefined)     updates.apec_api_token     = merge(updates.apec_api_token, existing.apec_api_token)
     }

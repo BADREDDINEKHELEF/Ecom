@@ -2,14 +2,19 @@ import { ShipmentInput, ShipmentResult } from './types'
 import { extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
 
-const BASE_URL = 'https://ecom-dz.net/api/v1'
+const BASE_URL = 'https://ecom-dz.net/Api_v1'
+
+function authHeaders(key: string, token: string): Record<string, string> {
+  return { 'Key': key, 'Token': token, 'Accept': 'application/json' }
+}
 
 export function ecomConfigured(): boolean {
-  return !!process.env.ECOM_TOKEN
+  return !!process.env.ECOM_API_KEY && !!process.env.ECOM_API_TOKEN
 }
 
 export async function ecomCreateShipmentWithToken(
   input: ShipmentInput,
+  key: string,
   token: string
 ): Promise<ShipmentResult> {
   const body = {
@@ -30,9 +35,8 @@ export async function ecomCreateShipmentWithToken(
     res = await deliveryFetch(`${BASE_URL}/parcels`, {
       method: 'POST',
       headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${token}`,
-        'Accept':        'application/json',
+        'Content-Type': 'application/json',
+        ...authHeaders(key, token),
       },
       body: JSON.stringify(body),
     })
@@ -62,14 +66,14 @@ export async function ecomCreateShipmentWithToken(
 }
 
 export async function ecomCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
-  if (!ecomConfigured()) throw new Error('Ecom Delivery token not configured')
-  return ecomCreateShipmentWithToken(input, process.env.ECOM_TOKEN!)
+  if (!ecomConfigured()) throw new Error('Ecom Delivery API key/token not configured')
+  return ecomCreateShipmentWithToken(input, process.env.ECOM_API_KEY!, process.env.ECOM_API_TOKEN!)
 }
 
-export async function ecomListParcels(token: string, pageSize = 100) {
+export async function ecomListParcels(key: string, token: string, pageSize = 100) {
   try {
     const res = await deliveryFetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      headers: authHeaders(key, token),
     })
     if (!res.ok) return null
     return res.json()
@@ -78,13 +82,14 @@ export async function ecomListParcels(token: string, pageSize = 100) {
 
 export async function ecomGetRateWithToken(
   wilayaName: string,
+  key: string,
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
   try {
     const url = `${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`
     const res = await deliveryFetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders(key, token),
     })
     
     if (!res.ok) {
@@ -104,13 +109,10 @@ export async function ecomGetRateWithToken(
   }
 }
 
-export async function ecomTrack(trackingNumber: string, token: string) {
+export async function ecomTrack(trackingNumber: string, key: string, token: string) {
   try {
     const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-      },
+      headers: authHeaders(key, token),
     })
     if (!res.ok) return null
     return res.json()

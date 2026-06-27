@@ -27,7 +27,8 @@ export async function dispatchShipment(
     maystro_token?: string
     rex_token?: string
     yassir_api_key?: string
-    ecom_token?: string
+    ecom_api_key?: string
+    ecom_api_token?: string
     apec_api_id?: string
     apec_api_token?: string
   }
@@ -134,10 +135,11 @@ export async function dispatchShipment(
     }
 
     case 'ecom': {
-      const token = vendorCreds?.ecom_token
+      const key = vendorCreds?.ecom_api_key
+      const tk = vendorCreds?.ecom_api_token
       if (vendorCreds) {
-        if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
-        const result = await ecomCreateShipmentWithToken(input, token)
+        if (!key || !tk) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+        const result = await ecomCreateShipmentWithToken(input, key, tk)
         return { ...result, provider, requiresManual: false }
       }
       if (!ecomConfigured()) {
@@ -201,7 +203,8 @@ export async function dispatchTrack(
     maystro_token?: string
     rex_token?: string
     yassir_api_key?: string
-    ecom_token?: string
+    ecom_api_key?: string
+    ecom_api_token?: string
     apec_api_id?: string
     apec_api_token?: string
   }
@@ -267,9 +270,10 @@ export async function dispatchTrack(
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
       }
       case 'ecom': {
-        const token = vendorCreds?.ecom_token ?? process.env.ECOM_TOKEN ?? ''
-        if (!token) return null
-        const data = await ecomTrack(trackingNumber, token)
+        const key = vendorCreds?.ecom_api_key ?? process.env.ECOM_API_KEY ?? ''
+        const tk = vendorCreds?.ecom_api_token ?? process.env.ECOM_API_TOKEN ?? ''
+        if (!key || !tk) return null
+        const data = await ecomTrack(trackingNumber, key, tk)
         if (!data) return null
         const raw = data.status ?? data.etat
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
@@ -341,7 +345,7 @@ export async function dispatchGetStats(
     procolis_token?: string; zr_token?: string
     colivraison_token?: string; maystro_token?: string
     rex_token?: string; yassir_api_key?: string
-    ecom_token?: string; apec_api_id?: string; apec_api_token?: string
+    ecom_api_key?: string; ecom_api_token?: string; apec_api_id?: string; apec_api_token?: string
   }
 ): Promise<ProviderStats | null> {
   try {
@@ -391,9 +395,10 @@ export async function dispatchGetStats(
         break
       }
       case 'ecom': {
-        const token = vendorCreds?.ecom_token ?? process.env.ECOM_TOKEN ?? ''
-        if (!token) return null
-        data = await ecomListParcels(token)
+        const key = vendorCreds?.ecom_api_key ?? process.env.ECOM_API_KEY ?? ''
+        const tk = vendorCreds?.ecom_api_token ?? process.env.ECOM_API_TOKEN ?? ''
+        if (!key || !tk) return null
+        data = await ecomListParcels(key, tk)
         break
       }
       case 'apec': {
@@ -425,7 +430,7 @@ type VendorCreds = {
   procolis_token?: string | null; zr_token?: string | null
   colivraison_token?: string | null; maystro_token?: string | null
   rex_token?: string | null; yassir_api_key?: string | null
-  ecom_token?: string | null; apec_api_id?: string | null; apec_api_token?: string | null
+  ecom_api_key?: string | null; ecom_api_token?: string | null; apec_api_id?: string | null; apec_api_token?: string | null
 }
 
 // vendorOnly=true prevents null vendor tokens from falling through to platform env vars.
@@ -512,12 +517,13 @@ export async function dispatchGetRate(
         return r ? { ...r, provider } : null
       }
       case 'ecom': {
-        const token = tok(vendorCreds?.ecom_token, process.env.ECOM_TOKEN)
-        if (!token) {
-          console.warn(`[dispatchGetRate] ecom: missing token`)
+        const key = tok(vendorCreds?.ecom_api_key, process.env.ECOM_API_KEY)
+        const tk = tok(vendorCreds?.ecom_api_token, process.env.ECOM_API_TOKEN)
+        if (!key || !tk) {
+          console.warn(`[dispatchGetRate] ecom: missing key/token (key=${!!key}, tk=${!!tk})`)
           return null
         }
-        const r = await ecomGetRateWithToken(wilayaName, token)
+        const r = await ecomGetRateWithToken(wilayaName, key, tk)
         return r ? { ...r, provider } : null
       }
       // yassir: no rate endpoint — fall back to static
