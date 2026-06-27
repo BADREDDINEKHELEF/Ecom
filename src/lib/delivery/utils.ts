@@ -48,3 +48,43 @@ export function extractRates(
 export function normalizeAlgiersPhone(phone: string): string {
   return normalizePhone(phone)
 }
+
+export function findWilayaRow(
+  data: unknown,
+  wilayaName: string
+): Record<string, unknown> | null {
+  if (!data) return null
+
+  const d = data as Record<string, unknown>
+  const rows = Array.isArray(data)
+    ? data
+    : (Array.isArray(d.data)
+      ? d.data
+      : (Array.isArray(d.results) ? d.results : null))
+
+  if (rows && Array.isArray(rows)) {
+    const target = wilayaName.toLowerCase().trim()
+    const found = rows.find((r: unknown) => {
+      if (!r || typeof r !== 'object') return false
+      const rowObj = r as Record<string, unknown>
+      
+      const wilayaInfoName = typeof rowObj.wilaya_info === 'object' && rowObj.wilaya_info !== null
+        ? String((rowObj.wilaya_info as Record<string, unknown>).name ?? '')
+        : ''
+
+      const name = String(
+        rowObj.wilaya ??
+        rowObj.wilaya_name ??
+        rowObj.name ??
+        rowObj.to_wilaya_name ??
+        wilayaInfoName ??
+        ''
+      ).toLowerCase().trim()
+      return name === target || name.includes(target) || target.includes(name)
+    })
+    return (found || rows[0]) as Record<string, unknown>
+  }
+  
+  const single = d.data ?? d.results ?? data
+  return single as Record<string, unknown>
+}

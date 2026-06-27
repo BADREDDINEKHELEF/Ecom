@@ -1,5 +1,5 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { splitName, extractRates, isValidWilaya } from './utils'
+import { splitName, extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
 
 const BASE_URL = 'https://api.apec.dz/v1'
@@ -96,7 +96,7 @@ export async function apecGetRateWithCreds(
     })
     if (!res.ok) return null
     const data = await res.json()
-    const row = Array.isArray(data) ? data[0] : (Array.isArray(data?.data) ? data.data[0] : (data?.data ?? data))
+    const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
   } catch {
     return null

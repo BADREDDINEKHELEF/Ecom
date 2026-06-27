@@ -1,5 +1,5 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates } from './utils'
+import { extractRates, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
 
 const BASE_URL = 'https://maystro-delivery.com/api/v1'
@@ -100,7 +100,7 @@ export async function maystroGetRateWithToken(
     })
     if (!res.ok) return null
     const data = await res.json()
-    const row = Array.isArray(data) ? data[0] : (data?.results?.[0] ?? data)
+    const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
   } catch {
     return null

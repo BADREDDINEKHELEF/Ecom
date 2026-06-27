@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest'
 import { deliveryFetch } from '@/lib/delivery/client'
-import { splitName, extractRates, normalizeAlgiersPhone } from '@/lib/delivery/utils'
+import { splitName, extractRates, normalizeAlgiersPhone, findWilayaRow } from '@/lib/delivery/utils'
 
 // Import providers to verify mapping works end-to-end
 import { yalidineCreateShipmentWithCreds, yalidineGetRateWithCreds } from '@/lib/delivery/yalidine'
@@ -132,6 +132,35 @@ describe('Delivery utility tests', () => {
 
     expect(extractRates(null)).toBeNull()
     expect(extractRates({})).toBeNull()
+  })
+
+  it('finds correct wilaya row in flat objects or arrays', () => {
+    // 1. Flat object
+    const flat = { home_fee: 500 }
+    expect(findWilayaRow(flat, 'Alger')).toEqual(flat)
+
+    // 2. Data array containing the target wilaya
+    const dataArray = {
+      data: [
+        { wilaya_name: 'Oran', home_fee: 600 },
+        { wilaya: 'Alger', home_fee: 400 },
+        { name: 'Blida', home_fee: 300 }
+      ]
+    }
+    expect(findWilayaRow(dataArray, 'Alger')).toEqual({ wilaya: 'Alger', home_fee: 400 })
+    expect(findWilayaRow(dataArray, 'oran')).toEqual({ wilaya_name: 'Oran', home_fee: 600 })
+    expect(findWilayaRow(dataArray, '  BLIDA  ')).toEqual({ name: 'Blida', home_fee: 300 })
+
+    // 3. Results array format
+    const resultsArray = {
+      results: [
+        { to_wilaya_name: 'Tipaza', home_fee: 450 }
+      ]
+    }
+    expect(findWilayaRow(resultsArray, 'Tipaza')).toEqual({ to_wilaya_name: 'Tipaza', home_fee: 450 })
+
+    // 4. Fallback if not found
+    expect(findWilayaRow(dataArray, 'UnknownWilaya')).toEqual({ wilaya_name: 'Oran', home_fee: 600 })
   })
 })
 
