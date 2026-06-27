@@ -46,10 +46,9 @@ const FEATURE_ENV = {
 
 const OPTIONAL_ENV = {
   // ── Payment ───────────────────────────────────────────────────────────
-  SATIM_MERCHANT_ID:        'Satim CIB/Edahabia merchant ID',
-  SATIM_TERMINAL_ID:        'Satim terminal ID',
-  SATIM_MERCHANT_PASSWORD:  'Satim merchant password',
-  SATIM_API_URL:            'Satim API base URL (e.g. https://satim.dz/payment/rest)',
+  SATIM_USERNAME:           'Satim merchant username (merchant_id:terminal_id or just merchant ID)',
+  SATIM_PASSWORD:           'Satim merchant password',
+  SATIM_BASE_URL:           'Satim API base URL (e.g. https://satim.dz)',
 
   // ── Rate Limiting (Upstash Redis) ─────────────────────────────────────
   UPSTASH_REDIS_REST_URL:   'Upstash Redis REST URL — from upstash.com dashboard',
@@ -58,6 +57,26 @@ const OPTIONAL_ENV = {
   // ── WhatsApp ──────────────────────────────────────────────────────────
   WHATSAPP_PHONE_NUMBER_ID: 'WhatsApp Business Phone Number ID — from Meta Business Manager',
   WHATSAPP_ACCESS_TOKEN:    'WhatsApp permanent system user token — from Meta Business Manager',
+
+  // ── BaridiMob payment ────────────────────────────────────────────────
+  BARIDIMOB_MERCHANT_ID:    'BaridiMob merchant ID',
+  BARIDIMOB_API_KEY:        'BaridiMob API key',
+  BARIDIMOB_BASE_URL:       'BaridiMob API base URL',
+
+  // ── Conversational API (Meta CAPI, TikTok, Google) ────────────────────
+  META_CAPI_TOKEN:          'Meta Conversions API token — from Meta Events Manager',
+  TIKTOK_CAPI_TOKEN:        'TikTok Conversions API token — from TikTok Events Manager',
+  GTAG_API_SECRET:          'Google Analytics 4 Measurement Protocol API secret',
+
+  // ── AI ────────────────────────────────────────────────────────────────
+  GEMINI_API_KEY:           'Google Gemini API key — from aistudio.google.com',
+
+  // ── Telegram alerts ───────────────────────────────────────────────────
+  TELEGRAM_BOT_TOKEN:       'Telegram bot token — from @BotFather',
+  TELEGRAM_ADMIN_CHAT_ID:   'Telegram admin chat ID for bot notifications',
+
+  // ── Cron ──────────────────────────────────────────────────────────────
+  CRON_SECRET:              'Cron job auth secret — shared secret between Vercel and your cron trigger',
 
   // ── App ───────────────────────────────────────────────────────────────
   NEXT_PUBLIC_APP_URL:      'Your production URL (e.g. https://storedz.dz) — used in payment callback URLs',
@@ -104,8 +123,8 @@ export function validateEnv(): { valid: boolean; errors: string[]; warnings: str
   if (!process.env.WHATSAPP_PHONE_NUMBER_ID) {
     warnings.push('⚠️  WHATSAPP_PHONE_NUMBER_ID not set — WhatsApp order notifications disabled')
   }
-  if (!process.env.SATIM_API_URL) {
-    warnings.push('⚠️  SATIM_API_URL not set — online card payments (CIB/Edahabia) disabled')
+  if (!process.env.SATIM_BASE_URL) {
+    warnings.push('⚠️  SATIM_BASE_URL not set — online card payments (CIB/Edahabia) disabled')
   }
 
   return { valid: errors.length === 0, errors, warnings }

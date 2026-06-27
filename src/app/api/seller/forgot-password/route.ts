@@ -145,17 +145,14 @@ export async function POST(req: NextRequest) {
 
     if (emailError && process.env.NODE_ENV !== 'development') {
       return NextResponse.json(
-        {
-          error: "Impossible d'envoyer l'email. Vérifiez votre adresse ou réessayez plus tard.",
-          _emailError: emailError,
-        },
+        { error: "Impossible d'envoyer l'email. Vérifiez votre adresse ou réessayez plus tard." },
         { status: 502 },
       )
     }
 
     return NextResponse.json({
       success: true,
-      ...(emailError ? { _emailError: emailError } : {}),
+      ...(emailError && process.env.NODE_ENV === 'development' ? { _emailError: emailError } : {}),
       ...(process.env.NODE_ENV === 'development' ? { _devOtp: otp } : {}),
     })
   } catch (err) {

@@ -107,6 +107,7 @@ export interface VendorDeliveryConfig {
   maystro_token?:       string | null
   rex_token?:           string | null
   yassir_api_key?:      string | null
+  ecom_token?:          string | null
   ecom_api_key?:        string | null
   ecom_api_token?:       string | null
   apec_api_id?:         string | null
@@ -219,8 +220,7 @@ function encryptConfigCredentials(
   if (e.maystro_token)      e.maystro_token      = enc(e.maystro_token)
   if (e.rex_token)          e.rex_token          = enc(e.rex_token)
   if (e.yassir_api_key)     e.yassir_api_key     = enc(e.yassir_api_key)
-  if (e.ecom_api_key)       e.ecom_api_key       = enc(e.ecom_api_key)
-  if (e.ecom_api_token)     e.ecom_api_token     = enc(e.ecom_api_token)
+  if (e.ecom_token)         e.ecom_token         = enc(e.ecom_token)
   if (e.apec_api_id)        e.apec_api_id        = enc(e.apec_api_id)
   if (e.apec_api_token)     e.apec_api_token     = enc(e.apec_api_token)
   return e
@@ -229,6 +229,16 @@ function encryptConfigCredentials(
 function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryConfig {
   const dec = (v: string | null | undefined): string | null =>
     v ? (isEncrypted(v) ? decryptField(v) : v) : null
+  const ecomDecrypted = dec(config.ecom_token)
+  let ecomKey = ''
+  let ecomToken = ''
+  if (ecomDecrypted) {
+    try {
+      const p = JSON.parse(ecomDecrypted)
+      ecomKey = p?.key ?? ecomDecrypted
+      ecomToken = p?.token ?? ''
+    } catch { ecomKey = ecomDecrypted }
+  }
   return {
     ...config,
     yalidine_api_id:    dec(config.yalidine_api_id),
@@ -239,8 +249,9 @@ function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryC
     maystro_token:      dec(config.maystro_token),
     rex_token:          dec(config.rex_token),
     yassir_api_key:     dec(config.yassir_api_key),
-    ecom_api_key:       dec(config.ecom_api_key),
-    ecom_api_token:     dec(config.ecom_api_token),
+    ecom_token:         ecomDecrypted,
+    ecom_api_key:       ecomKey || null,
+    ecom_api_token:      ecomToken || null,
     apec_api_id:        dec(config.apec_api_id),
     apec_api_token:     dec(config.apec_api_token),
   }
@@ -252,7 +263,7 @@ export async function getVendorDeliveryConfig(
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('vendor_delivery_config')
-    .select('id, vendor_id, default_provider, yalidine_api_id, yalidine_api_token, procolis_token, zr_token, colivraison_token, maystro_token, rex_token, yassir_api_key, ecom_api_key, ecom_api_token, apec_api_id, apec_api_token, auto_create_shipment, notify_whatsapp, notify_sms')
+    .select('id, vendor_id, default_provider, yalidine_api_id, yalidine_api_token, procolis_token, zr_token, colivraison_token, maystro_token, rex_token, yassir_api_key, ecom_token, apec_api_id, apec_api_token, auto_create_shipment, notify_whatsapp, notify_sms')
     .eq('vendor_id', vendorId)
     .maybeSingle()
   if (!data) return null

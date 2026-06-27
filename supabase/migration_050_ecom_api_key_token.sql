@@ -1,0 +1,8 @@
+-- NO MIGRATION NEEDED for Ecom-DZ credentials change.
+-- The code now stores both Key + Token as JSON in the existing `ecom_token` column.
+-- Format: {"key":"...","token":"..."}
+-- 
+-- If you prefer separate columns in the future, run:
+--   alter table vendor_delivery_config add column ecom_api_key text;
+--   alter table vendor_delivery_config add column ecom_api_token text;
+-- Then update `decryptConfigCredentials` in `vendors.ts` to read from them directly.
