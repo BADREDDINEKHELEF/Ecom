@@ -1,0 +1,22 @@
+# Task List — Priority 2 & Delivery Standardization Complete
+
+- [x] AI Product Translations
+  - [x] Implement `translateText` in `src/lib/ai/gemini.ts`
+  - [x] Create API route `POST /api/seller/ai/translate`
+  - [x] Add translation helper buttons in product editor
+- [x] AI Marketing Copy
+  - [x] Implement `generateMarketingCopy` in `src/lib/ai/gemini.ts`
+  - [x] Create API route `POST /api/seller/ai/marketing-copy`
+  - [x] Add marketing copy generator button/modal in product list
+- [x] Returns & Refunds Management
+  - [x] Create API route `GET /api/seller/returns`
+  - [x] Create API route `PATCH /api/seller/returns/[id]`
+  - [x] Create merchant returns dashboard page
+- [x] Delivery Auditing & Standardization
+  - [x] Create centralized delivery utility file `utils.ts`
+  - [x] Create central delivery fetch client `client.ts` with exponential backoff & timeout aborts
+  - [x] Refactor all 9 delivery provider integrations to use centralized utilities and client
+  - [x] Implement comprehensive verification tests in `delivery-client.test.ts`
+- [x] Verification
+  - [x] Run `npm run type-check` (passed cleanly)
+  - [x] Run `npm run test` (all 437 tests passed cleanly)

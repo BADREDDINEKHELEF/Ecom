@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 const NAMES = ['Ahmed', 'Fatima', 'Youssef', 'Amina', 'Karim', 'Sara', 'Mohamed', 'Nadia', 'Bilal', 'Yasmine', 'Hamza', 'Meriem']
 const WILAYAS = ['Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Tlemcen', 'Sétif', 'Batna', 'Béjaïa', 'Tizi Ouzou']
@@ -27,10 +27,10 @@ interface Notification {
 export default function SocialProofTicker() {
   const [notif, setNotif] = useState<Notification | null>(null)
   const [visible, setVisible] = useState(false)
-  const counter = useState(0)
+  const idRef = useRef(0)
 
   useEffect(() => {
-    let id = counter[0]
+    let id = idRef.current
 
     function show() {
       const name = randomItem(NAMES)
@@ -39,6 +39,7 @@ export default function SocialProofTicker() {
       const mins = randomMinutes()
 
       id++
+      idRef.current = id
       setNotif({
         id,
         text: `${name} de ${wilaya} a commandé "${product}" il y a ${mins} min`,

@@ -174,7 +174,7 @@ export default function CheckoutContent() {
       }
     }, 400)
     return () => clearTimeout(timer)
-  }, [form.wilaya, cartStoreSlug])
+  }, [form.wilaya, cartStoreSlug, items])
 
   const handleLocate = () => {
     if (!navigator.geolocation) { setLocError(t.checkout.locationFailed); return }

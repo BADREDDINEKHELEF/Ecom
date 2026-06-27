@@ -47,7 +47,7 @@ export function decryptField(ciphertext: string): string {
     decipher.setAuthTag(tag)
     return decipher.update(enc).toString('utf8') + decipher.final('utf8')
   } catch {
-    // GCM auth tag mismatch — ciphertext is tampered or corrupted
+    console.warn('[crypto] GCM auth tag mismatch — FIELD_ENCRYPTION_KEY may be wrong on this environment. Vendor credentials will be empty.')
     return ''
   }
 }

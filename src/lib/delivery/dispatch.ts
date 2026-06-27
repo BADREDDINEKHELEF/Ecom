@@ -449,50 +449,74 @@ export async function dispatchGetRate(
       case 'yalidine': {
         const id = tok(vendorCreds?.yalidine_api_id, process.env.YALIDINE_API_ID)
         const tk = tok(vendorCreds?.yalidine_api_token, process.env.YALIDINE_API_TOKEN)
-        if (!id || !tk) return null
+        if (!id || !tk) {
+          console.warn(`[dispatchGetRate] yalidine: missing credentials (id=${!!id}, tk=${!!tk})`)
+          return null
+        }
         const r = await yalidineGetRateWithCreds(wilayaName, id, tk)
         return r ? { ...r, provider } : null
       }
       case 'procolis': {
         const token = tok(vendorCreds?.procolis_token, process.env.PROCOLIS_TOKEN)
-        if (!token) return null
+        if (!token) {
+          console.warn(`[dispatchGetRate] procolis: missing token`)
+          return null
+        }
         const r = await procolisGetRateWithToken(wilayaName, token)
         return r ? { ...r, provider } : null
       }
       case 'zr': {
         const token = tok(vendorCreds?.zr_token, process.env.ZR_TOKEN)
-        if (!token) return null
+        if (!token) {
+          console.warn(`[dispatchGetRate] zr: missing token`)
+          return null
+        }
         const r = await zrGetRateWithToken(wilayaName, token)
         return r ? { ...r, provider } : null
       }
       case 'colivraison': {
         const token = tok(vendorCreds?.colivraison_token, process.env.COLIVRAISON_TOKEN)
-        if (!token) return null
+        if (!token) {
+          console.warn(`[dispatchGetRate] colivraison: missing token`)
+          return null
+        }
         const r = await colivraisonGetRateWithToken(wilayaName, token)
         return r ? { ...r, provider } : null
       }
       case 'maystro': {
         const token = tok(vendorCreds?.maystro_token, process.env.MAYSTRO_TOKEN)
-        if (!token) return null
+        if (!token) {
+          console.warn(`[dispatchGetRate] maystro: missing token`)
+          return null
+        }
         const r = await maystroGetRateWithToken(wilayaName, token)
         return r ? { ...r, provider } : null
       }
       case 'rex': {
         const token = tok(vendorCreds?.rex_token, process.env.REX_TOKEN)
-        if (!token) return null
+        if (!token) {
+          console.warn(`[dispatchGetRate] rex: missing token`)
+          return null
+        }
         const r = await rexGetRateWithToken(wilayaName, token)
         return r ? { ...r, provider } : null
       }
       case 'apec': {
         const id = tok(vendorCreds?.apec_api_id, process.env.APEC_API_ID)
         const tk = tok(vendorCreds?.apec_api_token, process.env.APEC_API_TOKEN)
-        if (!id || !tk) return null
+        if (!id || !tk) {
+          console.warn(`[dispatchGetRate] apec: missing credentials (id=${!!id}, tk=${!!tk})`)
+          return null
+        }
         const r = await apecGetRateWithCreds(wilayaName, id, tk)
         return r ? { ...r, provider } : null
       }
       case 'ecom': {
         const token = tok(vendorCreds?.ecom_token, process.env.ECOM_TOKEN)
-        if (!token) return null
+        if (!token) {
+          console.warn(`[dispatchGetRate] ecom: missing token`)
+          return null
+        }
         const r = await ecomGetRateWithToken(wilayaName, token)
         return r ? { ...r, provider } : null
       }

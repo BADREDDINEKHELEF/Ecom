@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Check, Eye, EyeOff, Truck, Bell, Zap, Info, Menu, ExternalLink } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
@@ -42,7 +42,7 @@ export default function DeliverySettingsPage() {
   const [testResultApec, setTestResultApec] = useState<'ok' | 'fail' | 'unsaved' | null>(null)
   const [savedConfig, setSavedConfig] = useState<Record<string, unknown> | null>(null)
 
-  const loadConfig = () => {
+  const loadConfig = useCallback(() => {
     if (!vendor) return
     setLoadingConfig(true)
     fetch('/api/seller/delivery-config')
@@ -71,11 +71,11 @@ export default function DeliverySettingsPage() {
         setLoadingConfig(false)
       })
       .catch(() => setLoadingConfig(false))
-  }
+  }, [vendor])
 
   useEffect(() => {
     loadConfig()
-  }, [vendor])
+  }, [loadConfig])
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()

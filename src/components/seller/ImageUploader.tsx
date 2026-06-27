@@ -142,7 +142,6 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
       if (prev.some((i) => i.uploading)) return prev
       return value.map((url, i) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false, color: colors?.[i] ?? '' }))
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, colors])
 
   // ── Upload a single file ─────────────────────────────────────────────────

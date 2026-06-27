@@ -27,17 +27,17 @@ export async function POST(req: NextRequest) {
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
 
-  let body: { integrationName?: string; action?: string; params?: any }
-  try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid body' }, { status: 400 }) }
+  let body: { integrationName?: string; action?: string; params?: { wilaya?: string } }
+  try { body = (await req.json()) as { integrationName?: string; action?: string; params?: { wilaya?: string } } } catch { return NextResponse.json({ error: 'Invalid body' }, { status: 400 }) }
   const { integrationName, action, params } = body
 
   if (!integrationName || !action) return NextResponse.json({ error: 'Missing integrationName or action' }, { status: 400 })
 
   const config = await getVendorDeliveryConfig(vendor.id)
   
-  const recordResult = async (ok: boolean, details: { error?: string | null; status?: number | null; accountName?: string | null; quoteFee?: number | null; quoteDuration?: string | null; quoteResponse?: any }) => {
+  const recordResult = async (ok: boolean, details: { error?: string | null; status?: number | null; accountName?: string | null; quoteFee?: number | null; quoteDuration?: string | null; quoteResponse?: unknown }) => {
     const health_status = ok ? 'connected' : 'failed'
-    const update: any = {
+    const update: Record<string, unknown> = {
       health_status,
       last_error_message: ok ? null : (details.error || 'Connection failed'),
       last_http_status: details.status || null,

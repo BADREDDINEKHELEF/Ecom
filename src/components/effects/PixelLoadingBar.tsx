@@ -97,7 +97,7 @@ export default function PixelLoadingBar() {
       window.removeEventListener('storedzNavEnd',   onNavEnd)
       cancelAnimationFrame(rafRef.current)
     }
-  }, [])
+  }, [reduced])
 
   if (!visible) return null
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Check, X, Zap, Play, Gauge, Code, Menu, RefreshCw } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useRTL } from '@/lib/store/langStore'
@@ -46,9 +46,9 @@ export default function IntegrationsHealthPage() {
   // Local tester states
   const [testing, setTesting] = useState<Record<string, boolean>>({})
   const [selectedWilaya, setSelectedWilaya] = useState<Record<string, string>>({})
-  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; raw?: any; message?: string; rate?: any }>>({})
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; raw?: unknown; message?: string; rate?: { homeDelivery?: number; deskDelivery?: number; provider?: string } }>>({})
 
-  const loadHealth = async () => {
+  const loadHealth = useCallback(async () => {
     if (!vendor) return
     setLoadingHealth(true)
     try {
@@ -64,11 +64,11 @@ export default function IntegrationsHealthPage() {
     } catch {} finally {
       setLoadingHealth(false)
     }
-  }
+  }, [vendor])
 
   useEffect(() => {
     loadHealth()
-  }, [vendor])
+  }, [loadHealth])
 
   const runTest = async (integrationName: string, action: string, extraParams?: unknown) => {
     setTesting((prev) => ({ ...prev, [`${integrationName}-${action}`]: true }))
