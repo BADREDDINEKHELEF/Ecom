@@ -4,6 +4,7 @@ import { getReviews, addReview } from '@/lib/supabase/queries'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { parseAndValidate, logAndReturnError, rateLimitResponse } from '@/lib/api/routeHelpers'
+import { logger } from '@/lib/logger'
 
 interface Params { params: Promise<{ productId: string }> }
 
