@@ -143,24 +143,17 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    if (emailError && process.env.NODE_ENV !== 'development') {
+    if (emailError) {
       return NextResponse.json(
         { error: "Impossible d'envoyer l'email. Vérifiez votre adresse ou réessayez plus tard." },
         { status: 502 },
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      ...(emailError && process.env.NODE_ENV === 'development' ? { _emailError: emailError } : {}),
-      ...(process.env.NODE_ENV === 'development' ? { _devOtp: otp } : {}),
-    })
+    return NextResponse.json({ success: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     logger.error('[POST /api/seller/forgot-password]', { error: msg })
-    if (process.env.NODE_ENV === 'development') {
-      return NextResponse.json({ error: msg }, { status: 500 })
-    }
     return NextResponse.json({ error: 'Impossible d\'envoyer le code. Réessayez.' }, { status: 500 })
   }
 }
