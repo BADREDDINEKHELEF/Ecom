@@ -8,6 +8,7 @@ import { dispatchGetRate } from '@/lib/delivery/dispatch'
 
 // Import specific carrier clients/calls
 import { yassirListParcels } from '@/lib/delivery/yassir'
+import { ecomListParcels } from '@/lib/delivery/ecom'
 
 // Import CAPI calls
 import { fireMetaPurchase, fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
@@ -246,15 +247,10 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
         }
         if (action === 'test_connection') {
-          const res = await fetch('https://ecom-dz.net/Api_v1/delivery-fees?wilaya=Alger', {
-            headers: { 'Key': key, 'Token': tk },
-            signal: AbortSignal.timeout(10_000)
-          })
-          const ok = res.ok
-          const status = res.status
-          const resBody = await res.json().catch(() => ({}))
-          await recordResult(ok, { status, error: ok ? null : `Ecom API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          const parcels = await ecomListParcels(key, tk, 1)
+          const ok = parcels !== null
+          await recordResult(ok, { error: ok ? null : 'Ecom API connection failed' })
+          return NextResponse.json({ ok, raw: parcels })
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'

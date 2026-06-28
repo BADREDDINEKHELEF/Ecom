@@ -7,7 +7,7 @@ import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivrai
 import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels, maystroGetRateWithToken } from './maystro'
 import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels, rexGetRateWithToken } from './rex'
 import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
-import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels, ecomGetRateWithToken } from './ecom'
+import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
 import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels, apecGetRateWithCreds } from './apec'
 
 export interface DispatchResult extends ShipmentResult {
@@ -517,14 +517,8 @@ export async function dispatchGetRate(
         return r ? { ...r, provider } : null
       }
       case 'ecom': {
-        const key = tok(vendorCreds?.ecom_api_key, process.env.ECOM_API_KEY)
-        const tk = tok(vendorCreds?.ecom_api_token, process.env.ECOM_API_TOKEN)
-        if (!key || !tk) {
-          console.warn(`[dispatchGetRate] ecom: missing key/token (key=${!!key}, tk=${!!tk})`)
-          return null
-        }
-        const r = await ecomGetRateWithToken(wilayaName, key, tk)
-        return r ? { ...r, provider } : null
+        // Ecom-DZ does not expose a live rate endpoint — uses static pricing
+        return null
       }
       // yassir: no rate endpoint — fall back to static
       default:

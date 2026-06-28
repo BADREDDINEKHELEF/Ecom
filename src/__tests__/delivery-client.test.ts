@@ -477,6 +477,7 @@ describe('E2E Provider Payload Mapping', () => {
         wilaya: 'Alger',
         total: 1500,
       },
+      'key',
       'token'
     )
 
@@ -496,7 +497,7 @@ describe('E2E Provider Payload Mapping', () => {
       }),
     } as Response)
 
-    const res = await ecomGetRateWithToken('Alger', 'token')
+    const res = await ecomGetRateWithToken('Alger', 'key', 'token')
     expect(res).toEqual({ homeDelivery: 550, deskDelivery: 350 })
   })
 

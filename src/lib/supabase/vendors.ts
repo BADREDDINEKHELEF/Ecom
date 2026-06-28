@@ -212,6 +212,15 @@ function encryptConfigCredentials(
 ): typeof config {
   const e = { ...config }
   const enc = (v?: string | null) => (v && !isEncrypted(v) ? encryptField(v) : v)
+
+  if (e.ecom_api_key || e.ecom_api_token) {
+    e.ecom_token = JSON.stringify({ key: e.ecom_api_key ?? '', token: e.ecom_api_token ?? '' })
+    delete e.ecom_api_key
+    delete e.ecom_api_token
+  } else if (e.ecom_token) {
+    e.ecom_token = enc(e.ecom_token)
+  }
+
   if (e.yalidine_api_id)    e.yalidine_api_id    = enc(e.yalidine_api_id)
   if (e.yalidine_api_token) e.yalidine_api_token = enc(e.yalidine_api_token)
   if (e.procolis_token)     e.procolis_token     = enc(e.procolis_token)
@@ -229,16 +238,21 @@ function encryptConfigCredentials(
 function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryConfig {
   const dec = (v: string | null | undefined): string | null =>
     v ? (isEncrypted(v) ? decryptField(v) : v) : null
+
   const ecomDecrypted = dec(config.ecom_token)
-  let ecomKey = ''
-  let ecomToken = ''
+  let ecomApiKey: string | null = null
+  let ecomApiToken: string | null = null
   if (ecomDecrypted) {
     try {
-      const p = JSON.parse(ecomDecrypted)
-      ecomKey = p?.key ?? ecomDecrypted
-      ecomToken = p?.token ?? ''
-    } catch { ecomKey = ecomDecrypted }
+      const parsed = JSON.parse(ecomDecrypted)
+      ecomApiKey = typeof parsed.key === 'string' ? parsed.key : null
+      ecomApiToken = typeof parsed.token === 'string' ? parsed.token : null
+    } catch {
+      ecomApiKey = null
+      ecomApiToken = ecomDecrypted
+    }
   }
+
   return {
     ...config,
     yalidine_api_id:    dec(config.yalidine_api_id),
@@ -249,9 +263,8 @@ function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryC
     maystro_token:      dec(config.maystro_token),
     rex_token:          dec(config.rex_token),
     yassir_api_key:     dec(config.yassir_api_key),
-    ecom_token:         ecomDecrypted,
-    ecom_api_key:       ecomKey || null,
-    ecom_api_token:      ecomToken || null,
+    ecom_api_key:       ecomApiKey,
+    ecom_api_token:     ecomApiToken,
     apec_api_id:        dec(config.apec_api_id),
     apec_api_token:     dec(config.apec_api_token),
   }
