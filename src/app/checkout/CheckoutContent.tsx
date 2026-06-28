@@ -302,7 +302,7 @@ export default function CheckoutContent() {
   const validatePhone = (val: string) => {
     if (!val) { setPhoneError(''); return }
     const clean = val.replace(/\s+/g, '')
-    if (!/^(213[5-7]|0[5-7])\d{8}$/.test(clean)) {
+    if (!/^(\+?213|0)[5-7]\d{8}$/.test(clean)) {
       setPhoneError(t.checkout.phoneInvalid)
     } else {
       setPhoneError('')
@@ -331,6 +331,11 @@ export default function CheckoutContent() {
 
     const resolvedCity = form.city === '__autre__' ? customCommune : form.city
 
+    if (!form.phone.trim()) {
+      setSaveError('Numéro de téléphone requis')
+      setSaving(false)
+      return
+    }
     if (!resolvedCity.trim()) {
       setSaveError(t.checkout.selectCommune)
       setSaving(false)
