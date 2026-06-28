@@ -2,13 +2,14 @@ import { TrendingDown, TrendingUp, Package, DollarSign, AlertTriangle } from 'lu
 import { getCodWilayaStats, getCodProviderStats } from '@/lib/supabase/analytics'
 import { formatPrice } from '@/lib/utils'
 import CodExportButton from './CodExportButton'
+import { logger } from '@/lib/logger'
 
 export const revalidate = 300
 
 export default async function CodAnalyticsPage() {
   const [wilayaStats, providerStats] = await Promise.all([
-    getCodWilayaStats().catch(() => []),
-    getCodProviderStats().catch(() => []),
+    getCodWilayaStats().catch((err) => { logger.error('[admin/cod] getCodWilayaStats failed', { error: err instanceof Error ? err.message : String(err) }); return [] }),
+    getCodProviderStats().catch((err) => { logger.error('[admin/cod] getCodProviderStats failed', { error: err instanceof Error ? err.message : String(err) }); return [] }),
   ])
 
   const totalCod       = wilayaStats.reduce((s, r) => s + Number(r.total_cod_orders), 0)

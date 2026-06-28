@@ -76,10 +76,13 @@ export async function ecomListParcels(key: string, token: string, pageSize = 100
     const res = await deliveryFetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
       headers: authHeaders(key, token),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[ecomListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch (err: unknown) {
-    logger.error('[ecomListParcels]', { error: err instanceof Error ? err.message : String(err) })
+  } catch (err) {
+    logger.error('[ecomListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -98,7 +101,7 @@ export async function ecomGetRateWithToken(
     
     if (!res.ok) {
       const body = await res.text().catch(() => '')
-      logger.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaName}: status=${res.status} body=${body}`)
+      logger.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaName}`, { status: res.status, body })
       return null
     }
     
@@ -107,8 +110,7 @@ export async function ecomGetRateWithToken(
     const rate = extractRates(row)
     return rate
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    logger.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}:`, { error: msg })
+    logger.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}`, { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -118,10 +120,13 @@ export async function ecomTrack(trackingNumber: string, key: string, token: stri
     const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
       headers: authHeaders(key, token),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[ecomTrack] non-ok response', { status: res.status, trackingNumber })
+      return null
+    }
     return res.json()
-  } catch (err: unknown) {
-    logger.error('[ecomTrack]', { error: err instanceof Error ? err.message : String(err) })
+  } catch (err) {
+    logger.error('[ecomTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingNumber })
     return null
   }
 }

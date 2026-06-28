@@ -19,7 +19,7 @@ export default function CrossSellCarousel({ nicheId, excludeId, title = 'Vous ai
     fetch(`/api/products/related?nicheId=${nicheId}&excludeId=${excludeId}&limit=8`)
       .then((r) => r.json())
       .then((data) => setProducts(Array.isArray(data) ? data : []))
-      .catch(() => {})
+      .catch((err) => { console.error('[CrossSellCarousel] fetch failed:', err instanceof Error ? err.message : String(err)) })
   }, [nicheId, excludeId])
 
   const scroll = (dir: 'left' | 'right') => {

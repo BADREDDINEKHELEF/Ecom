@@ -110,7 +110,10 @@ export async function listActiveSessions(): Promise<SessionRecord[]> {
       lastSeenAt:        s.last_seen_at,
       expiresAt:         s.expires_at,
     }))
-  } catch {
+  } catch (err) {
+    logger.error('[sessions] listActiveSessions failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
     return []
   }
 }
@@ -165,7 +168,10 @@ export async function isTotpCounterUsed(counter: number): Promise<boolean> {
       .eq('counter', counter)
       .maybeSingle()
     return data !== null
-  } catch {
+  } catch (err) {
+    logger.warn('[sessions] isTotpCounterUsed check failed, failing open', {
+      error: err instanceof Error ? err.message : String(err),
+    })
     return false
   }
 }
@@ -182,7 +188,9 @@ export async function markTotpCounterUsed(counter: number): Promise<void> {
     if (cutoff > 0) {
       await admin.from('admin_used_totp_counters').delete().lt('counter', cutoff)
     }
-  } catch {
-    // non-fatal — prefer availability over strict replay protection on DB failure
+  } catch (err) {
+    logger.warn('[sessions] markTotpCounterUsed failed (non-fatal)', {
+      error: err instanceof Error ? err.message : String(err),
+    })
   }
 }

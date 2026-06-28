@@ -223,7 +223,7 @@ export default function SellerDashboardPage() {
         .then((d) => (Array.isArray(d.orders) ? d.orders : []) as VendorOrderSummary[]),
     ])
       .then(([prods, ords]) => { setAllProducts(prods); setOrders(ords) })
-      .catch(() => { /* keep empty state, show dashboard with zeros */ })
+      .catch((err) => { console.error('[seller/dashboard] failed to load products/orders:', err instanceof Error ? err.message : String(err)) })
       .finally(() => setFetching(false))
 
     fetch('/api/seller/cancelled-and-abandoned')
@@ -234,7 +234,7 @@ export default function SellerDashboardPage() {
           setCancelledCount(d.cancelled?.length ?? 0)
         }
       })
-      .catch(() => {})
+      .catch((err) => { console.error('[seller/dashboard] failed to load cancelled/abandoned data:', err instanceof Error ? err.message : String(err)) })
   }, [vendor])
 
   const analytics    = useMemo(() => processOrders(orders, allProducts), [orders, allProducts])

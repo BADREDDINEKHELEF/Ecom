@@ -41,7 +41,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     getStoreSettings()
       .then(setForm)
-      .catch(() => {})
+      .catch((err) => { console.error('[admin/settings] failed to load settings:', err instanceof Error ? err.message : String(err)) })
       .finally(() => setLoading(false))
   }, [])
 
