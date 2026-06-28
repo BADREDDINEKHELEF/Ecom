@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://api.colivraison.com/api'
 
@@ -59,9 +60,15 @@ export async function colivraisonListParcels(token: string, pageSize = 100) {
     const res = await deliveryFetch(`${BASE_URL}/orders?page=1&per_page=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[colivraisonListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[colivraisonListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function colivraisonGetRateWithToken(
@@ -73,11 +80,15 @@ export async function colivraisonGetRateWithToken(
     const res = await deliveryFetch(`${BASE_URL}/pricing?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[colivraisonGetRateWithToken] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err) {
+    logger.error('[colivraisonGetRateWithToken] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }
@@ -87,7 +98,13 @@ export async function colivraisonTrack(trackingCode: string, token: string) {
     const res = await deliveryFetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[colivraisonTrack] non-ok response', { status: res.status, trackingCode })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[colivraisonTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingCode })
+    return null
+  }
 }

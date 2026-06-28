@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { createHash } from 'crypto'
+import { logger } from '@/lib/logger'
 
 // Transparent 1×1 GIF
 const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')
@@ -76,7 +77,9 @@ export async function GET(req: NextRequest) {
         user_agent: req.headers.get('user-agent')?.slice(0, 500) ?? null,
         ip_hash:    hashIp(clientIp),
       })
-    } catch {}
+    } catch (err) {
+      logger.error('[pixel/collect GET] fire-and-forget insert failed', { error: err instanceof Error ? err.message : String(err), pixelId })
+    }
   })()
 
   return response
@@ -129,7 +132,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true }, {
       headers: { 'Access-Control-Allow-Origin': '*' },
     })
-  } catch {
+  } catch (err) {
+    logger.error('[pixel/collect POST] failed', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }

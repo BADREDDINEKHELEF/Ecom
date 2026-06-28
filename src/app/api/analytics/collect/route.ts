@@ -56,15 +56,19 @@ export async function POST(req: NextRequest) {
    } catch { /* unauthenticated — ok */ }
 
    const supabase = createAdminClient()
-   await supabase.from('analytics_events').insert({
-     event:       parsed.data.event,
-     user_id:     userId,
-     session_id:  parsed.data.session_id ?? null,
-     product_id:  parsed.data.product_id ?? null,
-     vendor_id:   vendorId,
-     device_type: parsed.data.device_type ?? null,
-     metadata:    parsed.data.metadata ?? {},
-   })
+   try {
+     await supabase.from('analytics_events').insert({
+       event:       parsed.data.event,
+       user_id:     userId,
+       session_id:  parsed.data.session_id ?? null,
+       product_id:  parsed.data.product_id ?? null,
+       vendor_id:   vendorId,
+       device_type: parsed.data.device_type ?? null,
+       metadata:    parsed.data.metadata ?? {},
+     })
+   } catch (err) {
+     logger.error('[analytics/collect] insert failed', { error: err instanceof Error ? err.message : String(err) })
+   }
   // Fire-and-forget — always return 200 to caller
   return NextResponse.json({ ok: true })
 }

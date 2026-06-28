@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://rexlivraison.com/api/v1'
 
@@ -57,9 +58,15 @@ export async function rexListParcels(token: string, pageSize = 100) {
     const res = await deliveryFetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[rexListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[rexListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function rexGetRateWithToken(
@@ -71,11 +78,15 @@ export async function rexGetRateWithToken(
     const res = await deliveryFetch(`${BASE_URL}/rates?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[rexGetRateWithToken] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err) {
+    logger.error('[rexGetRateWithToken] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }
@@ -85,7 +96,13 @@ export async function rexTrack(trackingCode: string, token: string) {
     const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingCode)}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[rexTrack] non-ok response', { status: res.status, trackingCode })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[rexTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingCode })
+    return null
+  }
 }

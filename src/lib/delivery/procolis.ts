@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://procolis.com/api_v2'
 
@@ -62,9 +63,15 @@ export async function procolisListParcels(token: string, pageSize = 100) {
     const res = await deliveryFetch(`${BASE_URL}/colis?page=1&per_page=${pageSize}`, {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[procolisListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[procolisListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function procolisGetRateWithToken(
@@ -76,11 +83,15 @@ export async function procolisGetRateWithToken(
     const res = await deliveryFetch(`${BASE_URL}/tarif?Wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[procolisGetRateWithToken] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err) {
+    logger.error('[procolisGetRateWithToken] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }
@@ -94,7 +105,13 @@ export async function procolisTrack(trackingNumber: string, token: string) {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       }
     )
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[procolisTrack] non-ok response', { status: res.status, trackingNumber })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[procolisTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingNumber })
+    return null
+  }
 }

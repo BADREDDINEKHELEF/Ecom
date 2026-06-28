@@ -9,6 +9,7 @@ import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack,
 import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
 import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
 import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels, apecGetRateWithCreds } from './apec'
+import { logger } from '@/lib/logger'
 
 export interface DispatchResult extends ShipmentResult {
   provider: string
@@ -182,7 +183,7 @@ export function normalizeProviderStatus(raw: unknown): string {
   if (['cancelled', 'annulé', 'annule', 'canceled'].includes(s)) return 'cancelled'
   if (['pending', 'waiting', 'wait_for_pickup', 'created', '0'].includes(s)) return 'pending'
   // Unknown status — log so new provider status codes can be added above
-  console.warn(`[normalizeProviderStatus] unrecognized status: "${raw}" — treating as in_transit`)
+  logger.warn('[normalizeProviderStatus] unrecognized status — treating as in_transit', { raw: String(raw) })
   return 'in_transit'
 }
 
@@ -290,7 +291,8 @@ export async function dispatchTrack(
       default:
         return null
     }
-  } catch {
+  } catch (err) {
+    logger.error('[dispatchTrack] failed', { error: err instanceof Error ? err.message : String(err), provider, trackingNumber })
     return null
   }
 }
@@ -414,7 +416,8 @@ export async function dispatchGetStats(
     const parcels = extractParcelArray(data)
     if (parcels.length === 0) return null
     return countStatuses(parcels)
-  } catch {
+  } catch (err) {
+    logger.error('[dispatchGetStats] failed', { error: err instanceof Error ? err.message : String(err), provider })
     return null
   }
 }
@@ -455,7 +458,7 @@ export async function dispatchGetRate(
         const id = tok(vendorCreds?.yalidine_api_id, process.env.YALIDINE_API_ID)
         const tk = tok(vendorCreds?.yalidine_api_token, process.env.YALIDINE_API_TOKEN)
         if (!id || !tk) {
-          console.warn(`[dispatchGetRate] yalidine: missing credentials (id=${!!id}, tk=${!!tk})`)
+          logger.warn('[dispatchGetRate] yalidine: missing credentials', { hasId: !!id, hasToken: !!tk })
           return null
         }
         const r = await yalidineGetRateWithCreds(wilayaName, id, tk)
@@ -464,7 +467,7 @@ export async function dispatchGetRate(
       case 'procolis': {
         const token = tok(vendorCreds?.procolis_token, process.env.PROCOLIS_TOKEN)
         if (!token) {
-          console.warn(`[dispatchGetRate] procolis: missing token`)
+          logger.warn('[dispatchGetRate] procolis: missing token')
           return null
         }
         const r = await procolisGetRateWithToken(wilayaName, token)
@@ -473,7 +476,7 @@ export async function dispatchGetRate(
       case 'zr': {
         const token = tok(vendorCreds?.zr_token, process.env.ZR_TOKEN)
         if (!token) {
-          console.warn(`[dispatchGetRate] zr: missing token`)
+          logger.warn('[dispatchGetRate] zr: missing token')
           return null
         }
         const r = await zrGetRateWithToken(wilayaName, token)
@@ -482,7 +485,7 @@ export async function dispatchGetRate(
       case 'colivraison': {
         const token = tok(vendorCreds?.colivraison_token, process.env.COLIVRAISON_TOKEN)
         if (!token) {
-          console.warn(`[dispatchGetRate] colivraison: missing token`)
+          logger.warn('[dispatchGetRate] colivraison: missing token')
           return null
         }
         const r = await colivraisonGetRateWithToken(wilayaName, token)
@@ -491,7 +494,7 @@ export async function dispatchGetRate(
       case 'maystro': {
         const token = tok(vendorCreds?.maystro_token, process.env.MAYSTRO_TOKEN)
         if (!token) {
-          console.warn(`[dispatchGetRate] maystro: missing token`)
+          logger.warn('[dispatchGetRate] maystro: missing token')
           return null
         }
         const r = await maystroGetRateWithToken(wilayaName, token)
@@ -500,7 +503,7 @@ export async function dispatchGetRate(
       case 'rex': {
         const token = tok(vendorCreds?.rex_token, process.env.REX_TOKEN)
         if (!token) {
-          console.warn(`[dispatchGetRate] rex: missing token`)
+          logger.warn('[dispatchGetRate] rex: missing token')
           return null
         }
         const r = await rexGetRateWithToken(wilayaName, token)
@@ -510,7 +513,7 @@ export async function dispatchGetRate(
         const id = tok(vendorCreds?.apec_api_id, process.env.APEC_API_ID)
         const tk = tok(vendorCreds?.apec_api_token, process.env.APEC_API_TOKEN)
         if (!id || !tk) {
-          console.warn(`[dispatchGetRate] apec: missing credentials (id=${!!id}, tk=${!!tk})`)
+          logger.warn('[dispatchGetRate] apec: missing credentials', { hasId: !!id, hasToken: !!tk })
           return null
         }
         const r = await apecGetRateWithCreds(wilayaName, id, tk)
@@ -524,7 +527,8 @@ export async function dispatchGetRate(
       default:
         return null
     }
-  } catch {
+  } catch (err) {
+    logger.error('[dispatchGetRate] failed', { error: err instanceof Error ? err.message : String(err), provider, wilayaName })
     return null
   }
 }
