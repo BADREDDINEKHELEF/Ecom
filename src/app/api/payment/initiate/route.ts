@@ -20,7 +20,7 @@ const OrderItemSchema = z.object({
 const InitiateSchema = z.object({
   paymentMethod:    z.enum(['edahabia', 'cib', 'card', 'baridimob']),
   fullName:         z.string().min(2).max(200),
-  phone:            z.string().regex(/^(213[5-7]|0[5-7])\d{8}$/, 'Invalid Algerian phone number'),
+  phone:            z.string().regex(/^(\+?213|0)[5-7]\d{8}$/, 'Invalid Algerian phone number'),
   email:            z.string().email().max(320).optional().nullable(),
   wilaya:           z.string().min(1).max(100),
   city:             z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),

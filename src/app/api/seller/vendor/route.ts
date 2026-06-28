@@ -55,6 +55,7 @@ const PatchSchema = z.object({
   meta_pixel_id:    z.string().regex(/^\d{10,20}$/).nullable().optional(),
   gtag_id:          z.string().regex(/^(G|GTM|AW)-[A-Z0-9]{4,20}$/).nullable().optional(),
   tiktok_pixel_id:  z.string().regex(/^[A-Z0-9]{10,30}$/).nullable().optional(),
+  meta_enabled:     z.boolean().optional(),
   // Vendor CAPI tokens (server-side, stored securely)
   meta_capi_token:    z.string().max(500).nullable().optional(),
   tiktok_capi_token:  z.string().max(500).nullable().optional(),
@@ -99,6 +100,7 @@ export async function PATCH(req: NextRequest) {
     // Encrypt server-side CAPI tokens before storing — never persist them in plaintext
     const dataToSave = {
       ...parsed.data,
+      ...(parsed.data.meta_pixel_id     !== undefined && { meta_enabled:       parsed.data.meta_pixel_id !== null }),
       ...(parsed.data.meta_capi_token   !== undefined && { meta_capi_token:   encryptIfNeeded(parsed.data.meta_capi_token) }),
       ...(parsed.data.tiktok_capi_token !== undefined && { tiktok_capi_token: encryptIfNeeded(parsed.data.tiktok_capi_token) }),
       ...(parsed.data.gtag_api_secret   !== undefined && { gtag_api_secret:   encryptIfNeeded(parsed.data.gtag_api_secret) }),
