@@ -1,7 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
+import { isValidWilaya } from './utils'
+import { extractTrackingInfo, fetchJsonOrNull, fetchRateOrNull } from './helpers'
 import { deliveryFetch } from './client'
-import { extractRates, isValidWilaya, findWilayaRow } from './utils'
-import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://ecom-dz.net/Api_v1'
 
@@ -57,13 +57,7 @@ export async function ecomCreateShipmentWithToken(
   }
 
   const data = await res.json()
-  const tracking = String(
-    data?.tracking ?? data?.tracking_code ?? data?.tracking_number ??
-    data?.code_suivi ?? data?.parcel_id ?? data?.id ?? ''
-  )
-  const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
-
-  return { tracking, labelUrl }
+  return extractTrackingInfo(data)
 }
 
 export async function ecomCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
@@ -72,16 +66,9 @@ export async function ecomCreateShipment(input: ShipmentInput): Promise<Shipment
 }
 
 export async function ecomListParcels(key: string, token: string, pageSize = 100) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
-      headers: authHeaders(key, token),
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch (err: unknown) {
-    logger.error('[ecomListParcels]', { error: err instanceof Error ? err.message : String(err) })
-    return null
-  }
+  return fetchJsonOrNull(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
+    headers: authHeaders(key, token),
+  })
 }
 
 export async function ecomGetRateWithToken(
@@ -90,38 +77,15 @@ export async function ecomGetRateWithToken(
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
-  try {
-    const url = `${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`
-    const res = await deliveryFetch(url, {
-      headers: authHeaders(key, token),
-    })
-    
-    if (!res.ok) {
-      const body = await res.text().catch(() => '')
-      logger.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaName}: status=${res.status} body=${body}`)
-      return null
-    }
-    
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    const rate = extractRates(row)
-    return rate
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    logger.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}:`, { error: msg })
-    return null
-  }
+  return fetchRateOrNull(
+    `${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`,
+    authHeaders(key, token),
+    wilayaName,
+  )
 }
 
 export async function ecomTrack(trackingNumber: string, key: string, token: string) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
-      headers: authHeaders(key, token),
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch (err: unknown) {
-    logger.error('[ecomTrack]', { error: err instanceof Error ? err.message : String(err) })
-    return null
-  }
+  return fetchJsonOrNull(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
+    headers: authHeaders(key, token),
+  })
 }

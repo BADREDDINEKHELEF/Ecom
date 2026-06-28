@@ -1,6 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates, isValidWilaya, findWilayaRow } from './utils'
-import { deliveryFetch } from './client'
+import { isValidWilaya } from './utils'
+import { postShipment, extractTrackingInfo, fetchJsonOrNull, fetchRateOrNull } from './helpers'
 
 const BASE_URL = 'https://rexlivraison.com/api/v1'
 
@@ -24,27 +24,14 @@ export async function rexCreateShipmentWithToken(
     can_open:          0,
   }
 
-  const res = await deliveryFetch(`${BASE_URL}/parcels`, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Rex ${res.status}: ${text}`)
-  }
-
-  const data = await res.json()
-  const tracking = String(
-    data?.tracking_code ?? data?.tracking ?? data?.code ?? data?.id ?? ''
+  const { data } = await postShipment(
+    'Rex',
+    `${BASE_URL}/parcels`,
+    { 'Authorization': `Bearer ${token}` },
+    body,
   )
-  const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
 
-  return { tracking, labelUrl }
+  return extractTrackingInfo(data)
 }
 
 export async function rexCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
@@ -53,13 +40,9 @@ export async function rexCreateShipment(input: ShipmentInput): Promise<ShipmentR
 }
 
 export async function rexListParcels(token: string, pageSize = 100) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
 }
 
 export async function rexGetRateWithToken(
@@ -67,25 +50,15 @@ export async function rexGetRateWithToken(
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/rates?wilaya=${encodeURIComponent(wilayaName)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
-    return null
-  }
+  return fetchRateOrNull(
+    `${BASE_URL}/rates?wilaya=${encodeURIComponent(wilayaName)}`,
+    { Authorization: `Bearer ${token}` },
+    wilayaName,
+  )
 }
 
 export async function rexTrack(trackingCode: string, token: string) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingCode)}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/parcels/${encodeURIComponent(trackingCode)}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  })
 }

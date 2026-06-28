@@ -1,6 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates, isValidWilaya, findWilayaRow } from './utils'
-import { deliveryFetch } from './client'
+import { isValidWilaya } from './utils'
+import { postShipment, fetchJsonOrNull, fetchRateOrNull } from './helpers'
 
 const BASE_URL = 'https://procolis.com/api_v2'
 
@@ -29,23 +29,15 @@ export async function procolisCreateShipmentWithToken(
     ],
   }
 
-  const res = await deliveryFetch(`${BASE_URL}/ajouter`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  })
+  const { data } = await postShipment(
+    'Procolis',
+    `${BASE_URL}/ajouter`,
+    { 'Authorization': `Bearer ${token}` },
+    body,
+  )
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Procolis ${res.status}: ${text}`)
-  }
-
-  const data = await res.json()
   // Procolis response wraps created parcels in data.Colis[]
-  const parcel = (Array.isArray(data?.Colis) ? data.Colis : [])[0] ?? data ?? {}
+  const parcel = (Array.isArray(data?.Colis) ? (data.Colis as Record<string, unknown>[])[0] : null) ?? data
   const tracking = String(parcel.code_suivi ?? parcel.tracking ?? parcel.id ?? '')
   const labelUrl = String(parcel.label ?? parcel.label_url ?? parcel.bon_livraison ?? parcel.bon_url ?? '') || undefined
 
@@ -58,13 +50,9 @@ export async function procolisCreateShipment(input: ShipmentInput): Promise<Ship
 }
 
 export async function procolisListParcels(token: string, pageSize = 100) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/colis?page=1&per_page=${pageSize}`, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/colis?page=1&per_page=${pageSize}`, {
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+  })
 }
 
 export async function procolisGetRateWithToken(
@@ -72,29 +60,17 @@ export async function procolisGetRateWithToken(
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/tarif?Wilaya=${encodeURIComponent(wilayaName)}`, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
-    return null
-  }
+  return fetchRateOrNull(
+    `${BASE_URL}/tarif?Wilaya=${encodeURIComponent(wilayaName)}`,
+    { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    wilayaName,
+  )
 }
 
 export async function procolisTrack(trackingNumber: string, token: string) {
-  try {
-    // Note: Procolis API uses '/traking' (their spelling) not '/tracking'
-    const res = await deliveryFetch(
-      `${BASE_URL}/traking?code_suivi=${encodeURIComponent(trackingNumber)}`,
-      {
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      }
-    )
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  // Note: Procolis API uses '/traking' (their spelling) not '/tracking'
+  return fetchJsonOrNull(
+    `${BASE_URL}/traking?code_suivi=${encodeURIComponent(trackingNumber)}`,
+    { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } },
+  )
 }

@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRouteClient } from '@/lib/supabase/server'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
-import { logger } from '@/lib/logger'
 import {
   createShipment, getVendorShipments, updateShipmentStatus,
   getVendorDeliveryConfig, updateShippingInfo, updateOrderStatus
 } from '@/lib/supabase/queries'
 import { dispatchShipment, dispatchGetRate } from '@/lib/delivery/dispatch'
-import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
-import { getClientIp } from '@/lib/utils/ip'
+import { checkUserDualRateLimit } from '@/lib/auth/rateLimit'
+import { requireSellerWithRateLimit, rateLimitResponse, parseAndValidate, logAndReturnError } from '@/lib/api/routeHelpers'
+import { logger } from '@/lib/logger'
 import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
 
 const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
@@ -35,38 +33,19 @@ const PatchShipmentSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req)
-  const rl = await checkSellerRateLimit(ip, 'shipments_create', 20, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes. Réessayez plus tard.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireSellerWithRateLimit(req, 'shipments_create', 20, 60)
+  if (auth instanceof NextResponse) return auth
+  const { user, vendor } = auth
 
   const userRl = await checkUserDualRateLimit(user.id, 'shipments', {
     burstMax: 5, burstWindowSecs: 60,
     sustainedMax: 30, sustainedWindowSecs: 3600,
   })
-  if (!userRl.allowed) return NextResponse.json(
-    { error: 'Limite atteinte. Réessayez plus tard.' },
-    { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-  )
+  if (!userRl.allowed) return rateLimitResponse(userRl)
 
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
-
-  let body: unknown
-  try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const parsed = CreateShipmentSchema.safeParse(body)
-  if (!parsed.success) {
-    const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
-    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
-  }
+  const validated = await parseAndValidate(req, CreateShipmentSchema)
+  if (validated instanceof NextResponse) return validated
+  const parsed = validated
 
   const { orderId, provider, trackingNumber, isStopDesk, stopDeskCause, autoCreate, notes } = parsed.data
 
@@ -195,24 +174,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ shipment, requiresManual })
   } catch (err) {
-    logger.error('[POST /api/seller/shipments]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[POST /api/seller/shipments]', err)
   }
 }
 
 export async function GET(req: NextRequest) {
-  const ip = getClientIp(req)
-  const rl = await checkSellerRateLimit(ip, 'shipments_read', 60, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes. Réessayez plus tard.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+  const auth = await requireSellerWithRateLimit(req, 'shipments_read', 60, 60)
+  if (auth instanceof NextResponse) return auth
+  const { vendor } = auth
 
   try {
     const { searchParams } = new URL(req.url)
@@ -223,35 +192,18 @@ export async function GET(req: NextRequest) {
     const result = await getVendorShipments(vendor.id, page, 50, { status, provider })
     return NextResponse.json(result)
   } catch (err) {
-    logger.error('[GET /api/seller/shipments]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[GET /api/seller/shipments]', err)
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  const ip = getClientIp(req)
-  const rl = await checkSellerRateLimit(ip, 'shipments_patch', 20, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes. Réessayez plus tard.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireSellerWithRateLimit(req, 'shipments_patch', 20, 60)
+  if (auth instanceof NextResponse) return auth
+  const { vendor } = auth
 
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
-
-  let body: unknown
-  try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const parsed = PatchShipmentSchema.safeParse(body)
-  if (!parsed.success) {
-    const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
-    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
-  }
+  const validated = await parseAndValidate(req, PatchShipmentSchema)
+  if (validated instanceof NextResponse) return validated
+  const parsed = validated
 
   const { shipmentId, trackingNumber, status, detail } = parsed.data
 
@@ -279,7 +231,6 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true })
   } catch (err) {
-    logger.error('[PATCH /api/seller/shipments]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[PATCH /api/seller/shipments]', err)
   }
 }

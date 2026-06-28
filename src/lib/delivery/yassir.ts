@@ -1,6 +1,5 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { deliveryFetch } from './client'
-import { logger } from '@/lib/logger'
+import { postShipment, extractTrackingInfo, fetchJsonOrNull } from './helpers'
 
 // Yassir Express Business API — package delivery
 const BASE_URL = 'https://api.yassir.com/v1'
@@ -40,27 +39,14 @@ export async function yassirCreateShipmentWithKey(
       : '',
   }
 
-  const res = await deliveryFetch(`${BASE_URL}/deliveries`, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'x-api-key':     apiKey,
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Yassir ${res.status}: ${text}`)
-  }
-
-  const data = await res.json()
-  const tracking = String(
-    data?.tracking_number ?? data?.tracking_code ?? data?.delivery_id ?? data?.id ?? ''
+  const { data } = await postShipment(
+    'Yassir',
+    `${BASE_URL}/deliveries`,
+    { 'x-api-key': apiKey },
+    body,
   )
-  const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
 
-  return { tracking, labelUrl }
+  return extractTrackingInfo(data)
 }
 
 export async function yassirCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
@@ -69,27 +55,13 @@ export async function yassirCreateShipment(input: ShipmentInput): Promise<Shipme
 }
 
 export async function yassirListParcels(apiKey: string, pageSize = 100) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/deliveries?page=1&limit=${pageSize}`, {
-      headers: { 'x-api-key': apiKey },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch (err: unknown) {
-    logger.error('[yassirListParcels]', { error: err instanceof Error ? err.message : String(err) })
-    return null
-  }
+  return fetchJsonOrNull(`${BASE_URL}/deliveries?page=1&limit=${pageSize}`, {
+    headers: { 'x-api-key': apiKey },
+  })
 }
 
 export async function yassirTrack(trackingNumber: string, apiKey: string) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
-      headers: { 'x-api-key': apiKey },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch (err: unknown) {
-    logger.error('[yassirTrack]', { error: err instanceof Error ? err.message : String(err) })
-    return null
-  }
+  return fetchJsonOrNull(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
+    headers: { 'x-api-key': apiKey },
+  })
 }

@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { getVendorOrders, updateOrderStatus } from '@/lib/supabase/orders'
-import { logger } from '@/lib/logger'
-import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
-import { getClientIp } from '@/lib/utils/ip'
+import { checkUserDualRateLimit } from '@/lib/auth/rateLimit'
+import { requireSellerWithRateLimit, rateLimitResponse, parseAndValidate, logAndReturnError } from '@/lib/api/routeHelpers'
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as const
 type OrderStatus = typeof ORDER_STATUSES[number]
@@ -26,63 +23,34 @@ const PatchSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const ip = getClientIp(req)
-    const rl = await checkSellerRateLimit(ip, 'orders_read', 60, 60)
-    if (!rl.allowed) return NextResponse.json(
-      { error: 'Trop de requêtes. Réessayez plus tard.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    const auth = await requireSellerWithRateLimit(req, 'orders_read', 60, 60)
+    if (auth instanceof NextResponse) return auth
+    const { vendor } = auth
 
     const url = new URL(req.url)
     const page = Math.max(0, parseInt(url.searchParams.get('page') ?? '0') || 0)
     const { summaries, hasMore } = await getVendorOrders(vendor.id, page)
     return NextResponse.json({ orders: summaries, hasMore, page })
   } catch (err) {
-    logger.error('[GET /api/seller/orders]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[GET /api/seller/orders]', err)
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const ip = getClientIp(req)
-    const rl = await checkSellerRateLimit(ip, 'orders_write', 30, 60)
-    if (!rl.allowed) return NextResponse.json(
-      { error: 'Trop de requêtes. Réessayez plus tard.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireSellerWithRateLimit(req, 'orders_write', 30, 60)
+    if (auth instanceof NextResponse) return auth
+    const { user, vendor } = auth
 
     const userRl = await checkUserDualRateLimit(user.id, 'orders_write', {
       burstMax: 10, burstWindowSecs: 60,
       sustainedMax: 60, sustainedWindowSecs: 3600,
     })
-    if (!userRl.allowed) return NextResponse.json(
-      { error: 'Limite atteinte. Réessayez plus tard.' },
-      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    if (!userRl.allowed) return rateLimitResponse(userRl)
 
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
-
-    let body: unknown
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-    }
-    const parsed = PatchSchema.safeParse(body)
-    if (!parsed.success) {
-      const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
-      return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
-    }
-    const { orderId, status } = parsed.data
+    const validated = await parseAndValidate(req, PatchSchema)
+    if (validated instanceof NextResponse) return validated
+    const { orderId, status } = validated.data
 
     // Verify this order actually contains items from this vendor
     const admin = createAdminClient()
@@ -108,7 +76,6 @@ export async function PATCH(req: NextRequest) {
     await updateOrderStatus(orderId, status)
     return NextResponse.json({ ok: true, orderId, status })
   } catch (err) {
-    logger.error('[PATCH /api/seller/orders]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[PATCH /api/seller/orders]', err)
   }
 }

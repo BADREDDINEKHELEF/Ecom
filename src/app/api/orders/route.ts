@@ -15,6 +15,7 @@ import { getMetaConfigsByIds, getPlatformMetaConfig } from '@/lib/meta/store'
 import { decryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone as utilNormalizePhone } from '@/lib/utils/phone'
+import { parseAndValidate, rateLimitResponse, errorMessage } from '@/lib/api/routeHelpers'
 
 function decryptCred(v: string | null | undefined): string | null {
   if (!v) return null
@@ -60,26 +61,11 @@ const CreateOrderSchema = z.object({
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
   const rl = await checkCheckoutRateLimit(ip)
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: 'Trop de commandes. Veuillez patienter quelques minutes.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-  }
+  if (!rl.allowed) return rateLimitResponse(rl)
 
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
-
-  const parsed = CreateOrderSchema.safeParse(body)
-  if (!parsed.success) {
-    // Never expose Zod internals to clients in production
-    const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
-    return NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 })
-  }
+  const validated = await parseAndValidate(req, CreateOrderSchema)
+  if (validated instanceof NextResponse) return validated
+  const parsed = validated
 
   const {
     promoCodeId: rawPromoCodeId,
@@ -282,7 +268,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ orderId }, { status: 201 })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Order creation failed'
+    const message = errorMessage(err)
     logger.error('[POST /api/orders]', { error: message })
 
     // Map internal errors to safe client-facing messages (no internal detail leakage)

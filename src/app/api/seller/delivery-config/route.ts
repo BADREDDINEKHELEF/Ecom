@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
-import { getVendorByUserIdServer, getVendorDeliveryConfig, saveVendorDeliveryConfig } from '@/lib/supabase/vendors'
+import { getVendorDeliveryConfig, saveVendorDeliveryConfig } from '@/lib/supabase/vendors'
+import { checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { requireSellerWithRateLimit, rateLimitResponse, parseAndValidate, logAndReturnError } from '@/lib/api/routeHelpers'
 import { logger } from '@/lib/logger'
-import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
-import { getClientIp } from '@/lib/utils/ip'
 
 const PatchSchema = z.object({
   default_provider:    z.string().max(50).optional(),
@@ -27,18 +26,9 @@ const PatchSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const ip = getClientIp(req)
-    const rl = await checkSellerRateLimit(ip, 'delivery_config_read', 60, 60)
-    if (!rl.allowed) return NextResponse.json(
-      { error: 'Trop de requêtes. Réessayez plus tard.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    const auth = await requireSellerWithRateLimit(req, 'delivery_config_read', 60, 60)
+    if (auth instanceof NextResponse) return auth
+    const { vendor } = auth
 
     const config = await getVendorDeliveryConfig(vendor.id)
     const mask = (v?: string | null) => v ? '••••••••' : ''
@@ -72,59 +62,43 @@ export async function GET(req: NextRequest) {
     } : null
     return NextResponse.json({ config: redacted })
   } catch (err) {
-    logger.error('[GET /api/seller/delivery-config]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[GET /api/seller/delivery-config]', err)
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const ip = getClientIp(req)
-    const rl = await checkSellerRateLimit(ip, 'delivery_config_write', 10, 60)
-    if (!rl.allowed) return NextResponse.json(
-      { error: 'Trop de requêtes. Réessayez plus tard.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await requireSellerWithRateLimit(req, 'delivery_config_write', 10, 60)
+    if (auth instanceof NextResponse) return auth
+    const { user, vendor } = auth
 
     const userRl = await checkUserRateLimit(user.id, 'delivery_config', 10, 3600)
-    if (!userRl.allowed) return NextResponse.json(
-      { error: 'Limite atteinte. Réessayez plus tard.' },
-      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    if (!userRl.allowed) return rateLimitResponse(userRl)
 
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    const validated = await parseAndValidate(req, PatchSchema)
+    if (validated instanceof NextResponse) return validated
+    const parsed = validated
 
-    let body: unknown
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-    }
-
-    const parsed = PatchSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
-
-    const updates = { ...parsed.data }
+    const updates: Record<string, unknown> = { ...parsed.data }
     const existing = await getVendorDeliveryConfig(vendor.id)
     if (existing) {
       const merge = (newVal: string | null | undefined, oldVal: string | null | undefined) => {
         if (newVal === '••••••••') return oldVal
         return newVal
       }
-      if (updates.yalidine_api_id !== undefined)    updates.yalidine_api_id    = merge(updates.yalidine_api_id, existing.yalidine_api_id)
-      if (updates.yalidine_api_token !== undefined) updates.yalidine_api_token = merge(updates.yalidine_api_token, existing.yalidine_api_token)
-      if (updates.procolis_token !== undefined)     updates.procolis_token     = merge(updates.procolis_token, existing.procolis_token)
-      if (updates.zr_token !== undefined)           updates.zr_token           = merge(updates.zr_token, existing.zr_token)
-      if (updates.colivraison_token !== undefined)  updates.colivraison_token  = merge(updates.colivraison_token, existing.colivraison_token)
-      if (updates.maystro_token !== undefined)      updates.maystro_token      = merge(updates.maystro_token, existing.maystro_token)
-      if (updates.rex_token !== undefined)          updates.rex_token          = merge(updates.rex_token, existing.rex_token)
-      if (updates.yassir_api_key !== undefined)     updates.yassir_api_key     = merge(updates.yassir_api_key, existing.yassir_api_key)
-      if (updates.ecom_api_key !== undefined)       updates.ecom_api_key       = merge(updates.ecom_api_key, existing.ecom_api_key)
-      if (updates.ecom_api_token !== undefined)     updates.ecom_api_token     = merge(updates.ecom_api_token, existing.ecom_api_token)
-      if (updates.apec_api_id !== undefined)        updates.apec_api_id        = merge(updates.apec_api_id, existing.apec_api_id)
-      if (updates.apec_api_token !== undefined)     updates.apec_api_token     = merge(updates.apec_api_token, existing.apec_api_token)
+      const s = (v: unknown) => v as string | null | undefined
+      if (updates.yalidine_api_id !== undefined)    updates.yalidine_api_id    = merge(s(updates.yalidine_api_id), existing.yalidine_api_id)
+      if (updates.yalidine_api_token !== undefined) updates.yalidine_api_token = merge(s(updates.yalidine_api_token), existing.yalidine_api_token)
+      if (updates.procolis_token !== undefined)     updates.procolis_token     = merge(s(updates.procolis_token), existing.procolis_token)
+      if (updates.zr_token !== undefined)           updates.zr_token           = merge(s(updates.zr_token), existing.zr_token)
+      if (updates.colivraison_token !== undefined)  updates.colivraison_token  = merge(s(updates.colivraison_token), existing.colivraison_token)
+      if (updates.maystro_token !== undefined)      updates.maystro_token      = merge(s(updates.maystro_token), existing.maystro_token)
+      if (updates.rex_token !== undefined)          updates.rex_token          = merge(s(updates.rex_token), existing.rex_token)
+      if (updates.yassir_api_key !== undefined)     updates.yassir_api_key     = merge(s(updates.yassir_api_key), existing.yassir_api_key)
+      if (updates.ecom_api_key !== undefined)       updates.ecom_api_key       = merge(s(updates.ecom_api_key), existing.ecom_api_key)
+      if (updates.ecom_api_token !== undefined)     updates.ecom_api_token     = merge(s(updates.ecom_api_token), existing.ecom_api_token)
+      if (updates.apec_api_id !== undefined)        updates.apec_api_id        = merge(s(updates.apec_api_id), existing.apec_api_id)
+      if (updates.apec_api_token !== undefined)     updates.apec_api_token     = merge(s(updates.apec_api_token), existing.apec_api_token)
     }
 
     try {
@@ -139,7 +113,6 @@ export async function PATCH(req: NextRequest) {
     }
     return NextResponse.json({ ok: true })
   } catch (err) {
-    logger.error('[PATCH /api/seller/delivery-config]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[PATCH /api/seller/delivery-config]', err)
   }
 }
