@@ -91,7 +91,7 @@ export default function AdminProductsPage() {
       await deleteProduct(id)
       setProductList((prev) => prev.filter((p) => p.id !== id))
     } catch (error) {
-      console.error('Delete failed:', error)
+      console.error('[admin/products] delete failed:', error instanceof Error ? error.message : String(error))
       let errorMessage = 'Failed to delete product.'
       // Check for a common database constraint violation error
       if (error instanceof Error && error.message.includes('violates foreign key constraint')) {

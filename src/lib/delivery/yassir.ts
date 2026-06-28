@@ -73,10 +73,13 @@ export async function yassirListParcels(apiKey: string, pageSize = 100) {
     const res = await deliveryFetch(`${BASE_URL}/deliveries?page=1&limit=${pageSize}`, {
       headers: { 'x-api-key': apiKey },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[yassirListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch (err: unknown) {
-    logger.error('[yassirListParcels]', { error: err instanceof Error ? err.message : String(err) })
+  } catch (err) {
+    logger.error('[yassirListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -86,10 +89,13 @@ export async function yassirTrack(trackingNumber: string, apiKey: string) {
     const res = await deliveryFetch(`${BASE_URL}/deliveries/${encodeURIComponent(trackingNumber)}`, {
       headers: { 'x-api-key': apiKey },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[yassirTrack] non-ok response', { status: res.status, trackingNumber })
+      return null
+    }
     return res.json()
-  } catch (err: unknown) {
-    logger.error('[yassirTrack]', { error: err instanceof Error ? err.message : String(err) })
+  } catch (err) {
+    logger.error('[yassirTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingNumber })
     return null
   }
 }

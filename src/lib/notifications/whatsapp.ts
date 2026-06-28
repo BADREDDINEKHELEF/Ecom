@@ -271,7 +271,8 @@ export async function sendFreeTextMessage(
     const data = await res.json()
     if (!res.ok) return { success: false, error: data?.error?.message }
     return { success: true }
-  } catch {
+  } catch (err) {
+    logger.error('[WhatsApp] sendFreeTextMessage failed', { error: err instanceof Error ? err.message : String(err) })
     return { success: false, error: 'network_error' }
   }
 }

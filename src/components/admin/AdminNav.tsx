@@ -33,7 +33,7 @@ export default function AdminNav({ onNavClick }: { onNavClick?: () => void } = {
       fetch('/api/admin/orders?countOnly=1')
         .then((r) => r.json())
         .then((d) => { if (!cancelled) setPending(d.pending ?? 0) })
-        .catch(() => {})
+        .catch((err) => { console.error('[AdminNav] pending orders fetch failed:', err instanceof Error ? err.message : String(err)) })
     }
 
     fetchPending()

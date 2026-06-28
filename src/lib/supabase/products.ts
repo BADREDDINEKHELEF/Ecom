@@ -3,6 +3,7 @@ import { createClient } from './client'
 import { createAdminClient } from './admin'
 import { Product, ColorVariant } from '@/types'
 import { normalizePhone } from '@/lib/utils/phone'
+import { logger } from '@/lib/logger'
 
 export function dbToProduct(row: Record<string, unknown>): Product {
   return {
@@ -44,7 +45,10 @@ export const getProducts = unstable_cache(
     if (nicheId)  query = query.eq('niche_id', nicheId)
     if (category) query = query.eq('category', category)
     const { data, error } = await query
-    if (error) return []
+    if (error) {
+      logger.error('[products] getProducts query failed', { error: error.message })
+      return []
+    }
     return (data ?? []).map(dbToProduct)
   },
   ['products-list'],
@@ -63,7 +67,10 @@ export const getFeaturedProducts = unstable_cache(
       .limit(limit)
     if (nicheId) query = query.eq('niche_id', nicheId)
     const { data, error } = await query
-    if (error) return []
+    if (error) {
+      logger.error('[products] getFeaturedProducts query failed', { error: error.message })
+      return []
+    }
     return (data ?? []).map(dbToProduct)
   },
   ['products-featured'],
@@ -78,7 +85,11 @@ export const getProductById = unstable_cache(
       .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,total_orders,created_at')
       .eq('id', id)
       .single()
-    if (error || !data) return null
+    if (error) {
+      logger.error('[products] getProductById query failed', { error: error.message, id })
+      return null
+    }
+    if (!data) return null
 
     const product = dbToProduct(data)
 
@@ -119,7 +130,7 @@ export async function getVendorPhoneByProductId(productId: string): Promise<stri
     // Use the centralized, robust phone normalization utility.
     return normalizePhone(raw)
   } catch (error) {
-    console.error(`Failed to normalize vendor phone for product ${productId}:`, error)
+    logger.warn('[products] failed to normalize vendor phone', { productId, error: error instanceof Error ? error.message : String(error) })
     // Return null if the stored number is invalid, maintaining function signature.
     return null
   }

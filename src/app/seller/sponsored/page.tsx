@@ -72,7 +72,7 @@ export default function SellerSponsoredPage() {
     ]).then(([sp, prods]) => {
       setSponsored(sp)
       setProducts(prods)
-    }).catch(() => { /* keep empty state on error */ })
+    }).catch((err) => { console.error('[seller/sponsored] fetch failed:', err instanceof Error ? err.message : String(err)) })
     .finally(() => setFetching(false))
   }, [vendor])
 

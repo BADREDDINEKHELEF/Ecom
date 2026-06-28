@@ -6,6 +6,7 @@ import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
+import { logger } from '@/lib/logger'
 
 const TRACKING_REGEX = /^[A-Za-z0-9]{6,20}$/
 
@@ -26,7 +27,8 @@ async function trackWithTimeout(
       new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
     ])
     return result ? { status: result.status, detail: result.detail, provider } : null
-  } catch {
+  } catch (err) {
+    logger.error('[trackWithTimeout] failed', { error: err instanceof Error ? err.message : String(err), provider, tracking })
     return null
   }
 }
@@ -80,8 +82,8 @@ export async function GET(req: NextRequest) {
           vendorOnly = true
         }
       }
-    } catch {
-      // proceed without vendor creds
+    } catch (err) {
+      logger.warn('[delivery/collect] vendor creds lookup failed, proceeding without', { error: err instanceof Error ? err.message : String(err), storeSlug })
     }
   }
 
@@ -97,7 +99,8 @@ export async function GET(req: NextRequest) {
       }
       if (rate.deskDelivery !== undefined) entry.deskDelivery = rate.deskDelivery
       return entry
-    } catch {
+    } catch (err) {
+      logger.warn('[delivery/collect] rate fetch failed', { error: err instanceof Error ? err.message : String(err), provider: p.id })
       return null
     }
   })

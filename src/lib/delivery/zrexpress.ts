@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { extractRates, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://www.zrexpress.dz/api'
 
@@ -85,9 +86,15 @@ export async function zrListParcels(token: string, pageSize = 100) {
     const res = await deliveryFetch(`${BASE_URL}/parcel?page=1&page_size=${pageSize}`, {
       headers: { Authorization: `Token ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[zrListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[zrListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function zrGetRateWithToken(
@@ -100,11 +107,15 @@ export async function zrGetRateWithToken(
     const res = await deliveryFetch(`${BASE_URL}/tarif?IDWilaya=${id}`, {
       headers: { Authorization: `Token ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[zrGetRateWithToken] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err) {
+    logger.error('[zrGetRateWithToken] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }
@@ -114,9 +125,13 @@ export async function zrTrack(trackingNumber: string, token: string) {
     const res = await deliveryFetch(`${BASE_URL}/parcel/${encodeURIComponent(trackingNumber)}`, {
       headers: { Authorization: `Token ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[zrTrack] non-ok response', { status: res.status, trackingNumber })
+      return null
+    }
     return res.json()
-  } catch {
+  } catch (err) {
+    logger.error('[zrTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingNumber })
     return null
   }
 }

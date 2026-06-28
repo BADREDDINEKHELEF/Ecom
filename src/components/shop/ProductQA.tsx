@@ -30,7 +30,7 @@ export default function ProductQA({ productId }: Props) {
     fetch(`/api/questions/${productId}`)
       .then((r) => r.json())
       .then((d) => setQuestions(Array.isArray(d) ? d : []))
-      .catch(() => setQuestions([]))
+      .catch((err) => { console.error('[ProductQA] fetch failed:', err instanceof Error ? err.message : String(err)); setQuestions([]) })
       .finally(() => setLoading(false))
   }, [productId])
 

@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { splitName, extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://api.yalidine.app/v1'
 
@@ -81,9 +82,13 @@ export async function yalidineTrack(trackingNumber: string, apiId: string, apiTo
     const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}/`, {
       headers: buildHeaders(apiId, apiToken),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[yalidineTrack] non-ok response', { status: res.status, trackingNumber })
+      return null
+    }
     return res.json()
-  } catch {
+  } catch (err) {
+    logger.error('[yalidineTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingNumber })
     return null
   }
 }
@@ -93,9 +98,15 @@ export async function yalidineListParcels(apiId: string, apiToken: string, pageS
     const res = await deliveryFetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
       headers: buildHeaders(apiId, apiToken),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[yalidineListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[yalidineListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function yalidineGetRates(wilayaName: string) {
@@ -105,9 +116,13 @@ export async function yalidineGetRates(wilayaName: string) {
     const res = await deliveryFetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
       headers: buildHeaders(process.env.YALIDINE_API_ID!, process.env.YALIDINE_API_TOKEN!),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[yalidineGetRates] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     return await res.json()
-  } catch {
+  } catch (err) {
+    logger.error('[yalidineGetRates] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }
@@ -122,11 +137,15 @@ export async function yalidineGetRateWithCreds(
     const res = await deliveryFetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
       headers: buildHeaders(apiId, apiToken),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[yalidineGetRateWithCreds] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err) {
+    logger.error('[yalidineGetRateWithCreds] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }

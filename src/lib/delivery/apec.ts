@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { splitName, extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://api.apec.dz/v1'
 
@@ -69,9 +70,15 @@ export async function apecListParcels(apiId: string, apiToken: string, pageSize 
     const res = await deliveryFetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
       headers: buildHeaders(apiId, apiToken),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[apecListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[apecListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function apecTrack(trackingNumber: string, apiId: string, apiToken: string) {
@@ -79,9 +86,15 @@ export async function apecTrack(trackingNumber: string, apiId: string, apiToken:
     const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
       headers: buildHeaders(apiId, apiToken),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[apecTrack] non-ok response', { status: res.status, trackingNumber })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[apecTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingNumber })
+    return null
+  }
 }
 
 export async function apecGetRateWithCreds(
@@ -94,11 +107,15 @@ export async function apecGetRateWithCreds(
     const res = await deliveryFetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
       headers: buildHeaders(apiId, apiToken),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[apecGetRateWithCreds] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err) {
+    logger.error('[apecGetRateWithCreds] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }

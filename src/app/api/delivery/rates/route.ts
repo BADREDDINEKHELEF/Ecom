@@ -5,6 +5,7 @@ import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { dispatchGetRate } from '@/lib/delivery/dispatch'
 import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
+import { logger } from '@/lib/logger'
 
 function staticRate(wilaya: string): { homeDelivery: number; deskDelivery: number; provider: string; live: boolean } {
   const zone = WILAYA_DATA[wilaya]?.zone ?? 3
@@ -63,17 +64,18 @@ export async function GET(req: NextRequest) {
 
       if (!rate) {
         if (isLiveProvider) {
-          console.warn(`[delivery/rates] ${provider} returned no rate for wilaya="${wilaya}" — falling back to static pricing. Check FIELD_ENCRYPTION_KEY and vendor credentials.`)
+          logger.warn(`[delivery/rates] ${provider} returned no rate, falling back to static pricing`, { wilaya, provider })
         }
         return NextResponse.json(staticRate(wilaya))
       }
 
       return NextResponse.json({ homeDelivery: rate.homeDelivery, deskDelivery: rate.deskDelivery, provider, live: true })
     } catch (err) {
-      console.warn(`[delivery/rates] ${provider} threw for wilaya="${wilaya}":`, err instanceof Error ? err.message : String(err))
+      logger.warn(`[delivery/rates] ${provider} threw, falling back to static pricing`, { wilaya, provider, error: err instanceof Error ? err.message : String(err) })
       return NextResponse.json(staticRate(wilaya))
     }
-  } catch {
+  } catch (err) {
+    logger.error('[delivery/rates] unexpected error, falling back to static pricing', { wilaya, error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json(staticRate(wilaya))
   }
 }

@@ -5,6 +5,7 @@ import { getAllOrders } from '@/lib/supabase/orders'
 import { getAllVendors } from '@/lib/supabase/vendors'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerT } from '@/lib/i18n/server'
+import { logger } from '@/lib/logger'
 
 const STATUS_STYLES: Record<string, string> = {
   pending:   'bg-amber-100 text-amber-700',
@@ -19,9 +20,9 @@ async function getDashboardData() {
 
   const [analytics, ordersResult, vendorsResult, totalOrders, uniqueCustomers] =
     await Promise.all([
-      getAnalyticsData().catch(() => null),
-      getAllOrders(0, 5, 'admin').catch(() => ({ orders: [], hasMore: false })),
-      getAllVendors(0, 20).catch(() => ({ vendors: [], hasMore: false })),
+      getAnalyticsData().catch((err) => { logger.error('[admin] getAnalyticsData failed', { error: err instanceof Error ? err.message : String(err) }); return null }),
+      getAllOrders(0, 5, 'admin').catch((err) => { logger.error('[admin] getAllOrders failed', { error: err instanceof Error ? err.message : String(err) }); return { orders: [], hasMore: false } }),
+      getAllVendors(0, 20).catch((err) => { logger.error('[admin] getAllVendors failed', { error: err instanceof Error ? err.message : String(err) }); return { vendors: [], hasMore: false } }),
       supabase
         .from('orders')
         .select('id', { count: 'exact', head: true })

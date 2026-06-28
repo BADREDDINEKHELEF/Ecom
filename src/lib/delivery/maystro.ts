@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { extractRates, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://maystro-delivery.com/api/v1'
 
@@ -83,9 +84,15 @@ export async function maystroListParcels(token: string, pageSize = 100) {
     const res = await deliveryFetch(`${BASE_URL}/orders/?page=1&page_size=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[maystroListParcels] non-ok response', { status: res.status })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[maystroListParcels] failed', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function maystroGetRateWithToken(
@@ -98,11 +105,15 @@ export async function maystroGetRateWithToken(
     const res = await deliveryFetch(`${BASE_URL}/shipping-prices/?wilaya=${wilayaId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[maystroGetRateWithToken] non-ok response', { status: res.status, wilayaName })
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err) {
+    logger.error('[maystroGetRateWithToken] failed', { error: err instanceof Error ? err.message : String(err), wilayaName })
     return null
   }
 }
@@ -112,7 +123,13 @@ export async function maystroTrack(trackingCode: string, token: string) {
     const res = await deliveryFetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}/`, {
       headers: { 'Authorization': `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn('[maystroTrack] non-ok response', { status: res.status, trackingCode })
+      return null
+    }
     return res.json()
-  } catch { return null }
+  } catch (err) {
+    logger.error('[maystroTrack] failed', { error: err instanceof Error ? err.message : String(err), trackingCode })
+    return null
+  }
 }

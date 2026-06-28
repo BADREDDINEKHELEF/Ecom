@@ -72,7 +72,7 @@ export default function DeliverySettingsPage() {
         }
         setLoadingConfig(false)
       })
-      .catch(() => setLoadingConfig(false))
+      .catch((err) => { console.error('[seller/delivery] config load failed:', err instanceof Error ? err.message : String(err)); setLoadingConfig(false) })
   }, [vendor])
 
   useEffect(() => {

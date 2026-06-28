@@ -23,7 +23,7 @@ export default function SellerInventoryPage() {
         const data = await res.json()
         setInventoryData(data)
       } catch (error) {
-        console.error(error)
+        console.error('[seller/inventory] fetch failed:', error instanceof Error ? error.message : String(error))
       } finally {
         setIsLoading(false)
       }

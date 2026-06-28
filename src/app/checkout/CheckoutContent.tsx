@@ -91,7 +91,7 @@ export default function CheckoutContent() {
     import('qrcode').then((QRCode) =>
       QRCode.toDataURL(baridimobModal.qrCodeData, { width: 280, margin: 2, color: { dark: '#1a1a1a', light: '#fffbeb' } })
     ).then((url) => { if (!cancelled) setQrImageUrl(url) })
-      .catch(() => { if (!cancelled) setQrImageUrl(null) })
+      .catch((err) => { console.error('[checkout] QR code generation failed:', err instanceof Error ? err.message : String(err)); if (!cancelled) setQrImageUrl(null) })
     return () => { cancelled = true }
   }, [baridimobModal?.qrCodeData])
 
@@ -121,7 +121,7 @@ export default function CheckoutContent() {
     fetch('/api/loyalty')
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.balance > 0) setLoyaltyBalance(d.balance) })
-      .catch(() => {})
+      .catch((err) => { console.error('[checkout] loyalty fetch failed:', err instanceof Error ? err.message : String(err)) })
     track('checkout_start', {})
     // Fire pixel InitiateCheckout once — uses closure values from mount
     const { items: cartItems, total: getTotal } = useCartStore.getState()
