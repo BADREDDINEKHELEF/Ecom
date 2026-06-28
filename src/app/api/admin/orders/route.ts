@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/auth/adminAuth'
 import { getAllOrders, updateOrderStatus } from '@/lib/supabase/orders'
-import { logger } from '@/lib/logger'
-import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
-import { getClientIp } from '@/lib/utils/ip'
+import { requireAdminWithRateLimit, parseAndValidate, logAndReturnError } from '@/lib/api/routeHelpers'
 
 export async function GET(req: NextRequest) {
-  const denied = await requireAdmin(req)
+  const denied = await requireAdminWithRateLimit(req, 'orders_read', 120, 60)
   if (denied) return denied
-  const ip = getClientIp(req)
-  const rl = await checkAdminApiRateLimit(ip, 'orders_read', 120, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
 
   const { searchParams } = req.nextUrl
 
@@ -36,8 +27,7 @@ export async function GET(req: NextRequest) {
         .eq('status', 'pending')
         .in('id', orderIds)
       return NextResponse.json({ pending: count ?? 0 })
-    } catch (err) {
-      logger.error('[GET /api/admin/orders countOnly]', { error: err instanceof Error ? err.message : String(err) })
+    } catch {
       return NextResponse.json({ pending: 0 })
     }
   }
@@ -50,8 +40,7 @@ export async function GET(req: NextRequest) {
     const result = await getAllOrders(page, 50, source)
     return NextResponse.json(result)
   } catch (err) {
-    logger.error('[GET /api/admin/orders]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+    return logAndReturnError('[GET /api/admin/orders]', err, 'Failed to fetch orders')
   }
 }
 
@@ -61,34 +50,16 @@ const PatchSchema = z.object({
 })
 
 export async function PATCH(req: NextRequest) {
-  const denied = await requireAdmin(req)
+  const denied = await requireAdminWithRateLimit(req, 'orders_write', 30, 60)
   if (denied) return denied
-  const ip = getClientIp(req)
-  const rl = await checkAdminApiRateLimit(ip, 'orders_write', 30, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
 
-  let body: unknown
-  try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const parsed = PatchSchema.safeParse(body)
-  if (!parsed.success) {
-    const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
-    return NextResponse.json(
-      { error: 'Validation failed', ...(details && { details }) },
-      { status: 400 }
-    )
-  }
+  const validated = await parseAndValidate(req, PatchSchema)
+  if (validated instanceof NextResponse) return validated
 
   try {
-    await updateOrderStatus(parsed.data.orderId, parsed.data.status)
+    await updateOrderStatus(validated.data.orderId, validated.data.status)
     return NextResponse.json({ ok: true })
   } catch (err) {
-    logger.error('[PATCH /api/admin/orders]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
+    return logAndReturnError('[PATCH /api/admin/orders]', err, 'Failed to update order')
   }
 }

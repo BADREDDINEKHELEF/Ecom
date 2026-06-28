@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/auth/adminAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
-import { getClientIp } from '@/lib/utils/ip'
-import { logger } from '@/lib/logger'
+import { requireAdminWithRateLimit, parseBody, logAndReturnError } from '@/lib/api/routeHelpers'
 
 const PatchPromotionSchema = z.object({
   id:         z.string().min(1),
@@ -15,14 +12,8 @@ const PatchPromotionSchema = z.object({
 
 // GET /api/admin/promotions?status=pending&page=0
 export async function GET(req: NextRequest) {
-  const denied = await requireAdmin(req)
+  const denied = await requireAdminWithRateLimit(req, 'promotions_read', 120, 60)
   if (denied) return denied
-  const ip = getClientIp(req)
-  const rl = await checkAdminApiRateLimit(ip, 'promotions_read', 120, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
 
   try {
     const { searchParams } = new URL(req.url)
@@ -58,20 +49,13 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/promotions — approve / reject / update
 export async function PATCH(req: NextRequest) {
-  const denied = await requireAdmin(req)
+  const denied = await requireAdminWithRateLimit(req, 'promotions_write', 30, 60)
   if (denied) return denied
-  const ip = getClientIp(req)
-  const rl = await checkAdminApiRateLimit(ip, 'promotions_write', 30, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
 
   try {
-    let body: unknown
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-    }
+    const bodyResult = await parseBody(req)
+    if (bodyResult instanceof NextResponse) return bodyResult
+    const body = bodyResult.data
 
     const parsed = PatchPromotionSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: 'id is required' }, { status: 400 })
@@ -96,7 +80,6 @@ export async function PATCH(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (err) {
-    logger.error('[PATCH /api/admin/promotions]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[PATCH /api/admin/promotions]', err)
   }
 }

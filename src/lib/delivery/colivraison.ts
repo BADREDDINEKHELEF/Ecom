@@ -1,6 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates, isValidWilaya, findWilayaRow } from './utils'
-import { deliveryFetch } from './client'
+import { isValidWilaya } from './utils'
+import { postShipment, extractTrackingInfo, fetchJsonOrNull, fetchRateOrNull } from './helpers'
 
 const BASE_URL = 'https://api.colivraison.com/api'
 
@@ -25,28 +25,14 @@ export async function colivraisonCreateShipmentWithToken(
     can_open:   0,
   }
 
-  const res = await deliveryFetch(`${BASE_URL}/orders`, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Colivraison ${res.status}: ${text}`)
-  }
-
-  const data = await res.json()
-  const tracking = String(
-    data?.tracking_code ?? data?.code_suivi ?? data?.id ?? data?.order_id ?? ''
+  const { data } = await postShipment(
+    'Colivraison',
+    `${BASE_URL}/orders`,
+    { 'Authorization': `Bearer ${token}` },
+    body,
   )
-  const labelUrl: string | undefined =
-    data?.label ?? data?.label_url ?? data?.bon_url ?? undefined
 
-  return { tracking, labelUrl }
+  return extractTrackingInfo(data)
 }
 
 export async function colivraisonCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
@@ -55,39 +41,25 @@ export async function colivraisonCreateShipment(input: ShipmentInput): Promise<S
 }
 
 export async function colivraisonListParcels(token: string, pageSize = 100) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/orders?page=1&per_page=${pageSize}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/orders?page=1&per_page=${pageSize}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
 }
 
 export async function colivraisonGetRateWithToken(
   wilayaName: string,
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
-  try {
-    if (!isValidWilaya(wilayaName)) return null
-    const res = await deliveryFetch(`${BASE_URL}/pricing?wilaya=${encodeURIComponent(wilayaName)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
-    return null
-  }
+  if (!isValidWilaya(wilayaName)) return null
+  return fetchRateOrNull(
+    `${BASE_URL}/pricing?wilaya=${encodeURIComponent(wilayaName)}`,
+    { Authorization: `Bearer ${token}` },
+    wilayaName,
+  )
 }
 
 export async function colivraisonTrack(trackingCode: string, token: string) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  })
 }

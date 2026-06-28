@@ -1,6 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { splitName, extractRates, isValidWilaya, findWilayaRow } from './utils'
-import { deliveryFetch } from './client'
+import { splitName, isValidWilaya } from './utils'
+import { postShipment, extractTrackingInfo, fetchJsonOrNull, fetchRateOrNull } from './helpers'
 
 const BASE_URL = 'https://api.apec.dz/v1'
 
@@ -41,22 +41,14 @@ export async function apecCreateShipmentWithCreds(
     weight: 1,
   }
 
-  const res = await deliveryFetch(`${BASE_URL}/parcels/`, {
-    method: 'POST',
-    headers: buildHeaders(apiId, apiToken),
-    body: JSON.stringify(body),
-  })
+  const { data } = await postShipment(
+    'APEC',
+    `${BASE_URL}/parcels/`,
+    buildHeaders(apiId, apiToken),
+    body,
+  )
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`APEC ${res.status}: ${text}`)
-  }
-
-  const data = await res.json()
-  const tracking = String(data?.tracking ?? data?.tracking_code ?? data?.tracking_number ?? data?.parcel_id ?? data?.id ?? '')
-  const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
-
-  return { tracking, labelUrl }
+  return extractTrackingInfo(data)
 }
 
 export async function apecCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
@@ -65,23 +57,15 @@ export async function apecCreateShipment(input: ShipmentInput): Promise<Shipment
 }
 
 export async function apecListParcels(apiId: string, apiToken: string, pageSize = 100) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
-      headers: buildHeaders(apiId, apiToken),
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
+    headers: buildHeaders(apiId, apiToken),
+  })
 }
 
 export async function apecTrack(trackingNumber: string, apiId: string, apiToken: string) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
-      headers: buildHeaders(apiId, apiToken),
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
+    headers: buildHeaders(apiId, apiToken),
+  })
 }
 
 export async function apecGetRateWithCreds(
@@ -90,15 +74,9 @@ export async function apecGetRateWithCreds(
   apiToken: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
-      headers: buildHeaders(apiId, apiToken),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
-    return null
-  }
+  return fetchRateOrNull(
+    `${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`,
+    buildHeaders(apiId, apiToken),
+    wilayaName,
+  )
 }

@@ -1,27 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { logSellerDataAccess } from '@/lib/auth/sellerAudit'
-import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
-import { logger } from '@/lib/logger'
+import { requireSellerWithRateLimit, logAndReturnError } from '@/lib/api/routeHelpers'
 
 export async function GET(req: NextRequest) {
-  const ip = getClientIp(req)
-  const rl = await checkSellerRateLimit(ip, 'abandoned_analytics', 30, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-
   try {
-    const supabase = createRouteClient(req)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    const auth = await requireSellerWithRateLimit(req, 'abandoned_analytics', 30, 60)
+    if (auth instanceof NextResponse) return auth
+    const { vendor } = auth
 
     if (!vendor.store_slug) return NextResponse.json({
       totalAbandoned: 0, recovered: 0, recoveryRate: 0, totalValue: 0,
@@ -78,13 +65,12 @@ export async function GET(req: NextRequest) {
       vendorId:     vendor.id,
       action:       'view_abandoned',
       resourceType: 'abandoned_cart',
-      ipAddress:    ip,
+      ipAddress:    getClientIp(req),
       userAgent:    req.headers.get('user-agent') ?? undefined,
     })
 
     return NextResponse.json({ totalAbandoned, recovered: recoveredCount, recoveryRate, totalValue, byWilaya, byDay })
   } catch (err) {
-    logger.error('[GET /api/seller/abandoned-analytics]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[GET /api/seller/abandoned-analytics]', err)
   }
 }

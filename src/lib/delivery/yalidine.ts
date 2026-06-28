@@ -1,6 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { splitName, extractRates, isValidWilaya, findWilayaRow } from './utils'
-import { deliveryFetch } from './client'
+import { splitName, isValidWilaya } from './utils'
+import { postShipment, fetchJsonOrNull, fetchRateOrNull } from './helpers'
 
 const BASE_URL = 'https://api.yalidine.app/v1'
 
@@ -41,21 +41,16 @@ async function createShipmentWithHeaders(
     weight: 1,
   }
   
-  const res = await deliveryFetch(`${BASE_URL}/parcels/`, {
-    method: 'POST',
-    headers: buildHeaders(apiId, apiToken),
-    body: JSON.stringify(body),
-  })
-  
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Yalidine ${res.status}: ${text}`)
-  }
-  
-  const data = await res.json()
+  const { data } = await postShipment(
+    'Yalidine',
+    `${BASE_URL}/parcels/`,
+    buildHeaders(apiId, apiToken),
+    body,
+  )
+
   return {
     tracking: String(data.tracking ?? data.tracking_code ?? data.tracking_number ?? data.parcel_id ?? data.id ?? ''),
-    labelUrl: data.label ?? data.label_url ?? undefined,
+    labelUrl: (data.label ?? data.label_url ?? undefined) as string | undefined,
   }
 }
 
@@ -77,39 +72,23 @@ export async function yalidineCreateShipment(input: ShipmentInput): Promise<Ship
 }
 
 export async function yalidineTrack(trackingNumber: string, apiId: string, apiToken: string) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}/`, {
-      headers: buildHeaders(apiId, apiToken),
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
-  }
+  return fetchJsonOrNull(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}/`, {
+    headers: buildHeaders(apiId, apiToken),
+  })
 }
 
 export async function yalidineListParcels(apiId: string, apiToken: string, pageSize = 100) {
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
-      headers: buildHeaders(apiId, apiToken),
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
+  return fetchJsonOrNull(`${BASE_URL}/parcels/?page=1&page_size=${pageSize}`, {
+    headers: buildHeaders(apiId, apiToken),
+  })
 }
 
 export async function yalidineGetRates(wilayaName: string) {
   if (!isValidWilaya(wilayaName)) return null
   if (!yalidineConfigured()) return null
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
-      headers: buildHeaders(process.env.YALIDINE_API_ID!, process.env.YALIDINE_API_TOKEN!),
-    })
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
+  return fetchJsonOrNull(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
+    headers: buildHeaders(process.env.YALIDINE_API_ID!, process.env.YALIDINE_API_TOKEN!),
+  })
 }
 
 export async function yalidineGetRateWithCreds(
@@ -118,15 +97,9 @@ export async function yalidineGetRateWithCreds(
   apiToken: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`, {
-      headers: buildHeaders(apiId, apiToken),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
-    return null
-  }
+  return fetchRateOrNull(
+    `${BASE_URL}/delivery-fees/?to_wilaya_name=${encodeURIComponent(wilayaName)}`,
+    buildHeaders(apiId, apiToken),
+    wilayaName,
+  )
 }

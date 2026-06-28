@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdmin } from '@/lib/auth/adminAuth'
-import { logger } from '@/lib/logger'
-import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
-import { getClientIp } from '@/lib/utils/ip'
+import { requireAdminWithRateLimit, logAndReturnError } from '@/lib/api/routeHelpers'
 
 export async function GET(req: NextRequest) {
-  const denied = await requireAdmin(req)
+  const denied = await requireAdminWithRateLimit(req, 'returns_read', 120, 60)
   if (denied) return denied
-  const ip = getClientIp(req)
-  const rl = await checkAdminApiRateLimit(ip, 'returns_read', 120, 60)
-  if (!rl.allowed) return NextResponse.json(
-    { error: 'Trop de requêtes.' },
-    { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
 
   try {
     const supabase = createAdminClient()
@@ -26,7 +17,6 @@ export async function GET(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ returns: data ?? [] })
   } catch (err) {
-    logger.error('[GET /api/admin/returns]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return logAndReturnError('[GET /api/admin/returns]', err)
   }
 }

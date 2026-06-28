@@ -215,24 +215,24 @@ export async function dispatchTrack(
         const id = vendorCreds?.yalidine_api_id ?? process.env.YALIDINE_API_ID ?? ''
         const tk = vendorCreds?.yalidine_api_token ?? process.env.YALIDINE_API_TOKEN ?? ''
         if (!id || !tk) return null
-        const data = await yalidineTrack(trackingNumber, id, tk)
+        const data = await yalidineTrack(trackingNumber, id, tk) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.status ?? data.etat ?? data.state
-        return { status: normalizeProviderStatus(raw), detail: data.status_detail ?? undefined }
+        return { status: normalizeProviderStatus(raw), detail: (data.status_detail as string) ?? undefined }
       }
       case 'procolis': {
         const token = vendorCreds?.procolis_token ?? process.env.PROCOLIS_TOKEN ?? ''
         if (!token) return null
-        const data = await procolisTrack(trackingNumber, token)
+        const data = await procolisTrack(trackingNumber, token) as Record<string, unknown> | null
         if (!data) return null
-        const parcel = Array.isArray(data?.Colis) ? data.Colis[0] : data
+        const parcel = Array.isArray(data?.Colis) ? (data.Colis as Record<string, unknown>[])[0] : data
         const raw = parcel?.Statut ?? parcel?.status ?? parcel?.etat
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
       }
       case 'zr': {
         const token = vendorCreds?.zr_token ?? process.env.ZR_TOKEN ?? ''
         if (!token) return null
-        const data = await zrTrack(trackingNumber, token)
+        const data = await zrTrack(trackingNumber, token) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.Etat ?? data.status ?? data.etat
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
@@ -240,7 +240,7 @@ export async function dispatchTrack(
       case 'colivraison': {
         const token = vendorCreds?.colivraison_token ?? process.env.COLIVRAISON_TOKEN ?? ''
         if (!token) return null
-        const data = await colivraisonTrack(trackingNumber, token)
+        const data = await colivraisonTrack(trackingNumber, token) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.status ?? data.etat ?? data.state
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
@@ -248,7 +248,7 @@ export async function dispatchTrack(
       case 'maystro': {
         const token = vendorCreds?.maystro_token ?? process.env.MAYSTRO_TOKEN ?? ''
         if (!token) return null
-        const data = await maystroTrack(trackingNumber, token)
+        const data = await maystroTrack(trackingNumber, token) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.status ?? data.etat
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
@@ -256,7 +256,7 @@ export async function dispatchTrack(
       case 'rex': {
         const token = vendorCreds?.rex_token ?? process.env.REX_TOKEN ?? ''
         if (!token) return null
-        const data = await rexTrack(trackingNumber, token)
+        const data = await rexTrack(trackingNumber, token) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.status ?? data.etat
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
@@ -264,7 +264,7 @@ export async function dispatchTrack(
       case 'yassir': {
         const apiKey = vendorCreds?.yassir_api_key ?? process.env.YASSIR_API_KEY ?? ''
         if (!apiKey) return null
-        const data = await yassirTrack(trackingNumber, apiKey)
+        const data = await yassirTrack(trackingNumber, apiKey) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.status ?? data.state
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
@@ -273,7 +273,7 @@ export async function dispatchTrack(
         const key = vendorCreds?.ecom_api_key ?? process.env.ECOM_API_KEY ?? ''
         const tk = vendorCreds?.ecom_api_token ?? process.env.ECOM_API_TOKEN ?? ''
         if (!key || !tk) return null
-        const data = await ecomTrack(trackingNumber, key, tk)
+        const data = await ecomTrack(trackingNumber, key, tk) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.status ?? data.etat
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
@@ -282,7 +282,7 @@ export async function dispatchTrack(
         const id = vendorCreds?.apec_api_id ?? process.env.APEC_API_ID ?? ''
         const tk = vendorCreds?.apec_api_token ?? process.env.APEC_API_TOKEN ?? ''
         if (!id || !tk) return null
-        const data = await apecTrack(trackingNumber, id, tk)
+        const data = await apecTrack(trackingNumber, id, tk) as Record<string, unknown> | null
         if (!data) return null
         const raw = data.status ?? data.etat
         return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }

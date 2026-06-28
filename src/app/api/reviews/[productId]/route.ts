@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getReviews, addReview } from '@/lib/supabase/queries'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { parseAndValidate, logAndReturnError, rateLimitResponse } from '@/lib/api/routeHelpers'
 import { logger } from '@/lib/logger'
 
 interface Params { params: Promise<{ productId: string }> }
@@ -32,23 +33,14 @@ export async function GET(req: NextRequest, { params }: Params) {
 export async function POST(req: NextRequest, { params }: Params) {
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'reviews_post')
-  if (!rl.allowed) {
-    return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans une minute.' }, {
-      status: 429,
-      headers: { 'Retry-After': String(rl.retryAfterSeconds) },
-    })
-  }
+  if (!rl.allowed) return rateLimitResponse(rl)
 
   try {
     const { productId } = await params
 
-    let body: unknown
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-    }
-
-    const parsed = ReviewSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+    const validated = await parseAndValidate(req, ReviewSchema)
+    if (validated instanceof NextResponse) return validated
+    const parsed = validated
 
     await addReview({
       product_id:  productId,
@@ -59,7 +51,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     })
     return NextResponse.json({ success: true }, { status: 201 })
   } catch (err) {
-    logger.error('[POST /api/reviews/[productId]]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return logAndReturnError('[POST /api/reviews/[productId]]', err, 'Erreur serveur')
   }
 }
