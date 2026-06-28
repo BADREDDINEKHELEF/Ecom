@@ -202,7 +202,7 @@ export default function DeliverySettingsPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url}
+      <SellerSidebar storeName={vendor.store_name!} slug={vendor.store_slug!} onLogout={signOut} logoUrl={vendor.logo_url}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
@@ -268,7 +268,7 @@ export default function DeliverySettingsPage() {
                     <div className="relative">
                       <input type={showToken ? 'text' : 'password'} value={form.yalidine_api_token}
                         onChange={(e) => setForm({ ...form, yalidine_api_token: e.target.value })}
-                        placeholder="••••••••••••••••••••"
+                        placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                         className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                       <button type="button" onClick={() => setShowToken(!showToken)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -294,7 +294,7 @@ export default function DeliverySettingsPage() {
                       )}
                       {testResult === 'unsaved' && (
                         <span className="text-sm font-semibold text-amber-500">
-                          {isRTL ? 'يرجى حفظ التغييرات أولاً للتجربة' : "Sauvegardez d'abord pour tester."}
+                          {isRTL ? 'Ã™Å Ã˜Â±Ã˜Â¬Ã™â€° Ã˜Â­Ã™ÂÃ˜Â¸ Ã˜Â§Ã™â€žÃ˜ÂªÃ˜ÂºÃ™Å Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª Ã˜Â£Ã™Ë†Ã™â€žÃ˜Â§Ã™â€¹ Ã™â€žÃ™â€žÃ˜ÂªÃ˜Â¬Ã˜Â±Ã˜Â¨Ã˜Â©' : "Sauvegardez d'abord pour tester."}
                         </span>
                       )}
                     </div>
@@ -319,7 +319,7 @@ export default function DeliverySettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.procolis_token}
                   onChange={(e) => setForm({ ...form, procolis_token: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}
                 {autoShipmentCheckbox}
@@ -341,7 +341,7 @@ export default function DeliverySettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.zr_token}
                   onChange={(e) => setForm({ ...form, zr_token: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}
                 {autoShipmentCheckbox}
@@ -363,7 +363,7 @@ export default function DeliverySettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.bearerToken}</label>
                 <input type="password" value={form.maystro_token}
                   onChange={(e) => setForm({ ...form, maystro_token: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}
                 {autoShipmentCheckbox}
@@ -385,7 +385,7 @@ export default function DeliverySettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.bearerToken}</label>
                 <input type="password" value={form.colivraison_token}
                   onChange={(e) => setForm({ ...form, colivraison_token: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}
                 {autoShipmentCheckbox}
@@ -407,7 +407,7 @@ export default function DeliverySettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
                 <input type="password" value={form.rex_token}
                   onChange={(e) => setForm({ ...form, rex_token: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}
                 {autoShipmentCheckbox}
@@ -429,7 +429,7 @@ export default function DeliverySettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.apiKey}</label>
                 <input type="password" value={form.yassir_api_key}
                   onChange={(e) => setForm({ ...form, yassir_api_key: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}
                 {autoShipmentCheckbox}
@@ -451,12 +451,12 @@ export default function DeliverySettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Key</label>
                 <input type="password" value={form.ecom_api_key}
                   onChange={(e) => setForm({ ...form, ecom_api_key: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono mb-3" />
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Token</label>
                 <input type="password" value={form.ecom_api_token}
                   onChange={(e) => setForm({ ...form, ecom_api_token: e.target.value })}
-                  placeholder="••••••••••••••••••••"
+                  placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                 {encNote}
                 {autoShipmentCheckbox}
@@ -491,7 +491,7 @@ export default function DeliverySettingsPage() {
                     </label>
                     <input type="password" value={form.apec_api_token}
                       onChange={(e) => setForm({ ...form, apec_api_token: e.target.value })}
-                      placeholder="••••••••••••••••••••"
+                      placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
                     {encNote}
                   </div>
@@ -512,7 +512,7 @@ export default function DeliverySettingsPage() {
                       )}
                       {testResultApec === 'unsaved' && (
                         <span className="text-sm font-semibold text-amber-500">
-                          {isRTL ? 'يرجى حفظ التغييرات أولاً للتجربة' : "Sauvegardez d'abord pour tester."}
+                          {isRTL ? 'Ã™Å Ã˜Â±Ã˜Â¬Ã™â€° Ã˜Â­Ã™ÂÃ˜Â¸ Ã˜Â§Ã™â€žÃ˜ÂªÃ˜ÂºÃ™Å Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª Ã˜Â£Ã™Ë†Ã™â€žÃ˜Â§Ã™â€¹ Ã™â€žÃ™â€žÃ˜ÂªÃ˜Â¬Ã˜Â±Ã˜Â¨Ã˜Â©' : "Sauvegardez d'abord pour tester."}
                         </span>
                       )}
                     </div>

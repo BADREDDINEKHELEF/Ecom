@@ -28,8 +28,8 @@ interface StoreItem {
 const SUB_STATUS: Record<string, { label: string; color: string }> = {
   active:       { label: 'Actif',         color: 'bg-emerald-100 text-emerald-700' },
   trial:        { label: 'Essai',          color: 'bg-blue-100 text-blue-700' },
-  grace_period: { label: 'Période grace', color: 'bg-amber-100 text-amber-700' },
-  expired:      { label: 'Expiré',        color: 'bg-red-100 text-red-700' },
+  grace_period: { label: 'PÃƒÂ©riode grace', color: 'bg-amber-100 text-amber-700' },
+  expired:      { label: 'ExpirÃƒÂ©',        color: 'bg-red-100 text-red-700' },
   none:         { label: 'Sans plan',     color: 'bg-gray-100 text-gray-500' },
 }
 
@@ -81,7 +81,7 @@ export default function SellerStoresPage() {
         setForm({ store_name: '', store_slug: '', description: '', phone: '', wilaya: '' })
       }
     } catch {
-      setCreateError('Erreur réseau.')
+      setCreateError('Erreur rÃƒÂ©seau.')
     } finally {
       setCreating(false)
     }
@@ -111,7 +111,7 @@ export default function SellerStoresPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+      <SellerSidebar storeName={vendor.store_name!} slug={vendor.store_slug!} onLogout={signOut}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
@@ -121,7 +121,7 @@ export default function SellerStoresPage() {
           <div className="flex items-start justify-between mb-8">
             <div>
               <h1 className="text-2xl font-black text-gray-900">Mes Boutiques</h1>
-              <p className="text-gray-500 text-sm mt-1">Gérez toutes vos boutiques depuis un seul compte</p>
+              <p className="text-gray-500 text-sm mt-1">GÃƒÂ©rez toutes vos boutiques depuis un seul compte</p>
             </div>
             <button
               onClick={() => setShowCreate(!showCreate)}
@@ -134,12 +134,12 @@ export default function SellerStoresPage() {
           {/* Create form */}
           {showCreate && (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-              <h2 className="font-bold text-gray-900 mb-5">Créer une nouvelle boutique</h2>
+              <h2 className="font-bold text-gray-900 mb-5">CrÃƒÂ©er une nouvelle boutique</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1.5">Nom de la boutique *</label>
                   <input type="text" value={form.store_name} onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="Ma Boutique Algérienne"
+                    placeholder="Ma Boutique AlgÃƒÂ©rienne"
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div>
@@ -152,7 +152,7 @@ export default function SellerStoresPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1.5">Téléphone</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">TÃƒÂ©lÃƒÂ©phone</label>
                   <input type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     placeholder="05xx xxx xxx"
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
@@ -161,7 +161,7 @@ export default function SellerStoresPage() {
                   <label className="block text-sm font-bold text-gray-700 mb-1.5">Wilaya</label>
                   <select value={form.wilaya} onChange={(e) => setForm((f) => ({ ...f, wilaya: e.target.value }))}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                    <option value="">Sélectionnez…</option>
+                    <option value="">SÃƒÂ©lectionnezÃ¢â‚¬Â¦</option>
                     {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
                   </select>
                 </div>
@@ -178,14 +178,14 @@ export default function SellerStoresPage() {
                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   {createError}
                   {createError.includes('Abonnement') && (
-                    <Link href="/seller/subscription" className="ml-1 text-red-800 font-bold underline">Voir les plans →</Link>
+                    <Link href="/seller/subscription" className="ml-1 text-red-800 font-bold underline">Voir les plans Ã¢â€ â€™</Link>
                   )}
                 </div>
               )}
               <div className="mt-5 flex items-center gap-3">
                 <button onClick={handleCreate} disabled={creating || !form.store_name || !form.store_slug}
                   className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 text-white font-bold px-6 py-2.5 rounded-xl transition-colors text-sm">
-                  {creating ? <><RefreshCw className="w-4 h-4 animate-spin" /> Création…</> : <><Plus className="w-4 h-4" /> Créer la boutique</>}
+                  {creating ? <><RefreshCw className="w-4 h-4 animate-spin" /> CrÃƒÂ©ationÃ¢â‚¬Â¦</> : <><Plus className="w-4 h-4" /> CrÃƒÂ©er la boutique</>}
                 </button>
                 <button onClick={() => setShowCreate(false)} className="text-sm text-gray-500 hover:text-gray-800 px-4 py-2.5 rounded-xl hover:bg-gray-100 transition-colors">
                   Annuler
@@ -202,7 +202,7 @@ export default function SellerStoresPage() {
           ) : stores.length === 0 ? (
             <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
               <Store className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">Aucune boutique trouvée</p>
+              <p className="text-gray-500 font-medium">Aucune boutique trouvÃƒÂ©e</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -235,7 +235,7 @@ export default function SellerStoresPage() {
                           </span>
                           {store.is_approved ? (
                             <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                              <CheckCircle2 className="w-2.5 h-2.5" /> Approuvée
+                              <CheckCircle2 className="w-2.5 h-2.5" /> ApprouvÃƒÂ©e
                             </span>
                           ) : (
                             <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full flex items-center gap-0.5">
@@ -243,13 +243,13 @@ export default function SellerStoresPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">/shop/{store.store_slug} · {store.wilaya ?? '—'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">/shop/{store.store_slug} Ã‚Â· {store.wilaya ?? 'Ã¢â‚¬â€'}</p>
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Active toggle */}
                         <button onClick={() => toggleActive(store)} disabled={toggleLoading === store.id}
-                          title={store.is_active ? 'Désactiver' : 'Activer'}
+                          title={store.is_active ? 'DÃƒÂ©sactiver' : 'Activer'}
                           className={`p-2 rounded-xl transition-colors ${
                             store.is_active
                               ? 'text-emerald-600 hover:bg-emerald-50'
@@ -287,7 +287,7 @@ export default function SellerStoresPage() {
                 <Crown className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-gray-900 text-sm">Gérez jusqu&apos;à 10 boutiques</p>
+                <p className="font-bold text-gray-900 text-sm">GÃƒÂ©rez jusqu&apos;ÃƒÂ  10 boutiques</p>
                 <p className="text-xs text-gray-500 mt-0.5">Passez au plan Professionnel (3 boutiques) ou Entreprise (10 boutiques).</p>
               </div>
               <Link href="/seller/subscription"

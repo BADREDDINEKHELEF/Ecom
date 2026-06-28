@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useMemo } from 'react'
 import {
@@ -68,7 +68,7 @@ export default function SellerPayoutsPage() {
 
       if (!periodMap.has(key)) {
         periodMap.set(key, {
-          label:      `${formatDateShort(ws)} — ${formatDateShort(we)}`,
+          label:      `${formatDateShort(ws)} Ã¢â‚¬â€ ${formatDateShort(we)}`,
           from:       ws,
           to:         we,
           total:      0,
@@ -130,7 +130,7 @@ export default function SellerPayoutsPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url}
+      <SellerSidebar storeName={vendor.store_name!} slug={vendor.store_slug!} onLogout={signOut} logoUrl={vendor.logo_url}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
@@ -141,7 +141,7 @@ export default function SellerPayoutsPage() {
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
               <CreditCard className="w-6 h-6 text-emerald-600" /> Revenus & Paiements
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Historique de vos ventes livrées</p>
+            <p className="text-gray-500 text-sm mt-1">Historique de vos ventes livrÃƒÂ©es</p>
           </div>
           <button onClick={exportCSV}
             className="flex items-center gap-2 border border-gray-200 bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm flex-shrink-0">
@@ -157,10 +157,10 @@ export default function SellerPayoutsPage() {
               <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-emerald-600" />
               </div>
-              <p className="text-sm font-semibold text-gray-500">Total encaissé</p>
+              <p className="text-sm font-semibold text-gray-500">Total encaissÃƒÂ©</p>
             </div>
-            <p className="text-2xl font-black text-gray-900">{loadingOrders ? '…' : formatPrice(Math.round(totalEarned))}</p>
-            <p className="text-xs text-gray-400 mt-1">Commandes livrées — tout l&apos;historique</p>
+            <p className="text-2xl font-black text-gray-900">{loadingOrders ? 'Ã¢â‚¬Â¦' : formatPrice(Math.round(totalEarned))}</p>
+            <p className="text-xs text-gray-400 mt-1">Commandes livrÃƒÂ©es Ã¢â‚¬â€ tout l&apos;historique</p>
           </div>
 
           <div className="bg-white rounded-2xl p-5 shadow-sm">
@@ -170,8 +170,8 @@ export default function SellerPayoutsPage() {
               </div>
               <p className="text-sm font-semibold text-gray-500">En cours</p>
             </div>
-            <p className="text-2xl font-black text-gray-900">{loadingOrders ? '…' : formatPrice(Math.round(pendingBalance))}</p>
-            <p className="text-xs text-gray-400 mt-1">Commandes confirmées / expédiées cette semaine</p>
+            <p className="text-2xl font-black text-gray-900">{loadingOrders ? 'Ã¢â‚¬Â¦' : formatPrice(Math.round(pendingBalance))}</p>
+            <p className="text-xs text-gray-400 mt-1">Commandes confirmÃƒÂ©es / expÃƒÂ©diÃƒÂ©es cette semaine</p>
           </div>
 
           <div className="bg-white rounded-2xl p-5 shadow-sm border-2 border-emerald-200">
@@ -193,13 +193,13 @@ export default function SellerPayoutsPage() {
           </div>
           {loadingOrders ? (
             <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-              <Loader2 className="w-5 h-5 animate-spin" /> Chargement…
+              <Loader2 className="w-5 h-5 animate-spin" /> ChargementÃ¢â‚¬Â¦
             </div>
           ) : periods.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">Aucune commande livrée pour le moment</p>
-              <p className="text-sm mt-1">Vos revenus apparaîtront ici une fois vos premières livraisons confirmées.</p>
+              <p className="font-medium">Aucune commande livrÃƒÂ©e pour le moment</p>
+              <p className="text-sm mt-1">Vos revenus apparaÃƒÂ®tront ici une fois vos premiÃƒÂ¨res livraisons confirmÃƒÂ©es.</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
@@ -220,7 +220,7 @@ export default function SellerPayoutsPage() {
 
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 text-sm">{period.label}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{period.orderCount} commande{period.orderCount > 1 ? 's' : ''} livrée{period.orderCount > 1 ? 's' : ''}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{period.orderCount} commande{period.orderCount > 1 ? 's' : ''} livrÃƒÂ©e{period.orderCount > 1 ? 's' : ''}</p>
                       </div>
 
                       <p className="font-black text-emerald-600 text-base flex-shrink-0">{formatPrice(Math.round(period.total))}</p>
@@ -228,7 +228,7 @@ export default function SellerPayoutsPage() {
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${
                         period.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                       }`}>
-                        {period.status === 'paid' ? '✓ Viré' : 'En cours'}
+                        {period.status === 'paid' ? '? VirÃƒÂ©' : 'En cours'}
                       </span>
 
                       <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -257,7 +257,7 @@ export default function SellerPayoutsPage() {
                                     <p className="text-xs text-gray-400">{order.wilaya}</p>
                                   </td>
                                   <td className="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">
-                                    {items.map((i) => `${i.product_name} ×${i.quantity}`).join(', ')}
+                                    {items.map((i) => `${i.product_name} Ãƒâ€”${i.quantity}`).join(', ')}
                                   </td>
                                   <td className="px-4 py-3 text-right font-black text-emerald-600">{formatPrice(vendorTotal)}</td>
                                 </tr>
@@ -265,7 +265,7 @@ export default function SellerPayoutsPage() {
                             </tbody>
                             <tfoot>
                               <tr className="bg-gray-50 font-bold">
-                                <td colSpan={3} className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wide">Total période</td>
+                                <td colSpan={3} className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wide">Total pÃƒÂ©riode</td>
                                 <td className="px-4 py-3 text-right text-emerald-600 text-base">{formatPrice(Math.round(period.total))}</td>
                               </tr>
                             </tfoot>

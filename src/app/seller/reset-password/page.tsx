@@ -11,11 +11,11 @@ type Status = 'loading' | 'ready' | 'invalid' | 'success'
 
 function friendlyAuthError(msg: string): string {
   if (/same.*password|identical/i.test(msg))
-    return 'Le nouveau mot de passe doit être différent de l\'ancien.'
+    return 'Le nouveau mot de passe doit ÃƒÂªtre diffÃƒÂ©rent de l\'ancien.'
   if (/too.*many.*requests|rate.*limit/i.test(msg))
-    return 'Trop de tentatives. Réessayez dans quelques minutes.'
+    return 'Trop de tentatives. RÃƒÂ©essayez dans quelques minutes.'
   if (/weak.*password/i.test(msg))
-    return 'Mot de passe trop faible. Utilisez au moins 8 caractères.'
+    return 'Mot de passe trop faible. Utilisez au moins 8 caractÃƒÂ¨res.'
   return msg
 }
 
@@ -37,7 +37,7 @@ export default function ResetPasswordPage() {
       }
     })
 
-    // Fallback timeout — if no PASSWORD_RECOVERY event after 5s, link is invalid/expired
+    // Fallback timeout Ã¢â‚¬â€ if no PASSWORD_RECOVERY event after 5s, link is invalid/expired
     const timer = setTimeout(() => {
       setStatus((prev) => prev === 'loading' ? 'invalid' : prev)
     }, 5000)
@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 8) { setError('Le mot de passe doit contenir au moins 8 caractères.'); return }
+    if (password.length < 8) { setError('Le mot de passe doit contenir au moins 8 caractÃƒÂ¨res.'); return }
     setLoading(true)
     setError('')
     const supabase = createClient()
@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
           {status === 'loading' && (
             <div className="flex flex-col items-center gap-4 py-6">
               <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-              <p className="text-sm text-gray-500">Vérification du lien…</p>
+              <p className="text-sm text-gray-500">VÃƒÂ©rification du lienÃ¢â‚¬Â¦</p>
             </div>
           )}
 
@@ -126,7 +126,7 @@ export default function ResetPasswordPage() {
                       minLength={8}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
                       autoComplete="new-password"
                       className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400"
                     />
@@ -154,7 +154,7 @@ export default function ResetPasswordPage() {
 
               <p className="text-center text-sm text-gray-500 mt-5">
                 <Link href="/seller/login" className="text-emerald-600 font-bold hover:underline">
-                  ← {t.seller.backToLogin}
+                  Ã¢â€ Â {t.seller.backToLogin}
                 </Link>
               </p>
             </>

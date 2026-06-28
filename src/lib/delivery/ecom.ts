@@ -1,6 +1,7 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates, isValidWilaya, findWilayaRow } from './utils'
 import { deliveryFetch } from './client'
+import { extractRates, isValidWilaya, findWilayaRow } from './utils'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://ecom-dz.net/Api_v1'
 
@@ -77,7 +78,10 @@ export async function ecomListParcels(key: string, token: string, pageSize = 100
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
+  } catch (err: unknown) {
+    logger.error('[ecomListParcels]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function ecomGetRateWithToken(
@@ -94,7 +98,7 @@ export async function ecomGetRateWithToken(
     
     if (!res.ok) {
       const body = await res.text().catch(() => '')
-      console.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaName}: status=${res.status} body=${body}`)
+      logger.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaName}: status=${res.status} body=${body}`)
       return null
     }
     
@@ -104,7 +108,7 @@ export async function ecomGetRateWithToken(
     return rate
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}:`, msg)
+    logger.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}:`, { error: msg })
     return null
   }
 }
@@ -116,5 +120,8 @@ export async function ecomTrack(trackingNumber: string, key: string, token: stri
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
+  } catch (err: unknown) {
+    logger.error('[ecomTrack]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }

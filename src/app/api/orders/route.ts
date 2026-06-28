@@ -9,7 +9,9 @@ import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { createSellerNotification } from '@/lib/notifications/seller'
 import { awardPoints, redeemPoints } from '@/lib/loyalty'
-import { firePurchaseCAPI } from '@/lib/analytics/server'
+import { fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
+import { fireStorePurchaseCAPI, fireMultiStorePurchaseCAPI } from '@/lib/meta/capi'
+import { getMetaConfigsByIds, getPlatformMetaConfig } from '@/lib/meta/store'
 import { decryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone as utilNormalizePhone } from '@/lib/utils/phone'
@@ -190,53 +192,86 @@ export async function POST(req: NextRequest) {
           )
         )
 
-        // Vendor-level CAPI — fire for each vendor that has pixel + CAPI token set
+        // Vendor-level Meta CAPI via new multi-tenant system
         if (vendorIds.length > 0) {
+          const metaConfigs = (await getMetaConfigsByIds(vendorIds)).map(c => ({
+            ...c,
+            accessToken: c.accessToken ? decryptCred(c.accessToken) : null,
+          }))
+          const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: i.unitPrice, quantity: i.quantity }))
+          const metaVendorResult = fireMultiStorePurchaseCAPI(
+            metaConfigs, orderId, total,
+            { email: buyerEmail, phone: input.phone, clientIp: ip, clientUserAgent: req.headers.get('user-agent') ?? undefined },
+          )
+
+          // TikTok + GA4 per-vendor CAPI — keep on old adapter
           const { data: vendors } = await supabase
             .from('vendors')
-            .select('meta_pixel_id, meta_capi_token, tiktok_pixel_id, tiktok_capi_token, gtag_id, gtag_api_secret')
+            .select('tiktok_pixel_id, tiktok_capi_token, gtag_id, gtag_api_secret')
             .in('id', vendorIds)
-          const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: i.unitPrice, quantity: i.quantity }))
-          await Promise.all(
-            (vendors ?? []).map((v: Record<string, string | null>) =>
-              firePurchaseCAPI({
-                metaPixelId:     v.meta_pixel_id,
-                metaCAPIToken:   decryptCred(v.meta_capi_token),
-                tiktokPixelId:   v.tiktok_pixel_id,
-                tiktokCAPIToken: decryptCred(v.tiktok_capi_token),
-                gtagId:          v.gtag_id,
-                gtagApiSecret:   decryptCred(v.gtag_api_secret),
+          const otherVendorCalls = (vendors ?? []).map((v: Record<string, string | null>) => {
+            const calls: Promise<unknown>[] = []
+            if (v.tiktok_pixel_id && v.tiktok_capi_token) {
+              calls.push(fireTikTokPurchase({
+                pixelId:     v.tiktok_pixel_id,
+                accessToken: decryptCred(v.tiktok_capi_token)!,
                 orderId, total, items: capiItems,
                 email: buyerEmail, phone: input.phone,
                 clientIp: ip,
                 clientUserAgent: req.headers.get('user-agent') ?? undefined,
-                gaClientId: gaClientId ?? undefined,
-              })
-            )
-          )
+              }))
+            }
+            if (v.gtag_id && v.gtag_api_secret) {
+              calls.push(fireGA4Purchase({
+                measurementId: v.gtag_id!,
+                apiSecret:     decryptCred(v.gtag_api_secret)!,
+                orderId, total, items: capiItems,
+                clientId: gaClientId ?? undefined,
+              }))
+            }
+            return Promise.allSettled(calls)
+          })
+
+          await Promise.allSettled([metaVendorResult, ...otherVendorCalls])
         }
       } catch (err) {
         logger.error('[seller notification + CAPI] failed', { error: err instanceof Error ? err.message : String(err) })
       }
     })()
 
-    // Platform-level CAPI (non-blocking)
-    ;(async () => {
+    // Platform-level Meta CAPI (non-blocking)
+    const platformConfig = getPlatformMetaConfig()
+    if (platformConfig) {
+      fireStorePurchaseCAPI(platformConfig, orderId, total, {
+        email: buyerEmail, phone: input.phone,
+        clientIp: ip,
+        clientUserAgent: req.headers.get('user-agent') ?? undefined,
+      }).catch((err) => logger.error('[platform Meta CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+
+    // Platform-level TikTok CAPI (non-blocking)
+    if (process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID && process.env.TIKTOK_CAPI_TOKEN) {
       const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: i.unitPrice, quantity: i.quantity }))
-      await firePurchaseCAPI({
-        metaPixelId:     process.env.NEXT_PUBLIC_META_PIXEL_ID,
-        metaCAPIToken:   process.env.META_CAPI_TOKEN,
-        tiktokPixelId:   process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID,
-        tiktokCAPIToken: process.env.TIKTOK_CAPI_TOKEN,
-        gtagId:          process.env.NEXT_PUBLIC_GTAG_ID,
-        gtagApiSecret:   process.env.GTAG_API_SECRET,
+      fireTikTokPurchase({
+        pixelId:     process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID,
+        accessToken: process.env.TIKTOK_CAPI_TOKEN,
         orderId, total, items: capiItems,
         email: buyerEmail, phone: input.phone,
         clientIp: ip,
         clientUserAgent: req.headers.get('user-agent') ?? undefined,
-        gaClientId: gaClientId ?? undefined,
-      })
-    })().catch((err) => logger.error('[platform CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
+      }).catch((err) => logger.error('[platform TikTok CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+
+    // Platform-level GA4 CAPI (non-blocking)
+    if (process.env.NEXT_PUBLIC_GTAG_ID && process.env.GTAG_API_SECRET) {
+      const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: i.unitPrice, quantity: i.quantity }))
+      fireGA4Purchase({
+        measurementId: process.env.NEXT_PUBLIC_GTAG_ID,
+        apiSecret:     process.env.GTAG_API_SECRET,
+        orderId, total, items: capiItems,
+        clientId: gaClientId ?? undefined,
+      }).catch((err) => logger.error('[platform GA4 CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
 
     // Award loyalty points for this order (non-blocking)
     createRouteClient(req).auth.getUser()

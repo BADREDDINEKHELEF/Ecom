@@ -7,10 +7,11 @@ import { useRTL, useLang } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { SubscriptionPlan, VendorSubscription } from '@/lib/supabase/vendors'
 
-// ── Status badge ─────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Status badge Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 const STATUS_CFG = {
   trial:        { label: 'Trial',        color: 'bg-blue-100 text-blue-700',   icon: Clock },
+  pending:      { label: 'Pending',      color: 'bg-yellow-100 text-yellow-700', icon: Clock },
   active:       { label: 'Active',       color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
   grace_period: { label: 'Grace Period', color: 'bg-amber-100 text-amber-700', icon: AlertCircle },
   expired:      { label: 'Expired',      color: 'bg-red-100 text-red-700',     icon: AlertCircle },
@@ -38,7 +39,7 @@ const PLAN_BADGE: Record<string, string> = {
 const PAYMENT_METHODS = [
   { id: 'baridi_mob', label: 'BaridiMob', desc: 'Virement via l\'appli BaridiMob' },
   { id: 'ccp', label: 'CCP / Virement Postal', desc: 'Virement depuis un bureau de poste' },
-  { id: 'manual', label: 'Autre', desc: 'Paiement manuel — contactez le support' },
+  { id: 'manual', label: 'Autre', desc: 'Paiement manuel Ã¢â‚¬â€ contactez le support' },
 ]
 
 export default function SellerSubscriptionPage() {
@@ -94,7 +95,7 @@ export default function SellerSubscriptionPage() {
         setShowForm(false)
       }
     } catch {
-      setError('Erreur réseau. Réessayez.')
+      setError('Erreur rÃƒÂ©seau. RÃƒÂ©essayez.')
     } finally {
       setSubmitting(false)
     }
@@ -122,7 +123,7 @@ export default function SellerSubscriptionPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut}
+      <SellerSidebar storeName={vendor.store_name!} slug={vendor.store_slug!} onLogout={signOut}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
@@ -131,7 +132,7 @@ export default function SellerSubscriptionPage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-black text-gray-900">Abonnement</h1>
-            <p className="text-gray-500 text-sm mt-1">Gérez votre plan et vos paiements</p>
+            <p className="text-gray-500 text-sm mt-1">GÃƒÂ©rez votre plan et vos paiements</p>
           </div>
 
           {/* Current subscription banner */}
@@ -156,11 +157,11 @@ export default function SellerSubscriptionPage() {
                   </div>
                   {subscription && (
                     <p className="text-xs text-gray-400 mt-1">
-                      Expire le {new Date(subscription.expires_at).toLocaleDateString('fr-DZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      Expire le {new Date(subscription.expires_at ?? '').toLocaleDateString('fr-DZ', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                   )}
                   {!subscription && (
-                    <p className="text-xs text-gray-400 mt-1">Souscrivez à un plan pour accéder à toutes les fonctionnalités.</p>
+                    <p className="text-xs text-gray-400 mt-1">Souscrivez ÃƒÂ  un plan pour accÃƒÂ©der ÃƒÂ  toutes les fonctionnalitÃƒÂ©s.</p>
                   )}
                 </div>
                 <button
@@ -188,9 +189,9 @@ export default function SellerSubscriptionPage() {
             <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-emerald-800">Demande envoyée avec succès !</p>
+                <p className="font-bold text-emerald-800">Demande envoyÃƒÂ©e avec succÃƒÂ¨s !</p>
                 <p className="text-sm text-emerald-700 mt-0.5">
-                  Notre équipe va vérifier votre paiement et activer votre abonnement sous 24h.
+                  Notre ÃƒÂ©quipe va vÃƒÂ©rifier votre paiement et activer votre abonnement sous 24h.
                   Vous recevrez une confirmation par email.
                 </p>
               </div>
@@ -255,7 +256,7 @@ export default function SellerSubscriptionPage() {
                     <p className="text-sm text-amber-700">
                       Envoyez le montant de{' '}
                       <strong>{plans.find((p) => p.id === selectedPlan)?.price_dzd.toLocaleString()} DZD</strong>{' '}
-                      via BaridiMob ou virement CCP à notre compte. Entrez ensuite la référence de transaction ci-dessous.
+                      via BaridiMob ou virement CCP ÃƒÂ  notre compte. Entrez ensuite la rÃƒÂ©fÃƒÂ©rence de transaction ci-dessous.
                     </p>
                     {paymentDetails && (
                       <div className="mt-3 space-y-1.5">
@@ -300,7 +301,7 @@ export default function SellerSubscriptionPage() {
                   {/* Reference */}
                   <div className="mb-5">
                     <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Référence de transaction <span className="font-normal text-gray-400">(optionnel mais recommandé)</span>
+                      RÃƒÂ©fÃƒÂ©rence de transaction <span className="font-normal text-gray-400">(optionnel mais recommandÃƒÂ©)</span>
                     </label>
                     <input
                       type="text"
@@ -322,7 +323,7 @@ export default function SellerSubscriptionPage() {
                     disabled={submitting}
                     className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-bold px-6 py-3 rounded-xl transition-colors">
                     {submitting ? (
-                      <><RefreshCw className="w-4 h-4 animate-spin" /> Envoi en cours…</>
+                      <><RefreshCw className="w-4 h-4 animate-spin" /> Envoi en coursÃ¢â‚¬Â¦</>
                     ) : (
                       <><Upload className="w-4 h-4" /> Soumettre ma demande d&apos;abonnement</>
                     )}

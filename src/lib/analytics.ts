@@ -1,12 +1,13 @@
 /**
- * Analytics helpers — safe wrappers around Meta Pixel (fbq), Google Tag (gtag),
+ * Analytics helpers — safe wrappers around Google Tag (gtag), TikTok (ttq),
  * and the StoreDz first-party pixel (window.__pixel).
  * All calls are no-ops when scripts are blocked (ad blockers) or not configured.
+ *
+ * Meta Pixel tracking has moved to @/lib/meta/events.
  */
 
 declare global {
   interface Window {
-    fbq?:      (...args: unknown[]) => void
     gtag?:     (...args: unknown[]) => void
     dataLayer?: unknown[]
     __pixel?:  (event: string, meta?: Record<string, unknown>) => void
@@ -14,9 +15,6 @@ declare global {
   }
 }
 
-function _fbq(...args: unknown[]) {
-  try { if (typeof window !== 'undefined') window.fbq?.(...args) } catch {}
-}
 function _gtag(...args: unknown[]) {
   try { if (typeof window !== 'undefined') window.gtag?.(...args) } catch {}
 }
@@ -30,7 +28,6 @@ function _ttq(event: string, params?: Record<string, unknown>) {
 // ── Events ─────────────────────────────────────────────────────────────────
 
 export function trackPageView(url: string) {
-  _fbq('track', 'PageView')
   _gtag('event', 'page_view', { page_path: url })
   _pixel('PageView', { url })
   try { if (typeof window !== 'undefined') window.ttq?.page() } catch {}
@@ -41,13 +38,6 @@ export function trackViewContent(product: {
   name:  string
   price: number
 }) {
-  _fbq('track', 'ViewContent', {
-    content_ids:  [product.id],
-    content_name: product.name,
-    content_type: 'product',
-    value:        product.price,
-    currency:     'DZD',
-  })
   _gtag('event', 'view_item', {
     currency: 'DZD',
     value:    product.price,
@@ -63,13 +53,6 @@ export function trackAddToCart(product: {
   price:    number
   quantity: number
 }) {
-  _fbq('track', 'AddToCart', {
-    content_ids:  [product.id],
-    content_name: product.name,
-    content_type: 'product',
-    value:        product.price * product.quantity,
-    currency:     'DZD',
-  })
   _gtag('event', 'add_to_cart', {
     currency: 'DZD',
     value:    product.price * product.quantity,
@@ -92,11 +75,6 @@ export function trackAddToCart(product: {
 }
 
 export function trackInitiateCheckout(cart: { total: number; numItems: number }) {
-  _fbq('track', 'InitiateCheckout', {
-    value:     cart.total,
-    currency:  'DZD',
-    num_items: cart.numItems,
-  })
   _gtag('event', 'begin_checkout', {
     currency: 'DZD',
     value:    cart.total,
@@ -110,14 +88,6 @@ export function trackPurchase(order: {
   total:         number
   items: Array<{ id: string; name: string; price: number; quantity: number }>
 }) {
-  // Pass eventID so Meta/TikTok can deduplicate against the server-side CAPI event
-  _fbq('track', 'Purchase', {
-    value:        order.total,
-    currency:     'DZD',
-    content_ids:  order.items.map(i => i.id),
-    content_type: 'product',
-    num_items:    order.items.reduce((s, i) => s + i.quantity, 0),
-  }, { eventID: order.transactionId })
   _gtag('event', 'purchase', {
     transaction_id: order.transactionId,
     value:          order.total,

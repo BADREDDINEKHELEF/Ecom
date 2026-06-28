@@ -35,19 +35,25 @@ function buildCsp(extra: string[] = []): string {
       'https://business-api.tiktok.com',
       'https://www.google-analytics.com',
     ].join(' '),
+    "frame-src 'none'",
+    "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    "upgrade-insecure-requests",
     ...extra,
   ].join('; ')
 }
 
 const securityHeaders = [
-  { key: 'X-DNS-Prefetch-Control',    value: 'on' },
-  { key: 'X-Frame-Options',           value: 'DENY' },
-  { key: 'X-Content-Type-Options',    value: 'nosniff' },
-  { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=(self)' },
+  { key: 'X-DNS-Prefetch-Control',       value: 'on' },
+  { key: 'X-Frame-Options',              value: 'DENY' },
+  { key: 'X-Content-Type-Options',       value: 'nosniff' },
+  { key: 'X-XSS-Protection',             value: '0' },
+  { key: 'Referrer-Policy',              value: 'strict-origin-when-cross-origin' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Opener-Policy',   value: 'same-origin' },
+  { key: 'Permissions-Policy',           value: 'camera=(), microphone=(), geolocation=(self)' },
   {
     key:   'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
@@ -61,12 +67,16 @@ const securityHeaders = [
 const adminSecurityHeaders = [
   {
     key:   'Content-Security-Policy',
-    value: buildCsp(["object-src 'none'", "upgrade-insecure-requests"]),
+    value: buildCsp(["upgrade-insecure-requests"]),
   },
-  { key: 'X-Frame-Options',        value: 'DENY' },
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'Cache-Control',          value: 'no-store, no-cache, must-revalidate, private' },
-  { key: 'Pragma',                 value: 'no-cache' },
+  { key: 'X-Frame-Options',              value: 'DENY' },
+  { key: 'X-Content-Type-Options',       value: 'nosniff' },
+  { key: 'X-XSS-Protection',             value: '0' },
+  { key: 'Referrer-Policy',              value: 'strict-origin-when-cross-origin' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Opener-Policy',   value: 'same-origin' },
+  { key: 'Cache-Control',                value: 'no-store, no-cache, must-revalidate, private' },
+  { key: 'Pragma',                       value: 'no-cache' },
 ]
 
 // ── Next.js Config ──────────────────────────────────────────────────────────

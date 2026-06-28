@@ -51,9 +51,9 @@ export default function SellerPendingPage() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <XCircle className="w-8 h-8 text-red-500" />
             </div>
-            <h1 className="text-2xl font-black text-gray-900 mb-2">Demande refusée</h1>
+            <h1 className="text-2xl font-black text-gray-900 mb-2">Demande refusÃƒÂ©e</h1>
             <p className="text-gray-500 text-sm mb-4">
-              Votre boutique <span className="font-bold text-gray-800">{vendor?.store_name}</span> n&apos;a pas été approuvée.
+              Votre boutique <span className="font-bold text-gray-800">{vendor?.store_name}</span> n&apos;a pas ÃƒÂ©tÃƒÂ© approuvÃƒÂ©e.
             </p>
             {(vendor as Vendor & { admin_note?: string | null })?.admin_note && (
               <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6 text-sm text-red-700 text-left">
@@ -62,7 +62,7 @@ export default function SellerPendingPage() {
               </div>
             )}
             <p className="text-xs text-gray-400 mb-6">
-              Contactez-nous à <a href="mailto:support@storedz.dz" className="text-emerald-600 underline">support@storedz.dz</a> pour plus d&apos;informations.
+              Contactez-nous ÃƒÂ  <a href="mailto:support@storedz.dz" className="text-emerald-600 underline">support@storedz.dz</a> pour plus d&apos;informations.
             </p>
           </>
         ) : (
@@ -72,14 +72,14 @@ export default function SellerPendingPage() {
             </div>
             <h1 className="text-2xl font-black text-gray-900 mb-2">En attente de validation</h1>
             <p className="text-gray-500 text-sm mb-2">
-              Votre boutique <span className="font-bold text-gray-800">{vendor?.store_name}</span> a bien été créée.
+              Votre boutique <span className="font-bold text-gray-800">{vendor?.store_name}</span> a bien ÃƒÂ©tÃƒÂ© crÃƒÂ©ÃƒÂ©e.
             </p>
             <p className="text-gray-500 text-sm mb-6">
-              Notre équipe va vérifier votre dossier et vous donner accès dans les plus brefs délais (généralement 24h).
+              Notre ÃƒÂ©quipe va vÃƒÂ©rifier votre dossier et vous donner accÃƒÂ¨s dans les plus brefs dÃƒÂ©lais (gÃƒÂ©nÃƒÂ©ralement 24h).
             </p>
             <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 mb-6 text-sm text-emerald-700 text-left space-y-1.5">
-              <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 flex-shrink-0" /> Compte créé avec succès</div>
-              <div className="flex items-center gap-2 text-amber-600"><Clock className="w-4 h-4 flex-shrink-0" /> Vérification en cours par notre équipe</div>
+              <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 flex-shrink-0" /> Compte crÃƒÂ©ÃƒÂ© avec succÃƒÂ¨s</div>
+              <div className="flex items-center gap-2 text-amber-600"><Clock className="w-4 h-4 flex-shrink-0" /> VÃƒÂ©rification en cours par notre ÃƒÂ©quipe</div>
             </div>
             <button
               onClick={checkAgain}
@@ -87,7 +87,7 @@ export default function SellerPendingPage() {
               className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60 mb-3"
             >
               <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
-              {checking ? 'Vérification…' : 'Vérifier mon statut'}
+              {checking ? 'VÃƒÂ©rificationÃ¢â‚¬Â¦' : 'VÃƒÂ©rifier mon statut'}
             </button>
           </>
         )}
@@ -96,7 +96,7 @@ export default function SellerPendingPage() {
           onClick={signOut}
           className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 py-2.5 rounded-xl hover:bg-gray-100 transition-colors"
         >
-          <LogOut className="w-4 h-4" /> Se déconnecter
+          <LogOut className="w-4 h-4" /> Se dÃƒÂ©connecter
         </button>
       </div>
     </div>

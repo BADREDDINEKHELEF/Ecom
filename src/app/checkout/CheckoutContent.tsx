@@ -16,6 +16,7 @@ import { getCommunesForWilaya } from '@/lib/data/communes'
 import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
 import { trackPurchase, trackInitiateCheckout } from '@/lib/analytics'
 import { track } from '@/lib/analytics/track'
+import { trackPurchase as trackMetaPurchase, trackInitiateCheckout as trackMetaInitiateCheckout } from '@/lib/meta/events'
 
 function normalizeW(s: string) {
   return s.toLowerCase()
@@ -125,6 +126,25 @@ export default function CheckoutContent() {
     // Fire pixel InitiateCheckout once — uses closure values from mount
     const { items: cartItems, total: getTotal } = useCartStore.getState()
     trackInitiateCheckout({ total: getTotal(), numItems: cartItems.reduce((s, i) => s + i.quantity, 0) })
+    const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+    if (metaPixelId) {
+      trackMetaInitiateCheckout(
+        {
+          storeId:       '__platform__',
+          storeSlug:     '',
+          pixelId:       metaPixelId,
+          accessToken:   null,
+          testEventCode: null,
+          datasetId:     null,
+          enabled:       true,
+        },
+        {
+          value:     getTotal(),
+          currency:  'DZD',
+          num_items: cartItems.reduce((s, i) => s + i.quantity, 0),
+        },
+      )
+    }
   }, [])
 
   // Fetch live delivery price from vendor's configured provider when wilaya changes
@@ -379,6 +399,29 @@ export default function CheckoutContent() {
         const resolvedOrderId = orderData.orderId ?? orderData.id
         if (!resolvedOrderId) { setSaveError(t.checkout.orderFailed); return }
         trackPurchase({ transactionId: resolvedOrderId, total: orderTotal, items: cartSnapshot })
+        const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+        if (metaPixelId) {
+          trackMetaPurchase(
+            {
+              storeId:       '__platform__',
+              storeSlug:     '',
+              pixelId:       metaPixelId,
+              accessToken:   null,
+              testEventCode: null,
+              datasetId:     null,
+              enabled:       true,
+            },
+            {
+              value:        orderTotal,
+              currency:     'DZD',
+              content_ids:  cartSnapshot.map(i => i.id),
+              content_type: 'product',
+              num_items:    cartSnapshot.reduce((s, i) => s + i.quantity, 0),
+              contents:     cartSnapshot.map(i => ({ id: i.id, quantity: i.quantity, price: i.price })),
+              transactionId: resolvedOrderId,
+            },
+          )
+        }
         track('checkout_complete', { order_id: resolvedOrderId, total: orderTotal, payment_method: 'cash', wilaya: form?.wilaya })
 
         markRecovered()

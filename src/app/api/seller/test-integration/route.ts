@@ -11,7 +11,9 @@ import { yassirListParcels } from '@/lib/delivery/yassir'
 import { ecomListParcels } from '@/lib/delivery/ecom'
 
 // Import CAPI calls
-import { fireMetaPurchase, fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
+import { fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
+import { fireStorePurchaseCAPI } from '@/lib/meta/capi'
+import { getMetaConfigById } from '@/lib/meta/store'
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
@@ -291,28 +293,25 @@ export async function POST(req: NextRequest) {
       }
 
       case 'meta_capi': {
-        const pixelId = vendor.meta_pixel_id
-        const token = vendor.meta_capi_token
         const { decryptField, isEncrypted } = await import('@/lib/utils/crypto')
-        const rawToken = token ? (isEncrypted(token) ? decryptField(token) : token) : null
-
-        if (!pixelId || !rawToken) {
+        const config = await getMetaConfigById(vendor.id)
+        if (!config?.enabled || !config.pixelId || !config.accessToken) {
           await saveIntegrationHealth(vendor.id, 'meta_capi', { health_status: 'needs_configuration' })
           return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
         }
         if (action === 'send_test_event') {
-          const res = await fireMetaPurchase({
-            pixelId,
-            accessToken: rawToken,
-            orderId: `TEST-${Math.floor(Math.random() * 1000000)}`,
-            total: 1500,
+          const effectiveConfig = {
+            ...config,
+            accessToken: isEncrypted(config.accessToken) ? decryptField(config.accessToken) : config.accessToken,
+          }
+          const res = await fireStorePurchaseCAPI(effectiveConfig, `TEST-${Math.floor(Math.random() * 1000000)}`, 1500, {
             email: 'test@example.com',
             phone: '0555123456',
             clientIp: '127.0.0.1',
-            clientUserAgent: 'Mozilla/5.0 (Test Sandbox)'
+            clientUserAgent: 'Mozilla/5.0 (Test Sandbox)',
           })
           await recordResult(res.ok, { status: res.status, error: res.ok ? null : res.message })
-          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: res.raw })
+          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null })
         }
         break
       }
@@ -340,7 +339,7 @@ export async function POST(req: NextRequest) {
             clientUserAgent: 'Mozilla/5.0 (Test Sandbox)'
           })
           await recordResult(res.ok, { status: res.status, error: res.ok ? null : res.message })
-          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: res.raw })
+          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null })
         }
         break
       }
@@ -364,7 +363,7 @@ export async function POST(req: NextRequest) {
             items: [{ id: 'test-prod', name: 'Test Product', price: 1500, quantity: 1 }]
           })
           await recordResult(res.ok, { status: res.status, error: res.ok ? null : res.message })
-          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: res.raw })
+          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null })
         }
         break
       }

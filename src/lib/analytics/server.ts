@@ -2,6 +2,9 @@
  * Server-side Conversions APIs — fired after order creation.
  * Runs alongside client-side pixels for reliable tracking not blocked by ad blockers.
  * All calls are best-effort and never block the order flow.
+ *
+ * Meta Conversions API has moved to @/lib/meta/capi.
+ * Legacy Meta code (fireMetaPurchase, firePurchaseCAPI) has been removed.
  */
 
 import crypto from 'crypto'
@@ -11,14 +14,12 @@ function sha256(value: string): string {
 }
 
 function normalizePhone(phone: string): string {
-  // Strip non-digits, ensure it starts with 213 (Algerian country code)
   const digits = phone.replace(/\D/g, '')
   return digits.startsWith('213') ? digits : digits.startsWith('0') ? '213' + digits.slice(1) : digits
 }
 
 function anonymizeIp(ip: string): string {
   if (!ip) return ''
-  // IPv4: mask last octet (e.g. 192.168.1.123 -> 192.168.1.0)
   if (ip.includes('.')) {
     const parts = ip.split('.')
     if (parts.length === 4) {
@@ -26,7 +27,6 @@ function anonymizeIp(ip: string): string {
       return parts.join('.')
     }
   }
-  // IPv6: mask last 80 bits (e.g. 2001:db8:85a3:8d3:1319:8a2e:370:7348 -> 2001:db8:85a3::)
   if (ip.includes(':')) {
     const parts = ip.split(':')
     if (parts.length > 3) {
@@ -35,56 +35,7 @@ function anonymizeIp(ip: string): string {
   }
   return ip
 }
-
-// ── Meta Conversions API ────────────────────────────────────────────────────
-// Docs: https://developers.facebook.com/docs/marketing-api/conversions-api
-
-export async function fireMetaPurchase(opts: {
-  pixelId:         string
-  accessToken:     string
-  orderId:         string
-  total:           number
-  email?:          string | null
-  phone?:          string | null
-  clientIp?:       string
-  clientUserAgent?: string
-}): Promise<{ ok: boolean; status: number; message: string; raw?: unknown }> {
-  const { pixelId, accessToken, orderId, total, email, phone, clientIp, clientUserAgent } = opts
-  try {
-    const userData: Record<string, unknown> = {}
-    if (email)            userData.em  = sha256(email)
-    if (phone)            userData.ph  = sha256(normalizePhone(phone))
-    if (clientIp)         userData.client_ip_address  = anonymizeIp(clientIp)
-    if (clientUserAgent)  userData.client_user_agent  = clientUserAgent
-
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          data: [{
-            event_name:    'Purchase',
-            event_time:    Math.floor(Date.now() / 1000),
-            event_id:      orderId,
-            action_source: 'website',
-            user_data:     userData,
-            custom_data:   { value: total, currency: 'DZD', order_id: orderId },
-          }],
-        }),
-      }
-    )
-    const status = res.status
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      return { ok: false, status, message: body?.error?.message ?? `HTTP Error ${status}`, raw: body }
-    }
-    return { ok: true, status, message: 'Event accepted by Meta', raw: body }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return { ok: false, status: 0, message: msg }
-  }
-}
+// ── TikTok Events API ───────────────────────────────────────────────────────
 
 // ── TikTok Events API ───────────────────────────────────────────────────────
 // Docs: https://business-api.tiktok.com/portal/docs?id=1741601162187777
@@ -194,63 +145,4 @@ export async function fireGA4Purchase(opts: {
   }
 }
 
-// ── Batch helper — fires all three for a given set of credentials ───────────
 
-export async function firePurchaseCAPI(opts: {
-  metaPixelId?:     string | null
-  metaCAPIToken?:   string | null
-  tiktokPixelId?:   string | null
-  tiktokCAPIToken?: string | null
-  gtagId?:          string | null
-  gtagApiSecret?:   string | null
-  orderId:  string
-  total:    number
-  items:    Array<{ id: string; name: string; price: number; quantity: number }>
-  email?:   string | null
-  phone?:   string | null
-  clientIp?:         string
-  clientUserAgent?:  string
-  gaClientId?:       string
-}): Promise<void> {
-  const calls: Promise<unknown>[] = []
-
-  if (opts.metaPixelId && opts.metaCAPIToken) {
-    calls.push(fireMetaPurchase({
-      pixelId:         opts.metaPixelId,
-      accessToken:     opts.metaCAPIToken,
-      orderId:         opts.orderId,
-      total:           opts.total,
-      email:           opts.email,
-      phone:           opts.phone,
-      clientIp:        opts.clientIp,
-      clientUserAgent: opts.clientUserAgent,
-    }))
-  }
-
-  if (opts.tiktokPixelId && opts.tiktokCAPIToken) {
-    calls.push(fireTikTokPurchase({
-      pixelId:     opts.tiktokPixelId,
-      accessToken: opts.tiktokCAPIToken,
-      orderId:     opts.orderId,
-      total:       opts.total,
-      items:       opts.items,
-      email:       opts.email,
-      phone:       opts.phone,
-      clientIp:    opts.clientIp,
-      clientUserAgent: opts.clientUserAgent,
-    }))
-  }
-
-  if (opts.gtagId && opts.gtagApiSecret) {
-    calls.push(fireGA4Purchase({
-      measurementId: opts.gtagId,
-      apiSecret:     opts.gtagApiSecret,
-      orderId:       opts.orderId,
-      total:         opts.total,
-      items:         opts.items,
-      clientId:      opts.gaClientId,
-    }))
-  }
-
-  await Promise.allSettled(calls)
-}

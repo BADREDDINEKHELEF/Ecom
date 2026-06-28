@@ -97,19 +97,19 @@ export async function POST(req: NextRequest) {
     grace.setDate(grace.getDate() + 7)
 
     const sub = await createVendorSubscription({
-      vendor_id: vendor.id,
-      plan_id,
-      status: 'trial',           // admin activates after verifying payment
-      amount_dzd: plan.price_dzd,
-      started_at: now.toISOString(),
-      expires_at: expires.toISOString(),
-      grace_period_ends_at: grace.toISOString(),
-      payment_method: payment_method as 'manual' | 'baridi_mob' | 'ccp' | 'edahabia',
-      payment_reference: payment_reference ?? null,
-      payment_proof_url: payment_proof_url ?? null,
-      admin_note: null,
-      renewed_from_id: null,
-    } as Parameters<typeof createVendorSubscription>[0])
+      vendorId: vendor.id,
+      planId: plan_id,
+      status: 'trial',
+      amountDzd: plan.price_dzd,
+      startedAt: now.toISOString(),
+      expiresAt: expires.toISOString(),
+      gracePeriodEndsAt: grace.toISOString(),
+      paymentMethod: payment_method as 'manual' | 'baridi_mob' | 'ccp' | 'edahabia',
+      paymentReference: payment_reference ?? null,
+      paymentProofUrl: payment_proof_url ?? null,
+      adminNote: null,
+      renewedFromId: null,
+    })
 
     return NextResponse.json({ subscription: sub }, { status: 201 })
   } catch (err) {

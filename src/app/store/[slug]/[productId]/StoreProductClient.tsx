@@ -6,6 +6,7 @@ import { useCartStore } from '@/lib/store/cartStore'
 import { useT } from '@/lib/store/langStore'
 import { formatPrice } from '@/lib/utils'
 import { trackAddToCart } from '@/lib/analytics'
+import { trackAddToCart as trackMetaAddToCart } from '@/lib/meta/events'
 import { Product } from '@/types'
 
 interface Props {
@@ -57,6 +58,28 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
     const ok = addItem(product, qty, selectedColor ?? undefined, storeSlug)
     if (!ok) return // store conflict modal shown by CartSidebar
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: qty })
+    const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+    if (metaPixelId) {
+      trackMetaAddToCart(
+        {
+          storeId:       '__platform__',
+          storeSlug:     '',
+          pixelId:       metaPixelId,
+          accessToken:   null,
+          testEventCode: null,
+          datasetId:     null,
+          enabled:       true,
+        },
+        {
+          content_ids:  [product.id],
+          content_name: product.name,
+          content_type: 'product',
+          value:        product.price * qty,
+          currency:     'DZD',
+          contents:     [{ id: product.id, quantity: qty, price: product.price }],
+        },
+      )
+    }
     setAdded(true)
     setTimeout(() => setAdded(false), 2500)
   }

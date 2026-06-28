@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
@@ -14,7 +14,7 @@ import SellerSidebar from '@/components/seller/SellerSidebar'
 import OrderInvoicePrint from '@/components/ui/OrderInvoicePrint'
 import type { VendorOrderSummary } from '@/lib/supabase/queries'
 
-// ── Status icon/badge config (label computed from t inside component) ─────────
+// -- Status icon/badge config (label computed from t inside component) ---------
 const STATUS_STYLE: Record<string, { icon: React.ElementType; badge: string }> = {
   pending:   { icon: Clock,        badge: 'bg-amber-100 text-amber-700 border-amber-200' },
   confirmed: { icon: CheckCircle2, badge: 'bg-blue-100 text-blue-700 border-blue-200' },
@@ -32,7 +32,7 @@ function urgencyLevel(createdAt: string, status: string): 'none' | 'warn' | 'urg
   return 'none'
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// -- Page ----------------------------------------------------------------------
 
 export default function SellerOrdersPage() {
   const { vendor, loading, signOut } = useSellerAuth()
@@ -110,7 +110,7 @@ export default function SellerOrdersPage() {
 
   useEffect(() => { load() }, [load])
 
-  // ── Filter ───────────────────────────────────────────────────────────────────
+  // -- Filter -------------------------------------------------------------------
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return orders.filter((o) => {
@@ -127,7 +127,7 @@ export default function SellerOrdersPage() {
 
   const pendingCount = useMemo(() => orders.filter((o) => o.order.status === 'pending').length, [orders])
 
-  // ── Status action ─────────────────────────────────────────────────────────────
+  // -- Status action -------------------------------------------------------------
   const handleAction = async (orderId: string, status: string) => {
     setActionLoading(orderId + status)
     try {
@@ -147,7 +147,7 @@ export default function SellerOrdersPage() {
     }
   }
 
-  // ── Bulk confirm ──────────────────────────────────────────────────────────────
+  // -- Bulk confirm --------------------------------------------------------------
   const bulkConfirm = async () => {
     const targets = [...selected].filter((id) => {
       const o = orders.find((x) => x.order.id === id)
@@ -160,7 +160,7 @@ export default function SellerOrdersPage() {
     setBulkLoading(false)
   }
 
-  // ── CSV export ────────────────────────────────────────────────────────────────
+  // -- CSV export ----------------------------------------------------------------
   const exportCSV = () => {
     const rows = filtered.filter((o) => selected.size === 0 || selected.has(o.order.id))
     const header = ['ID', sd.colClient, t.checkout.phone, sd.colWilaya, sd.colStatus, sd.orderYourTotal, sd.orderDate]
@@ -204,7 +204,7 @@ export default function SellerOrdersPage() {
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" aria-label="Menu"><Menu className="w-5 h-5" /></button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url}
+      <SellerSidebar storeName={vendor.store_name!} slug={vendor.store_slug!} onLogout={signOut} logoUrl={vendor.logo_url}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
@@ -247,7 +247,7 @@ export default function SellerOrdersPage() {
           </div>
         )}
 
-        {/* Status tab filters — scrollable on mobile */}
+        {/* Status tab filters Ã¢â‚¬â€ scrollable on mobile */}
         <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-4 scrollbar-hide">
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-max sm:w-fit">
             {STATUS_TABS.map(({ key, label }) => {
@@ -310,7 +310,7 @@ export default function SellerOrdersPage() {
             </div>
           ) : (
             <>
-              {/* ── Mobile cards (sm:hidden) ───────────────────────────────── */}
+              {/* -- Mobile cards (sm:hidden) --------------------------------- */}
               <div className="sm:hidden divide-y divide-gray-100">
                 {filtered.map(({ order, items, vendorTotal }) => {
                   const urgency = urgencyLevel(order.created_at, order.status)
@@ -319,7 +319,7 @@ export default function SellerOrdersPage() {
                   const actions = NEXT_ACTIONS[order.status] ?? []
                   const isExpanded = expanded === order.id
                   const isRevealed = revealedPhone.has(order.id)
-                  const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + '•••' + order.phone.slice(-3) : order.phone
+                  const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢' + order.phone.slice(-3) : order.phone
 
                   return (
                     <div key={order.id + '-m'}
@@ -341,7 +341,7 @@ export default function SellerOrdersPage() {
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${cfg.badge}`}>
                               <StatusIcon className="w-3 h-3" />{cfg.label}
                             </span>
-                            <span className="text-xs text-gray-400">#{order.id.slice(0, 8)} · {order.wilaya}</span>
+                            <span className="text-xs text-gray-400">#{order.id.slice(0, 8)} Ã‚Â· {order.wilaya}</span>
                             {urgency !== 'none' && (
                               <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
                                 urgency === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
@@ -389,7 +389,7 @@ export default function SellerOrdersPage() {
                         </button>
                       </div>
 
-                      {/* Expanded detail — mobile */}
+                      {/* Expanded detail Ã¢â‚¬â€ mobile */}
                       {isExpanded && (
                         <div className="mt-3 ml-7 pt-3 border-t border-gray-100 space-y-3">
                           <div>
@@ -403,7 +403,7 @@ export default function SellerOrdersPage() {
                                       : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                     }
                                     <div className="min-w-0">
-                                      <span className="text-gray-700 truncate block">{item.product_name} × {item.quantity}</span>
+                                      <span className="text-gray-700 truncate block">{item.product_name} Ãƒâ€” {item.quantity}</span>
                                       {item.selected_color && (
                                         <span className="text-xs text-gray-400">Couleur : {item.selected_color}</span>
                                       )}
@@ -434,7 +434,7 @@ export default function SellerOrdersPage() {
                             </div>
                           </div>
                           <div className="pt-2">
-                            <OrderInvoicePrint order={{ ...order, order_items: items }} storeName={vendor.store_name} />
+                            <OrderInvoicePrint order={{ ...order, order_items: items }} storeName={vendor.store_name ?? ''} />
                           </div>
                         </div>
                       )}
@@ -443,7 +443,7 @@ export default function SellerOrdersPage() {
                 })}
               </div>
 
-              {/* ── Desktop table (hidden sm:block) ───────────────────────── */}
+              {/* -- Desktop table (hidden sm:block) ------------------------- */}
               <div className="hidden sm:block">
                 {/* Table header */}
                 <div className="flex items-center gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100">
@@ -465,7 +465,7 @@ export default function SellerOrdersPage() {
                     const actions = NEXT_ACTIONS[order.status] ?? []
                     const isExpanded = expanded === order.id
                     const isRevealed = revealedPhone.has(order.id)
-                    const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + '•••' + order.phone.slice(-3) : order.phone
+                    const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢' + order.phone.slice(-3) : order.phone
 
                     return (
                       <div key={order.id}
@@ -490,7 +490,7 @@ export default function SellerOrdersPage() {
                               )}
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              #{order.id.slice(0, 8)} ·{' '}
+                              #{order.id.slice(0, 8)} Ã‚Â·{' '}
                               {isRevealed || order.status !== 'pending' ? (
                                 <a href={`tel:${order.phone}`}
                                   onClick={(e) => e.stopPropagation()}
@@ -556,7 +556,7 @@ export default function SellerOrdersPage() {
                                           : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                         }
                                         <div>
-                                          <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
+                                          <span className="text-gray-700">{item.product_name} Ãƒâ€” {item.quantity}</span>
                                           {item.selected_color && (
                                             <p className="text-xs text-gray-400">Couleur : {item.selected_color}</p>
                                           )}
@@ -587,7 +587,7 @@ export default function SellerOrdersPage() {
                                     <span className="text-gray-600">{new Date(order.created_at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                                   </div>
                                   <div className="pt-2">
-                                    <OrderInvoicePrint order={{ ...order, order_items: items }} storeName={vendor.store_name} />
+                            <OrderInvoicePrint order={{ ...order, order_items: items }} storeName={vendor.store_name ?? ''} />
                                   </div>
                                 </div>
                               </div>

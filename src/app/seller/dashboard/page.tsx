@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
@@ -17,7 +17,7 @@ import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { Product } from '@/types'
 
-// ─── Status config ────────────────────────────────────────────────────────────
+// --- Status config ------------------------------------------------------------
 
 const STATUS_CFG: Record<string, { icon: React.ElementType; color: string }> = {
   pending:   { icon: Clock,        color: 'text-amber-600 bg-amber-50' },
@@ -27,7 +27,7 @@ const STATUS_CFG: Record<string, { icon: React.ElementType; color: string }> = {
   cancelled: { icon: AlertCircle,  color: 'text-red-600 bg-red-50' },
 }
 
-// ─── Analytics ────────────────────────────────────────────────────────────────
+// --- Analytics ----------------------------------------------------------------
 
 const LOW_STOCK_THRESHOLD = 5
 
@@ -100,7 +100,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     customerMap[phone].orders++
     customerMap[phone].spend += vendorTotal
 
-    // Delivery provider — track per-status
+    // Delivery provider Ã¢â‚¬â€ track per-status
     if (order.delivery_provider) {
       if (!deliveryMap[order.delivery_provider]) deliveryMap[order.delivery_provider] = { total: 0, delivered: 0, returned: 0, cancelled: 0 }
       deliveryMap[order.delivery_provider].total++
@@ -116,7 +116,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     dowMap[createdAt.getDay()]++
   }
 
-  // Monthly chart — last 6 months
+  // Monthly chart Ã¢â‚¬â€ last 6 months
   const monthly = Array.from({ length: 6 }, (_, i) => {
     const d = new Date()
     d.setMonth(d.getMonth() - (5 - i))
@@ -134,7 +134,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
       return { name: prod?.name ?? key, sales: s.sales, revenue: s.revenue, image: prod?.images[0] }
     })
 
-  // Worst sellers — products with ZERO sales
+  // Worst sellers Ã¢â‚¬â€ products with ZERO sales
   const worstSellers = allProducts.filter((p) => !soldIds.has(p.id)).slice(0, 4)
 
   // Top customers
@@ -148,7 +148,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     ? Math.round((repeatBuyers / Object.keys(customerMap).length) * 100)
     : 0
 
-  // Delivery breakdown — per-company with delivered/returned/rate
+  // Delivery breakdown Ã¢â‚¬â€ per-company with delivered/returned/rate
   const totalShipped = Object.values(deliveryMap).reduce((s, n) => s + n.total, 0)
   const deliveryBreakdown = Object.entries(deliveryMap)
     .sort((a, b) => b[1].total - a[1].total)
@@ -199,7 +199,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
   }
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function SellerDashboardPage() {
   const { vendor, loading, signOut } = useSellerAuth()
@@ -263,7 +263,7 @@ export default function SellerDashboardPage() {
         </button>
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} onLogout={signOut} logoUrl={vendor.logo_url}
+      <SellerSidebar storeName={vendor.store_name!} slug={vendor.store_slug!} onLogout={signOut} logoUrl={vendor.logo_url}
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
@@ -275,11 +275,11 @@ export default function SellerDashboardPage() {
             <div>
               <p className="font-black text-amber-800 text-sm">Boutique en attente d&apos;approbation</p>
               <p className="text-amber-700 text-xs mt-0.5">
-                Votre boutique est en cours de vérification par notre équipe. Vous serez notifié sous 24h.
-                Pour accélérer l&apos;approbation, assurez-vous d&apos;avoir soumis votre paiement d&apos;abonnement.
+                Votre boutique est en cours de vÃƒÂ©rification par notre ÃƒÂ©quipe. Vous serez notifiÃƒÂ© sous 24h.
+                Pour accÃƒÂ©lÃƒÂ©rer l&apos;approbation, assurez-vous d&apos;avoir soumis votre paiement d&apos;abonnement.
               </p>
               <Link href="/seller/subscription" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-amber-700 underline hover:text-amber-900">
-                Voir mon abonnement →
+                Voir mon abonnement ?
               </Link>
             </div>
           </div>
@@ -288,17 +288,17 @@ export default function SellerDashboardPage() {
           <div className="mb-6 flex items-start gap-3 bg-red-50 border border-red-300 rounded-2xl px-5 py-4">
             <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-black text-red-800 text-sm">Boutique refusée</p>
+              <p className="font-black text-red-800 text-sm">Boutique refusÃƒÂ©e</p>
               {vendor.admin_note && (
                 <p className="text-red-700 text-xs mt-0.5 bg-red-100 rounded-lg px-3 py-2 mt-1">
                   <span className="font-bold">Motif :</span> {vendor.admin_note}
                 </p>
               )}
               <p className="text-red-600 text-xs mt-2">
-                Réglez le problème indiqué, puis contactez le support pour une nouvelle révision.
+                RÃƒÂ©glez le problÃƒÂ¨me indiquÃƒÂ©, puis contactez le support pour une nouvelle rÃƒÂ©vision.
               </p>
               <Link href="/seller/subscription" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-red-700 underline hover:text-red-900">
-                Gérer mon abonnement →
+                GÃƒÂ©rer mon abonnement ?
               </Link>
             </div>
           </div>
@@ -307,7 +307,7 @@ export default function SellerDashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-5 gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 truncate">{greeting}, {vendor.store_name.split(' ')[0]} 👋</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 truncate">{greeting}, {(vendor.store_name ?? 'Store').split(' ')[0]} ??</h1>
           </div>
           <Link href="/seller/products?new=1"
             className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm flex-shrink-0">
@@ -349,16 +349,16 @@ export default function SellerDashboardPage() {
           </button>
         </div>
 
-        {/* ── ONBOARDING GUIDE (shown until seller adds their first product) ── */}
+        {/* -- ONBOARDING GUIDE (shown until seller adds their first product) -- */}
         {!fetching && allProducts.length === 0 && (
           <div className="mb-6 bg-gradient-to-br from-indigo-950 to-indigo-900 rounded-2xl p-6 text-white">
             <div className="flex items-start justify-between gap-4 mb-5">
               <div>
-                <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Guide de démarrage</p>
-                <h2 className="text-lg font-black">Votre boutique est prête — lancez-la en 4 étapes</h2>
-                <p className="text-indigo-300 text-sm mt-1">Suivez ces étapes pour recevoir votre première commande</p>
+                <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Guide de dÃƒÂ©marrage</p>
+                <h2 className="text-lg font-black">Votre boutique est prÃƒÂªte Ã¢â‚¬â€ lancez-la en 4 ÃƒÂ©tapes</h2>
+                <p className="text-indigo-300 text-sm mt-1">Suivez ces ÃƒÂ©tapes pour recevoir votre premiÃƒÂ¨re commande</p>
               </div>
-              <div className="text-4xl flex-shrink-0">🚀</div>
+              <div className="text-4xl flex-shrink-0">??</div>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-3">
@@ -366,18 +366,18 @@ export default function SellerDashboardPage() {
                 {
                   step: '1',
                   done: !!(vendor.logo_url && vendor.description && vendor.phone),
-                  title: 'Complétez votre profil',
-                  desc: 'Logo, description, téléphone WhatsApp — les clients font confiance aux boutiques complètes.',
+                  title: 'ComplÃƒÂ©tez votre profil',
+                  desc: 'Logo, description, tÃƒÂ©lÃƒÂ©phone WhatsApp Ã¢â‚¬â€ les clients font confiance aux boutiques complÃƒÂ¨tes.',
                   href: '/seller/settings',
-                  cta: vendor.logo_url ? 'Voir les paramètres →' : 'Compléter maintenant →',
+                  cta: vendor.logo_url ? 'Voir les paramÃƒÂ¨tres ?' : 'ComplÃƒÂ©ter maintenant ?',
                 },
                 {
                   step: '2',
                   done: false,
                   title: 'Ajoutez votre premier produit',
-                  desc: 'Photos claires + description précise = plus de commandes. Commencez par 3 à 5 produits.',
+                  desc: 'Photos claires + description prÃƒÂ©cise = plus de commandes. Commencez par 3 ÃƒÂ  5 produits.',
                   href: '/seller/products?new=1',
-                  cta: 'Ajouter un produit →',
+                  cta: 'Ajouter un produit ?',
                 },
                 {
                   step: '3',
@@ -385,15 +385,15 @@ export default function SellerDashboardPage() {
                   title: 'Partagez votre lien',
                   desc: 'Envoyez votre lien de boutique sur votre WhatsApp, Instagram Bio, et stories TikTok.',
                   href: '#store-link',
-                  cta: 'Copier le lien ↑',
+                  cta: 'Copier le lien ?',
                 },
                 {
                   step: '4',
                   done: false,
-                  title: 'Confirmez votre première commande',
+                  title: 'Confirmez votre premiÃƒÂ¨re commande',
                   desc: 'Quand une commande arrive, confirmez-la ici et contactez le client pour la livraison.',
                   href: '/seller/orders',
-                  cta: 'Voir les commandes →',
+                  cta: 'Voir les commandes ?',
                 },
               ].map(({ step, done, title, desc, href, cta }) => (
                 <Link
@@ -408,7 +408,7 @@ export default function SellerDashboardPage() {
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black mt-0.5 ${
                     done ? 'bg-emerald-500 text-white' : 'bg-white/20 text-white'
                   }`}>
-                    {done ? '✓' : step}
+                    {done ? '?' : step}
                   </div>
                   <div className="min-w-0">
                     <p className={`text-sm font-bold mb-0.5 ${done ? 'text-emerald-300' : 'text-white'}`}>{title}</p>
@@ -421,12 +421,12 @@ export default function SellerDashboardPage() {
 
             <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-indigo-400">
               <Shield className="w-3.5 h-3.5" />
-              Besoin d&apos;aide ? Contactez notre support WhatsApp — réponse en moins d&apos;1h.
+              Besoin d&apos;aide ? Contactez notre support WhatsApp Ã¢â‚¬â€ rÃƒÂ©ponse en moins d&apos;1h.
             </div>
           </div>
         )}
 
-        {/* Urgency strip — orders waiting > 2h */}
+        {/* Urgency strip Ã¢â‚¬â€ orders waiting > 2h */}
         {urgentOrders.length > 0 && (
           <div className="mb-5 flex flex-col sm:flex-row sm:items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
             <div className="flex items-center gap-3 flex-1">
@@ -435,14 +435,14 @@ export default function SellerDashboardPage() {
               </div>
               <div>
                 <p className="text-sm font-black text-red-800">
-                  {urgentOrders.length} commande{urgentOrders.length > 1 ? 's' : ''} non confirmée{urgentOrders.length > 1 ? 's' : ''} depuis +2h
+                  {urgentOrders.length} commande{urgentOrders.length > 1 ? 's' : ''} non confirmÃƒÂ©e{urgentOrders.length > 1 ? 's' : ''} depuis +2h
                 </p>
-                <p className="text-xs text-red-600 mt-0.5">Les acheteurs attendent une réponse — confirmez ou annulez maintenant.</p>
+                <p className="text-xs text-red-600 mt-0.5">Les acheteurs attendent une rÃƒÂ©ponse Ã¢â‚¬â€ confirmez ou annulez maintenant.</p>
               </div>
             </div>
             <Link href="/seller/orders?status=pending"
               className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors self-start sm:self-auto">
-              Confirmer maintenant →
+              Confirmer maintenant ?
             </Link>
           </div>
         )}
@@ -455,7 +455,7 @@ export default function SellerDashboardPage() {
                 <Zap className="w-5 h-5 text-amber-500" />
                 <p className="text-sm font-black text-amber-800">Stocks critiques ({lowStockProds.length} produit{lowStockProds.length > 1 ? 's' : ''})</p>
               </div>
-              <Link href="/seller/products" className="text-xs font-bold text-amber-700 hover:underline">Gérer le stock →</Link>
+              <Link href="/seller/products" className="text-xs font-bold text-amber-700 hover:underline">GÃƒÂ©rer le stock ?</Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {lowStockProds.slice(0, 4).map((p) => (
@@ -470,7 +470,7 @@ export default function SellerDashboardPage() {
           </div>
         )}
 
-        {/* KPIs — 4 analytical cards */}
+        {/* KPIs Ã¢â‚¬â€ 4 analytical cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
 
           {/* Today */}
@@ -481,7 +481,7 @@ export default function SellerDashboardPage() {
               commande{analytics.todayOrders !== 1 ? 's' : ''}
             </p>
             <p className="text-sm font-bold text-emerald-600 mt-1.5">
-              {analytics.todayRevenue > 0 ? formatPrice(analytics.todayRevenue) : <span className="text-gray-300">—</span>}
+              {analytics.todayRevenue > 0 ? formatPrice(analytics.todayRevenue) : <span className="text-gray-300">Ã¢â‚¬â€</span>}
             </p>
           </div>
 
@@ -489,7 +489,7 @@ export default function SellerDashboardPage() {
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Ce mois</p>
             <p className="text-xl sm:text-2xl font-black text-gray-900 truncate">
-              {analytics.thisMonthRevenue > 0 ? formatPrice(analytics.thisMonthRevenue) : <span className="text-gray-300">—</span>}
+              {analytics.thisMonthRevenue > 0 ? formatPrice(analytics.thisMonthRevenue) : <span className="text-gray-300">Ã¢â‚¬â€</span>}
             </p>
             {analytics.momGrowth !== null ? (
               <div className={`flex items-center gap-1 mt-1.5 ${analytics.momGrowth >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -514,10 +514,10 @@ export default function SellerDashboardPage() {
               : analytics.deliveryRate >= 50         ? 'text-amber-600'
               :                                        'text-red-500'
             }`}>
-              {analytics.deliveryRate !== null ? `${analytics.deliveryRate}%` : '—'}
+              {analytics.deliveryRate !== null ? `${analytics.deliveryRate}%` : 'Ã¢â‚¬â€'}
             </p>
             <p className="text-xs text-gray-400 mt-1.5">
-              {analytics.deliveredCount} livré{analytics.deliveredCount !== 1 ? 's' : ''} · {analytics.returnedCount} retour{analytics.returnedCount !== 1 ? 's' : ''}
+              {analytics.deliveredCount} livrÃƒÂ©{analytics.deliveredCount !== 1 ? 's' : ''} Ã‚Â· {analytics.returnedCount} retour{analytics.returnedCount !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -525,9 +525,9 @@ export default function SellerDashboardPage() {
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Panier moyen</p>
             <p className="text-xl sm:text-2xl font-black text-gray-900 truncate">
-              {analytics.avgOrderValue > 0 ? formatPrice(analytics.avgOrderValue) : <span className="text-gray-300">—</span>}
+              {analytics.avgOrderValue > 0 ? formatPrice(analytics.avgOrderValue) : <span className="text-gray-300">Ã¢â‚¬â€</span>}
             </p>
-            <p className="text-xs text-gray-400 mt-1.5">sur {analytics.deliveredCount} livrée{analytics.deliveredCount !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400 mt-1.5">sur {analytics.deliveredCount} livrÃƒÂ©e{analytics.deliveredCount !== 1 ? 's' : ''}</p>
           </div>
 
         </div>
@@ -580,32 +580,32 @@ export default function SellerDashboardPage() {
             </div>
           )}
 
-          {/* Insight pills — auto-generated from computed metrics */}
+          {/* Insight pills Ã¢â‚¬â€ auto-generated from computed metrics */}
           {!fetching && orders.length > 0 && (analytics.bestDay || analytics.topWilaya || analytics.repeatRate > 0 || (analytics.returnRate !== null && analytics.returnRate >= 20) || analytics.worstSellers.length > 0) && (
             <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-50">
               {analytics.bestDay && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full">
-                  📅 Meilleur jour : {analytics.bestDay}
+                  ?? Meilleur jour : {analytics.bestDay}
                 </span>
               )}
               {analytics.topWilaya && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full">
-                  📍 Top wilaya : {analytics.topWilaya}
+                  ?? Top wilaya : {analytics.topWilaya}
                 </span>
               )}
               {analytics.repeatRate > 0 && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold bg-violet-50 text-violet-700 px-3 py-1.5 rounded-full">
-                  🔁 {analytics.repeatRate}% clients fidèles
+                  ?? {analytics.repeatRate}% clients fidÃƒÂ¨les
                 </span>
               )}
               {analytics.returnRate !== null && analytics.returnRate >= 20 && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold bg-red-50 text-red-700 px-3 py-1.5 rounded-full">
-                  ⚠️ Taux de retour élevé : {analytics.returnRate}%
+                  ?? Taux de retour ÃƒÂ©levÃƒÂ© : {analytics.returnRate}%
                 </span>
               )}
               {analytics.worstSellers.length > 0 && (
                 <span className="flex items-center gap-1.5 text-xs font-semibold bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full">
-                  💤 {analytics.worstSellers.length} produit{analytics.worstSellers.length !== 1 ? 's' : ''} sans ventes
+                  ?? {analytics.worstSellers.length} produit{analytics.worstSellers.length !== 1 ? 's' : ''} sans ventes
                 </span>
               )}
             </div>
@@ -674,7 +674,7 @@ export default function SellerDashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{order.full_name}</p>
-                        <p className="text-xs text-gray-400">{order.wilaya} · {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                        <p className="text-xs text-gray-400">{order.wilaya} Ã‚Â· {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                       </div>
                       <p className="text-sm font-bold text-gray-900 flex-shrink-0">{formatPrice(vendorTotal)}</p>
                     </div>
@@ -709,7 +709,7 @@ export default function SellerDashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
-                        <p className="text-xs text-gray-400">{p.category} · {formatPrice(p.price)}</p>
+                        <p className="text-xs text-gray-400">{p.category} Ã‚Â· {formatPrice(p.price)}</p>
                       </div>
                       <span className="text-xs text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">0 sales</span>
                     </div>
@@ -738,7 +738,7 @@ export default function SellerDashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">{c.name}</p>
-                      <p className="text-xs text-gray-400">{c.wilaya} · {sd.customerOrders.replace('{n}', String(c.orders))}</p>
+                      <p className="text-xs text-gray-400">{c.wilaya} Ã‚Â· {sd.customerOrders.replace('{n}', String(c.orders))}</p>
                     </div>
                     <p className="text-sm font-bold text-gray-900 flex-shrink-0">{formatPrice(c.spend)}</p>
                   </div>
@@ -748,7 +748,7 @@ export default function SellerDashboardPage() {
           </div>
         </div>
 
-        {/* Delivery Performance — full width, per company */}
+        {/* Delivery Performance Ã¢â‚¬â€ full width, per company */}
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
             <Truck className="w-5 h-5 text-indigo-600" />
@@ -768,13 +768,13 @@ export default function SellerDashboardPage() {
                       <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
                       <span className="text-sm font-bold text-gray-800">{d.name}</span>
                     </div>
-                    <span className="text-xs font-semibold text-gray-400">{d.count} cmd · {d.pct}%</span>
+                    <span className="text-xs font-semibold text-gray-400">{d.count} cmd Ã‚Â· {d.pct}%</span>
                   </div>
                   {/* Stats row */}
                   <div className="grid grid-cols-3 gap-2 text-center mb-3">
                     <div className="bg-emerald-50 rounded-lg px-1 py-2">
                       <p className="text-sm font-black text-emerald-700">{d.delivered}</p>
-                      <p className="text-[10px] text-emerald-600 font-medium">Livré</p>
+                      <p className="text-[10px] text-emerald-600 font-medium">LivrÃƒÂ©</p>
                     </div>
                     <div className="bg-red-50 rounded-lg px-1 py-2">
                       <p className="text-sm font-black text-red-600">{d.returned}</p>
@@ -788,7 +788,7 @@ export default function SellerDashboardPage() {
                     }`}>
                       <p className={`text-sm font-black ${
                         d.rate === null ? 'text-gray-400' : d.rate >= 70 ? 'text-emerald-700' : d.rate >= 50 ? 'text-amber-700' : 'text-red-600'
-                      }`}>{d.rate !== null ? `${d.rate}%` : '—'}</p>
+                      }`}>{d.rate !== null ? `${d.rate}%` : 'Ã¢â‚¬â€'}</p>
                       <p className="text-[10px] text-gray-500 font-medium">Taux</p>
                     </div>
                   </div>
@@ -802,7 +802,7 @@ export default function SellerDashboardPage() {
           )}
         </div>
 
-        {/* Abandoned & Cancelled — 30 days */}
+        {/* Abandoned & Cancelled Ã¢â‚¬â€ 30 days */}
         {(abandonedCount !== null || cancelledCount !== null) && (
           <div className="mt-4 grid sm:grid-cols-2 gap-4">
             <div className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
@@ -810,12 +810,12 @@ export default function SellerDashboardPage() {
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Paniers abandonnés (30j)</p>
-                <p className="text-2xl font-black text-gray-900">{abandonedCount ?? '—'}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Personnes qui ont commencé à commander sans finaliser</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Paniers abandonnÃƒÂ©s (30j)</p>
+                <p className="text-2xl font-black text-gray-900">{abandonedCount ?? 'Ã¢â‚¬â€'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Personnes qui ont commencÃƒÂ© ÃƒÂ  commander sans finaliser</p>
               </div>
               <Link href="/seller/orders?tab=abandoned" className="text-xs font-bold text-amber-600 hover:underline flex-shrink-0">
-                Voir →
+                Voir ?
               </Link>
             </div>
             <div className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
@@ -823,12 +823,12 @@ export default function SellerDashboardPage() {
                 <AlertCircle className="w-5 h-5 text-red-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Commandes annulées (30j)</p>
-                <p className="text-2xl font-black text-gray-900">{cancelledCount ?? '—'}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Commandes annulées avant livraison</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Commandes annulÃƒÂ©es (30j)</p>
+                <p className="text-2xl font-black text-gray-900">{cancelledCount ?? 'Ã¢â‚¬â€'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Commandes annulÃƒÂ©es avant livraison</p>
               </div>
               <Link href="/seller/orders?status=cancelled" className="text-xs font-bold text-red-400 hover:underline flex-shrink-0">
-                Voir →
+                Voir ?
               </Link>
             </div>
           </div>
@@ -839,7 +839,7 @@ export default function SellerDashboardPage() {
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-gray-500" />
-              <h2 className="font-bold text-gray-900">Paramètres de la boutique</h2>
+              <h2 className="font-bold text-gray-900">ParamÃƒÂ¨tres de la boutique</h2>
             </div>
             <Link href="/seller/settings"
               className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
@@ -852,7 +852,7 @@ export default function SellerDashboardPage() {
             {/* Profile row */}
             <div className="px-6 py-4 flex items-center gap-4">
               {vendor.logo_url ? (
-                <img src={vendor.logo_url} alt={vendor.store_name}
+                <img src={vendor.logo_url} alt={vendor.store_name ?? ''}
                   className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-gray-100" />
               ) : (
                 <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -870,7 +870,7 @@ export default function SellerDashboardPage() {
                   ? 'bg-amber-100 text-amber-700'
                   : 'bg-red-100 text-red-600'
               }`}>
-                {vendor.is_approved ? 'Approuvée' : vendor.is_active ? 'En attente' : 'Refusée'}
+                {vendor.is_approved ? 'ApprouvÃƒÂ©e' : vendor.is_active ? 'En attente' : 'RefusÃƒÂ©e'}
               </span>
             </div>
 
@@ -880,13 +880,13 @@ export default function SellerDashboardPage() {
                 {
                   icon: MapPin,
                   label: 'Wilaya',
-                  value: vendor.wilaya || <span className="text-gray-300 italic text-xs">Non définie</span>,
+                  value: vendor.wilaya || <span className="text-gray-300 italic text-xs">Non dÃƒÂ©finie</span>,
                   color: 'text-indigo-600',
                 },
                 {
                   icon: Phone,
-                  label: 'Téléphone',
-                  value: vendor.phone || <span className="text-gray-300 italic text-xs">Non défini</span>,
+                  label: 'TÃƒÂ©lÃƒÂ©phone',
+                  value: vendor.phone || <span className="text-gray-300 italic text-xs">Non dÃƒÂ©fini</span>,
                   color: 'text-emerald-600',
                 },
                 {
@@ -894,7 +894,7 @@ export default function SellerDashboardPage() {
                   label: 'Abonnement',
                   value: vendor.subscription_status === 'active' ? 'Actif'
                     : vendor.subscription_status === 'trial' ? 'Essai'
-                    : vendor.subscription_status === 'grace_period' ? 'Grâce'
+                    : vendor.subscription_status === 'grace_period' ? 'GrÃƒÂ¢ce'
                     : 'Inactif',
                   color: vendor.subscription_status === 'active' ? 'text-emerald-600' : 'text-amber-600',
                 },
@@ -913,17 +913,17 @@ export default function SellerDashboardPage() {
             {(() => {
               const missing = [
                 !vendor.logo_url       && { href: '/seller/settings', label: 'Ajouter un logo',       icon: Image },
-                !vendor.description    && { href: '/seller/settings', label: 'Écrire une description', icon: Settings },
+                !vendor.description    && { href: '/seller/settings', label: 'Ãƒâ€°crire une description', icon: Settings },
                 !vendor.wilaya         && { href: '/seller/settings', label: 'Choisir une wilaya',     icon: MapPin },
-                !vendor.phone          && { href: '/seller/settings', label: 'Ajouter un téléphone',   icon: Phone },
-                !vendor.banner_url     && { href: '/seller/settings', label: 'Ajouter une bannière',   icon: Image },
+                !vendor.phone          && { href: '/seller/settings', label: 'Ajouter un tÃƒÂ©lÃƒÂ©phone',   icon: Phone },
+                !vendor.banner_url     && { href: '/seller/settings', label: 'Ajouter une banniÃƒÂ¨re',   icon: Image },
               ].filter(Boolean) as { href: string; label: string; icon: React.ElementType }[]
 
               if (missing.length === 0) return null
               return (
                 <div className="px-6 py-4">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                    Complétez votre profil ({missing.length} restant{missing.length > 1 ? 's' : ''})
+                    ComplÃƒÂ©tez votre profil ({missing.length} restant{missing.length > 1 ? 's' : ''})
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {missing.map(({ href, label, icon: Icon }) => (

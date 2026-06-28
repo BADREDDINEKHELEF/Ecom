@@ -1,5 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 // Yassir Express Business API — package delivery
 const BASE_URL = 'https://api.yassir.com/v1'
@@ -74,7 +75,10 @@ export async function yassirListParcels(apiKey: string, pageSize = 100) {
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
+  } catch (err: unknown) {
+    logger.error('[yassirListParcels]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function yassirTrack(trackingNumber: string, apiKey: string) {
@@ -84,5 +88,8 @@ export async function yassirTrack(trackingNumber: string, apiKey: string) {
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
+  } catch (err: unknown) {
+    logger.error('[yassirTrack]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }

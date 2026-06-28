@@ -6,7 +6,7 @@ import {
   getAllVendorSubscriptions,
   updateVendorSubscription,
   getSubscriptionPlans,
-  getSubscriptionById,
+  getVendorSubscriptionById,
 } from '@/lib/supabase/vendors'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -72,7 +72,7 @@ export async function PATCH(req: NextRequest) {
     // When approving (trial → active), reset billing window from now
     if (parsed.data.status === 'active') {
       const [sub, plans] = await Promise.all([
-        getSubscriptionById(parsed.data.id),
+        getVendorSubscriptionById(parsed.data.id),
         getSubscriptionPlans(),
       ])
       const plan = sub ? plans.find((p) => p.id === sub.plan_id) : null

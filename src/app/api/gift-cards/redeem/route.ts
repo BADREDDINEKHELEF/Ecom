@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
+import { checkGiftCardRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
@@ -12,8 +12,8 @@ const RedeemSchema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = await checkPublicRateLimit(ip, 'giftcard')
-  if (!rl.allowed) return NextResponse.json({ error: 'Trop de tentatives' }, { status: 429 })
+  const rl = await checkGiftCardRateLimit(ip)
+  if (!rl.allowed) return NextResponse.json({ error: 'Trop de tentatives. Réessayez plus tard.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } })
 
   let body: unknown
   try { body = await req.json() } catch {

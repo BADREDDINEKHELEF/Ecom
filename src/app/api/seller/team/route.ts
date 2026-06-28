@@ -20,6 +20,10 @@ const UpdateRoleSchema = z.object({
 
 // GET /api/seller/team — list all team members for the vendor
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'team_list')
+  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+
   const result = await requireVendorPermission(req, 'members:read')
   if (result instanceof NextResponse) return result
   const { ctx } = result

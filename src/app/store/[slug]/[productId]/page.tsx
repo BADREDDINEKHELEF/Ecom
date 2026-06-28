@@ -109,7 +109,7 @@ export default async function StoreProductPage({ params }: PageProps) {
             {v.logo_url && (
               <Image
                 src={v.logo_url}
-                alt={vendor.store_name}
+                alt={vendor.store_name ?? ''}
                 width={28}
                 height={28}
                 className="rounded-[8px] object-cover"
@@ -144,7 +144,7 @@ export default async function StoreProductPage({ params }: PageProps) {
               {v.logo_url && (
                 <Image
                   src={v.logo_url}
-                  alt={vendor.store_name}
+                  alt={vendor.store_name ?? ''}
                   width={22}
                   height={22}
                   className="rounded-[6px] object-cover"
@@ -252,7 +252,7 @@ export default async function StoreProductPage({ params }: PageProps) {
               product={product}
               accent={accent}
               vendorWhatsApp={vendorWhatsApp}
-              storeName={vendor.store_name}
+              storeName={vendor.store_name ?? ''}
               storeSlug={slug}
             />
 

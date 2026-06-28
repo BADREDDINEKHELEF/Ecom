@@ -492,8 +492,7 @@ describe('E2E Provider Payload Mapping', () => {
       ok: true,
       status: 200,
       json: async () => ({
-        home_fee: 550,
-        desk_fee: 350,
+        data: [{ wilaya: 'Alger', home_fee: 550, desk_fee: 350 }],
       }),
     } as Response)
 

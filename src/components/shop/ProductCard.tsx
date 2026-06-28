@@ -16,6 +16,7 @@ import PixelBadge from '@/components/ui/PixelBadge'
 import { usePixelCartPop } from '@/components/effects/usePixelCartPop'
 import { usePixelCartFloat } from '@/components/effects/PixelCartFloat'
 import { trackAddToCart } from '@/lib/analytics'
+import { trackAddToCart as trackMetaAddToCart } from '@/lib/meta/events'
 
 const PixelCartFloat = dynamic(
   () => import('@/components/effects/PixelCartFloat').then(m => ({ default: m.default })),
@@ -50,6 +51,28 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
     addItem(product, 1, undefined, storeSlug ?? undefined)
     addToast(`${product.name} ${t.product.addedMsg}`)
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: 1 })
+    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+    if (pixelId) {
+      trackMetaAddToCart(
+        {
+          storeId:       '__platform__',
+          storeSlug:     '',
+          pixelId,
+          accessToken:   null,
+          testEventCode: null,
+          datasetId:     null,
+          enabled:       true,
+        },
+        {
+          content_ids:  [product.id],
+          content_name: product.name,
+          content_type: 'product',
+          value:        product.price,
+          currency:     'DZD',
+          contents:     [{ id: product.id, quantity: 1, price: product.price }],
+        },
+      )
+    }
     triggerPop(imgRef)
     if (cardRef.current) {
       triggerFloat(cardRef.current.getBoundingClientRect(), product.images[0] ?? '')

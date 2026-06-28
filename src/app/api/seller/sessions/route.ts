@@ -12,6 +12,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // GET /api/seller/sessions — list active sessions for the current user
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkPublicRateLimit(ip, 'seller_sessions_list')
+  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+
   const supabase = createRouteClient(req)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

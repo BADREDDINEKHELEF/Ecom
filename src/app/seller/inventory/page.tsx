@@ -48,12 +48,12 @@ export default function SellerInventoryPage() {
         <span className="font-semibold text-white text-sm truncate flex-1">{vendor.store_name}</span>
       </div>
 
-      <SellerSidebar storeName={vendor.store_name} slug={vendor.store_slug} logoUrl={vendor.logo_url} subscriptionStatus={vendor.subscription_status} isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} onLogout={signOut} />
+      <SellerSidebar storeName={vendor.store_name!} slug={vendor.store_slug!} logoUrl={vendor.logo_url} subscriptionStatus={vendor.subscription_status} isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} onLogout={signOut} />
       <main className="lg:ml-64 flex-1">
         <div className="p-4 sm:p-8">
           <div className="mb-6">
             <h1 className="text-2xl font-black text-gray-900">Inventaire</h1>
-            <p className="text-gray-500 text-sm mt-1">Gérez les niveaux de stock de tous vos produits en un seul endroit.</p>
+            <p className="text-gray-500 text-sm mt-1">GÃƒÂ©rez les niveaux de stock de tous vos produits en un seul endroit.</p>
           </div>
           <InventoryTable initialData={inventoryData} isLoading={isLoading} />
         </div>

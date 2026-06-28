@@ -36,12 +36,12 @@ export default function SellerRegisterPage() {
     setForm(next)
   }
 
-  // Step 1 — validate form + send OTP
+  // Step 1 Ã¢â‚¬â€ validate form + send OTP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
     if (RESERVED_SLUGS.has(form.storeSlug)) { setError(t.seller.urlTaken); return }
-    if (!form.email) { setError('Adresse e-mail requise pour vérifier votre compte.'); return }
+    if (!form.email) { setError('Adresse e-mail requise pour vÃƒÂ©rifier votre compte.'); return }
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/seller/send-email-otp', {
@@ -52,17 +52,17 @@ export default function SellerRegisterPage() {
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
       if (body._devOtp) {
-        setError(`[DEV] Code OTP : ${body._devOtp}  (domaine Resend non configuré)`)
+        setError(`[DEV] Code OTP : ${body._devOtp}  (domaine Resend non configurÃƒÂ©)`)
       }
       setView('otp')
     } catch {
-      setError('Erreur de connexion. Vérifiez votre accès internet.')
+      setError('Erreur de connexion. VÃƒÂ©rifiez votre accÃƒÂ¨s internet.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Step 2 — verify OTP then create account
+  // Step 2 Ã¢â‚¬â€ verify OTP then create account
   const handleVerifyAndCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError('')
@@ -86,7 +86,7 @@ export default function SellerRegisterPage() {
       if (signUpErr) { setError(signUpErr.message); setLoading(false); return }
       if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
 
-      // Create vendor record — pass auth token in case session cookie isn't set yet
+      // Create vendor record Ã¢â‚¬â€ pass auth token in case session cookie isn't set yet
       const authToken = authData.session?.access_token
       const regHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
       if (authToken) regHeaders['Authorization'] = `Bearer ${authToken}`
@@ -162,10 +162,10 @@ export default function SellerRegisterPage() {
               {view === 'otp' ? <KeyRound className="w-6 h-6 text-white" /> : <Store className="w-6 h-6 text-white" />}
             </div>
 <h1 className="text-2xl font-black text-gray-900">
-               {view === 'otp' ? 'Vérifiez votre e-mail' : t.seller.registerTitle}
+               {view === 'otp' ? 'VÃƒÂ©rifiez votre e-mail' : t.seller.registerTitle}
              </h1>
              <p className="text-gray-500 text-sm mt-1">
-               {view === 'otp' ? `Code envoyé à ${form.email}` : t.seller.registerSub}
+               {view === 'otp' ? `Code envoyÃƒÂ© ÃƒÂ  ${form.email}` : t.seller.registerSub}
              </p>
           </div>
 
@@ -173,7 +173,7 @@ export default function SellerRegisterPage() {
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">{error}</div>
           )}
 
-          {/* ── OTP verification step ── */}
+          {/* Ã¢â€â‚¬Ã¢â€â‚¬ OTP verification step Ã¢â€â‚¬Ã¢â€â‚¬ */}
           {view === 'otp' && (
             <form onSubmit={handleVerifyAndCreate} className="space-y-4">
               <div>
@@ -186,12 +186,12 @@ export default function SellerRegisterPage() {
               <button type="submit" disabled={loading || otp.length !== 6}
                 className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none">
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Vérifier et créer mon compte
+                VÃƒÂ©rifier et crÃƒÂ©er mon compte
               </button>
               <div className="flex items-center justify-between text-sm">
                 <button type="button" onClick={() => { setView('form'); setOtp(''); setError('') }}
                   className="text-gray-500 hover:text-gray-700">
-                  ← Modifier mes infos
+                  Ã¢â€ Â Modifier mes infos
                 </button>
                 <button type="button" onClick={handleResend} disabled={loading}
                   className="text-emerald-600 hover:underline font-medium disabled:opacity-50">
@@ -201,7 +201,7 @@ export default function SellerRegisterPage() {
             </form>
           )}
 
-          {/* ── Registration form ── */}
+          {/* Ã¢â€â‚¬Ã¢â€â‚¬ Registration form Ã¢â€â‚¬Ã¢â€â‚¬ */}
           {view === 'form' && <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t.seller.accountInfo}</p>
 

@@ -18,7 +18,6 @@ const PatchSchema = z.object({
   yassir_api_key:      z.string().max(500).nullable().optional(),
   ecom_api_key:        z.string().max(500).nullable().optional(),
   ecom_api_token:       z.string().max(500).nullable().optional(),
-  ecom_token:          z.string().max(2000).nullable().optional(),
   apec_api_id:         z.string().max(200).nullable().optional(),
   apec_api_token:      z.string().max(500).nullable().optional(),
   auto_create_shipment: z.boolean().optional(),
@@ -44,18 +43,6 @@ export async function GET(req: NextRequest) {
     const config = await getVendorDeliveryConfig(vendor.id)
     const mask = (v?: string | null) => v ? '••••••••' : ''
 
-    let ecom_api_key = ''
-    let ecom_api_token = ''
-    if (config?.ecom_token) {
-      try {
-        const parsed = JSON.parse(config.ecom_token)
-        ecom_api_key = parsed?.key ?? ''
-        ecom_api_token = parsed?.token ?? ''
-      } catch {
-        ecom_api_key = config.ecom_token
-      }
-    }
-
     const redacted = config ? {
       default_provider:     config.default_provider,
       auto_create_shipment: config.auto_create_shipment,
@@ -69,8 +56,8 @@ export async function GET(req: NextRequest) {
       maystro_token:        mask(config.maystro_token),
       rex_token:            mask(config.rex_token),
       yassir_api_key:       mask(config.yassir_api_key),
-      ecom_api_key:         mask(ecom_api_key),
-      ecom_api_token:        mask(ecom_api_token),
+      ecom_api_key:         mask(config.ecom_api_key),
+      ecom_api_token:        mask(config.ecom_api_token),
       apec_api_id:          mask(config.apec_api_id),
       apec_api_token:       mask(config.apec_api_token),
       has_yalidine:         !!(config.yalidine_api_id && config.yalidine_api_token),
@@ -80,7 +67,7 @@ export async function GET(req: NextRequest) {
       has_maystro:          !!config.maystro_token,
       has_rex:              !!config.rex_token,
       has_yassir:           !!config.yassir_api_key,
-      has_ecom:             !!(ecom_api_key && ecom_api_token),
+      has_ecom:             !!(config.ecom_api_key && config.ecom_api_token),
       has_apec:             !!(config.apec_api_id && config.apec_api_token),
     } : null
     return NextResponse.json({ config: redacted })
@@ -134,26 +121,8 @@ export async function PATCH(req: NextRequest) {
       if (updates.maystro_token !== undefined)      updates.maystro_token      = merge(updates.maystro_token, existing.maystro_token)
       if (updates.rex_token !== undefined)          updates.rex_token          = merge(updates.rex_token, existing.rex_token)
       if (updates.yassir_api_key !== undefined)     updates.yassir_api_key     = merge(updates.yassir_api_key, existing.yassir_api_key)
-      if (updates.ecom_api_key !== undefined || updates.ecom_api_token !== undefined) {
-        let oldKey = ''
-        let oldToken = ''
-        if (existing.ecom_token) {
-          try {
-            const p = JSON.parse(existing.ecom_token)
-            oldKey = p?.key ?? existing.ecom_token
-            oldToken = p?.token ?? ''
-          } catch { oldKey = existing.ecom_token }
-        }
-        const mergedKey = merge(updates.ecom_api_key, oldKey || null)
-        const mergedToken = merge(updates.ecom_api_token, oldToken || null)
-        if (mergedKey || mergedToken) {
-          updates.ecom_token = JSON.stringify({ key: mergedKey ?? '', token: mergedToken ?? '' })
-        } else {
-          updates.ecom_token = null
-        }
-        delete updates.ecom_api_key
-        delete updates.ecom_api_token
-      }
+      if (updates.ecom_api_key !== undefined)       updates.ecom_api_key       = merge(updates.ecom_api_key, existing.ecom_api_key)
+      if (updates.ecom_api_token !== undefined)     updates.ecom_api_token     = merge(updates.ecom_api_token, existing.ecom_api_token)
       if (updates.apec_api_id !== undefined)        updates.apec_api_id        = merge(updates.apec_api_id, existing.apec_api_id)
       if (updates.apec_api_token !== undefined)     updates.apec_api_token     = merge(updates.apec_api_token, existing.apec_api_token)
     }

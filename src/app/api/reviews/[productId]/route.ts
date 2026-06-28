@@ -23,7 +23,8 @@ export async function GET(req: NextRequest, { params }: Params) {
     const { productId } = await params
     const reviews = await getReviews(productId)
     return NextResponse.json(reviews)
-  } catch {
+  } catch (err) {
+    logger.error('[GET /api/reviews/[productId]]', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json([], { status: 500 })
   }
 }
