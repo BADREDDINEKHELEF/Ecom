@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, RefreshCw, RotateCcw, ChevronDown, Check, Clipboard, AlertCircle } from 'lucide-react'
+import Image from 'next/image'
 import { formatPrice } from '@/lib/utils'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import SellerSidebar from '@/components/seller/SellerSidebar'
@@ -257,7 +258,7 @@ export default function SellerReturnsPage() {
                             <div className="flex gap-3 flex-wrap">
                               {r.photos.map((pUrl, idx) => (
                                 <a key={idx} href={pUrl} target="_blank" rel="noopener noreferrer" className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-600 transition-colors">
-                                  <img src={pUrl} alt="Justificatif retour" className="w-full h-full object-cover" />
+                                  <Image src={pUrl} alt="Justificatif retour" fill className="object-cover" />
                                 </a>
                               ))}
                             </div>

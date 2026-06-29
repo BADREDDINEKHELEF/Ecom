@@ -88,7 +88,7 @@ export default function SellerOrdersPage() {
   const [search, setSearch]             = useState('')
   const [statusTab, setStatusTab]       = useState('')
   const [expanded, setExpanded]         = useState<string | null>(null)
-  const [revealedPhone, setRevealedPhone] = useState<Set<string>>(new Set())
+
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [selected, setSelected]         = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading]   = useState(false)
@@ -318,8 +318,6 @@ export default function SellerOrdersPage() {
                   const StatusIcon = cfg.icon
                   const actions = NEXT_ACTIONS[order.status] ?? []
                   const isExpanded = expanded === order.id
-                  const isRevealed = revealedPhone.has(order.id)
-                  const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢' + order.phone.slice(-3) : order.phone
 
                   return (
                     <div key={order.id + '-m'}
@@ -349,20 +347,10 @@ export default function SellerOrdersPage() {
                             )}
                           </div>
                           <p className="text-xs text-gray-400 mt-1">
-                            {isRevealed || order.status !== 'pending' ? (
-                              <a href={`tel:${order.phone}`}
-                                className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
-                                <Phone className="w-3 h-3" />{order.phone}
-                              </a>
-                            ) : (
-                              <>
-                                {maskedPhone}
-                                <button onClick={() => setRevealedPhone((prev) => new Set([...prev, order.id]))}
-                                  className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold">
-                                  <Phone className="w-3 h-3 inline" /> {sd.reveal}
-                                </button>
-                              </>
-                            )}
+                            <a href={`tel:${order.phone}`}
+                              className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
+                              <Phone className="w-3 h-3" />{order.phone}
+                            </a>
                           </p>
                         </div>
                       </div>
@@ -464,8 +452,6 @@ export default function SellerOrdersPage() {
                     const StatusIcon = cfg.icon
                     const actions = NEXT_ACTIONS[order.status] ?? []
                     const isExpanded = expanded === order.id
-                    const isRevealed = revealedPhone.has(order.id)
-                    const maskedPhone = order.phone.length >= 7 ? order.phone.slice(0, 4) + 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢' + order.phone.slice(-3) : order.phone
 
                     return (
                       <div key={order.id}
@@ -491,21 +477,11 @@ export default function SellerOrdersPage() {
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">
                               #{order.id.slice(0, 8)} Ã‚Â·{' '}
-                              {isRevealed || order.status !== 'pending' ? (
-                                <a href={`tel:${order.phone}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
-                                  <Phone className="w-3 h-3" />{order.phone}
-                                </a>
-                              ) : (
-                                <>
-                                  {maskedPhone}
-                                  <button onClick={(e) => { e.stopPropagation(); setRevealedPhone((prev) => new Set([...prev, order.id])) }}
-                                    className="ml-1.5 text-emerald-600 hover:underline text-[11px] font-semibold inline-flex items-center gap-0.5">
-                                    <Phone className="w-3 h-3" /> {sd.reveal}
-                                  </button>
-                                </>
-                              )}
+                              <a href={`tel:${order.phone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
+                                <Phone className="w-3 h-3" />{order.phone}
+                              </a>
                             </p>
                           </button>
 
@@ -552,7 +528,7 @@ export default function SellerOrdersPage() {
                                     <div key={item.id} className="flex items-center justify-between text-sm">
                                       <div className="flex items-center gap-2">
                                         {item.product_image
-                                          ? <img src={item.product_image} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                                          ? <Image src={item.product_image} alt="" width={32} height={32} className="w-8 h-8 rounded object-cover flex-shrink-0" />
                                           : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                         }
                                         <div>

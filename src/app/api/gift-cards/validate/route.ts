@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { checkGiftCardRateLimit } from '@/lib/auth/rateLimit'
+import { checkGiftCardRateLimit, checkGiftCardCodeRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Code requis' }, { status: 400 })
 
   const code = parsed.data.code.trim().toUpperCase()
+
+  // Per-code gate: blocks enumeration even when attacker rotates IPs
+  const codeRl = await checkGiftCardCodeRateLimit(code)
+  if (!codeRl.allowed) return NextResponse.json({ error: 'Trop de tentatives. Réessayez plus tard.' }, { status: 429 })
 
   try {
     const supabase = createAdminClient()

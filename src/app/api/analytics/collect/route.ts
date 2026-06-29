@@ -29,31 +29,31 @@ export async function POST(req: NextRequest) {
   const parsed = CollectSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
 
-// Optionally resolve authenticated seller's vendor context
-   let userId: string | null = null
-   let vendorId: string | null = null
-   try {
-     const supabase = createRouteClient(req)
-     const { data: { user } } = await supabase.auth.getUser()
-     userId = user?.id ?? null
+  // Optionally resolve authenticated seller's vendor context
+  let userId: string | null = null
+  let vendorId: string | null = null
+  try {
+    const supabase = createRouteClient(req)
+    const { data: { user } } = await supabase.auth.getUser()
+    userId = user?.id ?? null
 
-     // Resolve vendor context to get the authenticated seller's vendor ID
-     const vendorCtx = await getVendorContext(req)
-     if (vendorCtx) {
-       // If vendor_id was provided in request body, verify ownership or reject
-       if (parsed.data.vendor_id && parsed.data.vendor_id !== vendorCtx.vendor.id) {
-         logger.warn('[analytics/collect] vendor_id forgery attempt', {
-           requestedVendorId: parsed.data.vendor_id,
-           authenticatedVendorId: vendorCtx.vendor.id,
-           userId,
-           ip,
-         })
-         vendorId = null // Ignore forged vendor_id
-       } else {
-         vendorId = vendorCtx.vendor.id
-       }
-     }
-   } catch { /* unauthenticated — ok */ }
+    // Resolve vendor context to get the authenticated seller's vendor ID
+    const vendorCtx = await getVendorContext(req)
+    if (vendorCtx) {
+      // If vendor_id was provided in request body, verify ownership or reject
+      if (parsed.data.vendor_id && parsed.data.vendor_id !== vendorCtx.vendor.id) {
+        logger.warn('[analytics/collect] vendor_id forgery attempt', {
+          requestedVendorId: parsed.data.vendor_id,
+          authenticatedVendorId: vendorCtx.vendor.id,
+          userId,
+          ip,
+        })
+        vendorId = null // Ignore forged vendor_id
+      } else {
+        vendorId = vendorCtx.vendor.id
+      }
+    }
+  } catch { /* unauthenticated — ok */ }
 
    const supabase = createAdminClient()
    await supabase.from('analytics_events').insert({

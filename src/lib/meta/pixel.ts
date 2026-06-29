@@ -63,11 +63,6 @@ export function resetPixels(): void {
 // ── Event tracking ─────────────────────────────────────────────────────
 
 export function trackMetaEvent(event: MetaEventName, params?: Record<string, unknown>): void {
-  if (initializedPixels.size === 0) {
-    // Always fire for the global pixel even if no store pixel was explicitly initialized
-    _fbq('track', event, params)
-    return
-  }
   _fbq('track', event, params)
 }
 

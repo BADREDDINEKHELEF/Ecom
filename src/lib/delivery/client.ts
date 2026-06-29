@@ -25,22 +25,24 @@ export async function deliveryFetch(
   while (true) {
     attempt++
     const controller = new AbortController()
-    
-    // Support custom signals if provided, otherwise use controller signal
-    const signal = options.signal || controller.signal
-    const timeoutId = setTimeout(() => {
-      if (!options.signal) {
-        controller.abort()
-      }
-    }, timeoutMs)
+
+    // Always time out via our controller. If caller supplied a signal, forward
+    // its abort into our controller so both sources of cancellation work.
+    let externalAbortHandler: (() => void) | undefined
+    if (options.signal) {
+      externalAbortHandler = () => controller.abort()
+      options.signal.addEventListener('abort', externalAbortHandler, { once: true })
+    }
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
     try {
       const response = await fetch(url, {
         ...options,
-        signal,
+        signal: controller.signal,
       })
 
       clearTimeout(timeoutId)
+      if (externalAbortHandler) options.signal!.removeEventListener('abort', externalAbortHandler)
 
       // If transient 5xx error, retry
       if (response.status >= 500 && attempt < maxRetries) {
@@ -53,6 +55,7 @@ export async function deliveryFetch(
       return response
     } catch (err: unknown) {
       clearTimeout(timeoutId)
+      if (externalAbortHandler) options.signal!.removeEventListener('abort', externalAbortHandler)
 
       const error = err instanceof Error ? err : new Error(String(err))
       const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout') || error.message?.includes('aborted')

@@ -8,6 +8,13 @@ import { maskPhone } from '@/lib/utils/mask'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// Normalize both +213... and 0... Algerian phone variants to the same digits-only form
+// so a stored "+213551234567" matches a provided "0551234567".
+function canonicalPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  return digits.startsWith('0') ? '213' + digits.slice(1) : digits
+}
+
 const ALLOWED_PHOTO_HOSTS = new Set([
   'supabase.co',
   'supabase.in',
@@ -68,9 +75,10 @@ export async function POST(
     const { reason, phone, photos: rawPhotos } = parsed.data
     const photos = (rawPhotos ?? []).filter(isSafePhotoUrl)
 
+    const canonicalInput = canonicalPhone(phone)
+
     // Gate 3: per phone — 5 return requests per phone per hour
-    const cleanPhone = phone.replace(/\D/g, '')
-    const phoneRl = await checkPublicRateLimit(`return_phone:${cleanPhone}`, 'return_per_phone')
+    const phoneRl = await checkPublicRateLimit(`return_phone:${canonicalInput}`, 'return_per_phone')
     if (!phoneRl.allowed) {
       logger.warn('[return] rate limit: per-phone', { phone: maskPhone(phone), orderId, ip })
       return NextResponse.json({ error: 'Trop de tentatives' }, { status: 429 })
@@ -86,7 +94,7 @@ export async function POST(
 
     if (!order) return NextResponse.json({ error: 'Commande introuvable' }, { status: 404 })
 
-    if (order.phone.replace(/\D/g, '') !== cleanPhone) {
+    if (canonicalPhone(order.phone) !== canonicalInput) {
       logger.warn('[return] phone mismatch', { orderId, ip, provided: maskPhone(phone) })
       return NextResponse.json({ error: 'Numéro de téléphone incorrect' }, { status: 403 })
     }

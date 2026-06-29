@@ -194,6 +194,11 @@ export async function checkGiftCardRateLimit(ip: string): Promise<RateLimitResul
   return check('giftcard_validate', ip, 5, 10 * 60)
 }
 
+/** Gift card per-code: 10 attempts / 30 min per code (blocks enumeration even with IP rotation) */
+export async function checkGiftCardCodeRateLimit(code: string): Promise<RateLimitResult> {
+  return check('giftcard_per_code', `code:${code}`, 10, 30 * 60)
+}
+
 /** Checkout: 10 orders / 10 min per IP (prevents order flooding) */
 export async function checkCheckoutRateLimit(ip: string): Promise<RateLimitResult> {
   return check('checkout', ip, 10, 10 * 60)

@@ -137,13 +137,15 @@ async function sendCAPIPurchase(
  * @param config - The store's Meta config (resolved by store resolver)
  * @param orderId - Used as event_id for dedup with browser pixel
  * @param total - Order total in DZD
- * @param userDataInput - Customer data (PII is hashed automatically)
+ * @param userDataInput - Customer data (PII is hashed automatically); pass eventSourceUrl for best match quality
+ * @param purchaseMeta - Optional content_ids and num_items for richer event data
  */
 export async function fireStorePurchaseCAPI(
   config: StoreMetaConfig,
   orderId: string,
   total: number,
   userDataInput: UserDataInput,
+  purchaseMeta?: { contentIds?: string[]; numItems?: number },
 ): Promise<CAPIResult> {
   if (!config.enabled || !config.pixelId || !config.accessToken) {
     log('Skipped — store not configured', { storeId: config.storeId, storeSlug: config.storeSlug })
@@ -154,16 +156,19 @@ export async function fireStorePurchaseCAPI(
 
   const body: MetaCAPIRequestBody = {
     data: [{
-      event_name:      'Purchase',
-      event_time:      Math.floor(Date.now() / 1000),
-      event_id:        orderId,
-      action_source:   'website',
-      user_data:       userData,
-      custom_data:     {
+      event_name:    'Purchase',
+      event_time:    Math.floor(Date.now() / 1000),
+      event_id:      orderId,
+      action_source: 'website',
+      user_data:     userData,
+      custom_data:   {
         value:    total,
         currency: 'DZD',
         order_id: orderId,
+        ...(purchaseMeta?.contentIds?.length && { content_ids: purchaseMeta.contentIds, content_type: 'product' }),
+        ...(purchaseMeta?.numItems && { num_items: purchaseMeta.numItems }),
       },
+      ...(userDataInput.eventSourceUrl && { event_source_url: userDataInput.eventSourceUrl }),
     }],
   }
 
@@ -190,10 +195,11 @@ export async function fireMultiStorePurchaseCAPI(
   orderId: string,
   total: number,
   userDataInput: UserDataInput,
+  purchaseMeta?: { contentIds?: string[]; numItems?: number },
 ): Promise<CAPIVendorResult[]> {
   const results = await Promise.allSettled(
     configs.map(async (config) => {
-      const result = await fireStorePurchaseCAPI(config, orderId, total, userDataInput)
+      const result = await fireStorePurchaseCAPI(config, orderId, total, userDataInput, purchaseMeta)
       return { vendorId: config.storeId, storeSlug: config.storeSlug, result }
     }),
   )

@@ -36,8 +36,6 @@ function anonymizeIp(ip: string): string {
   return ip
 }
 // ── TikTok Events API ───────────────────────────────────────────────────────
-
-// ── TikTok Events API ───────────────────────────────────────────────────────
 // Docs: https://business-api.tiktok.com/portal/docs?id=1741601162187777
 
 export async function fireTikTokPurchase(opts: {

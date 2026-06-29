@@ -4,9 +4,9 @@ import { checkTotpSetupRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
 // GET /api/admin/totp — one-time setup only. Locked once ADMIN_TOTP_SECRET is set.
-// The raw secret is intentionally NOT returned in the response — only the QR code
-// is sent so the secret never appears in browser history, network logs, or JS console.
-// The admin must copy the secret from server logs on first-run only.
+// The secret IS returned once in the response body (HTTPS only).
+// The admin scans the QR code and copies the secret to the ADMIN_TOTP_SECRET env var.
+// Once that env var is set this endpoint returns 403, so the secret is exposed exactly once.
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req)
   const rl = await checkTotpSetupRateLimit(ip)
@@ -22,10 +22,9 @@ export async function GET(req: NextRequest) {
   const secret = generateTotpSecret()
   const qrCode = await generateQrCode(secret)
 
-  // Return secret in the response body (HTTPS only — not stored server-side).
-  // The admin copies it to the ADMIN_TOTP_SECRET environment variable.
-  // Once set, this endpoint returns 403 (line 18 above), so the secret
-  // is only ever returned once and never written to server logs.
+  // Return secret and QR code in response body (HTTPS only, not logged server-side).
+  // Admin scans QR code with an authenticator app and sets ADMIN_TOTP_SECRET env var.
+  // After that, this endpoint permanently returns 403.
   return NextResponse.json({
     qrCode,
     secret,

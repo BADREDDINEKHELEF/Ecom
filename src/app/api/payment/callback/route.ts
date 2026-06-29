@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (order.satim_order_id && order.satim_order_id === satimId) {
-      logger.warn('[payment/callback] duplicate callback — already processed', { orderId, satimId })
+      logger.info('[payment/callback] duplicate callback — idempotent redirect to success', { orderId, satimId })
       return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
     }
 
@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
         expected: expectedCentimes,
         received: status.amount,
       })
+      await markOrderFailed(orderId)
       return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=amount_mismatch`)
     }
 

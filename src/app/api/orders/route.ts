@@ -203,9 +203,19 @@ export async function POST(req: NextRequest) {
             accessToken: c.accessToken ? decryptCred(c.accessToken) : null,
           }))
           const capiItems = input.items.map(i => ({ id: i.productId, name: i.productName, price: i.unitPrice, quantity: i.quantity }))
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL
+          const purchaseMeta = {
+            contentIds: input.items.map(i => i.productId),
+            numItems:   input.items.reduce((s, i) => s + i.quantity, 0),
+          }
           const metaVendorResult = fireMultiStorePurchaseCAPI(
             metaConfigs, orderId, total,
-            { email: buyerEmail, phone: input.phone, clientIp: ip, clientUserAgent: req.headers.get('user-agent') ?? undefined },
+            {
+              email: buyerEmail, phone: input.phone,
+              clientUserAgent: req.headers.get('user-agent') ?? undefined,
+              eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+            },
+            purchaseMeta,
           )
 
           // TikTok + GA4 per-vendor CAPI — keep on old adapter
@@ -221,7 +231,6 @@ export async function POST(req: NextRequest) {
                 accessToken: decryptCred(v.tiktok_capi_token)!,
                 orderId, total, items: capiItems,
                 email: buyerEmail, phone: input.phone,
-                clientIp: ip,
                 clientUserAgent: req.headers.get('user-agent') ?? undefined,
               }))
             }
@@ -246,11 +255,19 @@ export async function POST(req: NextRequest) {
     // Platform-level Meta CAPI (non-blocking)
     const platformConfig = getPlatformMetaConfig()
     if (platformConfig) {
-      fireStorePurchaseCAPI(platformConfig, orderId, total, {
-        email: buyerEmail, phone: input.phone,
-        clientIp: ip,
-        clientUserAgent: req.headers.get('user-agent') ?? undefined,
-      }).catch((err) => logger.error('[platform Meta CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      fireStorePurchaseCAPI(
+        platformConfig, orderId, total,
+        {
+          email: buyerEmail, phone: input.phone,
+          clientUserAgent: req.headers.get('user-agent') ?? undefined,
+          eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+        },
+        {
+          contentIds: input.items.map(i => i.productId),
+          numItems:   input.items.reduce((s, i) => s + i.quantity, 0),
+        },
+      ).catch((err) => logger.error('[platform Meta CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
     }
 
     // Platform-level TikTok CAPI (non-blocking)
@@ -261,7 +278,6 @@ export async function POST(req: NextRequest) {
         accessToken: process.env.TIKTOK_CAPI_TOKEN,
         orderId, total, items: capiItems,
         email: buyerEmail, phone: input.phone,
-        clientIp: ip,
         clientUserAgent: req.headers.get('user-agent') ?? undefined,
       }).catch((err) => logger.error('[platform TikTok CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
     }

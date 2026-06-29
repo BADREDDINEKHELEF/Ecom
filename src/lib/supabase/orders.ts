@@ -287,7 +287,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       is_stopdesk:     input.isStopDesk ?? (input.deliveryType === 'stop_desk'),
       delivery_type:   input.deliveryType ?? 'home',
       stop_desk_cause: input.stopDeskCause ?? null,
-      email:           input.email ?? null,
+      ...(input.email ? { email: input.email } : {}),
     })
     .select('id')
     .single()

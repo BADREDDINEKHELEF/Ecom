@@ -520,7 +520,7 @@ export default function CheckoutContent() {
         <p className="text-sm text-gray-500 mb-6">{t.checkout.baridimobScanDesc}</p>
         <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6 flex items-center justify-center">
           {qrImageUrl
-            ? <img src={qrImageUrl} alt="QR Code BaridiMob" width={280} height={280} className="rounded-xl" />
+            ? <Image src={qrImageUrl} alt="QR Code BaridiMob" width={280} height={280} className="rounded-xl" unoptimized />
             : <p className="text-xs font-mono text-amber-800 break-all select-all">{baridimobModal.qrCodeData}</p>
           }
         </div>

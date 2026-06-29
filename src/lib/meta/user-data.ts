@@ -58,6 +58,7 @@ export interface UserDataInput {
   clientUserAgent?:   string
   fbp?:               string | null
   fbc?:               string | null
+  eventSourceUrl?:    string
 }
 
 /**

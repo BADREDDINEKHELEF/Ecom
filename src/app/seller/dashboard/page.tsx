@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import {
   TrendingUp, TrendingDown, Clock,
   Package, Plus, ArrowRight, CheckCircle2, Truck, AlertCircle,
@@ -852,7 +853,7 @@ export default function SellerDashboardPage() {
             {/* Profile row */}
             <div className="px-6 py-4 flex items-center gap-4">
               {vendor.logo_url ? (
-                <img src={vendor.logo_url} alt={vendor.store_name ?? ''}
+                <NextImage src={vendor.logo_url} alt={vendor.store_name ?? ''} width={48} height={48}
                   className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-gray-100" />
               ) : (
                 <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
