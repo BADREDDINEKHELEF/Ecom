@@ -77,7 +77,8 @@ export default function SellerLoginPage() {
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
       if (body._devOtp) {
-        setError(`Code OTP : ${body._devOtp}  (email non envoyé — configurez RESEND_API_KEY ou SMTP)`)
+        const hint = body._emailError ? ` — SMTP: ${body._emailError.slice(0, 120)}` : ' (email non envoyé)'
+        setError(`Code OTP : ${body._devOtp}${hint}`)
       }
       setView('forgot_otp')
       setSuccess('Code envoyÃƒÂ© par e-mail Ã¢Å“â€œ')

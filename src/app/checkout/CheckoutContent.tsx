@@ -353,7 +353,7 @@ export default function CheckoutContent() {
 
     const orderPayload = {
       fullName:       form.fullName,
-      phone:          form.phone,
+      phone:          form.phone.replace(/[\s\-().]/g, ''),
       wilaya:         form.wilaya,
       city:           resolvedCity,
       address:        form.address,
