@@ -13,81 +13,86 @@ const RevealSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req)
+  try {
+    const ip = getClientIp(req)
 
-  // Gate 1: IP-level — strict because phone reveal is sensitive PII access
-  const ipRl = await checkSellerRateLimit(ip, 'reveal_phone', 10, 60)
-  if (!ipRl.allowed) {
-    void logSecurityEvent({
-      actorType: 'seller',
-      action:    SEC_EVENT.RATE_LIMIT_EXCEEDED,
-      resource:  'customers:reveal_phone',
-      ipAddress: ip,
-      result:    'blocked',
-    })
-    return NextResponse.json(
-      { error: 'Trop de requêtes.' },
-      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfterSeconds) } }
-    )
-  }
-
-  // Gate 2: Permission — only 'owner' role can reveal phones
-  // This also handles auth (returns 401 if not authenticated)
-  const result = await requireVendorPermission(req, 'customers:reveal_phone')
-  if (result instanceof NextResponse) {
-    if (result.status === 403) {
+    // Gate 1: IP-level — strict because phone reveal is sensitive PII access
+    const ipRl = await checkSellerRateLimit(ip, 'reveal_phone', 10, 60)
+    if (!ipRl.allowed) {
       void logSecurityEvent({
         actorType: 'seller',
-        action:    SEC_EVENT.PERMISSION_DENIED,
+        action:    SEC_EVENT.RATE_LIMIT_EXCEEDED,
         resource:  'customers:reveal_phone',
         ipAddress: ip,
         result:    'blocked',
       })
+      return NextResponse.json(
+        { error: 'Trop de requêtes.' },
+        { status: 429, headers: { 'Retry-After': String(ipRl.retryAfterSeconds) } }
+      )
     }
-    return result
+
+    // Gate 2: Permission — only 'owner' role can reveal phones
+    // This also handles auth (returns 401 if not authenticated)
+    const result = await requireVendorPermission(req, 'customers:reveal_phone')
+    if (result instanceof NextResponse) {
+      if (result.status === 403) {
+        void logSecurityEvent({
+          actorType: 'seller',
+          action:    SEC_EVENT.PERMISSION_DENIED,
+          resource:  'customers:reveal_phone',
+          ipAddress: ip,
+          result:    'blocked',
+        })
+      }
+      return result
+    }
+    const { ctx } = result
+
+    // Gate 3: Per-user hourly cap — max 20 reveals per hour per seller account
+    const userRl = await checkUserRateLimit(ctx.user.id, 'reveal_phone', 20, 3600)
+    if (!userRl.allowed) {
+      return NextResponse.json(
+        { error: 'Limite de révélations atteinte. Maximum 20 par heure.' },
+        { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
+      )
+    }
+
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+
+    const parsed = RevealSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+
+    const phone = await resolvePhoneByHash(ctx.vendor.id, parsed.data.phoneHash)
+    if (!phone) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+
+    // Fire-and-forget audit entries (both seller-level and security-level)
+    void logSellerDataAccess({
+      vendorId:     ctx.vendor.id,
+      action:       'reveal_phone',
+      resourceType: 'customer_list',
+      resourceId:   parsed.data.phoneHash,
+      ipAddress:    ip,
+      userAgent:    req.headers.get('user-agent') ?? undefined,
+    })
+
+    void logSecurityEvent({
+      actorType: 'seller',
+      actorId:   ctx.vendor.id,
+      action:    SEC_EVENT.CUSTOMER_PHONE_REVEALED,
+      resource:  `customer:${parsed.data.phoneHash}`,
+      ipAddress: ip,
+      userAgent: req.headers.get('user-agent') ?? undefined,
+      result:    'success',
+      meta:      { role: ctx.role },
+    })
+
+    return NextResponse.json({ phone })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
-  const { ctx } = result
-
-  // Gate 3: Per-user hourly cap — max 20 reveals per hour per seller account
-  const userRl = await checkUserRateLimit(ctx.user.id, 'reveal_phone', 20, 3600)
-  if (!userRl.allowed) {
-    return NextResponse.json(
-      { error: 'Limite de révélations atteinte. Maximum 20 par heure.' },
-      { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
-  }
-
-  let body: unknown
-  try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const parsed = RevealSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
-
-  const phone = await resolvePhoneByHash(ctx.vendor.id, parsed.data.phoneHash)
-  if (!phone) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
-
-  // Fire-and-forget audit entries (both seller-level and security-level)
-  void logSellerDataAccess({
-    vendorId:     ctx.vendor.id,
-    action:       'reveal_phone',
-    resourceType: 'customer_list',
-    resourceId:   parsed.data.phoneHash,
-    ipAddress:    ip,
-    userAgent:    req.headers.get('user-agent') ?? undefined,
-  })
-
-  void logSecurityEvent({
-    actorType: 'seller',
-    actorId:   ctx.vendor.id,
-    action:    SEC_EVENT.CUSTOMER_PHONE_REVEALED,
-    resource:  `customer:${parsed.data.phoneHash}`,
-    ipAddress: ip,
-    userAgent: req.headers.get('user-agent') ?? undefined,
-    result:    'success',
-    meta:      { role: ctx.role },
-  })
-
-  return NextResponse.json({ phone })
 }

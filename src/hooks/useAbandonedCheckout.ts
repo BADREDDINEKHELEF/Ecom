@@ -2,11 +2,15 @@
 
 import { useCallback, useRef } from 'react'
 
+function randomId(): string {
+  try { return crypto.randomUUID().replace(/-/g, '') } catch { return Math.random().toString(36).slice(2, 16) + Date.now().toString(36) }
+}
+
 function getSessionId(): string {
   if (typeof window === 'undefined') return ''
   let id = sessionStorage.getItem('storedzSession')
   if (!id) {
-    id = `sess_${Date.now()}_${crypto.randomUUID().replace(/-/g, '')}`
+    id = `sess_${Date.now()}_${randomId()}`
     sessionStorage.setItem('storedzSession', id)
   }
   return id

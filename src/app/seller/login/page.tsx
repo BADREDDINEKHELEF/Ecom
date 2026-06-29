@@ -69,7 +69,7 @@ export default function SellerLoginPage() {
     e.preventDefault()
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/seller/forgot-password', {
+      const res = await fetch('/api/seller/send-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail }),

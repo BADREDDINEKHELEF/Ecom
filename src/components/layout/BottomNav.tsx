@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Package, ShoppingCart, User, Store } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cartStore'
+import { useT } from '@/lib/store/langStore'
 import { useState, useEffect } from 'react'
 
 export default function BottomNav() {
@@ -12,6 +13,7 @@ export default function BottomNav() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const cartCount = itemCount()
+  const t = useT()
 
   // Hide on seller/admin/store pages
   if (
@@ -36,7 +38,7 @@ export default function BottomNav() {
         <Link href="/" className="flex-1 flex flex-col items-center justify-center gap-0.5">
           <Home className={`w-5 h-5 transition-colors ${isActive('/') ? 'text-indigo-600' : 'text-gray-400'}`} />
           <span className={`text-[10px] font-medium leading-none ${isActive('/') ? 'text-indigo-600' : 'text-gray-400'}`}>
-            Accueil
+            {t.nav.home}
           </span>
         </Link>
 
@@ -44,7 +46,7 @@ export default function BottomNav() {
         <Link href="/track" className="flex-1 flex flex-col items-center justify-center gap-0.5">
           <Package className={`w-5 h-5 transition-colors ${isActive('/track') ? 'text-indigo-600' : 'text-gray-400'}`} />
           <span className={`text-[10px] font-medium leading-none ${isActive('/track') ? 'text-indigo-600' : 'text-gray-400'}`}>
-            Commande
+            {t.orders.title}
           </span>
         </Link>
 
@@ -62,14 +64,14 @@ export default function BottomNav() {
               </span>
             )}
           </div>
-          <span className="text-[10px] font-medium leading-none text-gray-400">Panier</span>
+          <span className="text-[10px] font-medium leading-none text-gray-400">{t.nav.cart}</span>
         </button>
 
         {/* Seller dashboard */}
         <Link href="/seller/dashboard" className="flex-1 flex flex-col items-center justify-center gap-0.5">
           <Store className={`w-5 h-5 transition-colors ${isActive('/seller') ? 'text-indigo-600' : 'text-gray-400'}`} />
           <span className={`text-[10px] font-medium leading-none ${isActive('/seller') ? 'text-indigo-600' : 'text-gray-400'}`}>
-            Ma boutique
+            {t.sellerDash.sellerDashboard}
           </span>
         </Link>
 
@@ -77,7 +79,7 @@ export default function BottomNav() {
         <Link href="/profile" className="flex-1 flex flex-col items-center justify-center gap-0.5">
           <User className={`w-5 h-5 transition-colors ${isActive('/profile') ? 'text-indigo-600' : 'text-gray-400'}`} />
           <span className={`text-[10px] font-medium leading-none ${isActive('/profile') ? 'text-indigo-600' : 'text-gray-400'}`}>
-            Compte
+            {t.nav.profile}
           </span>
         </Link>
 

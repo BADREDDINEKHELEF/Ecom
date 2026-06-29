@@ -7,9 +7,9 @@ import { normalizePhone } from '@/lib/utils/phone'
 export function dbToProduct(row: Record<string, unknown>): Product {
   return {
     id:              String(row.id),
-    nicheId:         String(row.niche_id),
-    category:        String(row.category),
-    name:            String(row.name),
+    nicheId:         row.niche_id != null ? String(row.niche_id) : '',
+    category:        row.category != null ? String(row.category) : '',
+    name:            row.name != null ? String(row.name) : '',
     description:     String(row.description ?? ''),
     price:           Number(row.price),
     comparePrice:    row.compare_price != null ? Number(row.compare_price) : undefined,

@@ -8,11 +8,12 @@ import { useT } from '@/lib/store/langStore'
 import { formatPrice, COLOR_HEX } from '@/lib/utils'
 
 function colorImage(product: { images: string[]; imageColors?: string[]; colorVariants?: { name: string; images: string[] }[] }, color: string | undefined): string {
+  if (!product.images.length) return ''
   if (!color) return product.images[0]
   const variant = (product.colorVariants ?? []).find(v => v.name === color)
   if (variant?.images?.[0]) return variant.images[0]
   const idx = (product.imageColors ?? []).indexOf(color)
-  return idx !== -1 ? product.images[idx] : product.images[0]
+  return idx !== -1 && product.images[idx] ? product.images[idx] : product.images[0]
 }
 
 export default function CartContent() {

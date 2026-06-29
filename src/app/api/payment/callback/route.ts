@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
   const orderId = searchParams.get('orderId')
   const satimId = searchParams.get('mdOrder')
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
 
   if (!orderId) {
     return NextResponse.redirect(`${appUrl}/payment/failure?reason=missing_order`)

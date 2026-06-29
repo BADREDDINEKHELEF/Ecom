@@ -36,12 +36,12 @@ export default function SellerRegisterPage() {
     setForm(next)
   }
 
-  // Step 1 Ã¢â‚¬â€ validate form + send OTP
+  // Step 1 — validate form + send OTP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
     if (RESERVED_SLUGS.has(form.storeSlug)) { setError(t.seller.urlTaken); return }
-    if (!form.email) { setError('Adresse e-mail requise pour vÃƒÂ©rifier votre compte.'); return }
+    if (!form.email) { setError('Adresse e-mail requise pour vérifier votre compte.'); return }
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/seller/send-email-otp', {
@@ -52,17 +52,17 @@ export default function SellerRegisterPage() {
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
       if (body._devOtp) {
-        setError(`[DEV] Code OTP : ${body._devOtp}  (domaine Resend non configurÃƒÂ©)`)
+        setError(`[DEV] Code OTP : ${body._devOtp}  (domaine Resend non configuré)`)
       }
       setView('otp')
     } catch {
-      setError('Erreur de connexion. VÃƒÂ©rifiez votre accÃƒÂ¨s internet.')
+      setError('Erreur de connexion. Vérifiez votre accès internet.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Step 2 Ã¢â‚¬â€ verify OTP then create account
+  // Step 2 — verify OTP then create account
   const handleVerifyAndCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError('')
@@ -86,7 +86,7 @@ export default function SellerRegisterPage() {
       if (signUpErr) { setError(signUpErr.message); setLoading(false); return }
       if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
 
-      // Create vendor record Ã¢â‚¬â€ pass auth token in case session cookie isn't set yet
+      // Create vendor record — pass auth token in case session cookie isn't set yet
       const authToken = authData.session?.access_token
       const regHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
       if (authToken) regHeaders['Authorization'] = `Bearer ${authToken}`
@@ -162,150 +162,150 @@ export default function SellerRegisterPage() {
               {view === 'otp' ? <KeyRound className="w-6 h-6 text-white" /> : <Store className="w-6 h-6 text-white" />}
             </div>
 <h1 className="text-2xl font-black text-gray-900">
-               {view === 'otp' ? 'VÃƒÂ©rifiez votre e-mail' : t.seller.registerTitle}
+               {view === 'otp' ? 'Vérifiez votre e-mail' : t.seller.registerTitle}
              </h1>
              <p className="text-gray-500 text-sm mt-1">
-               {view === 'otp' ? `Code envoyÃƒÂ© ÃƒÂ  ${form.email}` : t.seller.registerSub}
+               {view === 'otp' ? `Code envoyé à ${form.email}` : t.seller.registerSub}
              </p>
-          </div>
+           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">{error}</div>
-          )}
+           {error && (
+             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">{error}</div>
+           )}
 
-          {/* Ã¢â€â‚¬Ã¢â€â‚¬ OTP verification step Ã¢â€â‚¬Ã¢â€â‚¬ */}
-          {view === 'otp' && (
-            <form onSubmit={handleVerifyAndCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Code e-mail (6 chiffres)</label>
-                <input type="text" required maxLength={6} value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="123456" autoFocus
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-center tracking-[0.5em] font-bold text-lg focus:outline-none focus:border-emerald-400" />
-              </div>
-              <button type="submit" disabled={loading || otp.length !== 6}
-                className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none">
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                VÃƒÂ©rifier et crÃƒÂ©er mon compte
-              </button>
-              <div className="flex items-center justify-between text-sm">
-                <button type="button" onClick={() => { setView('form'); setOtp(''); setError('') }}
-                  className="text-gray-500 hover:text-gray-700">
-                  Ã¢â€ Â Modifier mes infos
-                </button>
-                <button type="button" onClick={handleResend} disabled={loading}
-                  className="text-emerald-600 hover:underline font-medium disabled:opacity-50">
-                  Renvoyer le code
-                </button>
-              </div>
-            </form>
-          )}
+           {/* — OTP verification step — */}
+           {view === 'otp' && (
+             <form onSubmit={handleVerifyAndCreate} className="space-y-4">
+               <div>
+                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Code e-mail (6 chiffres)</label>
+                 <input type="text" required maxLength={6} value={otp}
+                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                   placeholder="123456" autoFocus
+                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-center tracking-[0.5em] font-bold text-lg focus:outline-none focus:border-emerald-400" />
+               </div>
+               <button type="submit" disabled={loading || otp.length !== 6}
+                 className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none">
+                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                 Vérifier et créer mon compte
+               </button>
+               <div className="flex items-center justify-between text-sm">
+                 <button type="button" onClick={() => { setView('form'); setOtp(''); setError('') }}
+                   className="text-gray-500 hover:text-gray-700">
+                   ✏ Modifier mes infos
+                 </button>
+                 <button type="button" onClick={handleResend} disabled={loading}
+                   className="text-emerald-600 hover:underline font-medium disabled:opacity-50">
+                   Renvoyer le code
+                 </button>
+               </div>
+             </form>
+           )}
 
-          {/* Ã¢â€â‚¬Ã¢â€â‚¬ Registration form Ã¢â€â‚¬Ã¢â€â‚¬ */}
-          {view === 'form' && <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t.seller.accountInfo}</p>
+           {/* — Registration form — */}
+           {view === 'form' && <form onSubmit={handleSubmit} className="space-y-4">
+             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2">{t.seller.accountInfo}</p>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.fullNameLabel}</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
-                  placeholder="Mohammed Amiri"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-            </div>
+             <div>
+               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.fullNameLabel}</label>
+               <div className="relative">
+                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                 <input required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
+                   placeholder="Mohammed Amiri"
+                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+               </div>
+             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.emailLabel}</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input required type="email" value={form.email} onChange={(e) => f('email', e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-            </div>
+             <div>
+               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.emailLabel}</label>
+               <div className="relative">
+                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                 <input required type="email" value={form.email} onChange={(e) => f('email', e.target.value)}
+                   placeholder="you@example.com"
+                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+               </div>
+             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.passwordLabel}</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input required type={showPwd ? 'text' : 'password'} minLength={8}
-                  value={form.password} onChange={(e) => f('password', e.target.value)}
-                  placeholder={t.seller.passwordMin}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
-                <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+             <div>
+               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.passwordLabel}</label>
+               <div className="relative">
+                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                 <input required type={showPwd ? 'text' : 'password'} minLength={8}
+                   value={form.password} onChange={(e) => f('password', e.target.value)}
+                   placeholder={t.seller.passwordMin}
+                   className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                 <button type="button" onClick={() => setShowPwd(!showPwd)}
+                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                 </button>
+               </div>
+             </div>
 
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2">{t.seller.storeInfo}</p>
+             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2">{t.seller.storeInfo}</p>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.storeNameLabel}</label>
-              <div className="relative">
-                <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input required type="text" value={form.storeName} onChange={(e) => f('storeName', e.target.value)}
-                  placeholder={t.seller.myAlgerianShop}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
-              </div>
-            </div>
+             <div>
+               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.storeNameLabel}</label>
+               <div className="relative">
+                 <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                 <input required type="text" value={form.storeName} onChange={(e) => f('storeName', e.target.value)}
+                   placeholder={t.seller.myAlgerianShop}
+                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+               </div>
+             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.storeUrlLabel}</label>
-              <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
-                <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">storedz.dz/shop/</span>
-                <input required type="text" value={form.storeSlug}
-                  onChange={(e) => f('storeSlug', slugify(e.target.value))}
-                  placeholder="my-shop"
-                  className="flex-1 px-3 py-3 text-sm focus:outline-none" />
-              </div>
-            </div>
+             <div>
+               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.storeUrlLabel}</label>
+               <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
+                 <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">storedz.dz/shop/</span>
+                 <input required type="text" value={form.storeSlug}
+                   onChange={(e) => f('storeSlug', slugify(e.target.value))}
+                   placeholder="my-shop"
+                   className="flex-1 px-3 py-3 text-sm focus:outline-none" />
+               </div>
+             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.phoneLabel}</label>
-                <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="tel" required value={form.phone} onChange={(e) => f('phone', e.target.value)}
-                    placeholder={t.seller.phonePHRegister}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.wilayaLabel}</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select value={form.wilaya} onChange={(e) => f('wilaya', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white">
-                    <option value="">{t.seller.selectWilaya}</option>
-                    {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
+             <div className="grid grid-cols-2 gap-4">
+               <div>
+                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.phoneLabel}</label>
+                 <div className="relative">
+                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                   <input type="tel" required value={form.phone} onChange={(e) => f('phone', e.target.value)}
+                     placeholder={t.seller.phonePHRegister}
+                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                 </div>
+               </div>
+               <div>
+                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.wilayaLabel}</label>
+                 <div className="relative">
+                   <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                   <select value={form.wilaya} onChange={(e) => f('wilaya', e.target.value)}
+                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white">
+                     <option value="">{t.seller.selectWilaya}</option>
+                     {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
+                   </select>
+                 </div>
+               </div>
+             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.descLabel}</label>
-              <div className="relative">
-                <FileText className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
-                <textarea value={form.description} onChange={(e) => f('description', e.target.value)}
-                  rows={3} maxLength={300} placeholder={t.seller.descPH}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 resize-none" />
-              </div>
-            </div>
+             <div>
+               <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.descLabel}</label>
+               <div className="relative">
+                 <FileText className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+                 <textarea value={form.description} onChange={(e) => f('description', e.target.value)}
+                   rows={3} maxLength={300} placeholder={t.seller.descPH}
+                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 resize-none" />
+               </div>
+             </div>
 
-            <button type="submit" disabled={loading}
-              className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 text-base">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Store className="w-5 h-5" />}
-              {loading ? t.seller.creating : t.seller.createMyStore}
-            </button>
+             <button type="submit" disabled={loading}
+               className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 text-base">
+               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Store className="w-5 h-5" />}
+               {loading ? t.seller.creating : t.seller.createMyStore}
+             </button>
 
-            <p className="text-xs text-gray-400 text-center">{t.seller.terms}</p>
-          </form>}
-        </div>
-      </div>
-    </div>
-  )
-}
+             <p className="text-xs text-gray-400 text-center">{t.seller.terms}</p>
+           </form>}
+         </div>
+       </div>
+     </div>
+   )
+ }

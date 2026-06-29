@@ -6,6 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPrice(price: number): string {
+  if (!Number.isFinite(price)) price = 0
   return new Intl.NumberFormat('fr-DZ', {
     style: 'currency',
     currency: 'DZD',

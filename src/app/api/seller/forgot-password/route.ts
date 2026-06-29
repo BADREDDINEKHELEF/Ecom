@@ -96,10 +96,11 @@ export async function POST(req: NextRequest) {
 
     // Delete old unused OTPs for this email
     try {
-      await supabase.from('password_reset_otps').delete().or(`phone.eq.${email},email.eq.${email}`)
-    } catch {
       await supabase.from('password_reset_otps').delete().eq('phone', email)
-    }
+    } catch {}
+    try {
+      await supabase.from('password_reset_otps').delete().eq('email', email)
+    } catch {}
 
     // Generate and store OTP
     const otp = generateOTP()

@@ -28,34 +28,34 @@ export default function SocialProofTicker() {
   const [notif, setNotif] = useState<Notification | null>(null)
   const [visible, setVisible] = useState(false)
   const idRef = useRef(0)
+  const fadeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
-    let id = idRef.current
+    let alive = true
 
     function show() {
+      if (!alive) return
       const name = randomItem(NAMES)
       const wilaya = randomItem(WILAYAS)
       const product = randomItem(PRODUCTS)
       const mins = randomMinutes()
 
-      id++
-      idRef.current = id
-      setNotif({
-        id,
-        text: `${name} de ${wilaya} a commandé "${product}" il y a ${mins} min`,
-      })
+      idRef.current++
+      setNotif({ id: idRef.current, text: `${name} de ${wilaya} a commandé "${product}" il y a ${mins} min` })
       setVisible(true)
 
-      setTimeout(() => setVisible(false), 4000)
+      clearTimeout(fadeTimer.current)
+      fadeTimer.current = setTimeout(() => { if (alive) setVisible(false) }, 4000)
     }
 
-    // First show after 8 seconds, then every 25–40 seconds
     const initial = setTimeout(show, 8000)
     const interval = setInterval(show, 25000 + Math.random() * 15000)
 
     return () => {
+      alive = false
       clearTimeout(initial)
       clearInterval(interval)
+      clearTimeout(fadeTimer.current)
     }
   }, [])
 

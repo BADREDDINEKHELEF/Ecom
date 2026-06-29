@@ -10,7 +10,7 @@ import type { StoreSettings } from './settings'
 
 export async function upsertProduct(
   product: Omit<Product, 'rating' | 'reviewCount'>
-): Promise<Product> { // Change return type to Product
+): Promise<Product> {
   const supabase = createAdminClient()
   const { data, error } = await supabase.from('products').upsert({
     id:            product.id,

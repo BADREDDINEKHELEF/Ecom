@@ -59,10 +59,11 @@ export async function POST(req: NextRequest) {
 
     // Remove old OTPs for this email
     try {
-      await supabase.from('password_reset_otps').delete().or(`phone.eq.${email},email.eq.${email}`)
-    } catch {
       await supabase.from('password_reset_otps').delete().eq('phone', email)
-    }
+    } catch {}
+    try {
+      await supabase.from('password_reset_otps').delete().eq('email', email)
+    } catch {}
 
     const otp = generateOTP()
     const expiryStr = new Date(Date.now() + 5 * 60 * 1000).toISOString()
