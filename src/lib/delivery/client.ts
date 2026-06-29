@@ -33,7 +33,8 @@ export async function deliveryFetch(
       externalAbortHandler = () => controller.abort()
       options.signal.addEventListener('abort', externalAbortHandler, { once: true })
     }
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+    let timedOut = false
+    const timeoutId = setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs)
 
     try {
       const response = await fetch(url, {
@@ -45,7 +46,7 @@ export async function deliveryFetch(
       if (externalAbortHandler) options.signal!.removeEventListener('abort', externalAbortHandler)
 
       // If transient 5xx error, retry
-      if (response.status >= 500 && attempt < maxRetries) {
+      if (response.status >= 500 && attempt <= maxRetries) {
         logger.warn(`[deliveryFetch] attempt ${attempt} failed with status ${response.status} for URL: ${url}. Retrying in ${delay}ms...`)
         await new Promise((resolve) => setTimeout(resolve, delay))
         delay *= backoffFactor
@@ -58,16 +59,15 @@ export async function deliveryFetch(
       if (externalAbortHandler) options.signal!.removeEventListener('abort', externalAbortHandler)
 
       const error = err instanceof Error ? err : new Error(String(err))
-      const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout') || error.message?.includes('aborted')
-      
-      if (attempt < maxRetries) {
+
+      if (attempt <= maxRetries) {
         logger.warn(`[deliveryFetch] attempt ${attempt} failed with error: ${error.message} for URL: ${url}. Retrying in ${delay}ms...`)
         await new Promise((resolve) => setTimeout(resolve, delay))
         delay *= backoffFactor
         continue
       }
 
-      if (isTimeout) {
+      if (timedOut) {
         logger.error(`[deliveryFetch] request timed out after ${timeoutMs}ms for URL: ${url}`)
         throw new Error(`Connection timeout after ${timeoutMs}ms`)
       }

@@ -154,7 +154,9 @@ export async function revokeSessionById(sessionId: string): Promise<boolean> {
 /**
  * Returns true if this TOTP counter (floor(unix_time / 30)) has already been
  * used for a successful admin login — indicating a replay attempt.
- * Fails open on DB error to avoid locking out the admin over a transient fault.
+ * Fails CLOSED on DB error: a transient fault causes the counter to be treated
+ * as already used, which may temporarily block admin login but eliminates the
+ * TOTP replay window that a fail-open policy would create on an induced timeout.
  */
 export async function isTotpCounterUsed(counter: number): Promise<boolean> {
   try {
@@ -165,8 +167,19 @@ export async function isTotpCounterUsed(counter: number): Promise<boolean> {
       .eq('counter', counter)
       .maybeSingle()
     return data !== null
-  } catch {
-    return false
+  } catch (err) {
+    // Fail CLOSED: treat DB errors as "counter already used" to prevent replay
+    // attacks that exploit induced timeouts. Alert operator so they can restore
+    // the replay-protection table before re-enabling admin logins.
+    logger.error('[sessions] isTotpCounterUsed: DB error — failing closed to prevent TOTP replay. Admin login is blocked until the replay-protection table is reachable.', {
+      error: err instanceof Error ? err.message : String(err),
+      counter,
+    })
+    void writeAuditLog({
+      action: 'totp_replay_table_unavailable',
+      meta: { counter, error: err instanceof Error ? err.message : String(err) },
+    })
+    return true
   }
 }
 

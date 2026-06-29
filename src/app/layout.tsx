@@ -18,14 +18,32 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net'),
   title: { default: 'StoreDz — Ouvrez votre boutique en ligne', template: '%s | StoreDz' },
   description: 'Créez votre boutique en ligne en Algérie. Livraison vers les 58 wilayas. 0% de commission.',
   keywords: ['algerie', 'algérie', 'الجزائر', 'boutique en ligne', 'vendeur', 'e-commerce'],
   manifest: '/manifest.json',
+  alternates: {
+    languages: {
+      'fr-DZ': process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net',
+      'ar-DZ': `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net'}?lang=ar`,
+    },
+  },
   openGraph: {
     siteName: 'StoreDz',
     locale: 'fr_DZ',
     type: 'website',
+    url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net',
+    title: 'StoreDz — Ouvrez votre boutique en ligne',
+    description: 'Créez votre boutique en ligne en Algérie. Livraison vers les 58 wilayas. 0% de commission.',
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'StoreDz' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@StoreDz',
+    title: 'StoreDz — Ouvrez votre boutique en ligne',
+    description: 'Créez votre boutique en ligne en Algérie. Livraison vers les 58 wilayas. 0% de commission.',
+    images: ['/og-default.png'],
   },
 }
 
@@ -51,6 +69,55 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           try{const t=JSON.parse(localStorage.getItem('theme-preference')||'{}').state?.theme;if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}
           if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}
         `}} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              {
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                '@id': 'https://ecom-dz.net/#organization',
+                name: 'StoreDz',
+                url: 'https://ecom-dz.net',
+                logo: {
+                  '@type': 'ImageObject',
+                  url: 'https://ecom-dz.net/logo.png',
+                },
+                contactPoint: [
+                  {
+                    '@type': 'ContactPoint',
+                    telephone: '+213-XXX-XXX-XXX',
+                    contactType: 'customer service',
+                    email: 'support@ecom-dz.net',
+                    areaServed: 'DZ',
+                    availableLanguage: ['French', 'Arabic'],
+                  },
+                ],
+                sameAs: [
+                  'https://www.facebook.com/StoreDz',
+                  'https://www.instagram.com/StoreDz',
+                  'https://twitter.com/StoreDz',
+                ],
+              },
+              {
+                '@context': 'https://schema.org',
+                '@type': 'WebSite',
+                '@id': 'https://ecom-dz.net/#website',
+                url: 'https://ecom-dz.net',
+                name: 'StoreDz',
+                publisher: { '@id': 'https://ecom-dz.net/#organization' },
+                potentialAction: {
+                  '@type': 'SearchAction',
+                  target: {
+                    '@type': 'EntryPoint',
+                    urlTemplate: 'https://ecom-dz.net/search?q={search_term_string}',
+                  },
+                  'query-input': 'required name=search_term_string',
+                },
+              },
+            ]),
+          }}
+        />
       </head>
       <body>
         <RTLWrapper>

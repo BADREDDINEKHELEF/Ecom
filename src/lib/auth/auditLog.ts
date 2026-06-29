@@ -20,6 +20,7 @@ export type AuditAction =
   | 'subscription_approved'
   | 'subscription_rejected'
   | 'subscription_updated'
+  | 'totp_replay_table_unavailable'
 
 export async function writeAuditLog({
   action,

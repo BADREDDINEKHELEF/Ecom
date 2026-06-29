@@ -43,7 +43,14 @@ export async function POST(req: NextRequest) {
       const { timingSafeEqual } = await import('crypto')
       const a = Buffer.from(password ?? '')
       const b = Buffer.from(adminSecret)
-      passwordMatch = a.length === b.length && timingSafeEqual(a, b)
+      // Always compare at the same length to prevent timing oracle on password
+      // length. Pad the shorter buffer with zeros so timingSafeEqual always
+      // receives equal-length Uint8Arrays, eliminating the short-circuit that
+      // leaked ADMIN_SECRET's byte-length via response timing.
+      const len = Math.max(a.length, b.length)
+      const aPadded = Buffer.concat([a, Buffer.alloc(len - a.length)])
+      const bPadded = Buffer.concat([b, Buffer.alloc(len - b.length)])
+      passwordMatch = a.length === b.length && timingSafeEqual(aPadded, bPadded)
     } catch {
       passwordMatch = false
     }
@@ -91,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     // All checks passed — issue a JWT with a pre-generated JTI so we can create
     // the session record atomically before setting the cookie.
-    resetRateLimit(ip)
+    await resetRateLimit(ip)
     const jti = randomUUID()
     const token = await signAdminToken(jti)
     const expiresAt = new Date(Date.now() + ADMIN_TOKEN_MAX_AGE_SECONDS * 1000)

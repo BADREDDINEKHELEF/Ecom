@@ -131,9 +131,21 @@ export async function POST(req: NextRequest) {
     if (vData) {
       vendor = vData
     } else {
-      // Fallback: look up in auth.users by email using admin client listUsers
-      const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-      const user = authData?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      // Fallback: look up in auth.users by email.
+      // getUserByEmail is unavailable in this SDK version, so query the GoTrue
+      // admin REST endpoint with an email filter — this is an O(1) indexed
+      // lookup and avoids scanning the full users table.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+      const userLookupRes = await fetch(
+        `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}&per_page=1`,
+        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+      )
+      let user: { id: string } | null = null
+      if (userLookupRes.ok) {
+        const userLookupJson = await userLookupRes.json() as { users?: { id: string; email?: string }[] }
+        user = userLookupJson?.users?.[0] ?? null
+      }
       if (user) {
         const { data: vFallback } = await supabase
           .from('vendors')

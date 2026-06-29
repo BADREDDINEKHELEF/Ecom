@@ -48,6 +48,8 @@ export default function ProductColorGallery({ mainImages, colorVariants, name }:
                 key={v.name}
                 type="button"
                 title={v.name}
+                aria-label={v.name}
+                aria-pressed={selected === v.name}
                 onClick={() => handleSelect(v.name)}
                 className={`w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 ${
                   selected === v.name

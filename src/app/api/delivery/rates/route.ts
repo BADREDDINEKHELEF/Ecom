@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     const isLiveProvider = provider !== 'manual' && provider !== 'yassir'
 
     try {
-      const rate = await dispatchGetRate(provider, wilaya, config, false)
+      const rate = await dispatchGetRate(provider, wilaya, config, true)
 
       if (!rate) {
         if (isLiveProvider) {

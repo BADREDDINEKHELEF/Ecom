@@ -105,7 +105,7 @@ export default function SellerSubscriptionPage() {
     lang === 'ar' ? p.name_ar : lang === 'fr' ? p.name_fr : p.name_en
 
   const planFeatures = (p: SubscriptionPlan) =>
-    lang === 'ar' ? p.features_ar : lang === 'fr' ? p.features_fr : p.features_en
+    (lang === 'ar' ? p.features_ar : lang === 'fr' ? p.features_fr : p.features_en) ?? []
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

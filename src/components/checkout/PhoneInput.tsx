@@ -83,7 +83,7 @@ export default function PhoneInput({
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}
-          pattern="(213[5-7]|0[5-7])[0-9]{8}"
+          pattern="(\+?213[5-7]|0[5-7])[0-9]{8}"
           aria-invalid={hasError}
           aria-describedby={hasError ? `${id}-error` : undefined}
           className="flex-1 py-3 text-base bg-transparent focus:outline-none placeholder:text-gray-300 min-w-0"

@@ -118,6 +118,10 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/seller/team — change a member's role
 export async function PATCH(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkSellerRateLimit(ip, 'team_update', 20, 60)
+  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+
   const result = await requireVendorPermission(req, 'members:invite')
   if (result instanceof NextResponse) return result
   const { ctx } = result
@@ -129,8 +133,6 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = UpdateRoleSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
-
-  const ip = getClientIp(req)
 
   try {
     const admin = createAdminClient()

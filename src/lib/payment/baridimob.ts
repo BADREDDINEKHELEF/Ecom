@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'crypto'
 import { logger } from '@/lib/logger'
 
 export interface BaridiMobPaymentResult {
@@ -23,8 +24,53 @@ interface BaridiMobStatusResponse {
   paid?: boolean
 }
 
+// ── Strict type guard for the status response ────────────────────────────────
+function assertBaridiMobStatusResponse(data: unknown): asserts data is BaridiMobStatusResponse {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('BaridiMob status response is not an object')
+  }
+  const d = data as Record<string, unknown>
+  if (typeof d.status !== 'string') {
+    throw new Error(`BaridiMob status response missing required string field 'status'; got ${JSON.stringify(d)}`)
+  }
+  if ('paid' in d && typeof d.paid !== 'boolean' && typeof d.paid !== 'undefined') {
+    throw new Error(`BaridiMob status response field 'paid' has unexpected type ${typeof d.paid}`)
+  }
+}
+
 export function baridimobConfigured(): boolean {
-  return !!(process.env.BARIDIMOB_MERCHANT_ID && process.env.BARIDIMOB_API_KEY && process.env.BARIDIMOB_BASE_URL)
+  return !!(
+    process.env.BARIDIMOB_MERCHANT_ID &&
+    process.env.BARIDIMOB_API_KEY &&
+    process.env.BARIDIMOB_BASE_URL &&
+    process.env.BARIDIMOB_WEBHOOK_SECRET
+  )
+}
+
+// ── HMAC-SHA256 webhook signature verification ───────────────────────────────
+// Expected header: X-BaridiMob-Signature: sha256=<hex-digest>
+// Signature is computed over the raw request body bytes.
+export function verifyBaridiMobWebhook(rawBody: Buffer, signatureHeader: string | null): boolean {
+  const secret = process.env.BARIDIMOB_WEBHOOK_SECRET
+  if (!secret) {
+    logger.warn('[baridimob] BARIDIMOB_WEBHOOK_SECRET not set — rejecting webhook')
+    return false
+  }
+  if (!signatureHeader) {
+    logger.warn('[baridimob] webhook missing X-BaridiMob-Signature header')
+    return false
+  }
+  // Support "sha256=<hex>" prefix used by many gateway SDKs.
+  const hexReceived = signatureHeader.startsWith('sha256=')
+    ? signatureHeader.slice(7)
+    : signatureHeader
+  const expected = createHmac('sha256', secret).update(rawBody).digest('hex')
+  try {
+    return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(hexReceived, 'hex'))
+  } catch {
+    // timingSafeEqual throws when the two buffers differ in length.
+    return false
+  }
 }
 
 export async function baridimobInitiatePayment(params: {
@@ -106,13 +152,28 @@ export async function baridimobVerifyPayment(paymentId: string): Promise<{ paid:
     throw new Error(`BaridiMob status check failed: ${res.status}`)
   }
 
-  let data: BaridiMobStatusResponse
+  let raw: unknown
   try {
-    data = await res.json()
+    raw = await res.json()
   } catch {
     logger.error('[baridimob] verifyPayment invalid JSON response', { paymentId })
     throw new Error('BaridiMob status check failed: invalid response')
   }
 
-  return { paid: data.status === 'paid' || data.paid === true, status: data.status }
+  // Fix: strict type guard — throws on unexpected shapes rather than silently
+  // returning paid: false, which would hide integration/API shape mismatches.
+  try {
+    assertBaridiMobStatusResponse(raw)
+  } catch (err) {
+    logger.error('[baridimob] verifyPayment unexpected response shape', {
+      paymentId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    throw new Error('BaridiMob status check failed: unexpected response shape')
+  }
+  const data: BaridiMobStatusResponse = raw
+
+  // Fix: case-insensitive comparison so 'PAID', 'Paid', 'paid' all match.
+  const isPaid = data.status?.toLowerCase() === 'paid' || data.paid === true
+  return { paid: isPaid, status: data.status }
 }

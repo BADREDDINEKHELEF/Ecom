@@ -7,7 +7,7 @@ import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured, zrTrack, zrL
 import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured, colivraisonTrack, colivraisonListParcels, colivraisonGetRateWithToken } from './colivraison'
 import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels, maystroGetRateWithToken } from './maystro'
 import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels, rexGetRateWithToken } from './rex'
-import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
+import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels, YassirSenderInfo } from './yassir'
 import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
 import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels, apecGetRateWithCreds } from './apec'
 
@@ -25,6 +25,9 @@ type VendorDispatchCreds = {
   maystro_token?: string
   rex_token?: string
   yassir_api_key?: string
+  yassir_sender_name?: string
+  yassir_sender_phone?: string
+  yassir_sender_address?: string
   ecom_api_key?: string
   ecom_api_token?: string
   apec_api_id?: string
@@ -190,11 +193,13 @@ export function normalizeProviderStatus(raw: unknown): string {
   if (['in_transit', 'en_transit', 'en_route', 'transit', 'dispatched', 'shipped', '2'].includes(s)) return 'in_transit'
   if (['picked_up', 'enlevé', 'enleve', 'collected', 'pris_en_charge', 'ramassé', 'ramasse', '1'].includes(s)) return 'picked_up'
   if (['failed', 'echec', 'échoué', 'failed_delivery'].includes(s)) return 'failed'
-  if (['cancelled', 'annulé', 'annule', 'canceled'].includes(s)) return 'cancelled'
+  if (['cancelled', 'annulé', 'annule', 'canceled', '7'].includes(s)) return 'cancelled'
   if (['pending', 'waiting', 'wait_for_pickup', 'created', '0'].includes(s)) return 'pending'
-  // Unknown status — log so new provider status codes can be added above
-  logger.warn(`[normalizeProviderStatus] unrecognized status: "${raw}" — treating as in_transit`)
-  return 'in_transit'
+  // Unknown status — log so new provider status codes can be added above.
+  // Return 'unknown' rather than 'in_transit' so the cron does not poll indefinitely
+  // for shipments whose terminal state it cannot classify.
+  logger.warn(`[normalizeProviderStatus] unrecognized status: "${raw}" — returning 'unknown'`)
+  return 'unknown'
 }
 
 export interface TrackResult {
@@ -301,7 +306,8 @@ export async function dispatchTrack(
       default:
         return null
     }
-  } catch {
+  } catch (err) {
+    logger.warn('[dispatchTrack]', { provider, tracking: trackingNumber, error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -425,7 +431,8 @@ export async function dispatchGetStats(
     const parcels = extractParcelArray(data)
     if (parcels.length === 0) return null
     return countStatuses(parcels)
-  } catch {
+  } catch (err) {
+    logger.warn('[dispatchGetStats]', { provider, error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -535,7 +542,8 @@ export async function dispatchGetRate(
       default:
         return null
     }
-  } catch {
+  } catch (err) {
+    logger.warn('[dispatchGetRate]', { provider, wilaya: wilayaName, error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }

@@ -17,10 +17,10 @@ function colorImage(product: { images: string[]; imageColors?: string[]; colorVa
 }
 
 export default function CartContent() {
-  const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCartStore()
+  const { items, removeItem, updateQuantity, clearCart } = useCartStore()
   const t = useT()
-  const cartTotal = total()
-  const count = itemCount()
+  const cartTotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+  const count = items.reduce((sum, i) => sum + i.quantity, 0)
 
   if (items.length === 0) {
     return (

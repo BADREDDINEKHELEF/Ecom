@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
-import { getVendorOrders, updateOrderStatus } from '@/lib/supabase/orders'
+import { getVendorOrders, updateVendorOrderStatus } from '@/lib/supabase/orders'
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    await updateOrderStatus(orderId, status)
+    await updateVendorOrderStatus(orderId, vendor.id, status)
     return NextResponse.json({ ok: true, orderId, status })
   } catch (err) {
     logger.error('[PATCH /api/seller/orders]', { error: err instanceof Error ? err.message : String(err) })

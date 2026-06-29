@@ -56,7 +56,7 @@ export async function sendPasswordResetEmail(opts: {
 }): Promise<void> {
   if (!opts.resetLink.startsWith('https://')) {
     logger.error('[email] sendPasswordResetEmail: resetLink must start with https://')
-    return
+    throw new Error('resetLink must start with https://')
   }
   await sendEmail(
     opts.to,
@@ -146,6 +146,40 @@ export async function sendShippingUpdateEmail(opts: {
   }
 }
 
+export async function sendOrderPendingPaymentEmail(opts: {
+  to: string
+  fullName: string
+  orderId: string
+  total: number
+  wilaya: string
+  itemCount: number
+  isStopDesk?: boolean
+}): Promise<void> {
+  try {
+    await sendEmail(
+      opts.to,
+      `StoreDz — Commande #${opts.orderId.slice(0, 8).toUpperCase()} reçue, en attente de paiement`,
+      `
+      <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px">
+        <h2 style="color:#f59e0b">Commande reçue — en attente de paiement</h2>
+        <p>Bonjour <strong>${esc(opts.fullName)}</strong>,</p>
+        <p>Votre commande de <strong>${opts.itemCount} article(s)</strong> a bien été enregistrée et est en attente de validation du paiement.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr><td style="color:#6b7280;padding:4px 0">Numéro de commande</td><td><strong>#${opts.orderId.slice(0, 8).toUpperCase()}</strong></td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0">Wilaya</td><td><strong>${esc(opts.wilaya)}</strong></td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0">Mode de livraison</td><td><strong>${opts.isStopDesk ? 'Point Relais (Stop Desk)' : 'Livraison à domicile'}</strong></td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0">Montant</td><td><strong>${opts.total.toLocaleString('fr-DZ')} DA</strong></td></tr>
+        </table>
+        <p style="color:#6b7280">Votre commande sera confirmée dès que le paiement aura été validé. Si le paiement n'aboutit pas, votre commande sera automatiquement annulée.</p>
+        <p style="color:#9ca3af;font-size:12px;margin-top:32px">StoreDz — La marketplace algérienne</p>
+      </div>
+      `,
+    )
+  } catch (err) {
+    logger.error('[email] sendOrderPendingPaymentEmail failed', { error: err instanceof Error ? err.message : String(err) })
+  }
+}
+
 export async function sendAbandonedCartEmail(opts: {
   to: string
   name: string
@@ -160,7 +194,7 @@ export async function sendAbandonedCartEmail(opts: {
         <h2 style="color:#f59e0b">Votre panier vous attend !</h2>
         <p>Bonjour ${opts.name ? `<strong>${esc(opts.name)}</strong>` : ''},</p>
         <p>Vous avez laissé des articles dans votre panier pour un total de <strong>${opts.cartTotal.toLocaleString('fr-DZ')} DA</strong>.</p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://storedz.dz'}/checkout" style="display:inline-block;margin-top:16px;background:#059669;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">Finaliser ma commande</a>
+        <a href="${esc(process.env.NEXT_PUBLIC_APP_URL ?? 'https://storedz.dz')}/checkout" style="display:inline-block;margin-top:16px;background:#059669;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">Finaliser ma commande</a>
         <p style="color:#9ca3af;font-size:12px;margin-top:32px">StoreDz — La marketplace algérienne</p>
       </div>
       `,

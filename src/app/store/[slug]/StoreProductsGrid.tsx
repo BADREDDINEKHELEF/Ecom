@@ -61,6 +61,7 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={ts.searchPlaceholder}
+            aria-label={ts.searchPlaceholder}
             className="w-full pl-11 pr-10 py-3 bg-[#f5f5f7] rounded-2xl text-sm text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:ring-2 focus:ring-black/10"
           />
           {search && (
@@ -76,10 +77,14 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
 
       {/* Pill tabs — niches + filters */}
       {tabs.length > 1 && (
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        <div role="tablist" className="flex gap-2 mb-8 overflow-x-auto pb-1 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
           {tabs.map(t => (
             <button
               key={t.id}
+              id={`tab-${t.id}`}
+              role="tab"
+              aria-selected={tab === t.id}
+              aria-controls="products-panel"
               onClick={() => setTab(t.id)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                 tab === t.id
@@ -96,7 +101,7 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
       )}
 
       {visible.length === 0 ? (
-        <div className="text-center py-20 text-[#86868b]">
+        <div id="products-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="text-center py-20 text-[#86868b]">
           <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
           <p className="font-medium">
             {search ? ts.noResults.replace('{q}', search) : ts.noCategory}
@@ -108,7 +113,7 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10">
+        <div id="products-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10">
           {visible.map(product => (
             <ProductCard key={product.id} product={product} accent={accent} storeSlug={storeSlug} />
           ))}
@@ -208,7 +213,7 @@ function ProductCard({
         {product.stock > 0 && (
           <button
             onClick={handleQuickAdd}
-            aria-label={added ? 'Ajouté' : 'Ajouter au panier'}
+            aria-label={added ? ts.addedToCart : ts.addToCartLabel}
             className={`absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-95 ${
               added
                 ? 'bg-emerald-500 text-white opacity-100 scale-100'

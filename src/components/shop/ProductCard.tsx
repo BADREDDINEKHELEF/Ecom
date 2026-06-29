@@ -132,11 +132,9 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
       </Link>
 
       <div className="p-4">
-        <Link href={productHref}>
-          <h3 className="text-gray-900 font-semibold text-sm leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-2">
-            {product.name}
-          </h3>
-        </Link>
+        <h3 className="text-gray-900 font-semibold text-sm leading-snug line-clamp-2 mb-2">
+          {product.name}
+        </h3>
 
         <StarRating rating={product.rating} reviewCount={product.reviewCount} className="mb-2" />
 

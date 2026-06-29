@@ -10,8 +10,6 @@ try {
   logger.warn('[smtp] dns.setServers failed, using default resolver', { error: err instanceof Error ? err.message : String(err) })
 }
 
-let transporter: nodemailer.Transporter | null = null
-
 function stripQuotes(s: string): string {
   return s.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1')
 }
@@ -126,6 +124,10 @@ async function sendWithRetry(
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err))
       const msg = lastError.message
+      const isAuthError = msg.includes('EAUTH') || msg.includes('535') || msg.includes('Invalid credentials')
+      if (isAuthError) {
+        throw new Error(`SMTP authentication failed — check SMTP_USER and SMTP_PASS: ${msg}`)
+      }
       const isDnsError = msg.includes('EBUSY') || msg.includes('getaddrinfo') || msg.includes('ENOTFOUND') || msg.includes('EAI_AGAIN')
 
       if (attempt < maxRetries && isDnsError) {
@@ -148,9 +150,7 @@ export async function sendEmailViaSmtp(to: string, subject: string, html: string
     throw err
   }
 
-  if (!transporter) {
-    transporter = createTransporter(config)
-  }
+  const transporter = createTransporter(config)
 
   const mailOptions = {
     from: `"StoreDz" <${config.from}>`,

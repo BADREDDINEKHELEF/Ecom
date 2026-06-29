@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react'
 
@@ -12,9 +12,21 @@ interface Props {
 export default function ProductGallery({ images, name }: Props) {
   const [active, setActive] = useState(0)
   const [zoomed, setZoomed] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const prev = () => setActive(i => Math.max(0, i - 1))
   const next = () => setActive(i => Math.min(images.length - 1, i + 1))
+
+  // Move focus to close button when lightbox opens; handle Escape to close
+  useEffect(() => {
+    if (!zoomed) return
+    closeButtonRef.current?.focus()
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomed(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [zoomed])
 
   if (images.length === 0) {
     return (
@@ -49,6 +61,7 @@ export default function ProductGallery({ images, name }: Props) {
         {images.length > 1 && (
           <>
             <button
+              aria-label="Image précédente"
               onClick={e => { e.stopPropagation(); prev() }}
               disabled={active === 0}
               className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm disabled:opacity-0 hover:bg-white transition-all duration-200"
@@ -56,6 +69,7 @@ export default function ProductGallery({ images, name }: Props) {
               <ChevronLeft className="w-4 h-4 text-[#1d1d1f]" />
             </button>
             <button
+              aria-label="Image suivante"
               onClick={e => { e.stopPropagation(); next() }}
               disabled={active === images.length - 1}
               className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm disabled:opacity-0 hover:bg-white transition-all duration-200"
@@ -92,7 +106,7 @@ export default function ProductGallery({ images, name }: Props) {
                   : 'opacity-50 hover:opacity-80'
               }`}
             >
-              <Image src={img} alt="" width={72} height={72} className="object-cover w-full h-full" />
+              <Image src={img} alt={`${name} — photo ${i + 1}`} width={72} height={72} className="object-cover w-full h-full" />
             </button>
           ))}
         </div>
@@ -101,11 +115,16 @@ export default function ProductGallery({ images, name }: Props) {
       {/* Lightbox */}
       {zoomed && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Galerie d'images"
           className="fixed inset-0 z-[999] bg-black/96 flex items-center justify-center"
           onClick={() => setZoomed(false)}
         >
           {/* Close */}
           <button
+            ref={closeButtonRef}
+            aria-label="Fermer"
             onClick={() => setZoomed(false)}
             className="absolute top-5 right-5 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
           >
@@ -115,6 +134,7 @@ export default function ProductGallery({ images, name }: Props) {
           {images.length > 1 && (
             <>
               <button
+                aria-label="Image précédente"
                 onClick={e => { e.stopPropagation(); prev() }}
                 disabled={active === 0}
                 className="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
@@ -122,6 +142,7 @@ export default function ProductGallery({ images, name }: Props) {
                 <ChevronLeft className="w-5 h-5 text-white" />
               </button>
               <button
+                aria-label="Image suivante"
                 onClick={e => { e.stopPropagation(); next() }}
                 disabled={active === images.length - 1}
                 className="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"

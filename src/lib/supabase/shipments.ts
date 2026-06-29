@@ -48,7 +48,7 @@ export async function getShipmentByOrderId(orderId: string): Promise<ShipmentRow
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('shipments')
-    .select('*')
+    .select('id,order_id,vendor_id,provider,tracking_number,label_url,status,status_detail,wilaya,city,recipient_name,recipient_phone,declared_value,delivery_cost,notes,created_at,updated_at,delivered_at')
     .eq('order_id', orderId)
     .maybeSingle()
   return (data as ShipmentRow) ?? null
@@ -98,19 +98,27 @@ export async function updateShipmentStatus(
   if (detail)            updates.status_detail = detail
   if (status === 'delivered') updates.delivered_at = new Date().toISOString()
 
-  await supabase.from('shipments').update(updates).eq('id', id)
-  await supabase.from('shipment_events').insert({
-    shipment_id: id,
-    status,
-    detail: detail ?? null,
-  })
+  const { error: updateError } = await supabase
+    .from('shipments')
+    .update(updates)
+    .eq('id', id)
+  if (updateError) throw updateError
+
+  const { error: eventError } = await supabase
+    .from('shipment_events')
+    .insert({
+      shipment_id: id,
+      status,
+      detail: detail ?? null,
+    })
+  if (eventError) throw eventError
 }
 
 export async function getShipmentEvents(shipmentId: string): Promise<ShipmentEvent[]> {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('shipment_events')
-    .select('*')
+    .select('id,shipment_id,status,detail,location,created_at')
     .eq('shipment_id', shipmentId)
     .order('created_at', { ascending: false })
   return (data ?? []) as ShipmentEvent[]

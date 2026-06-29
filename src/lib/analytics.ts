@@ -11,7 +11,7 @@ declare global {
     gtag?:     (...args: unknown[]) => void
     dataLayer?: unknown[]
     __pixel?:  (event: string, meta?: Record<string, unknown>) => void
-    ttq?:      { track: (event: string, params?: Record<string, unknown>) => void; page: () => void }
+    ttq?:      { track: (event: string, params?: Record<string, unknown>, options?: Record<string, unknown>) => void; page: () => void }
   }
 }
 
@@ -21,8 +21,8 @@ function _gtag(...args: unknown[]) {
 function _pixel(event: string, meta?: Record<string, unknown>) {
   try { if (typeof window !== 'undefined') window.__pixel?.(event, meta) } catch {}
 }
-function _ttq(event: string, params?: Record<string, unknown>) {
-  try { if (typeof window !== 'undefined') window.ttq?.track(event, params) } catch {}
+function _ttq(event: string, params?: Record<string, unknown>, options?: Record<string, unknown>) {
+  try { if (typeof window !== 'undefined') window.ttq?.track(event, params, options) } catch {}
 }
 
 // ── Events ─────────────────────────────────────────────────────────────────
@@ -107,10 +107,15 @@ export function trackPurchase(order: {
     product_ids:    order.items.map(i => i.id),
   })
   // TikTok purchase standard event is 'CompletePayment' (not 'PlaceAnOrder')
-  _ttq('CompletePayment', {
-    value:    order.total,
-    currency: 'DZD',
-    event_id: order.transactionId,
-    contents: order.items.map(i => ({ content_id: i.id, content_name: i.name, quantity: i.quantity, price: i.price })),
-  })
+  // event_id must be in the third `options` argument (not inside properties) for
+  // server-side deduplication per TikTok Pixel JS SDK spec: ttq.track(event, props, options)
+  _ttq(
+    'CompletePayment',
+    {
+      value:    order.total,
+      currency: 'DZD',
+      contents: order.items.map(i => ({ content_id: i.id, content_name: i.name, quantity: i.quantity, price: i.price })),
+    },
+    { event_id: order.transactionId },
+  )
 }

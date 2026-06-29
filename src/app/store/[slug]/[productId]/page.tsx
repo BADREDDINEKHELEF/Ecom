@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, BadgeCheck, Shield, Truck, RotateCcw, Star, Package, Eye } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Shield, Truck, RotateCcw, Star, Package } from 'lucide-react'
 import { getProductById } from '@/lib/supabase/products'
 import { getVendorBySlug } from '@/lib/supabase/vendors'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -9,11 +9,14 @@ import { dbToProduct } from '@/lib/supabase/products'
 import { formatPrice } from '@/lib/utils'
 import { Product } from '@/types'
 import ProductColorGallery from './ProductColorGallery'
+import LiveViewers from './LiveViewers'
 import StoreProductClient from './StoreProductClient'
 import ProductShareButtons from './ProductShareButtons'
 import TrackViewContent from '@/components/analytics/TrackViewContent'
 import { getServerT } from '@/lib/i18n/server'
 import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net'
 
 interface PageProps {
   params: Promise<{ slug: string; productId: string }>
@@ -49,44 +52,101 @@ export async function generateMetadata({ params }: PageProps) {
   const product = await getProductById(productId)
   const vendor  = await getVendorBySlug(slug)
   if (!product || !vendor) return { title: 'Produit introuvable' }
+  const canonicalUrl = `${SITE_URL}/store/${slug}/${productId}`
+  const description  = product.metaDescription ?? product.description?.slice(0, 160) ?? product.name
   return {
     title:       product.metaTitle ?? `${product.name} — ${vendor.store_name}`,
-    description: product.metaDescription ?? product.description?.slice(0, 160) ?? product.name,
+    description,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
-      title:  product.name,
-      images: product.images[0] ? [product.images[0]] : [],
+      type:        'product' as const,
+      url:         canonicalUrl,
+      title:       product.name,
+      description,
+      locale:      'fr_DZ',
+      siteName:    'StoreDz',
+      images:      product.images[0] ? [{ url: product.images[0], alt: product.name }] : [],
     },
   }
 }
 
 export default async function StoreProductPage({ params }: PageProps) {
   const { slug, productId } = await params
-  const [product, vendor, t] = await Promise.all([
+  const [product, vendor] = await Promise.all([
     getProductById(productId),
     getVendorBySlug(slug),
+  ])
+  if (!product || !vendor) notFound()
+
+  const [related, t] = await Promise.all([
+    getRelatedProducts(vendor.id, productId),
     getServerT(),
   ])
   const ts = t.store
-  if (!product || !vendor) notFound()
 
   const v              = vendor as typeof vendor & VendorExt
   const accent         = v.accent_color ?? '#4f46e5'
   const vendorWhatsApp = v.social_whatsapp || v.phone || null
-
-  const related = await getRelatedProducts(vendor.id, productId)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
     ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
     : 0
   const savings  = hasDiscount ? product.comparePrice! - product.price : 0
-  // Deterministic per product per day — same value for the same product all day, changes daily
-  const dayOfYear = Math.floor(Date.now() / 86_400_000)
-  const seed      = productId.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xffff, dayOfYear)
-  const viewers   = 4 + (seed % 14)  // 4–17
+
+  const canonicalUrl  = `${SITE_URL}/store/${slug}/${productId}`
+  const storeUrl      = `${SITE_URL}/store/${slug}`
+  const availability  = product.stock > 0
+    ? 'https://schema.org/InStock'
+    : 'https://schema.org/OutOfStock'
+
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type':    'Product',
+    name:        product.name,
+    description: product.description ?? product.name,
+    image:       product.images,
+    url:         canonicalUrl,
+    brand: {
+      '@type': 'Brand',
+      name:     vendor.store_name,
+    },
+    offers: {
+      '@type':        'Offer',
+      price:           product.price,
+      priceCurrency:  'DZD',
+      availability,
+      url:             canonicalUrl,
+    },
+    ...(product.rating > 0 && {
+      aggregateRating: {
+        '@type':       'AggregateRating',
+        ratingValue:    product.rating,
+        reviewCount:    product.reviewCount ?? 1,
+      },
+    }),
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type':    'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'StoreDz',           item: SITE_URL   },
+      { '@type': 'ListItem', position: 2, name: vendor.store_name,   item: storeUrl   },
+      { '@type': 'ListItem', position: 3, name: product.name,        item: canonicalUrl },
+    ],
+  }
 
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <VendorAnalyticsScripts
         metaPixelId={v.meta_pixel_id}
         gtagId={v.gtag_id}
@@ -171,7 +231,7 @@ export default async function StoreProductPage({ params }: PageProps) {
                     ))}
                   </div>
                   <span className="text-sm font-semibold text-[#1d1d1f]">{product.rating.toFixed(1)}</span>
-                  <span className="text-sm text-[#86868b]">({product.reviewCount} avis)</span>
+                  <span className="text-sm text-[#86868b]">{ts.reviewCount.replace('{n}', String(product.reviewCount))}</span>
                 </div>
               )}
             </div>
@@ -198,22 +258,13 @@ export default async function StoreProductPage({ params }: PageProps) {
               </div>
               {hasDiscount && savings > 0 && (
                 <p className="text-base font-semibold text-emerald-600 mt-1.5">
-                  🎉 Vous économisez {formatPrice(savings)}
+                  {ts.savings.replace('{n}', formatPrice(savings))}
                 </p>
               )}
             </div>
 
-            {/* Social proof — live viewers */}
-            <div className="flex items-center gap-2 text-sm text-[#6e6e73]">
-              <span className="relative flex h-2 w-2 flex-shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
-              <Eye className="w-4 h-4 text-[#86868b]" />
-              <span>
-                {ts.viewersCount.replace('{n}', String(viewers))}
-              </span>
-            </div>
+            {/* Social proof — live viewers (client-only to avoid SSR/CSR hydration mismatch) */}
+            <LiveViewers productId={productId} />
 
             {/* Stock bar */}
             {product.stock > 0 && product.stock <= 15 && (

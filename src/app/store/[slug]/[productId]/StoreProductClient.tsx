@@ -129,6 +129,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
         <div className="flex items-center bg-[#f5f5f7] rounded-2xl overflow-hidden">
           <button
             onClick={() => setQty(q => Math.max(1, q - 1))}
+            aria-label={ts.decreaseQty ?? 'Diminuer la quantité'}
             className="w-10 h-10 flex items-center justify-center text-[#1d1d1f] hover:bg-[#e8e8ed] transition-colors"
           >
             <Minus className="w-3.5 h-3.5" />
@@ -136,6 +137,7 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
           <span className="w-10 text-center text-sm font-bold text-[#1d1d1f] tabular-nums">{qty}</span>
           <button
             onClick={() => setQty(q => Math.min(product.stock, q + 1))}
+            aria-label={ts.increaseQty ?? 'Augmenter la quantité'}
             className="w-10 h-10 flex items-center justify-center text-[#1d1d1f] hover:bg-[#e8e8ed] transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />

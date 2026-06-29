@@ -172,39 +172,32 @@ export async function saveVendorDeliveryConfig(
 ): Promise<void> {
   const supabase = createAdminClient()
   const encrypted = encryptConfigCredentials(config)
+  const now = new Date().toISOString()
 
-  const { data: existing } = await supabase
+  const { error } = await supabase
     .from('vendor_delivery_config')
-    .select('id')
-    .eq('vendor_id', vendorId)
-    .maybeSingle()
+    .upsert(
+      { vendor_id: vendorId, ...encrypted, updated_at: now },
+      { onConflict: 'vendor_id' }
+    )
 
-  if (existing) {
-    await supabase
-      .from('vendor_delivery_config')
-      .update({ ...encrypted, updated_at: new Date().toISOString() })
-      .eq('vendor_id', vendorId)
-  } else {
-    await supabase
-      .from('vendor_delivery_config')
-      .insert({ vendor_id: vendorId, ...encrypted, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-  }
+  if (error) throw error
 }
 
 // ── Subscription Types ───────────────────────────────────────────────────
 export interface SubscriptionPlan {
   id:                 string
   name:               string
-  name_ar:            string
-  name_fr:            string
-  name_en:            string
+  name_ar?:           string
+  name_fr?:           string
+  name_en?:           string
   price:              number
   price_dzd:          number
   billing_period_days: number
   features:           string[]
-  features_ar:        string[]
-  features_fr:        string[]
-  features_en:        string[]
+  features_ar?:       string[]
+  features_fr?:       string[]
+  features_en?:       string[]
   is_active:          boolean
   created_at:         string
 }
@@ -350,9 +343,9 @@ export async function getAllVendorSubscriptions(opts: {
     .order('created_at', { ascending: false })
     .range(from, to)
   if (opts.status) query = query.eq('status', opts.status)
-  const { data } = await query
+  const { data, count } = await query
   const subscriptions = (data ?? []) as VendorSubscription[]
-  return { subscriptions, hasMore: false }
+  return { subscriptions, hasMore: (count ?? 0) > to + 1 }
 }
 
 export async function updateVendorSubscription(

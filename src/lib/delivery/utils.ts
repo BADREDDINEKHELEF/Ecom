@@ -64,15 +64,14 @@ export function findWilayaRow(
 
   if (rows && Array.isArray(rows)) {
     const target = wilayaName.toLowerCase().trim()
-    const found = rows.find((r: unknown) => {
-      if (!r || typeof r !== 'object') return false
+
+    const getName = (r: unknown): string => {
+      if (!r || typeof r !== 'object') return ''
       const rowObj = r as Record<string, unknown>
-      
       const wilayaInfoName = typeof rowObj.wilaya_info === 'object' && rowObj.wilaya_info !== null
         ? String((rowObj.wilaya_info as Record<string, unknown>).name ?? '')
         : ''
-
-      const name = String(
+      return String(
         rowObj.wilaya ??
         rowObj.wilaya_name ??
         rowObj.name ??
@@ -80,9 +79,28 @@ export function findWilayaRow(
         wilayaInfoName ??
         ''
       ).toLowerCase().trim()
-      return name === target || name.includes(target) || target.includes(name)
+    }
+
+    // Prefer exact match first to avoid silent mismatch on fuzzy candidates.
+    const exactMatch = rows.find((r: unknown) => getName(r) === target)
+    if (exactMatch) return exactMatch as Record<string, unknown>
+
+    // Fall back to fuzzy (substring) match but log a warning so callers are aware.
+    const fuzzyMatch = rows.find((r: unknown) => {
+      const name = getName(r)
+      return name.includes(target) || target.includes(name)
     })
-    return (found || rows[0]) as Record<string, unknown>
+    if (fuzzyMatch) {
+      console.warn(
+        `[findWilayaRow] Fuzzy match used for wilaya "${wilayaName}" — ` +
+        `matched "${getName(fuzzyMatch)}" instead of an exact name. ` +
+        `Consider normalising spelling/accents.`
+      )
+      return fuzzyMatch as Record<string, unknown>
+    }
+
+    // No match found — return null so callers can fall back to static pricing.
+    return null
   }
   
   const single = d.data ?? d.results ?? data

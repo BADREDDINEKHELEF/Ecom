@@ -73,6 +73,7 @@ export interface CreateOrderInput {
   deliveryType?:      'home' | 'office' | 'stop_desk'
   stopDeskCause?:     string | null
   email?:             string | null
+  idempotencyKey?:    string | null
   items: {
     productId:     string
     productName:   string
@@ -87,6 +88,8 @@ export interface CreateOrderResult {
   id:                string
   total:             number
   giftCardDeduction: number
+  /** True when the order already existed and was looked up via idempotency_key. */
+  isDuplicate?:      boolean
 }
 
 /**
@@ -215,17 +218,33 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
   const subtotalAfterDiscounts = computedSubtotal + shippingCost - discountAmount - pointsDeduction
 
-  // Server-side gift card validation and deduction calculation (H-01 fix)
+  // Server-side gift card validation and atomic deduction (Bug-2 fix).
+  // We call claim_gift_card RPC which executes:
+  //   UPDATE gift_cards SET balance = balance - $amount
+  //   WHERE code = $code AND balance >= $amount AND is_active AND (expires_at IS NULL OR expires_at > now())
+  // and returns the actual amount deducted (0 if the card could not cover it or is invalid).
+  // This eliminates the TOCTOU race where two concurrent checkouts could both read the same
+  // positive balance and each apply the full deduction.
   let giftCardDeduction = 0
   if (input.giftCardCode && subtotalAfterDiscounts > 0) {
+    // First read to determine deduction amount (still needed to compute total before claiming)
     const { data: gc } = await supabase
       .from('gift_cards')
       .select('balance, is_active, expires_at')
       .eq('code', input.giftCardCode)
       .single()
 
-    if (gc && gc.is_active && (!gc.expires_at || new Date(gc.expires_at) > new Date())) {
-      giftCardDeduction = Math.min(gc.balance, subtotalAfterDiscounts)
+    if (gc && gc.is_active && (!gc.expires_at || new Date(gc.expires_at) > new Date()) && gc.balance > 0) {
+      const tentativeDeduction = Math.min(gc.balance, subtotalAfterDiscounts)
+      // Atomically claim the gift card balance — only succeeds if balance is still sufficient
+      const { data: claimed, error: gcErr } = await supabase.rpc('claim_gift_card', {
+        p_code: input.giftCardCode,
+        p_amount: tentativeDeduction,
+      })
+      if (!gcErr && claimed) {
+        giftCardDeduction = tentativeDeduction
+      }
+      // If claim failed (concurrent redemption beat us), giftCardDeduction stays 0
     }
   }
 
@@ -257,42 +276,77 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   // Atomically restore all decremented stock using an RPC. This is critical
   // to prevent race conditions if order creation fails after stock is reserved.
+  // Bug-1 fix: check restoreStock() result and log failures to a dead-letter table.
+  // Bug-9 fix: also roll back promo use count so a failed order does not consume a promo slot.
   async function restoreStock() {
     if (decrementedItems.length === 0) return
-    await supabase.rpc('restore_product_stocks', { items: decrementedItems })
+    const { error: restoreErr } = await supabase.rpc('restore_product_stocks', { items: decrementedItems })
+    if (restoreErr) {
+      // Log to dead-letter table so ops can manually correct permanently over-decremented stock.
+      await supabase.from('failed_stock_restores').insert({
+        items: decrementedItems,
+        error: restoreErr.message,
+        created_at: new Date().toISOString(),
+      }).then(() => {/* best-effort dead-letter write */})
+      console.error('[createOrder] restoreStock failed — stock may be permanently over-decremented:', restoreErr)
+    }
+    // Roll back promo use increment so tight-use-limit promos are not permanently consumed
+    // when no order was created. This is best-effort — log if it fails.
+    if (input.promoCodeId && discountAmount > 0) {
+      const { error: promoRollbackErr } = await supabase.rpc('decrement_promo_uses', {
+        p_promo_id: input.promoCodeId,
+      })
+      if (promoRollbackErr) {
+        console.error('[createOrder] promo use rollback failed — promo slot may be permanently consumed:', promoRollbackErr)
+      }
+    }
   }
 
   // ── 5. Insert order ───────────────────────────────────────────────
   const { data: order, error: orderErr } = await supabase
     .from('orders')
     .insert({
-      full_name:       input.fullName,
-      phone:           normalizePhone(input.phone),
-      wilaya:          input.wilaya,
-      city:            input.city,
-      address:         input.address,
-      payment_method:  input.paymentMethod,
-      status:          input.status ?? 'pending',
-      subtotal:        computedSubtotal,
-      shipping_cost:   shippingCost, // Use server-calculated value
+      full_name:        input.fullName,
+      phone:            normalizePhone(input.phone),
+      wilaya:           input.wilaya,
+      city:             input.city,
+      address:          input.address,
+      payment_method:   input.paymentMethod,
+      status:           input.status ?? 'pending',
+      subtotal:         computedSubtotal,
+      shipping_cost:    shippingCost, // Use server-calculated value
       total,
-      promo_code_id:   input.promoCodeId ?? null,
-      discount_amount: discountAmount,
-      notes:           input.notes ?? null,
-      is_b2b:          input.isB2B ?? false,
-      company_name:    input.companyName ?? null,
-      nif:             input.nif ?? null,
-      nis:             input.nis ?? null,
-      rc:              input.rc ?? null,
-      is_stopdesk:     input.isStopDesk ?? (input.deliveryType === 'stop_desk'),
-      delivery_type:   input.deliveryType ?? 'home',
-      stop_desk_cause: input.stopDeskCause ?? null,
+      promo_code_id:    input.promoCodeId ?? null,
+      discount_amount:  discountAmount,
+      notes:            input.notes ?? null,
+      is_b2b:           input.isB2B ?? false,
+      company_name:     input.companyName ?? null,
+      nif:              input.nif ?? null,
+      nis:              input.nis ?? null,
+      rc:               input.rc ?? null,
+      is_stopdesk:      input.isStopDesk ?? (input.deliveryType === 'stop_desk'),
+      delivery_type:    input.deliveryType ?? 'home',
+      stop_desk_cause:  input.stopDeskCause ?? null,
       ...(input.email ? { email: input.email } : {}),
+      ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey } : {}),
     })
     .select('id')
     .single()
 
   if (orderErr) {
+    // Idempotency: Postgres unique violation on idempotency_key (code 23505).
+    // Look up the existing order and return it without touching stock or promos.
+    if (orderErr.code === '23505' && input.idempotencyKey) {
+      await restoreStock()
+      const { data: existing } = await supabase
+        .from('orders')
+        .select('id, total')
+        .eq('idempotency_key', input.idempotencyKey)
+        .single()
+      if (existing) {
+        return { id: existing.id, total: existing.total, giftCardDeduction: 0, isDuplicate: true }
+      }
+    }
     await restoreStock()
     throw orderErr
   }
@@ -322,12 +376,22 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
 export async function getOrderById(id: string): Promise<OrderRow | null> {
   const supabase = createAdminClient()
+  // Bug-4 fix: explicit column lists instead of double wildcard to avoid over-fetching
+  // sensitive/large columns and to make schema changes explicit.
   const { data } = await supabase
     .from('orders')
-    .select('*, order_items(*)')
+    .select(
+      'id,full_name,phone,email,wilaya,city,address,payment_method,status,' +
+      'subtotal,shipping_cost,total,discount_amount,delivery_outcome,delivery_provider,' +
+      'yalidine_tracking,yalidine_label_url,procolis_tracking,procolis_label_url,' +
+      'zr_tracking,zr_label_url,colivraison_tracking,colivraison_label_url,' +
+      'maystro_tracking,maystro_label_url,rex_tracking,rex_label_url,' +
+      'is_stopdesk,stop_desk_cause,created_at,' +
+      'order_items(id,product_id,product_name,product_image,product_price,quantity,subtotal,vendor_id,selected_color)'
+    )
     .eq('id', id)
     .single()
-  return (data as OrderRow) ?? null
+  return (data as unknown as OrderRow) ?? null
 }
 
 export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
@@ -355,32 +419,45 @@ export async function getAllOrders(
 ): Promise<{ orders: OrderRow[]; hasMore: boolean }> {
   const supabase = createAdminClient()
 
-  // When filtering by source we first collect matching order IDs from order_items
-  let orderIds: string[] | undefined
-  if (source === 'admin') {
-    const { data: items } = await supabase
-      .from('order_items')
-      .select('order_id')
-      .is('vendor_id', null)
-    orderIds = [...new Set((items ?? []).map((i: { order_id: string }) => i.order_id))]
-  } else if (source === 'vendor') {
-    const { data: items } = await supabase
-      .from('order_items')
-      .select('order_id')
-      .not('vendor_id', 'is', null)
-    orderIds = [...new Set((items ?? []).map((i: { order_id: string }) => i.order_id))]
-  }
+  const EXPLICIT_ORDER_COLS = 'id,full_name,phone,email,wilaya,city,address,payment_method,status,' +
+    'subtotal,shipping_cost,total,discount_amount,delivery_outcome,delivery_provider,' +
+    'yalidine_tracking,yalidine_label_url,procolis_tracking,procolis_label_url,' +
+    'zr_tracking,zr_label_url,colivraison_tracking,colivraison_label_url,' +
+    'maystro_tracking,maystro_label_url,rex_tracking,rex_label_url,' +
+    'is_stopdesk,stop_desk_cause,created_at'
+  const EXPLICIT_ITEM_COLS = 'id,product_id,product_name,product_image,product_price,quantity,subtotal,vendor_id,selected_color'
 
   const from = page * pageSize
-  let q = supabase
-    .from('orders')
-    .select('*, order_items(*)')
-    .order('created_at', { ascending: false })
-    .range(from, from + pageSize)  // fetches pageSize+1 rows to detect next page
 
-  if (orderIds !== undefined) {
-    if (orderIds.length === 0) return { orders: [], hasMore: false }
-    q = q.in('id', orderIds)
+  // Bug-3 fix: push source-filter into Postgres using !inner join instead of a two-step
+  // JS-side IN-list (which breaks on large stores and discards pagination accuracy).
+  // Bug-5 fix: use explicit column lists instead of double wildcards.
+  // Bug-3 & Bug-5: build query branch then await once.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q: any
+
+  if (source === 'admin') {
+    // Orders that have at least one item with vendor_id IS NULL
+    q = supabase
+      .from('orders')
+      .select(`${EXPLICIT_ORDER_COLS},order_items!inner(${EXPLICIT_ITEM_COLS})`)
+      .is('order_items.vendor_id', null)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize)
+  } else if (source === 'vendor') {
+    // Orders that have at least one item with vendor_id IS NOT NULL
+    q = supabase
+      .from('orders')
+      .select(`${EXPLICIT_ORDER_COLS},order_items!inner(${EXPLICIT_ITEM_COLS})`)
+      .not('order_items.vendor_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize)
+  } else {
+    q = supabase
+      .from('orders')
+      .select(`${EXPLICIT_ORDER_COLS},order_items(${EXPLICIT_ITEM_COLS})`)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize)
   }
 
   const { data, error } = await q
@@ -392,12 +469,53 @@ export async function getAllOrders(
   }
 }
 
-export async function updateOrderStatus(id: string, status: string): Promise<void> {
+// Bug-7 fix: narrow status to a union type so invalid status strings are caught at compile time.
+export async function updateOrderStatus(
+  id: string,
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'returned' | 'cancelled'
+): Promise<void> {
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('orders')
     .update({ status })
     .eq('id', id)
+  if (error) throw error
+}
+
+/**
+ * Vendor-scoped order status update.
+ * Unlike the bare updateOrderStatus, this helper re-verifies ownership at the
+ * DB write level: it first resolves the order through order_items filtered by
+ * both order_id AND vendor_id, then performs the status update only for that
+ * confirmed order id.  If the vendor does not own the order the function throws
+ * before any write is attempted, making the DB mutation itself scoped rather
+ * than relying solely on a pre-flight read in the caller.
+ */
+export async function updateVendorOrderStatus(
+  orderId: string,
+  vendorId: string,
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'returned' | 'cancelled'
+): Promise<void> {
+  const supabase = createAdminClient()
+
+  // Re-confirm ownership inside the write path: resolve orderId only when the
+  // vendor actually owns an item in that order.
+  const { data: item, error: ownerErr } = await supabase
+    .from('order_items')
+    .select('order_id')
+    .eq('order_id', orderId)
+    .eq('vendor_id', vendorId)
+    .limit(1)
+    .single()
+
+  if (ownerErr || !item) {
+    throw new Error(`Vendor ${vendorId} does not own order ${orderId}`)
+  }
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ status })
+    .eq('id', item.order_id)
   if (error) throw error
 }
 
@@ -413,12 +531,20 @@ export async function updateDeliveryOutcome(
   if (error) throw error
 }
 
+// Bug-6 & Bug-8 fix: allowlist valid delivery providers to prevent dynamic column-name injection.
+// Without this guard a caller passing provider='status' would overwrite the orders.status column.
+const VALID_PROVIDERS = new Set(['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex'] as const)
+type DeliveryProvider = 'yalidine' | 'procolis' | 'zr' | 'colivraison' | 'maystro' | 'rex'
+
 export async function updateShippingInfo(
   id: string,
   tracking: string,
-  provider: string,
+  provider: DeliveryProvider | string,
   labelUrl?: string
 ): Promise<void> {
+  if (!VALID_PROVIDERS.has(provider as DeliveryProvider)) {
+    throw new Error(`Invalid delivery provider: "${provider}". Must be one of: ${[...VALID_PROVIDERS].join(', ')}`)
+  }
   const supabase = createAdminClient()
   const trackingColumn = `${provider}_tracking`
   const labelColumn = `${provider}_label_url`

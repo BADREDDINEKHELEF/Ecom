@@ -7,34 +7,8 @@
  * Legacy Meta code (fireMetaPurchase, firePurchaseCAPI) has been removed.
  */
 
-import crypto from 'crypto'
+import { sha256, normalizePhone, anonymizeIp } from '@/lib/meta/user-data'
 
-function sha256(value: string): string {
-  return crypto.createHash('sha256').update(value.trim().toLowerCase()).digest('hex')
-}
-
-function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  return digits.startsWith('213') ? digits : digits.startsWith('0') ? '213' + digits.slice(1) : digits
-}
-
-function anonymizeIp(ip: string): string {
-  if (!ip) return ''
-  if (ip.includes('.')) {
-    const parts = ip.split('.')
-    if (parts.length === 4) {
-      parts[3] = '0'
-      return parts.join('.')
-    }
-  }
-  if (ip.includes(':')) {
-    const parts = ip.split(':')
-    if (parts.length > 3) {
-      return parts.slice(0, 4).join(':') + '::'
-    }
-  }
-  return ip
-}
 // ── TikTok Events API ───────────────────────────────────────────────────────
 // Docs: https://business-api.tiktok.com/portal/docs?id=1741601162187777
 
@@ -105,7 +79,9 @@ export async function fireGA4Purchase(opts: {
   clientId?:     string
 }): Promise<{ ok: boolean; status: number; message: string; raw?: unknown }> {
   const { measurementId, apiSecret, orderId, total, items, clientId } = opts
-  const effectiveClientId = clientId ?? `sv.${orderId.replace(/-/g, '').slice(0, 16)}`
+  if (!clientId) {
+    return { ok: false, status: 0, message: 'GA4 MP call skipped: no real gaClientId available' }
+  }
   try {
     const res = await fetch(
       `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
@@ -113,7 +89,7 @@ export async function fireGA4Purchase(opts: {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          client_id: effectiveClientId,
+          client_id: clientId,
           events: [{
             name:   'purchase',
             params: {

@@ -178,10 +178,17 @@ export async function checkRateLimit(ip: string): Promise<RateLimitResult> {
   return check('admin_login', ip, 5, 15 * 60)
 }
 
-export function resetRateLimit(ip: string): void {
+export async function resetRateLimit(ip: string): Promise<void> {
   resetInMemory('admin_login', ip)
-  // Upstash: no explicit reset needed — window expires naturally.
-  // On login success the 5-attempt budget effectively doesn't matter.
+  if (isUpstashConfigured()) {
+    try {
+      // DEL the sliding-window key so a successful login fully restores the
+      // attempt budget in Redis, matching the in-memory reset above.
+      await getRedis().del(`rl:admin_login:${ip}`)
+    } catch (err) {
+      logger.warn('[rateLimit] resetRateLimit: Redis DEL failed', { err })
+    }
+  }
 }
 
 /** Public endpoints: 30 requests / 1 min per IP */
@@ -211,15 +218,15 @@ export async function checkGeocodeRateLimit(ip: string): Promise<RateLimitResult
 
 /** OTP send: 5 per 15 min per IP, 3 per hour per phone number */
 export async function checkOtpSendRateLimit(ip: string, phone: string): Promise<RateLimitResult> {
-  const byIp    = await check('otp_send_ip',    ip,    5, 15 * 60)
+  const byIp    = await check('otp_send_ip',    ip,                           5, 15 * 60)
   if (!byIp.allowed) return byIp
-  const byPhone = await check('otp_send_phone', phone, 3, 60 * 60)
+  const byPhone = await check('otp_send_phone', phone.trim().toLowerCase(),   3, 60 * 60)
   return byPhone
 }
 
-/** OTP verify: 10 attempts per 15 min per phone (brute-force guard) */
+/** OTP verify: 10 attempts per 15 min per phone/email (brute-force guard) */
 export async function checkOtpVerifyRateLimit(phone: string): Promise<RateLimitResult> {
-  return check('otp_verify', phone, 10, 15 * 60)
+  return check('otp_verify', phone.trim().toLowerCase(), 10, 15 * 60)
 }
 
 /**

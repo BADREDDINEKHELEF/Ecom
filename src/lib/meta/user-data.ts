@@ -10,7 +10,7 @@ import type { MetaUserData } from './types'
 
 // ── Hashing ────────────────────────────────────────────────────────────
 
-function sha256(value: string): string {
+export function sha256(value: string): string {
   return crypto.createHash('sha256').update(value.trim().toLowerCase()).digest('hex')
 }
 
@@ -77,7 +77,7 @@ export function buildUserData(input: UserDataInput): MetaUserData {
   if (input.lastName)   data.last_name   = sha256(input.lastName.trim().toLowerCase())
   if (input.city)       data.city        = sha256(input.city.trim().toLowerCase())
   if (input.state)      data.state       = sha256(input.state.trim().toLowerCase())
-  if (input.postalCode) data.postal_code = sha256(input.postalCode.trim())
+  if (input.postalCode) data.postal_code = sha256(input.postalCode.trim().toLowerCase())
   if (input.country)    data.country     = sha256(input.country.trim().toLowerCase())
   if (input.externalId) data.external_id = sha256(input.externalId)
 

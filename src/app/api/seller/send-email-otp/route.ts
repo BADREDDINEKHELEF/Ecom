@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
       const { error } = await supabase.from('password_reset_otps').insert({
         phone:    email,
         email:    email,
-        otp,        // plaintext — satisfies old schema NOT NULL constraint
         otp_hash: hashed,
         expires_at: expiryStr,
       })
@@ -81,7 +80,6 @@ export async function POST(req: NextRequest) {
       if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('email'))) {
         const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
           phone:    email,
-          otp,
           otp_hash: hashed,
           expires_at: expiryStr,
         })
@@ -129,22 +127,20 @@ export async function POST(req: NextRequest) {
           )
         } catch {}
 
-        return NextResponse.json({
-          success: true,
-          _devOtp: otp,
-          _emailError: emailError,
-        })
+        return NextResponse.json(
+          { error: 'Impossible d\'envoyer l\'e-mail de vérification. Veuillez réessayer.' },
+          { status: 503 },
+        )
       }
 
       return NextResponse.json({ success: true })
     } catch (err) {
       otpStoreErr = err instanceof Error ? err.message : String(err)
-      logger.warn('[send-email-otp] OTP storage failed, skipping email', { error: otpStoreErr })
-      return NextResponse.json({
-        success: true,
-        _devOtp: generateOTP(),
-        _emailError: otpStoreErr,
-      })
+      logger.error('[send-email-otp] OTP storage failed', { error: otpStoreErr })
+      return NextResponse.json(
+        { error: 'Une erreur interne s\'est produite. Veuillez réessayer.' },
+        { status: 500 },
+      )
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

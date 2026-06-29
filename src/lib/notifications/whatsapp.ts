@@ -41,16 +41,47 @@ function getConfig(): WhatsAppConfig | null {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
   const accessToken   = process.env.WHATSAPP_ACCESS_TOKEN
   if (!phoneNumberId || !accessToken) return null
+
+  // Meta phone number IDs must be all-digit strings.
+  // A placeholder like 'REPLACE_ME' passes the non-empty check but will
+  // produce a 4xx on the first API call (no retry, silent failure).
+  if (!/^\d+$/.test(phoneNumberId)) {
+    logger.warn('[WhatsApp] WHATSAPP_PHONE_NUMBER_ID is not a numeric string — API calls will fail', {
+      value: phoneNumberId,
+    })
+    return null
+  }
+
   return { phoneNumberId, accessToken }
 }
 
 /**
  * Formats an Algerian phone number to WhatsApp's E.164 international format.
+ *
+ * Handles all common input forms:
+ *   +213 0551234567  → 213551234567  (leading zero after country code stripped)
+ *   +213551234567    → 213551234567
+ *   0551234567       → 213551234567
+ *   551234567        → 213551234567  (bare 9-digit)
  */
 function toWhatsAppNumber(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
+  // Strip everything except digits (handles +, spaces, dashes, parentheses)
+  let digits = phone.replace(/\D/g, '')
+
+  // Remove a leading double-zero international prefix (00213...)
+  if (digits.startsWith('00')) digits = digits.slice(2)
+
+  // Algeria country code present — strip a spurious leading 0 after 213
+  // e.g. 2130551234567 → 213551234567
+  if (digits.startsWith('2130')) return '213' + digits.slice(4)
+
+  // Already has Algeria country code without the extra zero
   if (digits.startsWith('213')) return digits
-  if (digits.startsWith('0'))   return `213${digits.slice(1)}`
+
+  // Local format with leading 0 (0551234567 → 213551234567)
+  if (digits.startsWith('0')) return `213${digits.slice(1)}`
+
+  // Bare number (9 digits — no prefix at all)
   return `213${digits}`
 }
 

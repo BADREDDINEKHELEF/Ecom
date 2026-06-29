@@ -70,6 +70,13 @@ export async function POST(req: NextRequest) {
         .not('vendor_id', 'is', null),
     ])
 
+    if (orderRes.error) {
+      if (orderRes.error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      }
+      logger.error('[POST /api/delivery/shipment] order fetch failed', { error: orderRes.error.message, code: orderRes.error.code })
+      return NextResponse.json({ error: 'Failed to fetch order' }, { status: 500 })
+    }
     if (!orderRes.data) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     const order = orderRes.data
 

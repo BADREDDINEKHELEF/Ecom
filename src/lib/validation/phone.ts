@@ -20,6 +20,7 @@ export function isValidAlgerianPhone(phone: string): boolean {
  */
 export function normalizePhone(phone: string): string {
   const clean = phone.replace(/[\s\-().+]/g, '')
+  if (clean.startsWith('00213')) return '0' + clean.slice(5)
   if (clean.startsWith('213')) return '0' + clean.slice(3)
   return clean
 }

@@ -107,13 +107,17 @@ export const useCartStore = create<CartStore>()(
           get().removeItem(productId, selectedColor)
           return
         }
-        set((s) => ({
-          items: s.items.map((i) =>
-            i.product.id === productId && i.selectedColor === selectedColor
-              ? { ...i, quantity }
-              : i
-          ),
-        }))
+        set((s) => {
+          const item = s.items.find(i => i.product.id === productId && i.selectedColor === selectedColor)
+          const maxQty = item?.product?.stock ?? quantity
+          return {
+            items: s.items.map((i) =>
+              i.product.id === productId && i.selectedColor === selectedColor
+                ? { ...i, quantity: Math.min(quantity, maxQty) }
+                : i
+            ),
+          }
+        })
       },
 
       clearCart: () => set({ items: [], cartStoreSlug: null, storeConflict: null }),

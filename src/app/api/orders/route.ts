@@ -212,6 +212,7 @@ export async function POST(req: NextRequest) {
             metaConfigs, orderId, total,
             {
               email: buyerEmail, phone: input.phone,
+              clientIp: ip,
               clientUserAgent: req.headers.get('user-agent') ?? undefined,
               eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
             },
@@ -231,6 +232,7 @@ export async function POST(req: NextRequest) {
                 accessToken: decryptCred(v.tiktok_capi_token)!,
                 orderId, total, items: capiItems,
                 email: buyerEmail, phone: input.phone,
+                clientIp: ip,
                 clientUserAgent: req.headers.get('user-agent') ?? undefined,
               }))
             }
@@ -260,6 +262,7 @@ export async function POST(req: NextRequest) {
         platformConfig, orderId, total,
         {
           email: buyerEmail, phone: input.phone,
+          clientIp: ip,
           clientUserAgent: req.headers.get('user-agent') ?? undefined,
           eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
         },
@@ -278,6 +281,7 @@ export async function POST(req: NextRequest) {
         accessToken: process.env.TIKTOK_CAPI_TOKEN,
         orderId, total, items: capiItems,
         email: buyerEmail, phone: input.phone,
+        clientIp: ip,
         clientUserAgent: req.headers.get('user-agent') ?? undefined,
       }).catch((err) => logger.error('[platform TikTok CAPI] failed', { error: err instanceof Error ? err.message : String(err) }))
     }

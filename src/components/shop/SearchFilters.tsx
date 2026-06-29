@@ -1,13 +1,32 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, Suspense } from 'react'
 import PriceRangeSlider from './PriceRangeSlider'
 import { Star } from 'lucide-react'
 
 const PRICE_MAX = 200000
 
-export default function SearchFilters() {
+function FiltersSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 space-y-5 animate-pulse">
+      <div>
+        <div className="h-3 w-32 bg-gray-200 rounded mb-3" />
+        <div className="h-6 bg-gray-100 rounded" />
+      </div>
+      <div>
+        <div className="h-3 w-28 bg-gray-200 rounded mb-3" />
+        <div className="flex gap-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-8 w-14 bg-gray-100 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SearchFiltersInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -62,5 +81,13 @@ export default function SearchFilters() {
         </button>
       )}
     </div>
+  )
+}
+
+export default function SearchFilters() {
+  return (
+    <Suspense fallback={<FiltersSkeleton />}>
+      <SearchFiltersInner />
+    </Suspense>
   )
 }

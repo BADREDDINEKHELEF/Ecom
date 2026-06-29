@@ -351,38 +351,63 @@ export async function getSellerAnalytics(
   const priorStart = new Date()
   priorStart.setDate(priorStart.getDate() - daysBack * 2)
 
+  type OrderRow = {
+    id: string
+    status: string
+    wilaya: string | null
+    delivery_outcome: string | null
+    delivery_provider: string | null
+    created_at: string
+  }
+
   type ItemRow = {
     quantity: number
     subtotal: number
     product_name: string
-    orders: {
-      id: string
-      status: string
-      wilaya: string | null
-      delivery_outcome: string | null
-      delivery_provider: string | null
-      created_at: string
-    } | null
+    order_id: string
+    orders: OrderRow | null
   }
 
-  // Fetch current and prior period in parallel
-  const [currentRes, priorRes] = await Promise.all([
+  type PriorOrderRow = { id: string; status: string; created_at: string }
+  type PriorItemRow  = { subtotal: number; order_id: string; orders: PriorOrderRow | null }
+
+  // Filter orders by date at the orders table level first (pushes date predicate to the
+  // orders index), then join order_items for this vendor — avoids fetching all historical
+  // order_items rows and discarding them in the application layer.
+  const [currentOrdersRes, priorOrdersRes] = await Promise.all([
     supabase
-      .from('order_items')
-      .select('quantity, subtotal, product_name, orders(id, status, wilaya, delivery_outcome, delivery_provider, created_at)')
-      .eq('vendor_id', vendorId)
-      .gte('orders.created_at', since.toISOString()),
+      .from('orders')
+      .select('id, status, wilaya, delivery_outcome, delivery_provider, created_at')
+      .gte('created_at', since.toISOString()),
     supabase
-      .from('order_items')
-      .select('subtotal, orders(id, status, created_at)')
-      .eq('vendor_id', vendorId)
-      .gte('orders.created_at', priorStart.toISOString())
-      .lt('orders.created_at', since.toISOString()),
+      .from('orders')
+      .select('id, status, created_at')
+      .gte('created_at', priorStart.toISOString())
+      .lt('created_at', since.toISOString()),
   ])
 
-  type PriorItemRow = { subtotal: number; orders: { id: string; status: string; created_at: string } | null }
-  const rows      = (currentRes.data ?? []) as unknown as ItemRow[]
-  const priorRows = (priorRes.data   ?? []) as unknown as PriorItemRow[]
+  const currentOrderIds = ((currentOrdersRes.data ?? []) as OrderRow[]).map((o) => o.id)
+  const priorOrderIds   = ((priorOrdersRes.data  ?? []) as PriorOrderRow[]).map((o) => o.id)
+
+  const [currentItemsRes, priorItemsRes] = await Promise.all([
+    currentOrderIds.length > 0
+      ? supabase
+          .from('order_items')
+          .select('quantity, subtotal, product_name, order_id, orders(id, status, wilaya, delivery_outcome, delivery_provider, created_at)')
+          .eq('vendor_id', vendorId)
+          .in('order_id', currentOrderIds)
+      : Promise.resolve({ data: [], error: null }),
+    priorOrderIds.length > 0
+      ? supabase
+          .from('order_items')
+          .select('subtotal, order_id, orders(id, status, created_at)')
+          .eq('vendor_id', vendorId)
+          .in('order_id', priorOrderIds)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+
+  const rows      = (currentItemsRes.data ?? []) as unknown as ItemRow[]
+  const priorRows = (priorItemsRes.data   ?? []) as unknown as PriorItemRow[]
 
   // ── Current period aggregation ──────────────────────────────
   const orderMap   = new Map<string, { order: ItemRow['orders']; vendorTotal: number }>()

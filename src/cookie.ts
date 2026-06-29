@@ -13,7 +13,7 @@ export function getAdminCookieOptions(maxAgeSeconds: number): {
   } {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.ADMIN_COOKIE_SECURE === 'true' || !!process.env.VERCEL || process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
     maxAge: maxAgeSeconds,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 const PixelConfetti = dynamic(() => import('@/components/effects/PixelConfetti'), { ssr: false })
 import Link from 'next/link'
@@ -61,7 +61,7 @@ const PAYMENT_ICONS: Record<PaymentMethod, React.ReactNode> = {
 }
 
 export default function CheckoutContent() {
-  const { items, total, clearCart, cartStoreSlug } = useCartStore()
+  const { items, total, clearCart, cartStoreSlug, _hasHydrated } = useCartStore()
   const t = useT()
   const lang = useLang()
   const cartTotal = total()
@@ -75,6 +75,8 @@ export default function CheckoutContent() {
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
   const [saving, setSaving] = useState(false)
+  // Ref-based lock for double-submit guard — synchronously reliable unlike state (Fix 1)
+  const submittingRef = useRef(false)
   const [saveError, setSaveError] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const { save: saveAbandoned, markRecovered } = useAbandonedCheckout()
@@ -147,6 +149,13 @@ export default function CheckoutContent() {
     }
   }, [])
 
+  // Stable vendorId derived from items — avoids re-firing on every render due to new array reference (Fix 7)
+  const primaryVendorId = useMemo(
+    () => items[0]?.product?.vendorId ?? null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items.map(i => i.product.id).join(',')]
+  )
+
   // Fetch live delivery price from vendor's configured provider when wilaya changes
   useEffect(() => {
     if (!form.wilaya) {
@@ -162,8 +171,8 @@ export default function CheckoutContent() {
         const params = new URLSearchParams({ wilaya: form.wilaya })
         if (cartStoreSlug) {
           params.set('storeSlug', cartStoreSlug)
-        } else if (items.length > 0 && items[0].product.vendorId) {
-          params.set('vendorId', items[0].product.vendorId)
+        } else if (primaryVendorId) {
+          params.set('vendorId', primaryVendorId)
         }
         const res = await fetch(`/api/delivery/rates?${params}`)
         if (res.ok) {
@@ -194,7 +203,7 @@ export default function CheckoutContent() {
       }
     }, 400)
     return () => clearTimeout(timer)
-  }, [form.wilaya, cartStoreSlug, items])
+  }, [form.wilaya, cartStoreSlug, primaryVendorId])
 
   const handleLocate = () => {
     if (!navigator.geolocation) { setLocError(t.checkout.locationFailed); return }
@@ -231,10 +240,11 @@ export default function CheckoutContent() {
 
   const discountAmount = promoResult?.discountAmount ?? 0
   const giftCardDeduction = giftCardResult?.deduction ?? 0
-  const pointsDeduction = (usePoints && loyaltyBalance) ? Math.min(loyaltyBalance, Math.max(0, cartTotal - discountAmount - giftCardDeduction)) : 0
   // Live rate from provider API; falls back to static zone pricing
   const chosenLiveRate = isStopDesk ? liveDeliveryRates.desk : liveDeliveryRates.home
   const shippingCost = chosenLiveRate ?? (delivery.isFree ? 0 : delivery.cost)
+  // Cap points at the fully-loaded total (including shipping) so displayed total never goes negative (Fix 6)
+  const pointsDeduction = (usePoints && loyaltyBalance) ? Math.min(loyaltyBalance, Math.max(0, cartTotal - discountAmount - giftCardDeduction + shippingCost)) : 0
   const orderTotal = Math.max(0, cartTotal - discountAmount - giftCardDeduction - pointsDeduction + shippingCost)
 
   const handleApplyPromo = async () => {
@@ -275,7 +285,8 @@ export default function CheckoutContent() {
   }
 
   const handleApplyGiftCard = async () => {
-    if (!giftCardInput.trim()) return
+    // Guard against keyboard Enter re-entry while a request is already in flight (Fix 12)
+    if (!giftCardInput.trim() || giftCardApplying) return
     setGiftCardApplying(true)
     setGiftCardError('')
     setGiftCardResult(null)
@@ -287,7 +298,9 @@ export default function CheckoutContent() {
       })
       const data = await res.json()
       if (res.ok) {
-        const deduction = Math.min(data.balance, Math.max(0, cartTotal - (promoResult?.discountAmount ?? 0)))
+        // Include shippingCost in the cap so gift card does not cover shipping (Fix 5)
+        // shippingCost may be 0 if wilaya not yet selected; user can re-apply after selecting wilaya
+        const deduction = Math.min(data.balance, Math.max(0, cartTotal + shippingCost - (promoResult?.discountAmount ?? 0)))
         setGiftCardResult({ id: data.id, code: giftCardInput.trim().toUpperCase(), balance: data.balance, deduction })
       } else {
         setGiftCardError(data.error ?? t.checkout.giftCardInvalid)
@@ -298,6 +311,13 @@ export default function CheckoutContent() {
       setGiftCardApplying(false)
     }
   }
+
+  // Clear promo/gift-card results when cartTotal changes so stale discounts don't persist (Fix 10)
+  useEffect(() => {
+    if (promoResult) { setPromoResult(null); setPromoError('') }
+    if (giftCardResult) { setGiftCardResult(null); setGiftCardError('') }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartTotal])
 
   const validatePhone = (val: string) => {
     if (!val) { setPhoneError(''); return }
@@ -311,10 +331,25 @@ export default function CheckoutContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (saving) return
-    if (phoneError) return
+    // Fix 4: Validate phone on submit (catches autofill/paste that bypasses onChange)
+    const cleanPhone = form.phone.replace(/[\s\-().]/g, '')
+    if (!cleanPhone || !/^(\+?213|0)[5-7]\d{8}$/.test(cleanPhone)) {
+      setPhoneError(t.checkout.phoneInvalid)
+      return
+    }
+    // Fix 1: Ref-based lock — synchronously prevents double-submit unlike state batching
+    if (submittingRef.current) return
+    submittingRef.current = true
+    if (phoneError) { submittingRef.current = false; return }
     if (rateError) {
       setSaveError(rateError)
+      submittingRef.current = false
+      return
+    }
+    // Fix 9: Guard against empty cart (e.g. cleared from another tab via shared localStorage)
+    if (items.length === 0) {
+      setSaveError(t.cart.empty)
+      submittingRef.current = false
       return
     }
     setSaving(true)
@@ -325,6 +360,7 @@ export default function CheckoutContent() {
       if (quantity < moq) {
         setSaveError(t.checkout.moqError.replace('{name}', product.name).replace('{n}', String(moq)))
         setSaving(false)
+        submittingRef.current = false
         return
       }
     }
@@ -334,26 +370,31 @@ export default function CheckoutContent() {
     if (!form.fullName.trim()) {
       setSaveError('Nom complet requis')
       setSaving(false)
+      submittingRef.current = false
       return
     }
     if (!form.phone.trim()) {
       setSaveError('Numéro de téléphone requis')
       setSaving(false)
+      submittingRef.current = false
       return
     }
     if (!form.wilaya) {
       setSaveError('Wilaya requise')
       setSaving(false)
+      submittingRef.current = false
       return
     }
     if (!resolvedCity.trim()) {
       setSaveError(t.checkout.selectCommune)
       setSaving(false)
+      submittingRef.current = false
       return
     }
     if (!form.address.trim() && deliveryType !== 'stop_desk') {
       setSaveError('Adresse requise pour ce type de livraison')
       setSaving(false)
+      submittingRef.current = false
       return
     }
 
@@ -412,11 +453,20 @@ export default function CheckoutContent() {
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
           setSaveError(errData.error ?? t.checkout.orderFailed)
+          // Fix 2: Explicitly release locks — early return bypasses the outer finally block
+          setSaving(false)
+          submittingRef.current = false
           return
         }
         const orderData = await res.json().catch(() => ({}))
         const resolvedOrderId = orderData.orderId ?? orderData.id
-        if (!resolvedOrderId) { setSaveError(t.checkout.orderFailed); return }
+        if (!resolvedOrderId) {
+          setSaveError(t.checkout.orderFailed)
+          // Fix 2: Same — explicit release needed because early return skips outer finally
+          setSaving(false)
+          submittingRef.current = false
+          return
+        }
         trackPurchase({ transactionId: resolvedOrderId, total: orderTotal, items: cartSnapshot })
         const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
         if (metaPixelId) {
@@ -444,6 +494,8 @@ export default function CheckoutContent() {
         track('checkout_complete', { order_id: resolvedOrderId, total: orderTotal, payment_method: 'cash', wilaya: form?.wilaya })
 
         markRecovered()
+        // Fix 3: setSubmitted(true) BEFORE clearCart() to prevent empty-cart flash
+        // (items.length===0 && !submitted would briefly render the empty-cart screen)
         setSubmitted(true)
         clearCart()
         return
@@ -493,6 +545,8 @@ export default function CheckoutContent() {
       setSaveError(t.checkout.orderFailed)
     } finally {
       setSaving(false)
+      // Fix 1: Always release the ref lock so future submissions are allowed
+      submittingRef.current = false
     }
   }
 
@@ -508,6 +562,17 @@ export default function CheckoutContent() {
       cartSnapshot: items.map(({ product, quantity }) => ({ id: product.id, name: product.name, quantity, price: product.price })),
       cartTotal,
     })
+  }
+
+  // Fix 11: Wait for Zustand cart hydration before rendering to avoid stale pre-hydration state.
+  // IMPORTANT: keep ssr:false on the dynamic import in checkout/page.tsx — this guard is a second
+  // line of defence; removing ssr:false would still cause a hydration mismatch.
+  if (!_hasHydrated) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" />
+      </div>
+    )
   }
 
   if (baridimobModal) {

@@ -37,7 +37,7 @@ describe('Rate Limiting — in-memory', () => {
     it('resets after resetRateLimit()', async () => {
       const ip = makeIp()
       for (let i = 0; i < 5; i++) await checkRateLimit(ip)
-      resetRateLimit(ip)
+      await resetRateLimit(ip)
       const result = await checkRateLimit(ip)
       expect(result.allowed).toBe(true)
     })

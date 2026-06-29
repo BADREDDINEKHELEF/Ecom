@@ -33,6 +33,10 @@ export function normalizePhone(phone: string): string {
  * @returns An array containing the E.164 format and the local `0...` format.
  */
 export function getPhoneVariants(normalizedPhone: string): string[] {
-  const localFormat = '0' + normalizedPhone.slice(4) // slice(4) to remove '+213'
+  const localFormat = normalizedPhone.startsWith('+213')
+    ? '0' + normalizedPhone.slice(4) // remove '+213'
+    : normalizedPhone.startsWith('213')
+    ? '0' + normalizedPhone.slice(3) // remove '213' (no leading +)
+    : normalizedPhone // already in local or unknown format; return as-is
   return [normalizedPhone, localFormat]
 }

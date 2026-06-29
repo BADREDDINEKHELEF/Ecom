@@ -9,13 +9,20 @@ export function yassirConfigured(): boolean {
   return !!process.env.YASSIR_API_KEY
 }
 
+export interface YassirSenderInfo {
+  senderName?: string
+  senderPhone?: string
+  senderAddress?: string
+}
+
 export async function yassirCreateShipmentWithKey(
   input: ShipmentInput,
-  apiKey: string
+  apiKey: string,
+  senderInfo?: YassirSenderInfo
 ): Promise<ShipmentResult> {
-  const senderName = process.env.YASSIR_SENDER_NAME
-  const senderPhone = process.env.YASSIR_SENDER_PHONE
-  const senderAddress = process.env.YASSIR_SENDER_ADDRESS
+  const senderName = senderInfo?.senderName ?? process.env.YASSIR_SENDER_NAME
+  const senderPhone = senderInfo?.senderPhone ?? process.env.YASSIR_SENDER_PHONE
+  const senderAddress = senderInfo?.senderAddress ?? process.env.YASSIR_SENDER_ADDRESS
   if (!senderName || !senderPhone || !senderAddress) {
     throw new Error('Yassir sender configuration not set (YASSIR_SENDER_NAME, YASSIR_SENDER_PHONE, YASSIR_SENDER_ADDRESS)')
   }

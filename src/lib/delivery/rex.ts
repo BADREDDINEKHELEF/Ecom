@@ -20,6 +20,7 @@ export async function rexCreateShipmentWithToken(
     commune:           input.city,
     product_name:      input.items || 'Colis',
     cod_amount:        input.total,
+    stop_desk:         input.isStopDesk ? 1 : 0,
     note:              input.isStopDesk && input.stopDeskCause ? input.stopDeskCause : '',
     can_open:          0,
   }

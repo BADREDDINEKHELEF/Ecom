@@ -64,6 +64,10 @@ export default function CartSidebar() {
       )}
 
       <div
+        role="dialog"
+        aria-label={t.cart.title}
+        aria-hidden={!isOpen}
+        {...(!isOpen ? { inert: true } : {})}
         className={`fixed top-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
           isRTL ? 'left-0' : 'right-0'
         } ${

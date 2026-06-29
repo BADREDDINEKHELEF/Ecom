@@ -3,11 +3,13 @@ import { z } from 'zod'
 import { satimRegisterOrder, satimConfigured } from '@/lib/payment/satim'
 import { baridimobInitiatePayment, baridimobConfigured } from '@/lib/payment/baridimob'
 import { createOrder } from '@/lib/supabase/orders'
-import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { sendOrderPendingPaymentEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { getClientIp } from '@/lib/utils/ip'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
 import { logger } from '@/lib/logger'
+import { computeCheckToken } from '@/lib/payment/checkToken'
 
 const OrderItemSchema = z.object({
   productId:    z.string().min(1),
@@ -41,6 +43,7 @@ const InitiateSchema = z.object({
   stopDeskCause:    z.string().max(300).optional().nullable(),
   items:            z.array(OrderItemSchema).min(1).max(50),
   selectedColor:    z.string().max(100).nullable().optional(),
+  idempotency_key:  z.string().uuid().optional().nullable(),
 })
 
 function normalizePhone(p: string) {
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
     isStopDesk,
     deliveryType,
     stopDeskCause,
+    idempotency_key: idempotencyKey,
     ...rest
   } = parsed.data
   const phone = normalizePhone(rest.phone)
@@ -95,7 +99,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { id: orderId, total } = await createOrder({
+    // Bug 2 fix: pass idempotency key to createOrder so duplicate submissions return
+    // the existing order instead of creating a new one (with stock/promo side-effects).
+    const { id: orderId, total, isDuplicate } = await createOrder({
       ...rest,
       phone,
       paymentMethod,
@@ -112,6 +118,7 @@ export async function POST(req: NextRequest) {
       stopDeskCause: stopDeskCause ?? null,
       email:    buyerEmail,
       status: 'pending_payment',
+      idempotencyKey: idempotencyKey ?? null,
     })
 
     // Use the server-computed total (DZD) returned by createOrder — never trust client amounts.
@@ -125,9 +132,18 @@ export async function POST(req: NextRequest) {
     }
     const orderAmountCentimes = Math.round(total * 100)
 
-    // Non-blocking notifications
-    if (buyerEmail) {
-      sendOrderConfirmationEmail({
+    // Issue an HMAC ownership token tied to this (orderId, phone) pair.
+    // The client must supply this token on every /api/payment/check call so the
+    // endpoint can verify the caller placed the order without requiring a login session.
+    const checkToken = computeCheckToken(orderId, phone)
+
+    // Bug 1 fix: send "order received — awaiting payment" email at initiation only.
+    // Order confirmation email is sent by callback/route.ts after markOrderPaid succeeds.
+    // Sending sendOrderConfirmationEmail here would: (a) falsely confirm unfinished payments,
+    // and (b) duplicate the email for successful payments handled by the callback route.
+    // Skip notifications on idempotent duplicate lookups (already sent on first call).
+    if (buyerEmail && !isDuplicate) {
+      sendOrderPendingPaymentEmail({
         to: buyerEmail,
         fullName: rest.fullName,
         orderId,
@@ -135,38 +151,66 @@ export async function POST(req: NextRequest) {
         wilaya: rest.wilaya,
         itemCount: rest.items.length,
         isStopDesk,
-      }).catch((err) => logger.error('[email initiate] confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
+      }).catch((err) => logger.error('[email initiate] pending payment notification failed', { error: err instanceof Error ? err.message : String(err) }))
     }
-    notifyOrderConfirmed({
-      phone: rest.phone,
-      fullName: rest.fullName,
-      orderId,
-      total,
-      wilaya: rest.wilaya,
-      itemCount: rest.items.length,
-    }).catch((err) => logger.error('[WhatsApp initiate] notification failed', { error: err instanceof Error ? err.message : String(err) }))
+    if (!isDuplicate) {
+      notifyOrderConfirmed({
+        phone: rest.phone,
+        fullName: rest.fullName,
+        orderId,
+        total,
+        wilaya: rest.wilaya,
+        itemCount: rest.items.length,
+      }).catch((err) => logger.error('[WhatsApp initiate] notification failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
 
-    if (paymentMethod === 'baridimob') {
-      const bmResult = await baridimobInitiatePayment({
-        orderNumber: orderId,
-        amountDZD:   total,
-        description: `Commande StoreDz #${orderId.slice(0, 8)}`,
-        callbackUrl: `${appUrl}/api/payment/callback`,
+    // Bug 3 fix: Satim orderNumber field is limited to 32 characters.
+    // A UUID v4 is 36 chars with hyphens; stripping hyphens yields exactly 32 hex chars.
+    // Using the raw UUID risks silent truncation by Satim, which could map two different
+    // orders to the same truncated orderNumber and cause status-check collisions.
+    const satimOrderNumber = orderId.replace(/-/g, '').slice(0, 32)
+
+    // Bug 4 fix: wrap gateway registration in an inner try/catch isolated from the
+    // createOrder try/catch above. If gateway registration fails after the order row
+    // already exists, immediately mark it cancelled so stock and promo slots are freed.
+    // Without this, a gateway outage leaves the order in pending_payment indefinitely,
+    // blocking inventory with no recovery path for the customer.
+    try {
+      if (paymentMethod === 'baridimob') {
+        const bmResult = await baridimobInitiatePayment({
+          orderNumber: satimOrderNumber,
+          amountDZD:   total,
+          description: `Commande StoreDz #${orderId.slice(0, 8)}`,
+          callbackUrl: `${appUrl}/api/payment/callback`,
+        })
+        return NextResponse.json({ orderId, checkToken, qrCodeData: bmResult.qrCodeData, deepLink: bmResult.deepLink, expiresAt: bmResult.expiresAt, method: 'baridimob' }, { status: 201 })
+      }
+
+      // CIB / Edahabia / Card → Satim
+      const satimResult = await satimRegisterOrder({
+        orderNumber:    satimOrderNumber,
+        amountCentimes: orderAmountCentimes,
+        description:    `Commande StoreDz #${orderId.slice(0, 8)}`,
+        returnUrl:      `${appUrl}/api/payment/callback?result=success&orderId=${orderId}`,
+        failUrl:        `${appUrl}/api/payment/callback?result=fail&orderId=${orderId}`,
+        language:       'fr',
       })
-      return NextResponse.json({ orderId, qrCodeData: bmResult.qrCodeData, deepLink: bmResult.deepLink, expiresAt: bmResult.expiresAt, method: 'baridimob' }, { status: 201 })
+
+      return NextResponse.json({ orderId, checkToken, formUrl: satimResult.formUrl, satimOrderId: satimResult.satimOrderId, method: 'satim' }, { status: 201 })
+    } catch (gatewayErr) {
+      // Bug 4 fix: cancel the orphaned order so stock and promo uses are released.
+      const gatewayMsg = gatewayErr instanceof Error ? gatewayErr.message : String(gatewayErr)
+      logger.error('[POST /api/payment/initiate] gateway registration failed — cancelling order', { orderId, error: gatewayMsg })
+      await createAdminClient()
+        .from('orders')
+        .update({ status: 'cancelled', payment_status: 'failed' })
+        .eq('id', orderId)
+        .eq('status', 'pending_payment')
+        .then(({ error }) => {
+          if (error) logger.error('[POST /api/payment/initiate] failed to cancel orphaned order', { orderId, error: error.message })
+        })
+      throw gatewayErr
     }
-
-    // CIB / Edahabia / Card → Satim
-    const satimResult = await satimRegisterOrder({
-      orderNumber:    orderId,
-      amountCentimes: orderAmountCentimes,
-      description:    `Commande StoreDz #${orderId.slice(0, 8)}`,
-      returnUrl:      `${appUrl}/api/payment/callback?result=success&orderId=${orderId}`,
-      failUrl:        `${appUrl}/api/payment/callback?result=fail&orderId=${orderId}`,
-      language:       'fr',
-    })
-
-    return NextResponse.json({ orderId, formUrl: satimResult.formUrl, satimOrderId: satimResult.satimOrderId, method: 'satim' }, { status: 201 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Payment initiation failed'
     logger.error('[POST /api/payment/initiate]', { error: msg })

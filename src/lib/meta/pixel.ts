@@ -41,15 +41,15 @@ const initializedPixels = new Set<string>()
  * Initialize a Meta Pixel for a store.
  * Safe to call multiple times — only initializes once per pixel ID.
  */
-export function initMetaPixel(pixelId: string, testEventCode?: string | null): void {
+export function initMetaPixel(pixelId: string, _testEventCode?: string | null): void {
   if (typeof window === 'undefined') return
   if (initializedPixels.has(pixelId)) return
 
-  const code = testEventCode?.trim()
-  const args: unknown[] = ['init', pixelId]
-  if (code) args.push({ testEventCode: code })
-
-  _fbq(...args)
+  // testEventCode is NOT a valid fbq('init') parameter — it must be passed
+  // on individual fbq('track') calls. Passing it here is silently ignored by
+  // the Meta Pixel SDK. The parameter is kept in the signature for backwards
+  // compatibility but is intentionally unused here.
+  _fbq('init', pixelId)
   initializedPixels.add(pixelId)
 }
 
