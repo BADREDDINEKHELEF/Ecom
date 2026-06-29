@@ -28,6 +28,10 @@ interface RateLimitResult {
 
 // ── Upstash Limiters (lazy-initialised) ────────────────────────────────────
 
+function stripQuotes(s: string): string {
+  return s.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1')
+}
+
 let upstashAvailable: boolean | null = null
 
 function isUpstashConfigured(): boolean {
@@ -42,8 +46,8 @@ let _redis: Redis | null = null
 function getRedis(): Redis {
   if (!_redis) {
     _redis = new Redis({
-      url:   process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      url:   stripQuotes(process.env.UPSTASH_REDIS_REST_URL!),
+      token: stripQuotes(process.env.UPSTASH_REDIS_REST_TOKEN!),
     })
   }
   return _redis

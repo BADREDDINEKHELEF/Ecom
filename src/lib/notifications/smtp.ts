@@ -12,12 +12,16 @@ try {
 
 let transporter: nodemailer.Transporter | null = null
 
+function stripQuotes(s: string): string {
+  return s.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1')
+}
+
 function getSmtpConfig() {
-  const host = process.env.SMTP_HOST?.trim()
-  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT.trim(), 10) : 587
-  const user = process.env.SMTP_USER?.trim()
-  const pass = process.env.SMTP_PASS?.trim()
-  const from = process.env.SMTP_FROM_EMAIL?.trim() || user
+  const host = process.env.SMTP_HOST ? stripQuotes(process.env.SMTP_HOST.trim()) : undefined
+  const port = process.env.SMTP_PORT ? parseInt(stripQuotes(process.env.SMTP_PORT.trim()), 10) : 587
+  const user = process.env.SMTP_USER ? stripQuotes(process.env.SMTP_USER.trim()) : undefined
+  const pass = process.env.SMTP_PASS ? stripQuotes(process.env.SMTP_PASS.trim()) : undefined
+  const from = process.env.SMTP_FROM_EMAIL ? stripQuotes(process.env.SMTP_FROM_EMAIL.trim()) : user
 
   if (!host || !user || !pass) return null
 

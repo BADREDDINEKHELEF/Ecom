@@ -331,13 +331,28 @@ export default function CheckoutContent() {
 
     const resolvedCity = form.city === '__autre__' ? customCommune : form.city
 
+    if (!form.fullName.trim()) {
+      setSaveError('Nom complet requis')
+      setSaving(false)
+      return
+    }
     if (!form.phone.trim()) {
       setSaveError('Numéro de téléphone requis')
       setSaving(false)
       return
     }
+    if (!form.wilaya) {
+      setSaveError('Wilaya requise')
+      setSaving(false)
+      return
+    }
     if (!resolvedCity.trim()) {
       setSaveError(t.checkout.selectCommune)
+      setSaving(false)
+      return
+    }
+    if (!form.address.trim() && deliveryType !== 'stop_desk') {
+      setSaveError('Adresse requise pour ce type de livraison')
       setSaving(false)
       return
     }
@@ -396,7 +411,7 @@ export default function CheckoutContent() {
         })
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
-          setSaveError(res.status === 409 ? (errData.error ?? t.checkout.orderFailed) : t.checkout.orderFailed)
+          setSaveError(errData.error ?? t.checkout.orderFailed)
           return
         }
         const orderData = await res.json().catch(() => ({}))
@@ -444,10 +459,8 @@ export default function CheckoutContent() {
         const errData = await res.json().catch(() => ({}))
         if (res.status === 503) {
           setSaveError(t.checkout.onlinePaymentUnavailable)
-        } else if (res.status === 409) {
-          setSaveError(errData.error ?? t.checkout.orderFailed)
         } else {
-          setSaveError(t.checkout.orderFailed)
+          setSaveError(errData.error ?? t.checkout.orderFailed)
         }
         return
       }
