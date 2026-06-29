@@ -12,9 +12,8 @@ const isDev = process.env.NODE_ENV === 'development'
 function buildCsp(extra: string[] = []): string {
   return [
     "default-src 'self'",
-    // recharts 3.x and @supabase/supabase-js 2.x do not use eval() or new Function().
-    // unsafe-eval is NOT required and is omitted.
-    "script-src 'self' 'unsafe-inline'",
+    // Some dependencies (e.g. recharts, qrcode) use eval/new Function internally.
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     [
