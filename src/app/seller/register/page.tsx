@@ -52,7 +52,7 @@ export default function SellerRegisterPage() {
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
       if (body._devOtp) {
-        setError(`[DEV] Code OTP : ${body._devOtp}  (domaine Resend non configuré)`)
+        setError(`Code OTP : ${body._devOtp}  (email non envoyé — configurez RESEND_API_KEY ou SMTP)`)
       }
       setView('otp')
     } catch {
