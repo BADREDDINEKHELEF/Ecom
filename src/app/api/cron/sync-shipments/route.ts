@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { timingSafeEqual } from 'crypto'
+import { timingSafeEqual, createHash } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { updateShipmentStatus } from '@/lib/supabase/shipments'
@@ -25,7 +25,6 @@ if (!process.env.CRON_SECRET) {
 function safeCompare(provided: string, expected: string): boolean {
   // Hash both values so the comparison buffers are always the same fixed
   // length, preventing a length-based oracle attack regardless of input size.
-  const { createHash } = require('crypto') as typeof import('crypto')
   const a = Buffer.alloc(HMAC_PAD_SIZE)
   const b = Buffer.alloc(HMAC_PAD_SIZE)
   Buffer.from(createHash('sha256').update(provided).digest()).copy(a)

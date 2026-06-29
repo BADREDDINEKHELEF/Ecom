@@ -1,4 +1,3 @@
-import { createHash } from 'crypto'
 import { createAdminClient } from './admin'
 import { maskPhone } from '@/lib/utils/mask'
 
@@ -22,44 +21,6 @@ export interface CustomerDetail extends CustomerSummary {
     wilaya:    string | null
     city:      string | null
   }[]
-}
-
-function phoneToHash(phone: string): string {
-  return createHash('sha256')
-    .update(phone.trim().toLowerCase())
-    .digest('hex')
-    .slice(0, 16)
-}
-
-// Fetch all distinct order_ids that belong to this vendor, then return those full orders.
-// Two-step to avoid the order_items fan-out bug where an order with N vendor items
-// would be counted N times if we join order_items → orders directly.
-async function getVendorOrders(
-  vendorId: string,
-  selectCols: string,
-): Promise<Record<string, unknown>[]> {
-  const admin = createAdminClient()
-
-  const { data: itemRows, error: itemErr } = await admin
-    .from('order_items')
-    .select('order_id')
-    .eq('vendor_id', vendorId)
-
-  if (itemErr || !itemRows?.length) return []
-
-  const orderIds = [...new Set(itemRows.map((r) => r.order_id as string))]
-
-  // Supabase .in() supports up to ~1000 values; for very large vendors split into batches
-  const BATCH = 800
-  const results: Record<string, unknown>[] = []
-  for (let i = 0; i < orderIds.length; i += BATCH) {
-    const { data, error } = await admin
-      .from('orders')
-      .select(selectCols)
-      .in('id', orderIds.slice(i, i + BATCH))
-    if (!error && data) results.push(...(data as unknown as Record<string, unknown>[]))
-  }
-  return results
 }
 
 export async function getVendorCustomers(vendorId: string): Promise<CustomerSummary[]> {

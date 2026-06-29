@@ -7,7 +7,7 @@ import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured, zrTrack, zrL
 import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured, colivraisonTrack, colivraisonListParcels, colivraisonGetRateWithToken } from './colivraison'
 import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels, maystroGetRateWithToken } from './maystro'
 import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels, rexGetRateWithToken } from './rex'
-import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels, YassirSenderInfo } from './yassir'
+import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
 import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
 import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels, apecGetRateWithCreds } from './apec'
 

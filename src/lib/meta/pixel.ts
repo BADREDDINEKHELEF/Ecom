@@ -41,6 +41,7 @@ const initializedPixels = new Set<string>()
  * Initialize a Meta Pixel for a store.
  * Safe to call multiple times — only initializes once per pixel ID.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function initMetaPixel(pixelId: string, _testEventCode?: string | null): void {
   if (typeof window === 'undefined') return
   if (initializedPixels.has(pixelId)) return
