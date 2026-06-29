@@ -285,12 +285,17 @@ export async function POST(req: NextRequest) {
       .catch((err) => logger.error('[loyalty] award failed', { error: err instanceof Error ? err.message : String(err) }))
 
     return NextResponse.json({ orderId }, { status: 201 })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Order creation failed'
-    logger.error('[POST /api/orders]', { error: message })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 
+      typeof err === 'object' && err !== null && 'message' in err 
+        ? String((err as Record<string, unknown>).message) 
+        : String(err)
+    const code = typeof err === 'object' && err !== null && 'code' in err
+      ? String((err as Record<string, unknown>).code)
+      : undefined
+    logger.error('[POST /api/orders]', { error: message, code, type: typeof err })
 
-    // Map internal errors to safe client-facing messages (no internal detail leakage)
-    if (message.includes('stock') || message.includes('Insufficient')) {
+    if (message.includes('stock') || message.includes('Insufficient') || code === 'PGRST204') {
       return NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 })
     }
     if (message.includes('not found') || message.includes('not available') || message.includes('no longer')) {
