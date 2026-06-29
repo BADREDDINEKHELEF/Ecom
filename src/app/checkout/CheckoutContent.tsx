@@ -70,7 +70,7 @@ export default function CheckoutContent() {
   const [submitted, setSubmitted] = useState(false)
   const [confettiDone, setConfettiDone] = useState(false)
   const [form, setForm] = useState({
-    fullName: '', email: '', phone: '', address: '', city: '', wilaya: '', notes: '', stopDeskCause: '',
+    fullName: '', phone: '', address: '', city: '', wilaya: '', notes: '', stopDeskCause: '',
   })
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
@@ -353,7 +353,6 @@ export default function CheckoutContent() {
 
     const orderPayload = {
       fullName:       form.fullName,
-      email:          form.email,
       phone:          form.phone,
       wilaya:         form.wilaya,
       city:           resolvedCity,
@@ -489,7 +488,6 @@ export default function CheckoutContent() {
     setForm(next)
     saveAbandoned({
       name: next.fullName,
-      email: next.email,
       phone: next.phone,
       wilaya: next.wilaya,
       address: next.address,
@@ -640,19 +638,7 @@ export default function CheckoutContent() {
                   inputMode="text"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400" />
               </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.email}</label>
-                <input
-                  required
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => f('email', e.target.value)}
-                  placeholder="exemple@email.com"
-                  autoComplete="email"
-                  inputMode="email"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400"
-                />
-              </div>
+
               <div>
                 <PhoneInput
                   value={form.phone}
