@@ -31,13 +31,13 @@ const OrderItemSchema = z.object({
   selectedColor: z.string().max(100).nullable().optional(),
 })
 
-const CreateOrderSchema = z.object({
+  const CreateOrderSchema = z.object({
   fullName:      z.string().min(2).max(200),
   phone:         z.string().regex(/^(\+?213|0)[5-7]\d{8}$/, 'Invalid Algerian phone number'),
   email:         z.string().email().max(320).optional().nullable(),
   wilaya:        z.string().min(1).max(100),
   city:          z.string().min(1).max(200).refine((v) => v !== '__autre__', { message: 'Invalid commune value' }),
-  address:       z.string().min(2).max(500),
+  address:       z.string().max(500).default(''),
   isStopDesk:    z.boolean().optional().default(false),
   deliveryType:  z.enum(['home', 'office', 'stop_desk']).optional().default('home'),
   stopDeskCause: z.string().max(300).optional().nullable(),
@@ -55,6 +55,10 @@ const CreateOrderSchema = z.object({
   rc:               z.string().max(50).optional().nullable(),
   gaClientId:       z.string().max(100).optional().nullable(),
   items:            z.array(OrderItemSchema).min(1).max(50),
+}).superRefine((data, ctx) => {
+  if (data.deliveryType !== 'stop_desk' && !data.address) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['address'], message: 'Address required for home/office delivery' })
+  }
 })
 
 export async function POST(req: NextRequest) {
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   const parsed = CreateOrderSchema.safeParse(body)
   if (!parsed.success) {
-    // Never expose Zod internals to clients in production
+    logger.warn('[POST /api/orders] validation failed', { issues: parsed.error.issues })
     const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
     return NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 })
   }

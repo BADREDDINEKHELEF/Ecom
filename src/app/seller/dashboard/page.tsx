@@ -131,7 +131,7 @@ function processOrders(orders: VendorOrderSummary[], allProducts: Product[]) {
     .slice(0, 5)
     .map(([key, s]) => {
       const prod = allProducts.find((p) => p.id === s.id || p.id === key)
-      return { name: prod?.name ?? key, sales: s.sales, revenue: s.revenue, image: prod?.images[0] }
+      return { name: prod?.name ?? key, sales: s.sales, revenue: s.revenue, image: prod?.images?.[0] }
     })
 
   // Worst sellers Ã¢â‚¬â€ products with ZERO sales

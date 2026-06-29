@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth/adminAuth'
 import { revokeSessionById } from '@/lib/auth/sessions'
+import { logger } from '@/lib/logger'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
@@ -24,17 +25,22 @@ export async function DELETE(
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
   )
 
-  const { id } = await props.params
-  if (!id || !UUID_RE.test(id)) {
-    return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 })
-  }
+  try {
+    const { id } = await props.params
+    if (!id || !UUID_RE.test(id)) {
+      return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 })
+    }
 
-  const ok = await revokeSessionById(id)
-  if (!ok) {
-    return NextResponse.json(
-      { error: 'Session not found or already revoked' },
-      { status: 404 }
-    )
+    const ok = await revokeSessionById(id)
+    if (!ok) {
+      return NextResponse.json(
+        { error: 'Session not found or already revoked' },
+        { status: 404 }
+      )
+    }
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    logger.error('[DELETE /api/admin/sessions/[id]]', { error: err instanceof Error ? err.message : String(err) })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true })
 }

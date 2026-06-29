@@ -65,20 +65,35 @@ export async function POST(req: NextRequest) {
 
       const otp = generateOTP()
       const expiryStr = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      const hashed = hashOtp(otp)
       
       let insertErr = null
       const { error } = await supabase.from('password_reset_otps').insert({
         phone:    email,
         email:    email,
-        otp_hash: hashOtp(otp),
+        otp,        // plaintext — satisfies old schema NOT NULL constraint
+        otp_hash: hashed,
         expires_at: expiryStr,
       })
       insertErr = error
 
-      if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('column') || String(insertErr.message).includes('email'))) {
+      // Fallback: email column doesn't exist — retry without it
+      if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('email'))) {
         const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
           phone:    email,
-          otp_hash: hashOtp(otp),
+          otp,
+          otp_hash: hashed,
+          expires_at: expiryStr,
+        })
+        insertErr = fallbackErr
+      }
+
+      // Fallback: otp_hash column doesn't exist — retry old schema (otp only)
+      if (insertErr && (insertErr.code === 'PGRST204' || String(insertErr.message).includes('otp_hash'))) {
+        const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
+          phone:    email,
+          email:    email,
+          otp,
           expires_at: expiryStr,
         })
         insertErr = fallbackErr

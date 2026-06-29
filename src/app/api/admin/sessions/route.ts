@@ -4,6 +4,7 @@ import { decodeAdminToken } from '@/lib/auth/jwt'
 import { listActiveSessions } from '@/lib/auth/sessions'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { logger } from '@/lib/logger'
 import { getAdminCookieName } from '@/cookie'
 
 // GET /api/admin/sessions — list all active admin sessions with device details.
@@ -20,10 +21,14 @@ export async function GET(req: NextRequest) {
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
   )
 
-  // Decode the current token to determine which session is "this device"
-  const token = req.cookies.get(getAdminCookieName())?.value
-  const currentJti = token ? (decodeAdminToken(token)?.jti ?? null) : null
+  try {
+    const token = req.cookies.get(getAdminCookieName())?.value
+    const currentJti = token ? (decodeAdminToken(token)?.jti ?? null) : null
 
-  const sessions = await listActiveSessions()
-  return NextResponse.json({ sessions, currentJti })
+    const sessions = await listActiveSessions()
+    return NextResponse.json({ sessions, currentJti })
+  } catch (err) {
+    logger.error('[GET /api/admin/sessions]', { error: err instanceof Error ? err.message : String(err) })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
