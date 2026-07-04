@@ -56,7 +56,7 @@ export default function SellerAbandonedPage() {
       if (!res.ok) throw new Error(await res.text())
       setData(await res.json())
     } catch {
-      setError('Impossible de charger les donnÃƒÂ©es abandonnÃƒÂ©es.')
+      setError('Impossible de charger les données abandonnées.')
     } finally {
       setLoading(false)
     }
@@ -80,7 +80,7 @@ export default function SellerAbandonedPage() {
       <main className="lg:ml-64 p-4 md:p-8 max-w-6xl mx-auto w-full">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Paniers abandonnÃƒÂ©s</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Paniers abandonnés</h1>
             <p className="text-sm text-gray-500 mt-0.5">30 derniers jours</p>
           </div>
           <button onClick={fetchData} disabled={loading}
@@ -107,9 +107,9 @@ export default function SellerAbandonedPage() {
           <>
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <StatCard icon={ShoppingCart} label="AbandonnÃƒÂ©s"   value={String(data.totalAbandoned)} color="red" />
-              <StatCard icon={CheckCircle}  label="RÃƒÂ©cupÃƒÂ©rÃƒÂ©s"    value={String(data.recovered)} color="green" />
-              <StatCard icon={TrendingUp}   label="Taux rÃƒÂ©cup."  value={`${data.recoveryRate}%`} color="indigo" />
+              <StatCard icon={ShoppingCart} label="Abandonnés"   value={String(data.totalAbandoned)} color="red" />
+              <StatCard icon={CheckCircle}  label="Récupérés"    value={String(data.recovered)} color="green" />
+              <StatCard icon={TrendingUp}   label="Taux récup."  value={`${data.recoveryRate}%`} color="indigo" />
               <StatCard icon={TrendingUp}   label="Valeur perdue" value={formatPrice(data.totalValue)} color="amber" />
             </div>
 
@@ -137,7 +137,7 @@ export default function SellerAbandonedPage() {
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                 <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-indigo-500" />
-                  Top wilayas abandonnÃƒÂ©es
+                  Top wilayas abandonnées
                 </h2>
                 <div className="space-y-3">
                   {data.byWilaya.map((row) => {
@@ -160,7 +160,7 @@ export default function SellerAbandonedPage() {
             {data.totalAbandoned === 0 && (
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
                 <ShoppingCart className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">Aucun panier abandonnÃƒÂ© ces 30 derniers jours.</p>
+                <p className="text-gray-500 text-sm">Aucun panier abandonné ces 30 derniers jours.</p>
               </div>
             )}
           </>

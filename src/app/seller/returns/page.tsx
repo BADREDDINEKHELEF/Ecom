@@ -30,23 +30,23 @@ interface ReturnRequest {
 
 const STATUS_CONFIG: Record<ReturnStatus, { label: Record<string, string>; style: string }> = {
   requested: { 
-    label: { fr: 'DemandÃƒÂ©', en: 'Requested', ar: 'Ã™â€¦Ã˜Â·Ã™â€žÃ™Ë†Ã˜Â¨' }, 
+    label: { fr: 'Demandé', en: 'Requested', ar: 'مطلوب' }, 
     style: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
   },
   approved:  { 
-    label: { fr: 'ApprouvÃƒÂ©', en: 'Approved', ar: 'Ã™â€¦Ã™â€šÃ˜Â¨Ã™Ë†Ã™â€ž' }, 
+    label: { fr: 'Approuvé', en: 'Approved', ar: 'مقبول' }, 
     style: 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
   },
   rejected:  { 
-    label: { fr: 'RejetÃƒÂ©', en: 'Rejected', ar: 'Ã™â€¦Ã˜Â±Ã™ÂÃ™Ë†Ã˜Â¶' }, 
+    label: { fr: 'Rejeté', en: 'Rejected', ar: 'مرفوض' }, 
     style: 'bg-red-500/20 text-red-400 border border-red-500/30' 
   },
   refunded:  { 
-    label: { fr: 'RemboursÃƒÂ©', en: 'Refunded', ar: 'Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â±Ã˜Â¬Ã˜Â¹ Ã™â€¦Ã˜Â§Ã™â€žÃ™Å Ã˜Â§' }, 
+    label: { fr: 'Remboursé', en: 'Refunded', ar: 'مسترجع ماليا' }, 
     style: 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
   },
   returned:  { 
-    label: { fr: 'RetournÃƒÂ©', en: 'Returned', ar: 'Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â±Ã˜Â¬Ã˜Â¹ Ã™Æ’Ã™â€žÃ™Å Ã˜Â§' }, 
+    label: { fr: 'Retourné', en: 'Returned', ar: 'مسترجع كليا' }, 
     style: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
   },
 }
@@ -85,7 +85,7 @@ export default function SellerReturnsPage() {
       setNotes(initialNotes)
       setRefundAmounts(initialRefunds)
     } catch {
-      setLoadError(lang === 'ar' ? 'Ã™ÂÃ˜Â´Ã™â€ž Ã˜ÂªÃ˜Â­Ã™â€¦Ã™Å Ã™â€ž Ã˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¬Ã˜Â¹Ã˜Â§Ã˜Âª' : (lang === 'fr' ? 'Impossible de charger les retours' : 'Could not load return requests'))
+      setLoadError(lang === 'ar' ? 'فشل تحميل Ø·Ù„Ø¨Ø§Øª المرتجعات' : (lang === 'fr' ? 'Impossible de charger les retours' : 'Could not load return requests'))
     } finally {
       setLoading(false)
     }
@@ -148,15 +148,15 @@ export default function SellerReturnsPage() {
 
   // UI translations
   const ui = {
-    title: lang === 'ar' ? 'Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¬Ã˜Â¹Ã˜Â§Ã˜Âª Ã™Ë†Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â±Ã˜Â¯Ã˜Â§Ã˜Âª' : (lang === 'fr' ? 'Retours & Remboursements' : 'Returns & Refunds'),
-    subtitle: lang === 'ar' ? `Ã™â€žÃ˜Â¯Ã™Å Ã™Æ’ ${returns.length} Ã˜Â·Ã™â€žÃ˜Â¨ Ã™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¬Ã˜Â¹` : (lang === 'fr' ? `${returns.length} demande(s) de retour` : `${returns.length} return request(s)`),
-    reason: lang === 'ar' ? 'Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¨Ã˜Â¨' : (lang === 'fr' ? 'Raison' : 'Reason'),
-    sellerNote: lang === 'ar' ? 'Ã™â€¦Ã™â€žÃ˜Â§Ã˜Â­Ã˜Â¸Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Â¦Ã˜Â¹' : (lang === 'fr' ? 'Note du vendeur' : 'Seller Note'),
-    sellerNotePlaceholder: lang === 'ar' ? 'Ã˜Â£Ã˜Â¶Ã™Â Ã˜ÂªÃ˜Â¹Ã™â€žÃ™Å Ã™â€š Ã˜Â¯Ã˜Â§Ã˜Â®Ã™â€žÃ™Å  Ã™â€¡Ã™â€ Ã˜Â§...' : (lang === 'fr' ? 'Commentaire interne (visible uniquement par vous)...' : 'Internal comment (visible only to you)...'),
-    refundAmountLabel: lang === 'ar' ? 'Ã™â€¦Ã˜Â¨Ã™â€žÃ˜Âº Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã˜ÂªÃ˜Â±Ã˜Â¯Ã˜Â§Ã˜Â¯ (Ã˜Â¯Ã˜Â¬)' : (lang === 'fr' ? 'Montant ÃƒÂ  rembourser (DA)' : 'Refund Amount (DA)'),
-    noReturns: lang === 'ar' ? 'Ã™â€žÃ˜Â§ Ã˜ÂªÃ™Ë†Ã˜Â¬Ã˜Â¯ Ã˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¬Ã˜Â¹Ã˜Â§Ã˜Âª Ã˜Â­Ã˜Â§Ã™â€žÃ™Å Ã˜Â§Ã™â€¹.' : (lang === 'fr' ? 'Aucune demande de retour pour le moment.' : 'No return requests found.'),
-    actions: lang === 'ar' ? 'Ã˜ÂªÃ˜Â­Ã˜Â¯Ã™Å Ã˜Â« Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â© Ã˜Â¥Ã™â€žÃ™â€°' : (lang === 'fr' ? 'Changer le statut en' : 'Update status to'),
-    saveNotes: lang === 'ar' ? 'Ã˜Â­Ã™ÂÃ˜Â¸ Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¹Ã˜Â¯Ã™Å Ã™â€žÃ˜Â§Ã˜Âª' : (lang === 'fr' ? 'Enregistrer les notes' : 'Save Notes'),
+    title: lang === 'ar' ? 'المرتجعات والمستردات' : (lang === 'fr' ? 'Retours & Remboursements' : 'Returns & Refunds'),
+    subtitle: lang === 'ar' ? `لديك ${returns.length} Ø·Ù„Ø¨ مرتجع` : (lang === 'fr' ? `${returns.length} demande(s) de retour` : `${returns.length} return request(s)`),
+    reason: lang === 'ar' ? 'Ø§Ù„Ø³Ø¨Ø¨' : (lang === 'fr' ? 'Raison' : 'Reason'),
+    sellerNote: lang === 'ar' ? 'ملاحظة Ø§Ù„Ø¨Ø§Ø¦Ø¹' : (lang === 'fr' ? 'Note du vendeur' : 'Seller Note'),
+    sellerNotePlaceholder: lang === 'ar' ? 'أضف ØªØ¹Ù„ÙŠÙ‚ Ø¯Ø§Ø®Ù„ÙŠ هنا...' : (lang === 'fr' ? 'Commentaire interne (visible uniquement par vous)...' : 'Internal comment (visible only to you)...'),
+    refundAmountLabel: lang === 'ar' ? 'مبلغ Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯ (Ø¯Ø¬)' : (lang === 'fr' ? 'Montant à  rembourser (DA)' : 'Refund Amount (DA)'),
+    noReturns: lang === 'ar' ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª مرتجعات Ø­Ø§Ù„ÙŠØ§Ù‹.' : (lang === 'fr' ? 'Aucune demande de retour pour le moment.' : 'No return requests found.'),
+    actions: lang === 'ar' ? 'ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø­Ø§Ù„Ø© Ø¥Ù„Ù‰' : (lang === 'fr' ? 'Changer le statut en' : 'Update status to'),
+    saveNotes: lang === 'ar' ? 'حفظ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª' : (lang === 'fr' ? 'Enregistrer les notes' : 'Save Notes'),
   }
 
   return (
@@ -187,7 +187,7 @@ export default function SellerReturnsPage() {
           {loading ? (
             <div className="flex flex-col items-center gap-3 text-gray-400 py-24 justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-              <span>ChargementÃ¢â‚¬Â¦</span>
+              <span>Chargement?</span>
             </div>
           ) : returns.length === 0 ? (
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-16 text-center text-gray-400 shadow-lg">
@@ -238,7 +238,7 @@ export default function SellerReturnsPage() {
                       {r.orders && (
                         <div className="text-right flex-shrink-0">
                           <p className="font-bold text-white text-sm">{r.orders.full_name}</p>
-                          <p className="text-xs text-gray-400">{r.orders.wilaya} Ã‚Â· {formatPrice(r.orders.total)}</p>
+                          <p className="text-xs text-gray-400">{r.orders.wilaya} · {formatPrice(r.orders.total)}</p>
                         </div>
                       )}
                       <ChevronDown className={`w-4 h-4 text-gray-500 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-white' : ''}`} />
@@ -321,7 +321,7 @@ export default function SellerReturnsPage() {
                                     onClick={() => handleUpdateStatus(r.id, s)}
                                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${c.style} hover:brightness-110`}
                                   >
-                                    {updating === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `Ã¢â€ â€™ ${statusLabel}`}
+                                    {updating === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `→ ${statusLabel}`}
                                   </button>
                                 )
                               })}

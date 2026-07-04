@@ -9,11 +9,14 @@ const analyzeBundles = withBundleAnalyzer({ enabled: process.env.ANALYZE === 'tr
 
 const isDev = process.env.NODE_ENV === 'development'
 
+// unsafe-eval is NOT required in production; Next.js compiles dependencies so
+// they do not rely on eval/new Function at runtime. Keep script-src tight.
+const BASE_SCRIPT_SRC = "script-src 'self' 'unsafe-inline'"
+
 function buildCsp(extra: string[] = []): string {
   return [
     "default-src 'self'",
-    // Some dependencies (e.g. recharts, qrcode) use eval/new Function internally.
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    `${BASE_SCRIPT_SRC} https://connect.facebook.net https://www.googletagmanager.com https://analytics.tiktok.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     [
@@ -22,6 +25,9 @@ function buildCsp(extra: string[] = []): string {
       'https://via.placeholder.com',
       'https://picsum.photos',
       'https://*.supabase.co',
+      'https://www.facebook.com',
+      'https://www.googletagmanager.com',
+      'https://analytics.tiktok.com',
     ].join(' '),
     [
       "connect-src 'self'",
@@ -31,6 +37,7 @@ function buildCsp(extra: string[] = []): string {
       'https://api.yalidine.app',
       'https://*.sentry.io',
       'https://graph.facebook.com',
+      'https://www.facebook.com',
       'https://business-api.tiktok.com',
       'https://www.google-analytics.com',
     ].join(' '),

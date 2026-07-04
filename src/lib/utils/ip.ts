@@ -14,6 +14,13 @@ import { NextRequest } from 'next/server'
  * client-controlled header that can be set to any value.
  */
 export function getClientIp(req: NextRequest): string {
+  // Vercel sets x-vercel-forwarded-for at the edge; it is trustworthy.
+  const vercelForwarded = req.headers.get('x-vercel-forwarded-for')
+  if (vercelForwarded) {
+    const first = vercelForwarded.split(',')[0]?.trim()
+    if (first) return first
+  }
+
   // Vercel / trusted reverse proxy sets x-real-ip reliably
   const realIp = req.headers.get('x-real-ip')
   if (realIp) return realIp.trim()

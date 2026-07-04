@@ -97,7 +97,15 @@ export async function middleware(req: NextRequest) {
 
   if (!isPublicAdminPath) {
     const adminToken = req.cookies.get(getAdminCookieName())?.value
-    if (!adminToken || !(await verifyAdminJwt(adminToken))) {
+    const jwtValid = adminToken ? await verifyAdminJwt(adminToken) : false
+    console.error('[Middleware DEBUG]', {
+      pathname,
+      cookieName: getAdminCookieName(),
+      hasToken: !!adminToken,
+      jwtValid,
+      ip,
+    })
+    if (!adminToken || !jwtValid) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }

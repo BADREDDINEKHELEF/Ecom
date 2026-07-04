@@ -159,8 +159,8 @@ describe('Delivery utility tests', () => {
     }
     expect(findWilayaRow(resultsArray, 'Tipaza')).toEqual({ to_wilaya_name: 'Tipaza', home_fee: 450 })
 
-    // 4. Fallback if not found
-    expect(findWilayaRow(dataArray, 'UnknownWilaya')).toEqual({ wilaya_name: 'Oran', home_fee: 600 })
+    // 4. Return null if not found (avoid silently defaulting to the first row)
+    expect(findWilayaRow(dataArray, 'UnknownWilaya')).toBeNull()
   })
 })
 

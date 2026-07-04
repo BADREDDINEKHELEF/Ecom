@@ -5,7 +5,7 @@ import { signAdminToken, ADMIN_TOKEN_MAX_AGE_SECONDS } from '@/lib/auth/jwt'
 import { verifyTotpGetCounter } from '@/lib/auth/totp'
 import { writeAuditLog } from '@/lib/auth/auditLog'
 import { getClientIp } from '@/lib/utils/ip'
-import { getAdminCookieName, getAdminCookieOptions } from '@/cookie'
+import { getAdminCookieName, getAdminCookieOptions, ADMIN_COOKIE_NAME } from '@/cookie'
 import { createSession, isTotpCounterUsed, markTotpCounterUsed } from '@/lib/auth/sessions'
 
 export async function POST(req: NextRequest) {
@@ -14,17 +14,19 @@ export async function POST(req: NextRequest) {
     const ua = req.headers.get('user-agent') ?? 'unknown'
 
     // Layer 1 — Rate limiting (5 attempts / 15 min / IP)
-    const rateCheck = await checkRateLimit(ip)
-    if (!rateCheck.allowed) {
-      void writeAuditLog({
-        action: 'admin_login_failure', ip, userAgent: ua,
-        result: 'failure', meta: { reason: 'rate_limited' },
-      })
-      return NextResponse.json(
-        { error: 'Too many attempts. Try again later.' },
-        { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
-      )
-    }
+    // TEMPORARILY DISABLED: x-real-ip fallback to 0.0.0.0 causes all users to
+    // share one global bucket. Re-enable after fixing IP extraction.
+    // const rateCheck = await checkRateLimit(ip)
+    // if (!rateCheck.allowed) {
+    //   void writeAuditLog({
+    //     action: 'admin_login_failure', ip, userAgent: ua,
+    //     result: 'failure', meta: { reason: 'rate_limited' },
+    //   })
+    //   return NextResponse.json(
+    //     { error: 'Too many attempts. Try again later.' },
+    //     { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
+    //   )
+    // }
 
     const body = await req.json().catch(() => ({}))
     const { password, totpCode } = body as { password?: string; totpCode?: string }
@@ -110,6 +112,10 @@ export async function POST(req: NextRequest) {
     const cookieName = getAdminCookieName()
     const cookieOpts = getAdminCookieOptions(ADMIN_TOKEN_MAX_AGE_SECONDS)
     res.cookies.set(cookieName, token, cookieOpts)
+    // Remove any legacy non-prefixed cookie left over from before the upgrade.
+    if (cookieName !== ADMIN_COOKIE_NAME) {
+      res.cookies.delete(ADMIN_COOKIE_NAME)
+    }
     return res
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

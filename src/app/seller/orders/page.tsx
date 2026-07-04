@@ -247,7 +247,7 @@ export default function SellerOrdersPage() {
           </div>
         )}
 
-        {/* Status tab filters Ã¢â‚¬â€ scrollable on mobile */}
+        {/* Status tab filters ? scrollable on mobile */}
         <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-4 scrollbar-hide">
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-max sm:w-fit">
             {STATUS_TABS.map(({ key, label }) => {
@@ -339,7 +339,7 @@ export default function SellerOrdersPage() {
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${cfg.badge}`}>
                               <StatusIcon className="w-3 h-3" />{cfg.label}
                             </span>
-                            <span className="text-xs text-gray-400">#{order.id.slice(0, 8)} Ã‚Â· {order.wilaya}</span>
+                            <span className="text-xs text-gray-400">#{order.id.slice(0, 8)} · {order.wilaya}</span>
                             {urgency !== 'none' && (
                               <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
                                 urgency === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
@@ -377,7 +377,7 @@ export default function SellerOrdersPage() {
                         </button>
                       </div>
 
-                      {/* Expanded detail Ã¢â‚¬â€ mobile */}
+                      {/* Expanded detail ? mobile */}
                       {isExpanded && (
                         <div className="mt-3 ml-7 pt-3 border-t border-gray-100 space-y-3">
                           <div>
@@ -391,7 +391,7 @@ export default function SellerOrdersPage() {
                                       : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                     }
                                     <div className="min-w-0">
-                                      <span className="text-gray-700 truncate block">{item.product_name} Ãƒâ€” {item.quantity}</span>
+                                      <span className="text-gray-700 truncate block">{item.product_name} × {item.quantity}</span>
                                       {item.selected_color && (
                                         <span className="text-xs text-gray-400">Couleur : {item.selected_color}</span>
                                       )}
@@ -476,7 +476,7 @@ export default function SellerOrdersPage() {
                               )}
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              #{order.id.slice(0, 8)} Ã‚Â·{' '}
+                              #{order.id.slice(0, 8)} ·{' '}
                               <a href={`tel:${order.phone}`}
                                 onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
@@ -532,7 +532,7 @@ export default function SellerOrdersPage() {
                                           : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                         }
                                         <div>
-                                          <span className="text-gray-700">{item.product_name} Ãƒâ€” {item.quantity}</span>
+                                          <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
                                           {item.selected_color && (
                                             <p className="text-xs text-gray-400">Couleur : {item.selected_color}</p>
                                           )}

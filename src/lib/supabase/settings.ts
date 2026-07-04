@@ -1,5 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { createClient } from './client'
+import { createAdminClient } from './admin'
 
 export interface StoreSettings {
   storeName:             string
@@ -65,7 +65,8 @@ function dbToSettings(data: Record<string, unknown>): StoreSettings {
 
 export const getStoreSettings = unstable_cache(
   async (): Promise<StoreSettings> => {
-    const supabase = createClient()
+    // Public settings; use admin client so cached reads work reliably server-side.
+    const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('store_settings')
       .select('*')

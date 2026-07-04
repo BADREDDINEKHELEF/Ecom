@@ -1,5 +1,4 @@
 import { unstable_cache } from 'next/cache'
-import { createClient } from './client'
 import { createAdminClient } from './admin'
 
 export interface Review {
@@ -14,7 +13,8 @@ export interface Review {
 }
 
 async function _getReviews(productId: string): Promise<Review[]> {
-  const supabase = createClient()
+  // Cached public read; admin client avoids browser-client issues in SSR/API routes.
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('reviews')
     .select('id, product_id, author_name, rating, comment, is_verified, created_at')

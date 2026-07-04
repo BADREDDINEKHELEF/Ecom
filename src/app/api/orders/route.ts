@@ -43,6 +43,7 @@ const OrderItemSchema = z.object({
   stopDeskCause: z.string().max(300).optional().nullable(),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
   // shippingCost is intentionally removed to prevent client-side manipulation (C-01)
+  idempotencyKey:   z.string().uuid().optional().nullable(),
   promoCodeId:      z.string().uuid().optional().nullable(),
   discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
   giftCardCode:     z.string().max(100).optional().nullable(),
@@ -100,11 +101,13 @@ export async function POST(req: NextRequest) {
     isStopDesk,
     deliveryType,
     stopDeskCause,
+    idempotencyKey,
     ...rest
   } = parsed.data
   const input = {
     ...rest,
     phone: utilNormalizePhone(parsed.data.phone),
+    idempotencyKey:   idempotencyKey ?? null,
     promoCodeId:      rawPromoCodeId ?? undefined,
     giftCardCode:     rawGiftCardCode?.trim().toUpperCase() || undefined,
     notes: rawNotes ?? null,
@@ -121,23 +124,15 @@ export async function POST(req: NextRequest) {
   const buyerEmail = rawEmail ?? null
 
   try {
-    const { id: orderId, total, giftCardDeduction } = await createOrder(input)
+    const { id: orderId, total, isDuplicate } = await createOrder(input)
 
-    // Redeem gift card balance — awaited direct RPC, not fire-and-forget HTTP.
-    // The order is already committed with the discounted total, so failure here means
-    // the customer got the discount without the balance being deducted. Log it.
-    if (input.giftCardCode && giftCardDeduction > 0) {
-      try {
-        const { error: gcErr } = await createAdminClient().rpc('redeem_gift_card', {
-          p_code:   input.giftCardCode,
-          p_amount: giftCardDeduction,
-        })
-        if (gcErr) logger.error('[gift-card] redeem rpc failed', { orderId, error: gcErr.message })
-      } catch (gcErr) {
-        logger.error('[gift-card] redeem failed', { orderId, error: gcErr instanceof Error ? gcErr.message : String(gcErr) })
-      }
-    }
+    // NOTE: gift-card balance is already deducted atomically inside createOrder()
+    // via the claim_gift_card RPC. Do NOT call a second redemption here — that
+    // would double-charge the customer's gift-card balance.
 
+    // Skip all side-effect notifications for idempotent duplicate lookups
+    // (already sent on the first successful call).
+    if (!isDuplicate) {
     // Redeem loyalty points (non-blocking)
     if (pointsRedeemed > 0) {
       const routeClient = createRouteClient(req)
@@ -303,6 +298,7 @@ export async function POST(req: NextRequest) {
         if (user) return awardPoints(user.id, orderId, total)
       })
       .catch((err) => logger.error('[loyalty] award failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
 
     return NextResponse.json({ orderId }, { status: 201 })
   } catch (err: unknown) {

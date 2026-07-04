@@ -80,7 +80,7 @@ export default function SellerCustomersPage() {
       const { phone } = await res.json()
       setRevealed((prev) => ({ ...prev, [phoneHash]: phone }))
     } catch {
-      alert('Impossible de rÃƒÂ©vÃƒÂ©ler ce numÃƒÂ©ro. RÃƒÂ©essayez.')
+      alert('Impossible de révéler ce numéro. Réessayez.')
     } finally {
       setRevealing(null)
     }
@@ -125,7 +125,7 @@ export default function SellerCustomersPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard icon={Users}     label="Total clients"   value={String(customers.length)} color="indigo" />
-          <StatCard icon={Award}     label="Acheteurs fidÃƒÂ¨les" value={String(repeatBuyers)} color="amber" />
+          <StatCard icon={Award}     label="Acheteurs fidèles" value={String(repeatBuyers)} color="amber" />
           <StatCard icon={ShoppingBag} label="Cmds moy./client" value={avgOrders} color="blue" />
           <StatCard icon={TrendingUp} label="LTV total"       value={formatPrice(totalLTV)} color="green" />
         </div>
@@ -136,7 +136,7 @@ export default function SellerCustomersPage() {
             <Search className="w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher par nom, tÃƒÂ©lÃƒÂ©phone, wilayaÃ¢â‚¬Â¦"
+              placeholder="Rechercher par nom, téléphone, wilaya?"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 text-sm text-gray-900 placeholder-gray-400 outline-none"
@@ -146,9 +146,9 @@ export default function SellerCustomersPage() {
           {error && <p className="p-4 text-sm text-red-500">{error}</p>}
 
           {loading ? (
-            <div className="p-8 text-center text-gray-400 text-sm">ChargementÃ¢â‚¬Â¦</div>
+            <div className="p-8 text-center text-gray-400 text-sm">Chargement?</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 text-sm">Aucun client trouvÃƒÂ©.</div>
+            <div className="p-8 text-center text-gray-400 text-sm">Aucun client trouvé.</div>
           ) : (
             <div className="divide-y divide-gray-50">
               {filtered.map((c) => (
@@ -191,7 +191,7 @@ export default function SellerCustomersPage() {
                     <button
                       onClick={() => revealPhone(c.phoneHash)}
                       disabled={!!revealed[c.phoneHash] || revealing === c.phoneHash}
-                      title={revealed[c.phoneHash] ? 'NumÃƒÂ©ro rÃƒÂ©vÃƒÂ©lÃƒÂ©' : 'RÃƒÂ©vÃƒÂ©ler le numÃƒÂ©ro'}
+                      title={revealed[c.phoneHash] ? 'Numéro révélé' : 'Révéler le numéro'}
                       className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-40"
                     >
                       {revealing === c.phoneHash
@@ -209,7 +209,7 @@ export default function SellerCustomersPage() {
         </div>
 
         <p className="text-xs text-gray-400 text-center">
-          Les numÃƒÂ©ros sont masquÃƒÂ©s par dÃƒÂ©faut. Chaque rÃƒÂ©vÃƒÂ©lation est enregistrÃƒÂ©e dans le journal d&apos;audit.
+          Les numéros sont masqués par défaut. Chaque révélation est enregistrée dans le journal d&apos;audit.
         </p>
       </main>
     </div>

@@ -6,6 +6,7 @@ import { encryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { validateStoreSlug } from '@/lib/validation/slug'
 
 function encryptIfNeeded(value: string | null | undefined): string | null | undefined {
   if (!value) return value
@@ -95,6 +96,24 @@ export async function PATCH(req: NextRequest) {
         { error: 'Validation failed', ...(details && { details }) },
         { status: 400 }
       )
+    }
+
+    // Validate slug format and reserved names server-side when changing slug
+    if (parsed.data.store_slug !== undefined && parsed.data.store_slug !== null) {
+      const slugValidation = validateStoreSlug(parsed.data.store_slug)
+      if (!slugValidation.ok) {
+        return NextResponse.json({ error: slugValidation.error }, { status: 400 })
+      }
+      // Ensure uniqueness case-insensitively (exclude current vendor)
+      const { data: existing } = await supabase
+        .from('vendors')
+        .select('id')
+        .ilike('store_slug', parsed.data.store_slug)
+        .neq('id', vendor.id)
+        .maybeSingle()
+      if (existing) {
+        return NextResponse.json({ error: 'URL déjà prise. Essayez un autre nom.' }, { status: 409 })
+      }
     }
 
     // Encrypt server-side CAPI tokens before storing — never persist them in plaintext

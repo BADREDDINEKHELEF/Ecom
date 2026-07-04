@@ -12,12 +12,15 @@ import type { StoreNiche } from './page'
 
 interface Props {
   products: Product[]
+  totalProducts: number
+  page: number
+  pageSize: number
   accent: string
   storeSlug: string
   storeNiches?: StoreNiche[]
 }
 
-export default function StoreProductsGrid({ products, accent, storeSlug, storeNiches = [] }: Props) {
+export default function StoreProductsGrid({ products, totalProducts, page, pageSize, accent, storeSlug, storeNiches = [] }: Props) {
   const [tab, setTab]       = useState('all')
   const [search, setSearch] = useState('')
   const t  = useT()
@@ -43,8 +46,10 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
     )
   }, [tabFiltered, search])
 
+  const totalPages = Math.ceil(totalProducts / pageSize)
+
   const tabs = [
-    { id: 'all', label: ts.tabAll, count: products.length, emoji: '' },
+    { id: 'all', label: ts.tabAll, count: totalProducts, emoji: '' },
     ...storeNiches.map(n => ({ id: n.id, label: n.name, count: products.filter(p => p.nicheId === n.id).length, emoji: n.emoji })),
     ...(newProducts.length  > 0 ? [{ id: 'new',  label: ts.tabNew,  count: newProducts.length,  emoji: '✨' }] : []),
     ...(saleProducts.length > 0 ? [{ id: 'sale', label: ts.tabSale, count: saleProducts.length, emoji: '🏷️' }] : []),
@@ -119,6 +124,27 @@ export default function StoreProductsGrid({ products, accent, storeSlug, storeNi
           ))}
         </div>
       )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-10">
+          <Link
+            href={`/store/${storeSlug}?page=${Math.max(1, page - 1)}`}
+            className={`px-4 py-2 text-sm font-semibold rounded-full border border-black/10 bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors ${page <= 1 ? 'pointer-events-none opacity-40' : ''}`}
+          >
+            Précédent
+          </Link>
+          <span className="text-sm text-[#86868b]">
+            Page {page} sur {totalPages}
+          </span>
+          <Link
+            href={`/store/${storeSlug}?page=${Math.min(totalPages, page + 1)}`}
+            className={`px-4 py-2 text-sm font-semibold rounded-full border border-black/10 bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors ${page >= totalPages ? 'pointer-events-none opacity-40' : ''}`}
+          >
+            Suivant
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
@@ -137,6 +163,7 @@ function ProductCard({
   const ts = t.store
   const tc = t.common
   const [added, setAdded] = useState(false)
+  const [imgBroken, setImgBroken] = useState(false)
 
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
@@ -148,6 +175,11 @@ function ProductCard({
     e.preventDefault()
     e.stopPropagation()
     if (product.stock === 0) return
+    // Products with color variants require the buyer to pick a color on the product page.
+    if ((product.colorVariants?.length ?? 0) > 0) {
+      window.location.href = `/store/${storeSlug}/${product.id}`
+      return
+    }
     const ok = addItem(product, 1, undefined, storeSlug)
     if (!ok) return // store conflict — CartSidebar shows the modal
     setAdded(true)
@@ -158,7 +190,7 @@ function ProductCard({
     <Link href={`/store/${storeSlug}/${product.id}`} className="group block">
       {/* Image — portrait, fills card, image IS the card */}
       <div className="relative aspect-[3/4] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#f5f5f7] mb-3">
-        {product.images?.[0] ? (
+        {product.images?.[0] && !imgBroken ? (
           <Image
             src={product.images[0]}
             alt={product.name}
@@ -167,6 +199,7 @@ function ProductCard({
               product.stock === 0 ? 'opacity-50 grayscale' : ''
             }`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            onError={() => setImgBroken(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

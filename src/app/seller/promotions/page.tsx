@@ -100,10 +100,10 @@ export default function SellerPromotionsPage() {
 
   const shareWhatsApp = (code: PromoCode) => {
     const discount = code.discount_type === 'percentage'
-      ? `${code.discount_value}% de rÃƒÂ©duction`
-      : `${formatPrice(code.discount_value)} de rÃƒÂ©duction`
+      ? `${code.discount_value}% de réduction`
+      : `${formatPrice(code.discount_value)} de réduction`
     const msg = encodeURIComponent(
-      `?? Code promo exclusif : *${code.code}*\n${discount} sur votre commande.\n${code.min_order > 0 ? `Commande minimum : ${formatPrice(code.min_order)}.\n` : ''}${code.expires_at ? `Valable jusqu\'au ${new Date(code.expires_at).toLocaleDateString('fr-DZ')}.\n` : ''}Commandez sur storedz.dz/shop/${vendor?.store_slug}`
+      `🎁 Code promo exclusif : *${code.code}*\n${discount} sur votre commande.\n${code.min_order > 0 ? `Commande minimum : ${formatPrice(code.min_order)}.\n` : ''}${code.expires_at ? `Valable jusqu\'au ${new Date(code.expires_at).toLocaleDateString('fr-DZ')}.\n` : ''}Commandez sur storedz.dz/shop/${vendor?.store_slug}`
     )
     window.open(`https://wa.me/?text=${msg}`, '_blank')
   }
@@ -199,7 +199,7 @@ export default function SellerPromotionsPage() {
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
               <Tag className="w-6 h-6 text-emerald-600" /> Promotions
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Codes promo, ventes flash, offres spÃƒÂ©ciales</p>
+            <p className="text-gray-500 text-sm mt-1">Codes promo, ventes flash, offres spéciales</p>
           </div>
           <button onClick={() => tab === 'codes' ? setShowPromoForm(true) : setShowFlashForm(true)}
             className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 text-sm">
@@ -228,7 +228,7 @@ export default function SellerPromotionsPage() {
             {showPromoForm && (
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100 mb-6">
                 <div className="flex items-center justify-between mb-5">
-                  <h2 className="font-bold text-gray-900">CrÃƒÂ©er un code promo</h2>
+                  <h2 className="font-bold text-gray-900">Créer un code promo</h2>
                   <button onClick={() => setShowPromoForm(false)}><X className="w-5 h-5 text-gray-400" /></button>
                 </div>
                 <form onSubmit={savePromoCode} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -239,13 +239,13 @@ export default function SellerPromotionsPage() {
                         className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono uppercase focus:outline-none focus:border-emerald-400" />
                       <button type="button" onClick={() => setPromoForm({ ...promoForm, code: generateCode() })}
                         className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
-                        GÃƒÂ©nÃƒÂ©rer
+                        Générer
                       </button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Type de rÃƒÂ©duction</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Type de réduction</label>
                     <div className="flex gap-2">
                       {(['percentage', 'fixed'] as const).map((type) => (
                         <button key={type} type="button"
@@ -283,7 +283,7 @@ export default function SellerPromotionsPage() {
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Utilisations max</label>
                     <input type="number" min="1" value={promoForm.max_uses}
                       onChange={(e) => setPromoForm({ ...promoForm, max_uses: e.target.value })}
-                      placeholder="IllimitÃƒÂ©"
+                      placeholder="Illimité"
                       className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
                   </div>
 
@@ -313,7 +313,7 @@ export default function SellerPromotionsPage() {
                     <button type="submit" disabled={savingPromo}
                       className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-60 text-sm">
                       {savingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                      CrÃƒÂ©er le code
+                      Créer le code
                     </button>
                     <button type="button" onClick={() => setShowPromoForm(false)}
                       className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50">
@@ -331,7 +331,7 @@ export default function SellerPromotionsPage() {
               <div className="bg-white rounded-2xl p-12 shadow-sm text-center text-gray-400">
                 <Tag className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p className="font-medium">Aucun code promo</p>
-                <button onClick={() => setShowPromoForm(true)} className="mt-2 text-emerald-600 font-bold text-sm hover:underline">CrÃƒÂ©er votre premier code ?</button>
+                <button onClick={() => setShowPromoForm(true)} className="mt-2 text-emerald-600 font-bold text-sm hover:underline">Créer votre premier code ?</button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -351,14 +351,14 @@ export default function SellerPromotionsPage() {
                                 ? 'bg-gray-100 text-gray-500'
                                 : 'bg-emerald-100 text-emerald-700'
                             }`}>
-                              {isExpired ? 'ExpirÃƒÂ©' : code.is_active ? 'Actif' : 'Inactif'}
+                              {isExpired ? 'Expiré' : code.is_active ? 'Actif' : 'Inactif'}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                             <span>
                               {code.discount_type === 'percentage'
-                                ? `${code.discount_value}% de rÃƒÂ©duction`
-                                : `${formatPrice(code.discount_value)} de rÃƒÂ©duction`}
+                                ? `${code.discount_value}% de réduction`
+                                : `${formatPrice(code.discount_value)} de réduction`}
                             </span>
                             {code.min_order > 0 && <span>Min: {formatPrice(code.min_order)}</span>}
                             {code.max_uses && <span>{code.uses_count}/{code.max_uses} utilisations</span>}
@@ -369,8 +369,8 @@ export default function SellerPromotionsPage() {
                                 Expire {new Date(code.expires_at).toLocaleDateString('fr-DZ')}
                               </span>
                             )}
-                            {code.free_shipping && <span>?? Livraison offerte</span>}
-                            {code.one_per_buyer && <span>1Ãƒâ€” par acheteur</span>}
+                            {code.free_shipping && <span>🚚 Livraison offerte</span>}
+                            {code.one_per_buyer && <span>1× par acheteur</span>}
                           </div>
                         </div>
 
@@ -386,7 +386,7 @@ export default function SellerPromotionsPage() {
                                 ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
                                 : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
                             }`}>
-                            {code.is_active ? 'DÃƒÂ©sactiver' : 'Activer'}
+                            {code.is_active ? 'Désactiver' : 'Activer'}
                           </button>
                         </div>
                       </div>
@@ -406,7 +406,7 @@ export default function SellerPromotionsPage() {
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100 mb-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-amber-500" /> CrÃƒÂ©er une vente flash
+                    <Zap className="w-5 h-5 text-amber-500" /> Créer une vente flash
                   </h2>
                   <button onClick={() => setShowFlashForm(false)}><X className="w-5 h-5 text-gray-400" /></button>
                 </div>
@@ -419,9 +419,9 @@ export default function SellerPromotionsPage() {
                         setFlashForm({ ...flashForm, product_id: e.target.value, flash_price: p ? Math.round(p.price * 0.8) : 0 })
                       }}
                       className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
-                      <option value="">SÃƒÂ©lectionner un produitÃ¢â‚¬Â¦</option>
+                      <option value="">Sélectionner un produit?</option>
                       {products.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name} Ã¢â‚¬â€ {formatPrice(p.price)}</option>
+                        <option key={p.id} value={p.id}>{p.name} ? {formatPrice(p.price)}</option>
                       ))}
                     </select>
                   </div>
@@ -439,15 +439,15 @@ export default function SellerPromotionsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stock limitÃƒÂ© (optionnel)</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stock limité (optionnel)</label>
                     <input type="number" min="1" value={flashForm.stock_limit}
                       onChange={(e) => setFlashForm({ ...flashForm, stock_limit: e.target.value })}
-                      placeholder="IllimitÃƒÂ©"
+                      placeholder="Illimité"
                       className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">DÃƒÂ©but</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Début</label>
                     <input required type="datetime-local" value={flashForm.starts_at}
                       onChange={(e) => setFlashForm({ ...flashForm, starts_at: e.target.value })}
                       className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
@@ -482,7 +482,7 @@ export default function SellerPromotionsPage() {
               <div className="bg-white rounded-2xl p-12 shadow-sm text-center text-gray-400">
                 <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p className="font-medium">Aucune vente flash</p>
-                <button onClick={() => setShowFlashForm(true)} className="mt-2 text-emerald-600 font-bold text-sm hover:underline">CrÃƒÂ©er votre premiÃƒÂ¨re vente flash ?</button>
+                <button onClick={() => setShowFlashForm(true)} className="mt-2 text-emerald-600 font-bold text-sm hover:underline">Créer votre première vente flash ?</button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -507,13 +507,13 @@ export default function SellerPromotionsPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="font-bold text-gray-900 truncate">{product?.name ?? 'Produit supprimÃƒÂ©'}</p>
+                            <p className="font-bold text-gray-900 truncate">{product?.name ?? 'Produit supprimé'}</p>
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
                               isActive  ? 'bg-amber-100 text-amber-700'
                               : isPending ? 'bg-blue-100 text-blue-700'
                               : 'bg-gray-100 text-gray-500'
                             }`}>
-                              {isActive ? '?? En cours' : isPending ? '? Ãƒâ‚¬ venir' : 'TerminÃƒÂ©'}
+                              {isActive ? '🔥 En cours' : isPending ? '⏳ À venir' : 'Terminé'}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-2">

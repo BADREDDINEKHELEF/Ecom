@@ -1,7 +1,14 @@
 export const ADMIN_COOKIE_NAME = 'admin_token'
+export const ADMIN_COOKIE_NAME_HOST = '__Host-admin_token'
 
+// Use the __Host- prefix in production/Vercel for defense-in-depth against
+// subdomain cookie injection. The prefix requires Secure, Path=/, and no Domain.
 export function getAdminCookieName(): string {
-  return ADMIN_COOKIE_NAME
+  const isProductionHost =
+    process.env.ADMIN_COOKIE_HOST_PREFIX === 'true' ||
+    !!process.env.VERCEL ||
+    process.env.NODE_ENV === 'production'
+  return isProductionHost ? ADMIN_COOKIE_NAME_HOST : ADMIN_COOKIE_NAME
 }
 
 export function getAdminCookieOptions(maxAgeSeconds: number): {

@@ -3,6 +3,7 @@ import { verifyAdminToken, decodeAdminToken } from './jwt'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { getAdminCookieName } from '@/cookie'
+import { deleteJti } from './sessions'
 
 /**
  * Reads and verifies the admin JWT cookie, then checks the JTI revocation
@@ -56,6 +57,7 @@ export async function revokeAdminToken(token: string): Promise<void> {
         expires_at: new Date(payload.exp * 1000).toISOString(),
       }),
       admin.from('admin_sessions').update({ is_active: false }).eq('jti', payload.jti),
+      deleteJti(payload.jti),
     ])
   } catch {
     logger.error('[revokeAdminToken] Failed to revoke token')
@@ -76,10 +78,13 @@ export async function invalidateJtiOnly(token: string): Promise<string | null> {
     const payload = decodeAdminToken(token)
     if (!payload?.jti || !payload.exp) return null
     const admin = createAdminClient()
-    await admin.from('admin_revoked_tokens').insert({
-      jti:        payload.jti,
-      expires_at: new Date(payload.exp * 1000).toISOString(),
-    })
+    await Promise.all([
+      admin.from('admin_revoked_tokens').insert({
+        jti:        payload.jti,
+        expires_at: new Date(payload.exp * 1000).toISOString(),
+      }),
+      deleteJti(payload.jti),
+    ])
     return payload.jti
   } catch {
     logger.error('[invalidateJtiOnly] Failed to invalidate JTI')

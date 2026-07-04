@@ -12,15 +12,15 @@ type View = 'login' | 'forgot_phone' | 'forgot_otp'
 
 function friendlyAuthError(msg: string): string {
   if (/invalid.*credentials|invalid.*password|wrong.*password/i.test(msg))
-    return 'E-mail ou mot de passe incorrect. RÃƒÂ©essayez.'
+    return 'E-mail ou mot de passe incorrect. Réessayez.'
   if (/email.*not.*confirmed/i.test(msg))
     return 'Confirmez votre e-mail avant de vous connecter.'
   if (/too.*many.*requests|rate.*limit/i.test(msg))
-    return 'Trop de tentatives. RÃƒÂ©essayez dans quelques minutes.'
+    return 'Trop de tentatives. Réessayez dans quelques minutes.'
   if (/user.*not.*found|no.*user/i.test(msg))
-    return 'Aucun compte trouvÃƒÂ© avec cet e-mail.'
+    return 'Aucun compte trouvé avec cet e-mail.'
   if (/network|fetch/i.test(msg))
-    return 'Erreur de connexion. VÃƒÂ©rifiez votre accÃƒÂ¨s internet.'
+    return 'Erreur de connexion. Vérifiez votre accès internet.'
   return msg
 }
 
@@ -41,7 +41,7 @@ export default function SellerLoginPage() {
 
   const reset = (v: View) => { setView(v); setError(''); setSuccess(''); setResetEmail(''); setOtp('') }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Login Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Login ──────────────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError('')
@@ -64,7 +64,7 @@ export default function SellerLoginPage() {
     router.push('/seller/dashboard'); router.refresh()
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Step 1 Ã¢â‚¬â€ Send OTP to email Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Step 1 ? Send OTP to email ─────────────────────────────────────────────
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError('')
@@ -77,22 +77,22 @@ export default function SellerLoginPage() {
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
       if (body._devOtp) {
-        const hint = body._emailError ? ` — SMTP: ${body._emailError.slice(0, 120)}` : ' (email non envoyé)'
+        const hint = body._emailError ? ` ? SMTP: ${body._emailError.slice(0, 120)}` : ' (email non envoyé)'
         setError(`Code OTP : ${body._devOtp}${hint}`)
       }
       setView('forgot_otp')
-      setSuccess('Code envoyÃƒÂ© par e-mail Ã¢Å“â€œ')
+      setSuccess('Code envoyé par e-mail ✓')
     } catch {
-      setError('Erreur de connexion. VÃƒÂ©rifiez votre accÃƒÂ¨s internet.')
+      setError('Erreur de connexion. Vérifiez votre accès internet.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Step 2 Ã¢â‚¬â€ Verify OTP + set new password Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Step 2 ? Verify OTP + set new password ─────────────────────────────────
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (newPwd.length < 8) { setError('Mot de passe : 8 caractÃƒÂ¨res minimum.'); return }
+    if (newPwd.length < 8) { setError('Mot de passe : 8 caractères minimum.'); return }
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/seller/verify-otp', {
@@ -102,10 +102,10 @@ export default function SellerLoginPage() {
       })
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Code incorrect.'); return }
-      setSuccess('Mot de passe mis ÃƒÂ  jour ! Connectez-vous.')
+      setSuccess('Mot de passe mis à  jour ! Connectez-vous.')
       setTimeout(() => reset('login'), 2000)
     } catch {
-      setError('Erreur de connexion. VÃƒÂ©rifiez votre accÃƒÂ¨s internet.')
+      setError('Erreur de connexion. Vérifiez votre accès internet.')
     } finally {
       setLoading(false)
     }
@@ -131,12 +131,12 @@ export default function SellerLoginPage() {
             <h1 className="text-2xl font-black text-gray-900">
                {view === 'login'       ? t.seller.loginTitle :
                 view === 'forgot_otp' ? 'Entrez le code' :
-                'Mot de passe oubliÃƒÂ© ?'}
+                'Mot de passe oublié ?'}
              </h1>
              <p className="text-gray-500 text-sm mt-1">
                {view === 'login'       ? t.seller.loginSub :
-                 view === 'forgot_otp' ? `Code envoyÃƒÂ© ÃƒÂ  ${resetEmail}` :
-                'Entrez votre adresse e-mail enregistrÃƒÂ©e'}
+                 view === 'forgot_otp' ? `Code envoyé à  ${resetEmail}` :
+                'Entrez votre adresse e-mail enregistrée'}
             </p>
           </div>
 
@@ -150,7 +150,7 @@ export default function SellerLoginPage() {
             </div>
           )}
 
-          {/* Ã¢â€â‚¬Ã¢â€â‚¬ Login form Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          {/* ── Login form ── */}
           {view === 'login' && (
             <form className="space-y-4" onSubmit={handleLogin}>
               <div>
@@ -176,7 +176,7 @@ export default function SellerLoginPage() {
                   <input type={showPwd ? 'text' : 'password'} required minLength={8}
                     value={form.password} autoComplete="current-password"
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder="Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢"
+                    placeholder="•¢•¢•¢•¢"
                     className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
                   <button type="button" onClick={() => setShowPwd(!showPwd)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -192,7 +192,7 @@ export default function SellerLoginPage() {
             </form>
           )}
 
-          {/* Ã¢â€â‚¬Ã¢â€â‚¬ Step 1: Enter email Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          {/* ── Step 1: Enter email ── */}
           {view === 'forgot_phone' && (
             <form className="space-y-4" onSubmit={handleSendOTP}>
               <div>
@@ -204,7 +204,7 @@ export default function SellerLoginPage() {
                     placeholder="vendeur@exemple.com"
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Adresse e-mail enregistrÃƒÂ©e sur votre compte vendeur</p>
+                <p className="text-xs text-gray-400 mt-1">Adresse e-mail enregistrée sur votre compte vendeur</p>
               </div>
               <button type="submit" disabled={loading}
                 className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none">
@@ -213,16 +213,16 @@ export default function SellerLoginPage() {
               </button>
               <button type="button" onClick={() => reset('login')}
                 className="w-full text-sm text-gray-500 hover:text-gray-700 text-center">
-                Ã¢â€ Â Retour ÃƒÂ  la connexion
+                ← Retour à  la connexion
               </button>
             </form>
           )}
 
-          {/* Ã¢â€â‚¬Ã¢â€â‚¬ Step 2: Enter OTP + new password Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          {/* ── Step 2: Enter OTP + new password ── */}
           {view === 'forgot_otp' && (
             <form className="space-y-4" onSubmit={handleVerifyOTP}>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Code de vÃƒÂ©rification (6 chiffres)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Code de vérification (6 chiffres)</label>
                 <input type="text" required maxLength={6} value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="123456"
@@ -235,7 +235,7 @@ export default function SellerLoginPage() {
                   <input type={showNew ? 'text' : 'password'} required minLength={8}
                     value={newPwd} autoComplete="new-password"
                     onChange={(e) => setNewPwd(e.target.value)}
-                    placeholder="Min. 8 caractÃƒÂ¨res"
+                    placeholder="Min. 8 caractères"
                     className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
                   <button type="button" onClick={() => setShowNew(!showNew)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -246,12 +246,12 @@ export default function SellerLoginPage() {
               <button type="submit" disabled={loading || otp.length !== 6}
                 className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none">
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                RÃƒÂ©initialiser le mot de passe
+                Réinitialiser le mot de passe
               </button>
               <div className="flex items-center justify-between text-sm">
                 <button type="button" onClick={() => reset('forgot_phone')}
                   className="text-gray-500 hover:text-gray-700">
-                  Ã¢â€ Â Changer d&apos;e-mail
+                  ← Changer d&apos;e-mail
                 </button>
                 <button type="button" onClick={handleSendOTP} disabled={loading}
                   className="text-emerald-600 hover:underline font-medium disabled:opacity-50">

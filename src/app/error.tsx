@@ -10,7 +10,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   const t = useT()
 
   useEffect(() => {
-    logger.error('App error', { error: error.message, digest: error.digest })
+    logger.error('App error', {
+      message: error.message,
+      stack: error.stack,
+      digest: error.digest,
+      name: error.name,
+    })
   }, [error])
 
   return (

@@ -99,7 +99,8 @@ export function findWilayaRow(
       return fuzzyMatch as Record<string, unknown>
     }
 
-    // No match found — return null so callers can fall back to static pricing.
+    // No match found — do not silently fall back to an arbitrary row. Return
+    // null so callers can surface "delivery not available to this wilaya".
     return null
   }
   

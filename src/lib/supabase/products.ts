@@ -1,7 +1,6 @@
 import { unstable_cache } from 'next/cache'
-import { createClient } from './client'
 import { createAdminClient } from './admin'
-import { Product, ColorVariant } from '@/types'
+import { Product, ColorVariant, ProductVariant } from '@/types'
 import { normalizePhone } from '@/lib/utils/phone'
 
 export function dbToProduct(row: Record<string, unknown>): Product {
@@ -29,6 +28,7 @@ export function dbToProduct(row: Record<string, unknown>): Product {
     minOrderQuantity:  row.min_order_quantity != null ? Number(row.min_order_quantity) : 1,
     isBundle:          Boolean(row.is_bundle),
     colorVariants:     Array.isArray(row.color_variants) ? (row.color_variants as ColorVariant[]) : [],
+    variants:          Array.isArray(row.variants) ? (row.variants as ProductVariant[]) : undefined,
     totalOrders:       row.total_orders != null ? Number(row.total_orders) : undefined,
     vendorId:          row.vendor_id != null ? String(row.vendor_id) : undefined,
   }
@@ -36,7 +36,8 @@ export function dbToProduct(row: Record<string, unknown>): Product {
 
 export const getProducts = unstable_cache(
   async (nicheId?: string, category?: string): Promise<Product[]> => {
-    const supabase = createClient()
+    // Public catalog; admin client so cached reads work reliably server-side.
+    const supabase = createAdminClient()
     let query = supabase
       .from('products')
       .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,total_orders,created_at')
@@ -53,7 +54,7 @@ export const getProducts = unstable_cache(
 
 export const getFeaturedProducts = unstable_cache(
   async (nicheId?: string, limit = 8): Promise<Product[]> => {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     let query = supabase
       .from('products')
       .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,total_orders,created_at')
@@ -87,7 +88,7 @@ export const getProductById = unstable_cache(
     } catch {
       const result = await supabase
         .from('products')
-        .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,total_orders,created_at')
+        .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,total_orders,color_variants,created_at')
         .eq('id', id)
         .single()
       data = result.data as Record<string, unknown> | null
@@ -98,7 +99,7 @@ export const getProductById = unstable_cache(
 
     return dbToProduct(data)
   },
-  ['product-by-id'],
+  ['product-by-id-v2'],
   { revalidate: 60, tags: ['products'] }
 )
 
@@ -129,8 +130,16 @@ export async function getVendorPhoneByProductId(productId: string): Promise<stri
   }
 }
 
+export interface VendorProductsPage {
+  products: Product[]
+  total: number
+  totalPages: number
+}
+
 export async function getVendorProducts(vendorId: string): Promise<Product[]> {
-  const supabase = createClient()
+  // Called from seller server components; admin client is safe because the
+  // caller has already verified the vendor identity.
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('products')
     .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at')
@@ -141,8 +150,101 @@ export async function getVendorProducts(vendorId: string): Promise<Product[]> {
   return (data ?? []).map(dbToProduct)
 }
 
+export async function getVendorProductsPaginated(
+  vendorId: string,
+  options: {
+    page?: number
+    limit?: number
+    search?: string
+    sortBy?: 'created_at' | 'name' | 'price' | 'stock'
+    sortOrder?: 'asc' | 'desc'
+  } = {}
+): Promise<VendorProductsPage> {
+  const {
+    page = 1,
+    limit = 20,
+    search = '',
+    sortBy = 'created_at',
+    sortOrder = 'desc',
+  } = options
+  const supabase = createAdminClient()
+
+  let query = supabase
+    .from('products')
+    .select(
+      'id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,condition,meta_title,meta_description,is_pre_order,pre_order_date,min_order_quantity,is_bundle,color_variants,created_at',
+      { count: 'exact' }
+    )
+    .eq('vendor_id', vendorId)
+
+  if (search.trim()) {
+    query = query.ilike('name', `%${search.trim()}%`)
+  }
+
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const { data, error, count } = await query
+    .order(sortBy, { ascending: sortOrder === 'asc' })
+    .range(from, to)
+
+  if (error) throw error
+
+  const total = count ?? 0
+  return {
+    products: (data ?? []).map(dbToProduct),
+    total,
+    totalPages: Math.ceil(total / limit),
+  }
+}
+
+export interface SearchProductsPage {
+  products: Product[]
+  total: number
+  totalPages: number
+}
+
+export async function searchProducts(
+  query: string,
+  options: { page?: number; limit?: number } = {}
+): Promise<SearchProductsPage> {
+  const { page = 1, limit = 24 } = options
+  const supabase = createAdminClient()
+
+  const q = query.trim()
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  let dbQuery = supabase
+    .from('products')
+    .select(
+      'id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at',
+      { count: 'exact' }
+    )
+    .eq('is_active', true)
+
+  if (q) {
+    dbQuery = dbQuery.or(`name.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%,tags.cs.{${q}}`)
+  }
+
+  const { data, error, count } = await dbQuery
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (error) throw error
+
+  const total = count ?? 0
+  return {
+    products: (data ?? []).map(dbToProduct),
+    total,
+    totalPages: Math.ceil(total / limit),
+  }
+}
+
 export async function getVendorPublicProducts(vendorId: string): Promise<Product[]> {
-  const supabase = createClient()
+  // Public store catalog; use admin client so it works reliably in SSR.
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('products')
     .select('id,niche_id,category,name,description,price,compare_price,images,image_colors,stock,rating,review_count,tags,is_new,is_featured,vendor_id,created_at')

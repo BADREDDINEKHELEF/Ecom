@@ -14,6 +14,7 @@ import StoreProductClient from './StoreProductClient'
 import ProductShareButtons from './ProductShareButtons'
 import TrackViewContent from '@/components/analytics/TrackViewContent'
 import { getServerT } from '@/lib/i18n/server'
+import { logger } from '@/lib/logger'
 import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net'
@@ -49,39 +50,66 @@ async function getRelatedProducts(vendorId: string, excludeId: string): Promise<
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug, productId } = await params
-  const product = await getProductById(productId)
-  const vendor  = await getVendorBySlug(slug)
-  if (!product || !vendor) return { title: 'Produit introuvable' }
   const canonicalUrl = `${SITE_URL}/store/${slug}/${productId}`
-  const description  = product.metaDescription ?? product.description?.slice(0, 160) ?? product.name
-  return {
-    title:       product.metaTitle ?? `${product.name} — ${vendor.store_name}`,
-    description,
-    alternates: { canonical: canonicalUrl },
-    openGraph: {
-      type:        'product' as const,
-      url:         canonicalUrl,
-      title:       product.name,
+  try {
+    // Use a fresh admin client directly; avoid unstable_cache here because cached
+    // fetches inside generateMetadata were crashing the RSC metadata boundary.
+    const supabase = createAdminClient()
+    const [{ data: product }, { data: vendor }] = await Promise.all([
+      supabase.from('products').select('id,name,description,meta_title,meta_description,images,vendor_id').eq('id', productId).maybeSingle(),
+      supabase.from('vendors').select('id,store_name,store_slug').ilike('store_slug', slug).maybeSingle(),
+    ])
+    if (!product || !vendor) {
+      return { title: 'Produit introuvable | StoreDz', alternates: { canonical: canonicalUrl } }
+    }
+    const firstImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null
+    const validOgImage = typeof firstImage === 'string' && /^https?:\/\//i.test(firstImage) ? firstImage : null
+    const description = product.meta_description ?? (typeof product.description === 'string' ? product.description.slice(0, 160) : product.name)
+    return {
+      title: product.meta_title ?? `${product.name} — ${vendor.store_name}`,
       description,
-      locale:      'fr_DZ',
-      siteName:    'StoreDz',
-      images:      product.images[0] ? [{ url: product.images[0], alt: product.name }] : [],
-    },
+      alternates: { canonical: canonicalUrl },
+      openGraph: {
+        type: 'website' as const,
+        url: canonicalUrl,
+        title: product.name,
+        description,
+        locale: 'fr_DZ',
+        siteName: 'StoreDz',
+        images: validOgImage ? [{ url: validOgImage, alt: product.name }] : [],
+      },
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`[StoreProductPage] generateMetadata failed /store/${slug}/${productId}`, { error: msg })
+    return { title: 'Produit | StoreDz', alternates: { canonical: canonicalUrl } }
   }
 }
 
 export default async function StoreProductPage({ params }: PageProps) {
   const { slug, productId } = await params
+
   const [product, vendor] = await Promise.all([
     getProductById(productId),
     getVendorBySlug(slug),
   ])
-  if (!product || !vendor) notFound()
+  if (!product || !vendor || product.vendorId !== vendor.id) {
+    logger.warn(`[StoreProductPage] notFound /store/${slug}/${productId}`, {
+      hasProduct: !!product,
+      hasVendor: !!vendor,
+      vendorIdMismatch: !!(product && vendor && product.vendorId !== vendor.id),
+      productVendorId: product?.vendorId,
+      urlVendorId: vendor?.id,
+    })
+    notFound()
+  }
 
-  const [related, t] = await Promise.all([
-    getRelatedProducts(vendor.id, productId),
-    getServerT(),
-  ])
+  try {
+
+    const [related, t] = await Promise.all([
+      getRelatedProducts(vendor.id, productId),
+      getServerT(),
+    ])
   const ts = t.store
 
   const v              = vendor as typeof vendor & VendorExt
@@ -371,6 +399,13 @@ export default async function StoreProductPage({ params }: PageProps) {
       </div>
     </div>
   )
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    // NEXT_HTTP_ERROR_FALLBACK is Next.js control-flow for notFound(); don't log as error.
+    if (msg.includes('NEXT_HTTP_ERROR_FALLBACK')) throw err
+    logger.error(`[StoreProductPage] Error rendering /store/${slug}/${productId}`, { error: msg })
+    throw err
+  }
 }
 
 function RelatedCard({

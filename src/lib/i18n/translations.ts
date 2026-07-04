@@ -200,6 +200,7 @@ export const translations = {
       myAccount: 'My Account',
       memberSince: 'Member since',
       signOut: 'Sign Out',
+      switchAccount: 'Switch account',
     },
     deals: {
       badge: 'Limited Time Deals',
@@ -842,6 +843,7 @@ export const translations = {
       myAccount: 'Mon compte',
       memberSince: 'Membre depuis',
       signOut: 'Se déconnecter',
+      switchAccount: 'Changer de compte',
     },
     deals: {
       badge: 'Offres à durée limitée',
@@ -1484,6 +1486,7 @@ export const translations = {
       myAccount: 'حسابي',
       memberSince: 'عضو منذ',
       signOut: 'تسجيل الخروج',
+      switchAccount: 'تبديل الحساب',
     },
     deals: {
       badge: 'عروض لفترة محدودة',

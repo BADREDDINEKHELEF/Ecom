@@ -115,7 +115,7 @@ function isAllowedImage(type: string, name: string) {
     n.endsWith('.heif')
   )
 }
-const MAX_MB = 30
+const MAX_MB = 10
 
 // ── Component ────────────────────────────────────────────────────────────────
 

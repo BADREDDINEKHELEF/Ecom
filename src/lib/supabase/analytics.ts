@@ -188,152 +188,40 @@ export async function getCodProviderStats(): Promise<CodProviderRow[]> {
 export async function getAdminStats(daysBack = 30): Promise<AdminStats> {
   const supabase = createAdminClient()
 
-  const since = new Date()
-  since.setDate(since.getDate() - daysBack)
+  // Use the DB-side RPC to avoid fetching every order/order_item into memory.
+  const { data, error } = await supabase.rpc('get_admin_dashboard_stats', {
+    days_back: daysBack,
+  })
+  if (error) throw error
 
-  const priorStart = new Date()
-  priorStart.setDate(priorStart.getDate() - daysBack * 2)
-
-  const monthStart = new Date()
-  monthStart.setDate(1)
-  monthStart.setHours(0, 0, 0, 0)
-
-  type OrderRow = {
-    id: string
-    total: number
-    wilaya: string | null
-    status: string
-    delivery_outcome: string | null
-    created_at: string
-    order_items: { vendor_id: string | null; subtotal: number }[]
-  }
-
-  const [ordersRes, priorOrdersRes, vendorsRes, productsRes, subsRes] =
-    await Promise.all([
-      supabase
-        .from('orders')
-        .select('id, total, wilaya, status, delivery_outcome, created_at, order_items(vendor_id, subtotal)')
-        .gte('created_at', since.toISOString()),
-      supabase
-        .from('orders')
-        .select('id, total, status')
-        .gte('created_at', priorStart.toISOString())
-        .lt('created_at', since.toISOString()),
-      supabase
-        .from('vendors')
-        .select('id, store_name, store_slug, is_active, subscription_status, created_at'),
-      supabase
-        .from('products')
-        .select('id', { count: 'exact', head: true }),
-      supabase
-        .from('vendors')
-        .select('subscription_plan_id, subscription_plans(price_dzd)')
-        .eq('subscription_status', 'active'),
-    ])
-
-  const orders     = (ordersRes.data   ?? []) as unknown as OrderRow[]
-  const priorOrds  = (priorOrdersRes.data ?? []) as { id: string; total: number; status: string }[]
-  const vendors    = (vendorsRes.data   ?? []) as {
-    id: string; store_name: string; store_slug: string
-    is_active: boolean; subscription_status: string | null; created_at: string
-  }[]
-  const subs = (subsRes.data ?? []) as unknown as { subscription_plan_id: string | null; subscription_plans: { price_dzd: number } | null }[]
-
-  // Revenue = confirmed delivered orders only
-  const transmitted   = orders.filter((o) => o.status === 'delivered')
-  const totalRevenue  = transmitted.reduce((s, o) => s + (o.total ?? 0), 0)
-  const totalOrders   = orders.filter((o) => o.status !== 'cancelled').length
-  const priorTransmit = priorOrds.filter((o) => o.status === 'delivered')
-  const priorRevenue  = priorTransmit.reduce((s, o) => s + (o.total ?? 0), 0)
-  const priorOrderCnt = priorOrds.filter((o) => o.status !== 'cancelled').length
-  const revenueGrowth = priorRevenue  > 0 ? Math.round(((totalRevenue  - priorRevenue)  / priorRevenue)  * 100) : 0
-  const ordersGrowth  = priorOrderCnt > 0 ? Math.round(((totalOrders   - priorOrderCnt) / priorOrderCnt) * 100) : 0
-  const avgOrderValue = transmitted.length > 0 ? Math.round(totalRevenue / transmitted.length) : 0
-
-  // Delivery / return rates — use `status` consistently (delivery_outcome is often null)
-  const delivered   = orders.filter((o) => o.status === 'delivered').length
-  const returned    = orders.filter((o) => o.status === 'returned').length
-  const deliveryRate = totalOrders > 0 ? Math.round((delivered / totalOrders) * 100) : 0
-  const returnRate   = totalOrders > 0 ? Math.round((returned  / totalOrders) * 100) : 0
-
-  // Vendors
-  const totalVendors        = vendors.length
-  const activeVendors       = vendors.filter((v) => v.is_active).length
-  const newVendorsThisMonth = vendors.filter((v) => new Date(v.created_at) >= monthStart).length
-
-  // Products
-  const totalProducts = productsRes.count ?? 0
-
-  // Subscriptions / MRR
-  const activeSubscriptions = subs.length
-  const mrr = subs.reduce((s, sub) => s + (sub.subscription_plans?.price_dzd ?? 0), 0)
-
-  // Wilaya breakdown — revenue from delivered orders only
-  const wilayaMap: Record<string, { orders: number; revenue: number }> = {}
-  for (const order of orders) {
-    if (!order.wilaya || order.status === 'cancelled') continue
-    if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0 }
-    wilayaMap[order.wilaya].orders++
-    if (order.status === 'delivered') wilayaMap[order.wilaya].revenue += order.total ?? 0
-  }
-  const byWilaya = Object.entries(wilayaMap)
-    .map(([wilaya, d]) => ({ wilaya, ...d }))
-    .sort((a, b) => b.orders - a.orders)
-    .slice(0, 15)
-
-  // Top vendors
-  const vendorMap: Record<string, { name: string; slug: string; orders: number; revenue: number; delivered: number }> = {}
-  const vendorLookup = new Map(vendors.map((v) => [v.id, v]))
-  for (const order of orders) {
-    const seenVendors = new Set<string>()
-    for (const item of order.order_items ?? []) {
-      const vid = item.vendor_id
-      if (!vid) continue
-      if (!vendorMap[vid]) {
-        const v = vendorLookup.get(vid)
-        vendorMap[vid] = { name: v?.store_name ?? 'Inconnu', slug: v?.store_slug ?? '', orders: 0, revenue: 0, delivered: 0 }
-      }
-      if (order.status === 'delivered') vendorMap[vid].revenue += item.subtotal ?? 0
-      if (!seenVendors.has(vid)) {
-        seenVendors.add(vid)
-        vendorMap[vid].orders++
-        if (order.status === 'delivered') vendorMap[vid].delivered++
-      }
+  const row = (data ?? [])[0] as Record<string, unknown> | undefined
+  if (!row) {
+    return {
+      totalRevenue: 0, revenueGrowth: 0, totalOrders: 0, ordersGrowth: 0,
+      avgOrderValue: 0, deliveryRate: 0, returnRate: 0,
+      totalVendors: 0, activeVendors: 0, newVendorsThisMonth: 0,
+      totalProducts: 0, activeSubscriptions: 0, mrr: 0,
+      monthly: [], byWilaya: [], topVendors: [],
     }
   }
-  const topVendors = Object.entries(vendorMap)
-    .map(([id, d]) => ({
-      id, ...d,
-      deliveryRate: d.orders > 0 ? Math.round((d.delivered / d.orders) * 100) : 0,
-    }))
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 10)
-
-  // Monthly chart
-  const months = daysBack <= 31 ? 1 : daysBack <= 93 ? 3 : daysBack <= 186 ? 6 : 12
-  const monthlyMap: Record<string, { revenue: number; orders: number }> = {}
-  for (const order of orders) {
-    if (order.status === 'cancelled') continue
-    const key = new Date(order.created_at).toLocaleString('en', { month: 'short', year: '2-digit' })
-    if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, orders: 0 }
-    if (order.status === 'delivered') monthlyMap[key].revenue += order.total ?? 0
-    monthlyMap[key].orders++
-  }
-  const monthly = Array.from({ length: months }, (_, i) => {
-    const d = new Date()
-    d.setMonth(d.getMonth() - (months - 1 - i))
-    const key = d.toLocaleString('en', { month: 'short', year: '2-digit' })
-    return { month: d.toLocaleString('en', { month: 'short' }), ...(monthlyMap[key] ?? { revenue: 0, orders: 0 }) }
-  })
 
   return {
-    totalRevenue, revenueGrowth,
-    totalOrders, ordersGrowth,
-    avgOrderValue, deliveryRate, returnRate,
-    totalVendors, activeVendors, newVendorsThisMonth,
-    totalProducts,
-    activeSubscriptions, mrr,
-    monthly, byWilaya, topVendors,
+    totalRevenue:        Number(row.totalRevenue ?? 0),
+    revenueGrowth:       Number(row.revenueGrowth ?? 0),
+    totalOrders:         Number(row.totalOrders ?? 0),
+    ordersGrowth:        Number(row.ordersGrowth ?? 0),
+    avgOrderValue:       Number(row.avgOrderValue ?? 0),
+    deliveryRate:        Number(row.deliveryRate ?? 0),
+    returnRate:          Number(row.returnRate ?? 0),
+    totalVendors:        Number(row.totalVendors ?? 0),
+    activeVendors:       Number(row.activeVendors ?? 0),
+    newVendorsThisMonth: Number(row.newVendorsThisMonth ?? 0),
+    totalProducts:       Number(row.totalProducts ?? 0),
+    activeSubscriptions: Number(row.activeSubscriptions ?? 0),
+    mrr:                 Number(row.mrr ?? 0),
+    monthly:             (row.monthly as AdminStats['monthly']) ?? [],
+    byWilaya:            (row.byWilaya as AdminStats['byWilaya']) ?? [],
+    topVendors:          (row.topVendors as AdminStats['topVendors']) ?? [],
   }
 }
 
@@ -345,232 +233,38 @@ export async function getSellerAnalytics(
 ): Promise<SellerAnalytics> {
   const supabase = createAdminClient()
 
-  const since = new Date()
-  since.setDate(since.getDate() - daysBack)
-
-  const priorStart = new Date()
-  priorStart.setDate(priorStart.getDate() - daysBack * 2)
-
-  type OrderRow = {
-    id: string
-    status: string
-    wilaya: string | null
-    delivery_outcome: string | null
-    delivery_provider: string | null
-    created_at: string
-  }
-
-  type ItemRow = {
-    quantity: number
-    subtotal: number
-    product_name: string
-    order_id: string
-    orders: OrderRow | null
-  }
-
-  type PriorOrderRow = { id: string; status: string; created_at: string }
-  type PriorItemRow  = { subtotal: number; order_id: string; orders: PriorOrderRow | null }
-
-  // Filter orders by date at the orders table level first (pushes date predicate to the
-  // orders index), then join order_items for this vendor — avoids fetching all historical
-  // order_items rows and discarding them in the application layer.
-  const [currentOrdersRes, priorOrdersRes] = await Promise.all([
-    supabase
-      .from('orders')
-      .select('id, status, wilaya, delivery_outcome, delivery_provider, created_at')
-      .gte('created_at', since.toISOString()),
-    supabase
-      .from('orders')
-      .select('id, status, created_at')
-      .gte('created_at', priorStart.toISOString())
-      .lt('created_at', since.toISOString()),
-  ])
-
-  const currentOrderIds = ((currentOrdersRes.data ?? []) as OrderRow[]).map((o) => o.id)
-  const priorOrderIds   = ((priorOrdersRes.data  ?? []) as PriorOrderRow[]).map((o) => o.id)
-
-  const [currentItemsRes, priorItemsRes] = await Promise.all([
-    currentOrderIds.length > 0
-      ? supabase
-          .from('order_items')
-          .select('quantity, subtotal, product_name, order_id, orders(id, status, wilaya, delivery_outcome, delivery_provider, created_at)')
-          .eq('vendor_id', vendorId)
-          .in('order_id', currentOrderIds)
-      : Promise.resolve({ data: [], error: null }),
-    priorOrderIds.length > 0
-      ? supabase
-          .from('order_items')
-          .select('subtotal, order_id, orders(id, status, created_at)')
-          .eq('vendor_id', vendorId)
-          .in('order_id', priorOrderIds)
-      : Promise.resolve({ data: [], error: null }),
-  ])
-
-  const rows      = (currentItemsRes.data ?? []) as unknown as ItemRow[]
-  const priorRows = (priorItemsRes.data   ?? []) as unknown as PriorItemRow[]
-
-  // ── Current period aggregation ──────────────────────────────
-  const orderMap   = new Map<string, { order: ItemRow['orders']; vendorTotal: number }>()
-  const productMap: Record<string, { units: number; revenue: number }> = {}
-  const productOrderMap: Record<string, Set<string>> = {}
-  const providerMap: Record<string, number> = {}
-  const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-  const dowMap: Record<number, { orders: number; revenue: number }> = {}
-  for (let i = 0; i < 7; i++) dowMap[i] = { orders: 0, revenue: 0 }
-
-  for (const row of rows) {
-    const order = row.orders
-    if (!order) continue
-
-    if (!orderMap.has(order.id)) orderMap.set(order.id, { order, vendorTotal: 0 })
-    orderMap.get(order.id)!.vendorTotal += row.subtotal
-
-    const pk = row.product_name
-    if (!productMap[pk]) productMap[pk] = { units: 0, revenue: 0 }
-    productMap[pk].units   += row.quantity
-    productMap[pk].revenue += row.subtotal
-    if (!productOrderMap[pk]) productOrderMap[pk] = new Set()
-    productOrderMap[pk].add(order.id)
-
-    const prov = order.delivery_provider ?? 'direct'
-    providerMap[prov] = (providerMap[prov] ?? 0) + 1
-  }
-
-  const allOrders        = Array.from(orderMap.values())
-  // Revenue = confirmed delivered orders only
-  const transmittedOrds  = allOrders.filter((o) => o.order?.status === 'delivered')
-  const totalRevenue     = transmittedOrds.reduce((s, o) => s + o.vendorTotal, 0)
-  const totalOrders      = allOrders.length
-  const deliveredOrders = allOrders.filter((o) => o.order?.status === 'delivered').length
-  const returnedOrders  = allOrders.filter((o) => o.order?.status === 'returned').length
-  const cancelledOrders = allOrders.filter((o) => o.order?.status === 'cancelled').length
-  const confirmedOrders = allOrders.filter((o) => ['confirmed', 'shipped', 'delivered'].includes(o.order?.status ?? '')).length
-  const shippedOrders   = allOrders.filter((o) => ['shipped', 'delivered'].includes(o.order?.status ?? '')).length
-  const pendingOrders   = allOrders.filter(
-    (o) => !['delivered', 'returned', 'cancelled'].includes(o.order?.status ?? '')
-  ).length
-  const finishedOrders  = deliveredOrders + returnedOrders
-
-  // Wilaya + day-of-week tracked at order level to avoid double-counting
-  const wilayaMap: Record<string, { orders: number; revenue: number; delivered: number; returned: number }> = {}
-
-  for (const { order, vendorTotal } of allOrders) {
-    if (!order) continue
-    const dow = new Date(order.created_at).getDay()
-    dowMap[dow].orders++
-    dowMap[dow].revenue += vendorTotal
-
-    if (order.wilaya) {
-      if (!wilayaMap[order.wilaya]) wilayaMap[order.wilaya] = { orders: 0, revenue: 0, delivered: 0, returned: 0 }
-      wilayaMap[order.wilaya].orders++
-      if (order.status === 'delivered') { wilayaMap[order.wilaya].revenue += vendorTotal; wilayaMap[order.wilaya].delivered++ }
-      if (order.status === 'returned')  wilayaMap[order.wilaya].returned++
-    }
-  }
-
-  // ── Prior period ───────────────────────────────────────────
-  const priorRevenueMap = new Map<string, number>()
-  const priorAllOrderIds = new Set<string>()
-  for (const row of priorRows) {
-    const order = row.orders
-    if (!order) continue
-    if (order.status === 'delivered') {
-      priorRevenueMap.set(order.id, (priorRevenueMap.get(order.id) ?? 0) + row.subtotal)
-    }
-    if (order.status !== 'cancelled') priorAllOrderIds.add(order.id)
-  }
-  const priorRevenue = Array.from(priorRevenueMap.values()).reduce((s, v) => s + v, 0)
-  const priorOrders  = priorAllOrderIds.size  // consistent with totalOrders (non-cancelled)
-  const revenueGrowth = priorRevenue > 0 ? Math.round(((totalRevenue - priorRevenue) / priorRevenue) * 100) : 0
-  const ordersGrowth  = priorOrders  > 0 ? Math.round(((totalOrders  - priorOrders)  / priorOrders)  * 100) : 0
-
-  // Projected 30-day revenue at current pace
-  const projectedRevenue = daysBack > 0 ? Math.round((totalRevenue / daysBack) * 30) : 0
-
-  // ── Monthly chart ───────────────────────────────────────────
-  const months = daysBack <= 31 ? 1 : daysBack <= 93 ? 3 : 6
-  const monthlyMap: Record<string, { revenue: number; orders: number }> = {}
-  for (const { order, vendorTotal } of allOrders) {
-    if (!order) continue
-    const key = new Date(order.created_at).toLocaleString('en', { month: 'short', year: '2-digit' })
-    if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, orders: 0 }
-    if (order.status === 'delivered') monthlyMap[key].revenue += vendorTotal
-    monthlyMap[key].orders++
-  }
-  const monthly = Array.from({ length: months }, (_, i) => {
-    const d = new Date()
-    d.setMonth(d.getMonth() - (months - 1 - i))
-    const key = d.toLocaleString('en', { month: 'short', year: '2-digit' })
-    return { month: d.toLocaleString('en', { month: 'short' }), ...(monthlyMap[key] ?? { revenue: 0, orders: 0 }) }
+  // Use the DB-side RPC to avoid fetching every order/order_item into memory.
+  const { data, error } = await supabase.rpc('get_seller_analytics', {
+    p_vendor_id: vendorId,
+    p_days_back: daysBack,
   })
+  if (error) throw error
 
-  // ── Per-day chart ───────────────────────────────────────────
-  const dayMap: Record<string, { revenue: number; orderIds: Set<string> }> = {}
-  for (const { order, vendorTotal } of allOrders) {
-    if (!order) continue
-    const dateKey = order.created_at.slice(0, 10)
-    if (!dayMap[dateKey]) dayMap[dateKey] = { revenue: 0, orderIds: new Set() }
-    if (order.status === 'delivered') dayMap[dateKey].revenue += vendorTotal
-    dayMap[dateKey].orderIds.add(order.id)
-  }
-  const byDay = Array.from({ length: Math.min(daysBack, 90) }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (Math.min(daysBack, 90) - 1 - i))
-    const dateKey = d.toISOString().slice(0, 10)
-    const label = d.toLocaleDateString('fr-DZ', { day: 'numeric', month: 'short' })
-    const entry = dayMap[dateKey]
-    return { date: label, revenue: entry?.revenue ?? 0, orders: entry?.orderIds.size ?? 0 }
-  })
+  const result = (data ?? {}) as Record<string, unknown>
 
   return {
-    totalRevenue,
-    totalOrders,
-    pendingOrders,
-    confirmedOrders,
-    shippedOrders,
-    deliveredOrders,
-    returnedOrders,
-    cancelledOrders,
-    avgOrderValue: transmittedOrds.length > 0 ? Math.round(totalRevenue / transmittedOrds.length) : 0,
-    returnRate:    finishedOrders ? Math.round((returnedOrders  / finishedOrders) * 100) : 0,
-    deliveryRate:  finishedOrders ? Math.round((deliveredOrders / finishedOrders) * 100) : 0,
-    priorRevenue,
-    priorOrders,
-    revenueGrowth,
-    ordersGrowth,
-    projectedRevenue,
-    monthly,
-    byDay,
-    byWilaya: Object.entries(wilayaMap)
-      .map(([wilaya, d]) => ({
-        wilaya,
-        orders:       d.orders,
-        revenue:      d.revenue,
-        delivered:    d.delivered,
-        returned:     d.returned,
-        avgOrder:     d.orders > 0 ? Math.round(d.revenue / d.orders) : 0,
-        deliveryRate: d.orders > 0 ? Math.round((d.delivered / d.orders) * 100) : 0,
-        returnRate:   d.orders > 0 ? Math.round((d.returned  / d.orders) * 100) : 0,
-      }))
-      .sort((a, b) => b.orders - a.orders)
-      .slice(0, 15),
-    byProvider: Object.entries(providerMap)
-      .map(([provider, count]) => ({ provider, count }))
-      .sort((a, b) => b.count - a.count),
-    topProducts: Object.entries(productMap)
-      .map(([name, d]) => ({
-        name,
-        units:    d.units,
-        revenue:  d.revenue,
-        orders:   productOrderMap[name]?.size ?? 0,
-        avgPrice: d.units > 0 ? Math.round(d.revenue / d.units) : 0,
-      }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 15),
-    worstProducts: [],
-    byDayOfWeek: Object.entries(dowMap).map(([dow, d]) => ({
-      day: DAY_NAMES[Number(dow)],
-      ...d,
-    })),
+    totalRevenue:      Number(result.totalRevenue ?? 0),
+    totalOrders:       Number(result.totalOrders ?? 0),
+    pendingOrders:     Number(result.pendingOrders ?? 0),
+    confirmedOrders:   Number(result.confirmedOrders ?? 0),
+    shippedOrders:     Number(result.shippedOrders ?? 0),
+    deliveredOrders:   Number(result.deliveredOrders ?? 0),
+    returnedOrders:    Number(result.returnedOrders ?? 0),
+    cancelledOrders:   Number(result.cancelledOrders ?? 0),
+    avgOrderValue:     Number(result.avgOrderValue ?? 0),
+    returnRate:        Number(result.returnRate ?? 0),
+    deliveryRate:      Number(result.deliveryRate ?? 0),
+    priorRevenue:      Number(result.priorRevenue ?? 0),
+    priorOrders:       Number(result.priorOrders ?? 0),
+    revenueGrowth:     Number(result.revenueGrowth ?? 0),
+    ordersGrowth:      Number(result.ordersGrowth ?? 0),
+    projectedRevenue:  Number(result.projectedRevenue ?? 0),
+    monthly:           (result.monthly as SellerAnalytics['monthly']) ?? [],
+    byDay:             (result.byDay as SellerAnalytics['byDay']) ?? [],
+    byWilaya:          (result.byWilaya as SellerAnalytics['byWilaya']) ?? [],
+    byProvider:        (result.byProvider as SellerAnalytics['byProvider']) ?? [],
+    topProducts:       (result.topProducts as SellerAnalytics['topProducts']) ?? [],
+    worstProducts:     (result.worstProducts as SellerAnalytics['worstProducts']) ?? [],
+    byDayOfWeek:       (result.byDayOfWeek as SellerAnalytics['byDayOfWeek']) ?? [],
   }
 }

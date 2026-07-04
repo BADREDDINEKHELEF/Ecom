@@ -88,7 +88,7 @@ export default function AdminProductsPage() {
     if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
     setDeleting(id)
     try {
-      await deleteProduct(id)
+      await deleteProduct(id, { isAdmin: true })
       setProductList((prev) => prev.filter((p) => p.id !== id))
     } catch (error) {
       console.error('Delete failed:', error)
@@ -125,7 +125,7 @@ export default function AdminProductsPage() {
     }
     try {
       // Assume upsertProduct returns the saved product from the database
-      const savedProduct = await upsertProduct(product)
+      const savedProduct = await upsertProduct(product, { isAdmin: true })
       if (editing) {
         setProductList((prev) => prev.map((p) =>
           p.id === editing.id ? { ...p, ...savedProduct } : p

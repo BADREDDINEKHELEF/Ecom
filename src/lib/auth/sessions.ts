@@ -15,6 +15,46 @@ import { writeAuditLog } from '@/lib/auth/auditLog'
 import { createHash } from 'crypto'
 import { logger } from '@/lib/logger'
 
+// ── Redis-backed JTI validation (used by middleware) ─────────────────────────
+
+function redisConfigured(): boolean {
+  return !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN
+}
+
+async function redisCommand<T>(command: string, ...args: string[]): Promise<T | null> {
+  if (!redisConfigured()) return null
+  const url = `${process.env.UPSTASH_REDIS_REST_URL}/${command}/${args.map(encodeURIComponent).join('/')}`
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      logger.error('[sessions] Redis command failed', { command, args, status: res.status })
+      return null
+    }
+    return (await res.json()) as T
+  } catch (err) {
+    logger.error('[sessions] Redis command error', { command, args, error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+async function setJtiValid(jti: string, expiresAt: Date): Promise<void> {
+  const ttlSeconds = Math.max(1, Math.floor((expiresAt.getTime() - Date.now()) / 1000))
+  // Upstash REST API: /set/<key>/<value>/EX/<ttl>
+  await redisCommand<{ result: string }>('set', jti, 'valid', 'ex', String(ttlSeconds))
+}
+
+export async function deleteJti(jti: string): Promise<void> {
+  await redisCommand<{ result: number }>('del', jti)
+}
+
+export async function isJtiValidInRedis(jti: string): Promise<boolean> {
+  const data = await redisCommand<{ result: string | null }>('get', jti)
+  return data?.result === 'valid'
+}
+
 // ── Device fingerprinting ────────────────────────────────────────────────────
 
 /**
@@ -48,6 +88,8 @@ export async function createSession({
       user_agent: userAgent,
       expires_at: expiresAt.toISOString(),
     })
+    // Mirror the active JTI in Redis so edge middleware can validate it cheaply.
+    await setJtiValid(jti, expiresAt)
   } catch (err) {
     logger.error('[sessions] createSession failed', {
       error: err instanceof Error ? err.message : String(err),
@@ -74,6 +116,9 @@ export async function rotateSessionJti(
         expires_at: newExpiresAt.toISOString(),
       })
       .eq('jti', oldJti)
+    // Rotate the Redis mirror: old JTI is no longer valid, new one is.
+    await deleteJti(oldJti)
+    await setJtiValid(newJti, newExpiresAt)
   } catch (err) {
     logger.error('[sessions] rotateSessionJti failed', {
       error: err instanceof Error ? err.message : String(err),
@@ -138,6 +183,7 @@ export async function revokeSessionById(sessionId: string): Promise<boolean> {
         expires_at: session.expires_at,
       }),
       admin.from('admin_sessions').update({ is_active: false }).eq('id', sessionId),
+      deleteJti(session.jti),
     ])
     void writeAuditLog({ action: 'admin_session_revoked', meta: { sessionId } })
     return true

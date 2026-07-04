@@ -7,12 +7,7 @@ import { ArrowLeft, Mail, Lock, User, Store, Phone, MapPin, FileText, Eye, EyeOf
 import { createClient } from '@/lib/supabase/client'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useT } from '@/lib/store/langStore'
-
-const RESERVED_SLUGS = new Set(['admin', 'api', 'store', 'auth', 'seller', 'dashboard', 'search', 'deals', 'pricing', 'checkout', 'orders', 'profile', 'wishlist', 'compare', 'track', 'cart', 'offline', 'register', 'login'])
-
-function slugify(s: string) {
-  return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
-}
+import { slugify, isReservedSlug } from '@/lib/validation/slug'
 
 type View = 'form' | 'otp'
 
@@ -36,11 +31,11 @@ export default function SellerRegisterPage() {
     setForm(next)
   }
 
-  // Step 1 — validate form + send OTP
+  // Step 1 ? validate form + send OTP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
-    if (RESERVED_SLUGS.has(form.storeSlug)) { setError(t.seller.urlTaken); return }
+    if (isReservedSlug(form.storeSlug)) { setError(t.seller.urlTaken); return }
     if (!form.email) { setError('Adresse e-mail requise pour vérifier votre compte.'); return }
     setLoading(true); setError('')
     try {
@@ -52,7 +47,7 @@ export default function SellerRegisterPage() {
       const body = await res.json()
       if (!res.ok) { setError(body.error ?? 'Impossible d\'envoyer le code.'); return }
       if (body._devOtp) {
-        const hint = body._emailError ? ` — SMTP: ${body._emailError.slice(0, 120)}` : ' (email non envoyé)'
+        const hint = body._emailError ? ` ? SMTP: ${body._emailError.slice(0, 120)}` : ' (email non envoyé)'
         setError(`Code OTP : ${body._devOtp}${hint}`)
       }
       setView('otp')
@@ -63,7 +58,7 @@ export default function SellerRegisterPage() {
     }
   }
 
-  // Step 2 — verify OTP then create account
+  // Step 2 ? verify OTP then create account
   const handleVerifyAndCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError('')
@@ -87,7 +82,7 @@ export default function SellerRegisterPage() {
       if (signUpErr) { setError(signUpErr.message); setLoading(false); return }
       if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
 
-      // Create vendor record — pass auth token in case session cookie isn't set yet
+      // Create vendor record ? pass auth token in case session cookie isn't set yet
       const authToken = authData.session?.access_token
       const regHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
       if (authToken) regHeaders['Authorization'] = `Bearer ${authToken}`
@@ -174,7 +169,7 @@ export default function SellerRegisterPage() {
              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">{error}</div>
            )}
 
-           {/* — OTP verification step — */}
+           {/* ? OTP verification step ? */}
            {view === 'otp' && (
              <form onSubmit={handleVerifyAndCreate} className="space-y-4">
                <div>
@@ -202,7 +197,7 @@ export default function SellerRegisterPage() {
              </form>
            )}
 
-           {/* — Registration form — */}
+           {/* ? Registration form ? */}
            {view === 'form' && <form onSubmit={handleSubmit} className="space-y-4">
              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2">{t.seller.accountInfo}</p>
 

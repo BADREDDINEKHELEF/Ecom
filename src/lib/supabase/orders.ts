@@ -90,6 +90,19 @@ export interface CreateOrderResult {
   giftCardDeduction: number
   /** True when the order already existed and was looked up via idempotency_key. */
   isDuplicate?:      boolean
+  /** Items that were committed to the order. Used for rollback if payment fails. */
+  items:             {
+    productId:     string
+    productName:   string
+    productImage:  string
+    quantity:      number
+    productPrice?: number
+    vendorId?:     string | null
+    selectedColor?: string | null
+  }[]
+  giftCardCode?:     string
+  promoCodeId?:      string | null
+  discountAmount?:   number
 }
 
 /**
@@ -97,34 +110,66 @@ export interface CreateOrderResult {
  * Tries the vendor's live delivery provider rate first (same source as /api/delivery/rates),
  * then falls back to static zone pricing so the server always agrees with the checkout display.
  */
-async function resolveShippingCost(
-  wilaya: string,
-  subtotal: number,
-  items: CreateOrderInput['items'],
-  isStopDesk?: boolean,
-): Promise<number> {
-  // Static zone fallback — always available
-  const zone   = WILAYA_DATA[wilaya]?.zone ?? 3
+function staticZoneCost(wilaya: string, subtotal: number, isStopDesk?: boolean): number {
+  const zone = WILAYA_DATA[wilaya]?.zone ?? 3
   const zoneCfg = ZONE_CONFIG[zone]
   const staticHomeCost = subtotal >= zoneCfg.freeFrom ? 0 : zoneCfg.cost
   const staticDeskCost = staticHomeCost === 0 ? 0 : Math.max(150, staticHomeCost - 200)
-  const staticCost = isStopDesk ? staticDeskCost : staticHomeCost
+  return isStopDesk ? staticDeskCost : staticHomeCost
+}
 
-  // Try live provider rate for the first vendor found in the cart
-  const vendorId = items.find((i) => i.vendorId)?.vendorId ?? null
-  if (!vendorId) return staticCost
-
+async function getVendorLiveShippingRate(
+  vendorId: string,
+  wilaya: string,
+  isStopDesk?: boolean
+): Promise<number | null> {
   try {
     const config = await getVendorDeliveryConfig(vendorId)
-    if (!config) return staticCost
+    if (!config) return null
     const provider = config.default_provider ?? 'yalidine'
     const rate = await dispatchGetRate(provider, wilaya, config, true)
-    if (!rate) return staticCost
-    const deliveryRate = (isStopDesk && rate.deskDelivery != null) ? rate.deskDelivery : rate.homeDelivery
-    return deliveryRate
+    if (!rate) return null
+    return (isStopDesk && rate.deskDelivery != null) ? rate.deskDelivery : rate.homeDelivery
   } catch {
-    return staticCost
+    return null
   }
+}
+
+async function resolveShippingCost(
+  wilaya: string,
+  subtotal: number,
+  items: (CreateOrderInput['items'][number] & { productPrice?: number })[],
+  isStopDesk?: boolean,
+): Promise<number> {
+  const vendorIds = Array.from(new Set(items.map((i) => i.vendorId).filter((v): v is string => typeof v === 'string' && v.length > 0)))
+
+  // No vendor info — fall back to a single static rate for the whole cart.
+  if (vendorIds.length === 0) {
+    return staticZoneCost(wilaya, subtotal, isStopDesk)
+  }
+
+  // Single vendor — existing behaviour: use the vendor's live rate if available.
+  if (vendorIds.length === 1) {
+    const vendorId = vendorIds[0]
+    const liveRate = await getVendorLiveShippingRate(vendorId, wilaya, isStopDesk)
+    return liveRate ?? staticZoneCost(wilaya, subtotal, isStopDesk)
+  }
+
+  // Multi-vendor cart: sum per-vendor shipping. Each vendor's share is based on
+  // the subtotal of their items so free-shipping thresholds apply per vendor.
+  // This is a best-effort calculation; true marketplace shipping usually splits
+  // the order into one shipment (and one order) per vendor.
+  let totalShipping = 0
+  for (const vendorId of vendorIds) {
+    const vendorItems = items.filter((i) => i.vendorId === vendorId)
+    const vendorSubtotal = vendorItems.reduce(
+      (s, i) => s + (i.productPrice ?? 0) * i.quantity,
+      0
+    )
+    const liveRate = await getVendorLiveShippingRate(vendorId, wilaya, isStopDesk)
+    totalShipping += liveRate ?? staticZoneCost(wilaya, vendorSubtotal, isStopDesk)
+  }
+  return totalShipping
 }
 
 /**
@@ -176,6 +221,15 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       subtotal,
     }
   })
+
+  // Derive the order's owning vendor from cart items. Single-vendor checkout is
+  // the current model; log if the cart unexpectedly spans multiple vendors so
+  // storefront stats (which count orders by vendor_id) stay accurate.
+  const vendorIds = Array.from(new Set(validatedItems.map(i => i.vendorId).filter(Boolean)))
+  const primaryVendorId = vendorIds[0] || null
+  if (vendorIds.length > 1) {
+    console.warn('[createOrder] multi-vendor cart detected; using first vendor_id', { vendorIds })
+  }
 
   // ── 3. Compute final total (server-side) ──────────────────────────
   // Re-validate promo code against server-computed subtotal to prevent discount manipulation
@@ -251,44 +305,63 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const total = Math.max(0, subtotalAfterDiscounts - giftCardDeduction)
 
   // ── 4. Decrement stock atomically via DB RPC ─────────────────────
-  // decrement_product_stock uses SELECT … FOR UPDATE (row-level lock)
-  // so concurrent orders for the same product cannot both succeed when
-  // only one unit remains. Defined in migration_005_stock_decrement.sql.
-  // Track what has been decremented so we can compensate on order-insert failure.
+  // decrement_product_stocks reserves stock for all items in a single DB round-trip.
+  // It returns per-item success/failure so we can roll back any successful
+  // decrements if one item fails (e.g. last-unit race).
+  const stockItems = validatedItems.map((item) => ({ productId: item.productId, quantity: item.quantity }))
   const decrementedItems: Array<{ productId: string; quantity: number }> = []
 
-  for (const item of validatedItems) {
-    const { data: decremented, error: stockErr } = await supabase.rpc('decrement_product_stock', {
-      p_product_id: item.productId,
-      p_quantity: item.quantity,
-    })
-    if (stockErr || !decremented) {
-      // Restore any stock we already decremented in this loop before throwing
-      await restoreStock()
-      throw new Error(
-        stockErr
-          ? `Stock reservation failed: ${stockErr.message}`
-          : `Insufficient stock for "${item.productName}"`
-      )
-    }
-    decrementedItems.push({ productId: item.productId, quantity: item.quantity })
+  const { data: stockResult, error: stockErr } = await supabase.rpc('decrement_product_stocks', {
+    items: stockItems,
+  })
+  if (stockErr) {
+    throw new Error(`Stock reservation failed: ${stockErr.message}`)
   }
+
+  type StockResultItem = { productId: string; ok: boolean; reason?: string; available?: number }
+  const results = (stockResult as StockResultItem[] | null) ?? []
+  const failedItems = results.filter((r) => !r.ok)
+
+  if (failedItems.length > 0) {
+    // Roll back successful decrements so we don't leave stock reserved for a failed order.
+    const succeededIds = new Set(results.filter((r) => r.ok).map((r) => r.productId))
+    const itemsToRestore = stockItems.filter((item) => succeededIds.has(item.productId))
+    if (itemsToRestore.length > 0) {
+      await supabase.rpc('restore_product_stocks', { items: itemsToRestore }).then(({ error }) => {
+        if (error) console.error('[createOrder] batch stock rollback failed:', error)
+      })
+    }
+
+    const firstFail = failedItems[0]
+    const failedProduct = validatedItems.find((i) => i.productId === firstFail.productId)
+    const productName = failedProduct?.productName ?? firstFail.productId
+    throw new Error(
+      firstFail.reason === 'not_found'
+        ? `Product not found: ${productName}`
+        : `Insufficient stock for "${productName}"`
+    )
+  }
+
+  // All items reserved successfully.
+  decrementedItems.push(...stockItems)
 
   // Atomically restore all decremented stock using an RPC. This is critical
   // to prevent race conditions if order creation fails after stock is reserved.
   // Bug-1 fix: check restoreStock() result and log failures to a dead-letter table.
   // Bug-9 fix: also roll back promo use count so a failed order does not consume a promo slot.
   async function restoreStock() {
-    if (decrementedItems.length === 0) return
-    const { error: restoreErr } = await supabase.rpc('restore_product_stocks', { items: decrementedItems })
-    if (restoreErr) {
-      // Log to dead-letter table so ops can manually correct permanently over-decremented stock.
-      await supabase.from('failed_stock_restores').insert({
-        items: decrementedItems,
-        error: restoreErr.message,
-        created_at: new Date().toISOString(),
-      }).then(() => {/* best-effort dead-letter write */})
-      console.error('[createOrder] restoreStock failed — stock may be permanently over-decremented:', restoreErr)
+    if (decrementedItems.length === 0 && !(input.giftCardCode && giftCardDeduction > 0)) return
+    if (decrementedItems.length > 0) {
+      const { error: restoreErr } = await supabase.rpc('restore_product_stocks', { items: decrementedItems })
+      if (restoreErr) {
+        // Log to dead-letter table so ops can manually correct permanently over-decremented stock.
+        await supabase.from('failed_stock_restores').insert({
+          items: decrementedItems,
+          error: restoreErr.message,
+          created_at: new Date().toISOString(),
+        }).then(() => {/* best-effort dead-letter write */})
+        console.error('[createOrder] restoreStock failed — stock may be permanently over-decremented:', restoreErr)
+      }
     }
     // Roll back promo use increment so tight-use-limit promos are not permanently consumed
     // when no order was created. This is best-effort — log if it fails.
@@ -298,6 +371,17 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       })
       if (promoRollbackErr) {
         console.error('[createOrder] promo use rollback failed — promo slot may be permanently consumed:', promoRollbackErr)
+      }
+    }
+    // Roll back gift-card claim so a failed order does not permanently consume balance.
+    // This is best-effort — log if it fails.
+    if (input.giftCardCode && giftCardDeduction > 0) {
+      const { error: gcRollbackErr } = await supabase.rpc('restore_gift_card', {
+        p_code: input.giftCardCode,
+        p_amount: giftCardDeduction,
+      })
+      if (gcRollbackErr) {
+        console.error('[createOrder] gift-card rollback failed — balance may be permanently consumed:', gcRollbackErr)
       }
     }
   }
@@ -319,6 +403,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       promo_code_id:    input.promoCodeId ?? null,
       discount_amount:  discountAmount,
       notes:            input.notes ?? null,
+      vendor_id:        primaryVendorId,
       is_b2b:           input.isB2B ?? false,
       company_name:     input.companyName ?? null,
       nif:              input.nif ?? null,
@@ -344,7 +429,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         .eq('idempotency_key', input.idempotencyKey)
         .single()
       if (existing) {
-        return { id: existing.id, total: existing.total, giftCardDeduction: 0, isDuplicate: true }
+        return { id: existing.id, total: existing.total, giftCardDeduction: 0, isDuplicate: true, items: [] }
       }
     }
     await restoreStock()
@@ -371,7 +456,73 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     throw itemsErr
   }
 
-  return { id: order.id, total, giftCardDeduction }
+  return {
+    id: order.id,
+    total,
+    giftCardDeduction,
+    items: validatedItems.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      productImage: item.productImage,
+      quantity: item.quantity,
+      productPrice: item.productPrice,
+      vendorId: item.vendorId,
+      selectedColor: item.selectedColor,
+    })),
+    giftCardCode: input.giftCardCode,
+    promoCodeId: input.promoCodeId ?? null,
+    discountAmount,
+  }
+}
+
+/**
+ * Cancels an order and best-effort restores gift-card balance and promo uses.
+ * Stock is restored automatically by the `trg_restore_stock_on_cancel` trigger,
+ * so we must NOT call restore_product_stocks here to avoid double-restoring.
+ * Used when payment gateway registration fails after an order was created.
+ */
+export async function cancelOrderAndRollback(
+  orderId: string,
+  options: {
+    giftCardCode?: string
+    giftCardDeduction?: number
+    promoCodeId?: string | null
+  }
+) {
+  const supabase = createAdminClient()
+
+  // 1. Mark order cancelled only if it is still pending_payment (idempotent).
+  // The trg_restore_stock_on_cancel trigger will restore product stock.
+  const { error: cancelErr } = await supabase
+    .from('orders')
+    .update({ status: 'cancelled', payment_status: 'failed' })
+    .eq('id', orderId)
+    .eq('status', 'pending_payment')
+  if (cancelErr) {
+    console.error('[cancelOrderAndRollback] failed to cancel order', { orderId, error: cancelErr })
+    throw cancelErr
+  }
+
+  // 2. Restore gift-card balance.
+  if (options.giftCardCode && (options.giftCardDeduction ?? 0) > 0) {
+    const { error: gcErr } = await supabase.rpc('restore_gift_card', {
+      p_code: options.giftCardCode,
+      p_amount: options.giftCardDeduction,
+    })
+    if (gcErr) {
+      console.error('[cancelOrderAndRollback] gift-card restore failed', { orderId, error: gcErr })
+    }
+  }
+
+  // 3. Roll back promo uses.
+  if (options.promoCodeId) {
+    const { error: promoErr } = await supabase.rpc('decrement_promo_uses', {
+      p_promo_id: options.promoCodeId,
+    })
+    if (promoErr) {
+      console.error('[cancelOrderAndRollback] promo rollback failed', { orderId, error: promoErr })
+    }
+  }
 }
 
 export async function getOrderById(id: string): Promise<OrderRow | null> {
@@ -510,6 +661,35 @@ export async function updateVendorOrderStatus(
 
   if (ownerErr || !item) {
     throw new Error(`Vendor ${vendorId} does not own order ${orderId}`)
+  }
+
+  // Read current status to enforce a safe state machine.
+  const { data: order, error: orderErr } = await supabase
+    .from('orders')
+    .select('status, payment_status')
+    .eq('id', item.order_id)
+    .single()
+  if (orderErr || !order) {
+    throw new Error(`Commande introuvable: ${orderId}`)
+  }
+  const currentStatus = order.status
+
+  // State-machine guards. Sellers may not cancel orders that are already paid
+  // or have progressed past pending, to avoid un-refunded cancellations.
+  if (status === 'cancelled') {
+    if (['cancelled', 'delivered', 'returned'].includes(currentStatus)) {
+      throw new Error('Cette commande ne peut plus être annulée.')
+    }
+    if (order.payment_status === 'paid') {
+      throw new Error('Les commandes payées ne peuvent être annulées que par un administrateur.')
+    }
+  }
+  // Prevent nonsensical backward transitions.
+  if (currentStatus === 'delivered' && status !== 'returned') {
+    throw new Error('Une commande livrée ne peut être modifiée que vers retournée.')
+  }
+  if (currentStatus === 'returned') {
+    throw new Error('Une commande retournée ne peut plus changer de statut.')
   }
 
   const { error } = await supabase

@@ -12,10 +12,12 @@ interface Props {
 export default function ProductGallery({ images, name }: Props) {
   const [active, setActive] = useState(0)
   const [zoomed, setZoomed] = useState(false)
+  const [broken, setBroken] = useState<Set<number>>(new Set())
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const prev = () => setActive(i => Math.max(0, i - 1))
   const next = () => setActive(i => Math.min(images.length - 1, i + 1))
+  const markBroken = (i: number) => setBroken(prev => new Set(prev).add(i))
 
   // Move focus to close button when lightbox opens; handle Escape to close
   useEffect(() => {
@@ -50,7 +52,13 @@ export default function ProductGallery({ images, name }: Props) {
           className="object-cover transition-all duration-500"
           sizes="(max-width: 768px) 100vw, 55vw"
           priority
+          onError={() => markBroken(active)}
         />
+        {broken.has(active) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f7]">
+            <span className="text-6xl opacity-20">📦</span>
+          </div>
+        )}
 
         {/* Zoom hint */}
         <div className="absolute top-3 right-3 w-8 h-8 bg-white/70 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
@@ -106,7 +114,12 @@ export default function ProductGallery({ images, name }: Props) {
                   : 'opacity-50 hover:opacity-80'
               }`}
             >
-              <Image src={img} alt={`${name} — photo ${i + 1}`} width={72} height={72} className="object-cover w-full h-full" />
+              <Image src={img} alt={`${name} — photo ${i + 1}`} width={72} height={72} className="object-cover w-full h-full" onError={() => markBroken(i)} />
+              {broken.has(i) && (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f7]">
+                  <span className="text-2xl opacity-20">📦</span>
+                </div>
+              )}
             </button>
           ))}
         </div>
@@ -162,7 +175,13 @@ export default function ProductGallery({ images, name }: Props) {
               fill
               className="object-contain"
               sizes="90vw"
+              onError={() => markBroken(active)}
             />
+            {broken.has(active) && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-6xl opacity-20">📦</span>
+              </div>
+            )}
           </div>
 
           {/* Counter */}

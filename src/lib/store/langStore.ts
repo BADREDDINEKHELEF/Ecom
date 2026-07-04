@@ -24,8 +24,9 @@ export const useLangStore = create<LangStore>()(
       isRTL: false,
       t: translations.fr,
       setLang: (lang: Lang) => {
-        set({ lang, t: translations[lang], isRTL: lang === 'ar' })
-        setCookieLang(lang)
+        const validLang = translations[lang] ? lang : 'fr'
+        set({ lang: validLang, t: translations[validLang], isRTL: validLang === 'ar' })
+        setCookieLang(validLang)
       },
     }),
     {
@@ -33,9 +34,11 @@ export const useLangStore = create<LangStore>()(
       partialize: (state) => ({ lang: state.lang }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.t = translations[state.lang]
-          state.isRTL = state.lang === 'ar'
-          setCookieLang(state.lang)
+          const validLang = translations[state.lang] ? state.lang : 'fr'
+          state.lang = validLang
+          state.t = translations[validLang]
+          state.isRTL = validLang === 'ar'
+          setCookieLang(validLang)
         }
       },
     }
@@ -45,7 +48,7 @@ export const useLangStore = create<LangStore>()(
 // useT always derives fresh from lang — never stale
 export const useT = () => {
   const lang = useLangStore((s) => s.lang)
-  return translations[lang]
+  return translations[lang] ?? translations.fr
 }
 export const useLang = () => useLangStore((s) => s.lang)
 export const useRTL = () => useLangStore((s) => s.isRTL)

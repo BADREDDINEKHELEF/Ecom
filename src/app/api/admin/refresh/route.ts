@@ -5,7 +5,7 @@ import { requireAdmin, invalidateJtiOnly } from '@/lib/auth/adminAuth'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
-import { getAdminCookieName, getAdminCookieOptions } from '@/cookie'
+import { getAdminCookieName, getAdminCookieOptions, ADMIN_COOKIE_NAME } from '@/cookie'
 import { rotateSessionJti, createSession } from '@/lib/auth/sessions'
 
 // POST /api/admin/refresh — re-issues the admin cookie without a password check.
@@ -48,6 +48,10 @@ export async function POST(req: NextRequest) {
     const cookieName = getAdminCookieName()
     const cookieOpts = getAdminCookieOptions(ADMIN_TOKEN_MAX_AGE_SECONDS)
     res.cookies.set(cookieName, newToken, cookieOpts)
+    // Remove any legacy non-prefixed cookie left over from before the upgrade.
+    if (cookieName !== ADMIN_COOKIE_NAME) {
+      res.cookies.delete(ADMIN_COOKIE_NAME)
+    }
     return res
   } catch (err) {
     logger.error('[POST /api/admin/refresh]', { error: err instanceof Error ? err.message : String(err) })

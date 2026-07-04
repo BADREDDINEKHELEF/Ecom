@@ -355,6 +355,11 @@ export default function CheckoutContent() {
     setSaving(true)
     setSaveError('')
 
+    // Generate one idempotency key per checkout attempt so retries/resubmissions
+    // of the same checkout do not create duplicate orders, stock decrements, or
+    // promo/gift-card consumption.
+    const idempotencyKey = crypto.randomUUID()
+
     for (const { product, quantity } of items) {
       const moq = product.minOrderQuantity ?? 1
       if (quantity < moq) {
@@ -426,6 +431,7 @@ export default function CheckoutContent() {
       nis:            b2b.isB2B ? b2b.nis || null : null,
       rc:             b2b.isB2B ? b2b.rc  || null : null,
       gaClientId:     gaClientId ?? null,
+      idempotencyKey,
       isStopDesk,
       deliveryType,
       stopDeskCause: isStopDesk ? form.stopDeskCause.trim() || null : null,
@@ -439,8 +445,8 @@ export default function CheckoutContent() {
       })),
     }
 
-    const cartSnapshot = items.map(({ product, quantity }) => ({
-      id: product.id, name: product.name, price: product.price, quantity,
+    const cartSnapshot = items.map(({ product, quantity, selectedColor }) => ({
+      id: product.id, name: product.name, price: product.price, quantity, selectedColor,
     }))
 
     try {

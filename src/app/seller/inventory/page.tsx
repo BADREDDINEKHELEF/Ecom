@@ -53,7 +53,7 @@ export default function SellerInventoryPage() {
         <div className="p-4 sm:p-8">
           <div className="mb-6">
             <h1 className="text-2xl font-black text-gray-900">Inventaire</h1>
-            <p className="text-gray-500 text-sm mt-1">GÃƒÂ©rez les niveaux de stock de tous vos produits en un seul endroit.</p>
+            <p className="text-gray-500 text-sm mt-1">Gérez les niveaux de stock de tous vos produits en un seul endroit.</p>
           </div>
           <InventoryTable initialData={inventoryData} isLoading={isLoading} />
         </div>

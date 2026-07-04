@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { writeAuditLog } from '@/lib/auth/auditLog'
 
 const PayoutSchema = z.object({
   id: z.string().uuid(),
@@ -108,6 +109,15 @@ export async function PATCH(req: NextRequest) {
       .eq('id', parsed.data.id)
       .eq('status', 'pending') // idempotent
     if (error) throw error
+
+    void writeAuditLog({
+      action: 'admin_commission_paid',
+      ip: getClientIp(req),
+      userAgent: req.headers.get('user-agent') ?? 'unknown',
+      result: 'success',
+      meta: { commissionId: parsed.data.id },
+    })
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     logger.error('[PATCH /api/admin/analytics/revenue]', { error: err instanceof Error ? err.message : String(err) })

@@ -1,16 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-
-export interface ProductVariant {
-  id:      string
-  options: Record<string, string>   // e.g. { Taille: '38', Couleur: 'Bleu' }
-  price:   number
-  stock:   number
-  sku:     string
-}
+import type { ProductVariant } from '@/types'
 
 interface VariantOption {
   name:   string
@@ -43,6 +36,23 @@ function cartesian(arrays: string[][]): string[][] {
 export default function VariantBuilder({ basePrice, variants, onChange }: Props) {
   const [options, setOptions]       = useState<VariantOption[]>([])
   const [collapsed, setCollapsed]   = useState(false)
+
+  // Derive option definitions from existing variants so editing a product
+  // restores its variant matrix configuration.
+  useEffect(() => {
+    if (!variants.length) {
+      setOptions([])
+      return
+    }
+    const derived = new Map<string, Set<string>>()
+    for (const v of variants) {
+      for (const [key, value] of Object.entries(v.options)) {
+        if (!derived.has(key)) derived.set(key, new Set())
+        derived.get(key)!.add(value)
+      }
+    }
+    setOptions(Array.from(derived.entries()).map(([name, values]) => ({ name, values: Array.from(values) })))
+  }, [variants])
 
   const addOption = () => setOptions([...options, { name: '', values: [] }])
 
@@ -89,18 +99,26 @@ export default function VariantBuilder({ basePrice, variants, onChange }: Props)
         options: optionMap,
         price:   basePrice,
         stock:   0,
-        sku:     '',
+        sku:     Object.values(optionMap).join('-').toUpperCase(),
       }
     })
     onChange(newVariants)
   }
 
+  const clampNumber = (n: number, min = 0) => (Number.isFinite(n) ? Math.max(min, n) : 0)
+
   const updateVariant = (id: string, field: keyof ProductVariant, value: string | number) => {
-    onChange(variants.map((v) => v.id === id ? { ...v, [field]: value } : v))
+    onChange(variants.map((v) => {
+      if (v.id !== id) return v
+      if (field === 'price')  return { ...v, price: clampNumber(Number(value)) }
+      if (field === 'stock')  return { ...v, stock: clampNumber(Number(value)) }
+      if (field === 'sku')    return { ...v, sku: String(value).trim() }
+      return { ...v, [field]: value }
+    }))
   }
 
-  const bulkSetPrice = (price: number) => onChange(variants.map((v) => ({ ...v, price })))
-  const bulkSetStock = (stock: number) => onChange(variants.map((v) => ({ ...v, stock })))
+  const bulkSetPrice = (price: number) => onChange(variants.map((v) => ({ ...v, price: clampNumber(price) })))
+  const bulkSetStock = (stock: number) => onChange(variants.map((v) => ({ ...v, stock: clampNumber(stock) })))
 
   if (variants.length > 0 && collapsed) {
     return (

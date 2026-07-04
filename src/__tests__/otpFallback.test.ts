@@ -306,7 +306,15 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     })
 
     mockUpdateUserById.mockResolvedValue({ error: null })
-    mockListUsers.mockResolvedValue({ data: { users: [{ id: 'u-legacy', email: 'legacy@example.com' }] } })
+
+    // The route queries the GoTrue admin REST endpoint directly for email lookup,
+    // so we mock global.fetch instead of supabase.auth.admin.listUsers.
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-key')
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ users: [{ id: 'u-legacy', email: 'legacy@example.com' }] }),
+    } as Response)
 
     const { POST } = await import('../app/api/seller/verify-otp/route')
     const req = makeReq('http://localhost/api/seller/verify-otp', {
@@ -317,6 +325,8 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     const res = await POST(req)
     expect(res.status).toBe(200)
 
+    // Verify it hit the auth admin endpoint for email lookup
+    expect(fetchSpy).toHaveBeenCalled()
     // Verify it backfilled email column in vendors table
     expect(mockUpdateVendors).toHaveBeenCalledWith({ email: 'legacy@example.com' })
   })

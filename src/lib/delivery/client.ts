@@ -45,8 +45,8 @@ export async function deliveryFetch(
       clearTimeout(timeoutId)
       if (externalAbortHandler) options.signal!.removeEventListener('abort', externalAbortHandler)
 
-      // If transient 5xx error, retry
-      if (response.status >= 500 && attempt <= maxRetries) {
+      // If transient 5xx error, retry (maxRetries is the total number of attempts)
+      if (response.status >= 500 && attempt < maxRetries) {
         logger.warn(`[deliveryFetch] attempt ${attempt} failed with status ${response.status} for URL: ${url}. Retrying in ${delay}ms...`)
         await new Promise((resolve) => setTimeout(resolve, delay))
         delay *= backoffFactor
@@ -60,7 +60,7 @@ export async function deliveryFetch(
 
       const error = err instanceof Error ? err : new Error(String(err))
 
-      if (attempt <= maxRetries) {
+      if (attempt < maxRetries) {
         logger.warn(`[deliveryFetch] attempt ${attempt} failed with error: ${error.message} for URL: ${url}. Retrying in ${delay}ms...`)
         await new Promise((resolve) => setTimeout(resolve, delay))
         delay *= backoffFactor

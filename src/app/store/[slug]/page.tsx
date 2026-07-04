@@ -47,20 +47,29 @@ interface VendorRow {
   pixel_id?: string | null
 }
 
-async function getStoreProducts(vendorId: string): Promise<{
+async function getStoreProducts(
+  vendorId: string,
+  page = 1,
+  limit = 24
+): Promise<{
   products: Product[]
+  totalProducts: number
   totalOrders: number
   storeNiches: StoreNiche[]
 }> {
   const supabase = createAdminClient()
-  const [{ data: products }, { count }] = await Promise.all([
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const [{ data: products, count: totalProducts }, { count: totalOrders }] = await Promise.all([
     supabase
       .from('products')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('vendor_id', vendorId)
       .eq('is_active', true)
       .order('is_featured', { ascending: false })
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .range(from, to),
     supabase
       .from('orders')
       .select('*', { count: 'exact', head: true })
@@ -89,7 +98,12 @@ async function getStoreProducts(vendorId: string): Promise<{
     })
   }
 
-  return { products: mapped, totalOrders: count ?? 0, storeNiches }
+  return {
+    products: mapped,
+    totalProducts: totalProducts ?? 0,
+    totalOrders: totalOrders ?? 0,
+    storeNiches,
+  }
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net'
@@ -137,8 +151,17 @@ const WA_ICON_SM = (
   </svg>
 )
 
-export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function StorePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ page?: string; q?: string }>
+}) {
   const { slug } = await params
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+
   const [vendor, t] = await Promise.all([
     getVendorBySlug(slug) as Promise<VendorRow | null>,
     getServerT(),
@@ -146,7 +169,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
   const ts = t.store
   if (!vendor) notFound()
 
-  const { products, totalOrders, storeNiches } = await getStoreProducts(vendor.id)
+  const { products, totalProducts, totalOrders, storeNiches } = await getStoreProducts(vendor.id, page, 24)
   const HEX_RE = /^#[0-9a-fA-F]{3,8}$/
   const accent = (vendor.accent_color && HEX_RE.test(vendor.accent_color)) ? vendor.accent_color : '#4f46e5'
 
@@ -455,11 +478,14 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           <>
             <div className="flex items-baseline justify-between mb-7">
               <h2 className="text-2xl font-black text-[#1d1d1f] tracking-tight">{ts.catalogue}</h2>
-              <span className="text-sm text-[#86868b]">{products.length} {t.common.products}</span>
+              <span className="text-sm text-[#86868b]">{totalProducts} {t.common.products}</span>
             </div>
 
             <StoreProductsGrid
               products={products}
+              totalProducts={totalProducts}
+              page={page}
+              pageSize={24}
               accent={accent}
               storeSlug={vendor.store_slug}
               storeNiches={storeNiches}

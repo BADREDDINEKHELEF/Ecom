@@ -96,6 +96,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${appUrl}/payment/failure?reason=order_not_found`)
     }
 
+    // Replay-attack guard: if this Satim order ID was already processed for this order, ack it.
+    if (order.satim_order_id && order.satim_order_id === satimId) {
+      logger.info('[payment/callback] Satim callback already processed', { orderId, satimId })
+      return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
+    }
+
     // Bug 1 fix: true idempotency — only skip re-processing when the order is
     // already in a confirmed/paid terminal state, not merely when satim_order_id
     // matches (which can never be true on a first call anyway, and would bypass
@@ -148,7 +154,7 @@ export async function GET(req: NextRequest) {
     // total_centimes as an integer at order creation; the tolerance is a
     // belt-and-suspenders guard until that migration lands.
     const expectedCentimes = Math.round(order.total * 100)
-    if (Math.abs(status.amount - expectedCentimes) > 1) {
+    if (status.amount !== expectedCentimes && Math.abs(status.amount - expectedCentimes) > 1) {
       logger.error('[payment/callback] AMOUNT MISMATCH — possible tampering', {
         orderId, satimId,
         expected: expectedCentimes,
@@ -200,7 +206,10 @@ async function markOrderPaid(orderId: string, satimOrderId: string) {
     })
     .eq('id', orderId)
     .eq('status', 'processing_payment')
-  if (error) logger.error('[payment/callback] markOrderPaid failed', { orderId, error: error.message })
+  if (error) {
+    logger.error('[payment/callback] markOrderPaid failed', { orderId, error: error.message })
+    throw new Error(`Failed to confirm order ${orderId}: ${error.message}`)
+  }
 }
 
 async function markOrderFailed(orderId: string) {
@@ -298,7 +307,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true })
     }
 
-    await createAdminClient()
+    const { error: confirmErr } = await createAdminClient()
       .from('orders')
       .update({
         status: 'confirmed',
@@ -307,6 +316,10 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', orderId)
       .eq('status', 'processing_payment')
+    if (confirmErr) {
+      logger.error('[payment/callback/baridimob] confirm update failed', { orderId, paymentId, error: confirmErr.message })
+      throw new Error(`Failed to confirm BaridiMob order ${orderId}: ${confirmErr.message}`)
+    }
 
     if (order.email) {
       const { count } = await createAdminClient()

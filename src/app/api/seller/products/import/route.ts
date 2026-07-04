@@ -4,6 +4,7 @@ import { createRouteClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
+import { checkVendorProductLimit } from '@/lib/supabase/server-utils'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
@@ -69,6 +70,24 @@ export async function POST(req: NextRequest) {
     const rows = parseCSV(text)
     if (rows.length === 0) return NextResponse.json({ error: 'Aucune ligne valide dans le CSV' }, { status: 400 })
     if (rows.length > 200) return NextResponse.json({ error: 'Maximum 200 produits par import' }, { status: 400 })
+
+    // Enforce subscription product limit before importing
+    const limitCheck = await checkVendorProductLimit(vendor.id)
+    const validRows = rows.filter((row) => {
+      const name  = row['name'] || row['nom'] || row['title'] || row['titre']
+      const price = parseFloat(row['price'] || row['prix'] || '0')
+      return !!name && !isNaN(price) && price > 0
+    })
+    if (limitCheck.limit !== null && limitCheck.count + validRows.length > limitCheck.limit) {
+      return NextResponse.json(
+        {
+          error: `Limite de produits dépassée. Vous avez ${limitCheck.count}/${limitCheck.limit} produits. Cet import en ajouterait ${validRows.length}.`,
+          count: limitCheck.count,
+          limit: limitCheck.limit,
+        },
+        { status: 403 }
+      )
+    }
 
     let imported = 0
     const errors: string[] = []

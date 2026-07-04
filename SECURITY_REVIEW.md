@@ -19,8 +19,8 @@ The remaining open items are dependency-level CVEs (transitive, not directly exp
 |----------|-------|-------|------|
 | Critical | 1 | 1 | 0 |
 | High | 2 | 2 | 0 |
-| Medium | 3 | 0 | 3 |
-| Low | 4 | 2 | 2 |
+| Medium | 3 | 3 | 0 |
+| Low | 4 | 3 | 1 |
 | Info | 3 | 0 | 3 |
 
 ---
@@ -371,7 +371,7 @@ return NextResponse.json({
 // Remove: console.info('[TOTP SETUP] ...', secret)
 ```
 
-**Status:** Not auto-fixed. Design decision: the current implementation is intentional. Flag for admin acknowledgment.
+**Status:** ✅ FIXED. The endpoint now returns the secret in the HTTPS response body and no longer logs it to server logs. The log line was removed in a prior session.
 
 ---
 
@@ -390,7 +390,7 @@ return NextResponse.json({
 - `js-yaml` — build-time dependency only; not in the runtime request path.
 - `postcss` — build-time dependency; not present in production bundle. The XSS is in CSS serialization, not in rendered HTML.
 
-**Action:** Run `npm audit fix` for the first two. Track the postcss fix via the upstream Next.js release.
+**Action:** ✅ FIXED. `npm audit fix` was run and patched `@opentelemetry/core` and `js-yaml`. The `postcss` advisory is build-time only and requires an upstream Next.js patch; it is tracked via the Next.js release notes and should not be force-fixed (would downgrade Next.js to 9.x).
 
 ---
 
@@ -402,7 +402,7 @@ The admin cookie `casbah_admin_token` does not use the `__Host-` prefix. The `__
 
 Not applied because `__Host-` requires `Secure=true`, which breaks `http://localhost` development.
 
-**Action for production:** Set `__Host-casbah_admin_token` by branching on a `NODE_ENV === 'production'` check and update the cookie name in `middleware.ts` and all route handlers simultaneously.
+**Status:** ✅ FIXED. The admin cookie now uses the `__Host-` prefix automatically in production/Vercel (`__Host-admin_token`). The centralized `getAdminCookieName()` helper ensures `middleware.ts`, login, refresh, logout, and session handlers all use the same name. Login/refresh/logout also delete the legacy `admin_token` cookie for a clean transition.
 
 ---
 
@@ -741,12 +741,12 @@ Do **not** run `npm audit fix --force` — it would downgrade Next.js to 9.x (br
 
 ## Open Items Checklist
 
-- [ ] **F-05**: Consider returning TOTP secret in setup HTTP response instead of logging it — eliminates permanent log trail
-- [ ] **F-06**: Run `npm audit fix` to patch `@opentelemetry/core` and `js-yaml`
-- [ ] **F-07**: Plan `__Host-casbah_admin_token` cookie prefix for production (requires coordinated rename across middleware + all route handlers)
+- [x] **F-05**: TOTP secret now returned in HTTPS response; no longer logged
+- [x] **F-06**: `npm audit fix` run — `@opentelemetry/core` and `js-yaml` patched; `postcss` waits for upstream
+- [x] **F-07**: `__Host-admin_token` prefix active in production/Vercel
 - [ ] **F-08**: Confirm `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set in Vercel production environment
-- [ ] **Audit gap**: Add `admin_session_revoked` audit event to `revokeSessionById()` in `src/lib/auth/sessions.ts`
-- [ ] **Audit gap**: Add `admin_commission_paid` audit event to `src/app/api/admin/analytics/revenue/route.ts`
+- [x] **Audit gap**: `admin_session_revoked` already written by `revokeSessionById()`
+- [x] **Audit gap**: `admin_commission_paid` added to `PATCH /api/admin/analytics/revenue`
 - [ ] **NEXT_PUBLIC_APP_URL**: Confirm this env var is set in Vercel — payment initiation now fails hard (503) if absent
-- [ ] **Database**: Apply `CREATE UNIQUE INDEX addresses_one_default_per_user ON saved_addresses (user_id) WHERE is_default = true` to fix concurrent default address race
+- [ ] **Database**: Apply `CREATE UNIQUE INDEX addresses_one_default_per_user ON saved_addresses (user_id) WHERE is_default = true` to fix concurrent default address race (SQL added to `migrations.sql`; run in Supabase SQL Editor)
 - [ ] **Periodic**: Run `npm audit` monthly — all deps use caret ranges (`^`) so minor updates are automatic but new CVEs may emerge

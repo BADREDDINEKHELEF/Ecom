@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { validateStoreSlug } from '@/lib/validation/slug'
 
 const ALLOWED_STORAGE_HOSTS = ['supabase.co', 'supabase.in']
 
@@ -58,48 +59,95 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!user_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+    // Fallback for email-confirmation flows: signUp() may not return a session,
+    // but if the client passes the email we can look up the freshly-created auth
+    // user via the GoTrue admin API and create the vendor on their behalf.
     let body: unknown
     try { body = await req.json() } catch {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
-
-    const parsed = Schema.safeParse(body)
-    if (!parsed.success) {
-      const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
+    const parsedBody = Schema.safeParse(body)
+    if (!parsedBody.success) {
+      const details = process.env.NODE_ENV === 'development' ? parsedBody.error.flatten() : undefined
       return NextResponse.json(
         { error: 'Validation failed', ...(details && { details }) },
         { status: 400 }
       )
     }
 
+    if (!user_id) {
+      const email = parsedBody.data.email
+      if (email) {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        if (supabaseUrl && serviceKey) {
+          try {
+            const lookupRes = await fetch(
+              `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}&per_page=1`,
+              { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+            )
+            if (lookupRes.ok) {
+              const lookupJson = await lookupRes.json() as { users?: { id: string; email?: string }[] }
+              const authUser = lookupJson?.users?.[0]
+              if (authUser) user_id = authUser.id
+            }
+          } catch (err) {
+            logger.warn('[POST /api/seller/register] email auth lookup failed', { error: err instanceof Error ? err.message : String(err) })
+          }
+        }
+      }
+    }
+
+    if (!user_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const parsed = parsedBody
     const { store_name, store_slug, phone, wilaya, description, logo_url, email } = parsed.data
+
+    // Validate slug format and reserved names server-side
+    const slugValidation = validateStoreSlug(store_slug)
+    if (!slugValidation.ok) {
+      return NextResponse.json({ error: slugValidation.error }, { status: 400 })
+    }
 
     const supabase = createAdminClient()
 
-    // Check slug uniqueness
+    // Check slug uniqueness case-insensitively so "My-Shop" and "my-shop" collide.
     const { data: existing } = await supabase
       .from('vendors')
       .select('id')
-      .eq('store_slug', store_slug)
+      .ilike('store_slug', store_slug)
       .maybeSingle()
 
     if (existing) {
       return NextResponse.json({ error: 'URL déjà prise. Essayez un autre nom.' }, { status: 409 })
     }
 
+    // Prevent one user from registering multiple stores.
+    const { data: existingVendor } = await supabase
+      .from('vendors')
+      .select('id')
+      .or(`user_id.eq.${user_id},owner_id.eq.${user_id}`)
+      .maybeSingle()
+    if (existingVendor) {
+      return NextResponse.json({ error: 'Vous avez déjà une boutique.' }, { status: 409 })
+    }
+
     const { data, error } = await supabase
       .from('vendors')
       .insert({
         user_id,
+        owner_id:    user_id,
         store_name,
-        store_slug,
+        store_slug:  store_slug.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, ''),
         phone:       phone ?? null,
         wilaya:      wilaya ?? null,
         description: description ?? null,
         logo_url:    logo_url ?? null,
         email:       email ?? null,
+        commission_rate: 10,
+        is_approved: false,
+        is_active:   true,
+        subscription_status: 'trial',
       })
       .select()
       .single()

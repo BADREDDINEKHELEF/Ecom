@@ -27,14 +27,20 @@ type VendorRow = Record<string, string | null | boolean>
 
 function rowToConfig(row: VendorRow | null): StoreMetaConfig | null {
   if (!row || !row.id) return null
+  const pixelId     = row.meta_pixel_id   ? String(row.meta_pixel_id)  : null
+  const accessToken = row.meta_capi_token ? String(row.meta_capi_token) : null
+  // The vendors table only has meta_pixel_id and meta_capi_token columns.
+  // Treat a vendor as enabled when they have configured a pixel ID, unless
+  // an explicit meta_enabled flag is present and set to false.
+  const enabled = pixelId ? (row.meta_enabled !== false) : false
   return {
     storeId:       String(row.id),
     storeSlug:     String(row.store_slug ?? ''),
-    pixelId:       row.meta_pixel_id   ? String(row.meta_pixel_id)  : null,
-    accessToken:   row.meta_capi_token ? String(row.meta_capi_token) : null,
+    pixelId,
+    accessToken,
     testEventCode: row.meta_test_event_code ? String(row.meta_test_event_code) : null,
     datasetId:     row.meta_dataset_id ? String(row.meta_dataset_id) : null,
-    enabled:       row.meta_enabled === true,
+    enabled,
   }
 }
 

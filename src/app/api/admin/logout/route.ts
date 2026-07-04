@@ -4,7 +4,7 @@ import { revokeAdminToken } from '@/lib/auth/adminAuth'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
-import { getAdminCookieName } from '@/cookie'
+import { getAdminCookieName, ADMIN_COOKIE_NAME } from '@/cookie'
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +21,10 @@ export async function POST(req: NextRequest) {
 
     await writeAuditLog({ action: 'admin_logout', ip, userAgent: ua, result: 'success' })
     const res = NextResponse.json({ ok: true })
+    // Delete both the current (possibly __Host-) name and the legacy name so
+    // the transition to the prefixed cookie is clean.
     res.cookies.delete(getAdminCookieName())
+    res.cookies.delete(ADMIN_COOKIE_NAME)
     return res
   } catch (err) {
     logger.error('[POST /api/admin/logout]', { error: err instanceof Error ? err.message : String(err) })

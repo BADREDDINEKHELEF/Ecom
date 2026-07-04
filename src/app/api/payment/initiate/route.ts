@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { satimRegisterOrder, satimConfigured } from '@/lib/payment/satim'
 import { baridimobInitiatePayment, baridimobConfigured } from '@/lib/payment/baridimob'
-import { createOrder } from '@/lib/supabase/orders'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createOrder, cancelOrderAndRollback } from '@/lib/supabase/orders'
 import { sendOrderPendingPaymentEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { getClientIp } from '@/lib/utils/ip'
@@ -101,7 +100,14 @@ export async function POST(req: NextRequest) {
   try {
     // Bug 2 fix: pass idempotency key to createOrder so duplicate submissions return
     // the existing order instead of creating a new one (with stock/promo side-effects).
-    const { id: orderId, total, isDuplicate } = await createOrder({
+    const {
+      id: orderId,
+      total,
+      isDuplicate,
+      giftCardCode: usedGiftCardCode,
+      giftCardDeduction: usedGiftCardDeduction,
+      promoCodeId: usedPromoCodeId,
+    } = await createOrder({
       ...rest,
       phone,
       paymentMethod,
@@ -199,16 +205,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ orderId, checkToken, formUrl: satimResult.formUrl, satimOrderId: satimResult.satimOrderId, method: 'satim' }, { status: 201 })
     } catch (gatewayErr) {
       // Bug 4 fix: cancel the orphaned order so stock and promo uses are released.
+      // Bug audit fix: also restore gift-card balance and promo uses.
       const gatewayMsg = gatewayErr instanceof Error ? gatewayErr.message : String(gatewayErr)
       logger.error('[POST /api/payment/initiate] gateway registration failed — cancelling order', { orderId, error: gatewayMsg })
-      await createAdminClient()
-        .from('orders')
-        .update({ status: 'cancelled', payment_status: 'failed' })
-        .eq('id', orderId)
-        .eq('status', 'pending_payment')
-        .then(({ error }) => {
-          if (error) logger.error('[POST /api/payment/initiate] failed to cancel orphaned order', { orderId, error: error.message })
-        })
+      await cancelOrderAndRollback(orderId, {
+        giftCardCode: usedGiftCardCode,
+        giftCardDeduction: usedGiftCardDeduction,
+        promoCodeId: usedPromoCodeId,
+      }).catch((rollbackErr) => {
+        logger.error('[POST /api/payment/initiate] rollback failed', { orderId, error: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr) })
+      })
       throw gatewayErr
     }
   } catch (err) {

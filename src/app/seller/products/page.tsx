@@ -7,15 +7,15 @@ import { Plus, Edit2, Trash2, X, Check, Loader2, Search, Package, Layers, Menu, 
 import CsvImportModal from '@/components/seller/CsvImportModal'
 import ImageUploader from '@/components/seller/ImageUploader'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { getVendorProducts } from '@/lib/supabase/queries'
+import { getVendorProductsPaginated } from '@/lib/supabase/queries'
 import { upsertProduct, deleteProduct, updateProductExtras } from '@/lib/supabase/mutations'
 import { checkVendorProductLimit } from '@/lib/supabase/server-utils'
 import { formatPrice } from '@/lib/utils'
 import { niches } from '@/lib/data/niches'
 import { useT, useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
-import VariantBuilder, { type ProductVariant } from '@/components/seller/VariantBuilder'
-import type { Product, ColorVariant } from '@/types'
+import VariantBuilder from '@/components/seller/VariantBuilder'
+import type { Product, ColorVariant, ProductVariant } from '@/types'
 
 const EMPTY_FORM = {
   id: '', nicheId: 'cars', category: '', name: '', description: '',
@@ -38,9 +38,22 @@ export default function SellerProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loadingProds, setLoadingProds] = useState(true)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalProducts, setTotalProducts] = useState(0)
   const [showForm, setShowForm] = useState(searchParams.get('new') === '1')
   const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
+
+  // Debounce search input so we don't fire a Supabase query on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [search])
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving]     = useState(false)
   const [formError, setFormError] = useState('')
@@ -114,7 +127,7 @@ export default function SellerProductsPage() {
       setMarketingResult(data)
       setMarketingActiveTab('fr')
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la gÃƒÂ©nÃƒÂ©ration.')
+      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération.')
       setShowMarketingModal(false)
     } finally {
       setMarketingLoading(false)
@@ -149,7 +162,7 @@ export default function SellerProductsPage() {
       setAiResult(data)
       setAiActiveTab('fr')
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la gÃƒÂ©nÃƒÂ©ration.')
+      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération.')
     } finally {
       setAiLoading(false)
     }
@@ -183,7 +196,7 @@ export default function SellerProductsPage() {
         tags: Array.isArray(data.tags) ? data.tags.join(', ') : prev.tags,
       }))
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la gÃƒÂ©nÃƒÂ©ration SEO.')
+      alert(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération SEO.')
     } finally {
       setSeoLoading(false)
     }
@@ -215,10 +228,16 @@ export default function SellerProductsPage() {
   const load = useCallback(async () => {
     if (!vendor) return
     setLoadingProds(true)
-    const prods = await getVendorProducts(vendor.id)
-    setProducts(prods)
+    const res = await getVendorProductsPaginated(vendor.id, {
+      page,
+      limit: 20,
+      search: debouncedSearch,
+    })
+    setProducts(res.products)
+    setTotalProducts(res.total)
+    setTotalPages(res.totalPages)
     setLoadingProds(false)
-  }, [vendor])
+  }, [vendor, page, debouncedSearch])
 
   useEffect(() => { load() }, [load])
 
@@ -233,11 +252,12 @@ export default function SellerProductsPage() {
       }
       imageColors = p.images.map(url => colorByUrl.get(url) ?? '')
     }
+    const productVariants = Array.isArray(p.variants) ? p.variants : []
     setForm({
       id: p.id, nicheId: p.nicheId, category: p.category, name: p.name,
       description: p.description, price: p.price, comparePrice: p.comparePrice || 0,
       stock: p.stock, tags: p.tags.join(', '), images: p.images, imageColors,
-      isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false, hasVariants: false,
+      isNew: p.isNew ?? false, isFeatured: p.isFeatured ?? false, hasVariants: productVariants.length > 0,
       condition: p.condition ?? 'new',
       metaTitle: p.metaTitle ?? '',
       metaDescription: p.metaDescription ?? '',
@@ -246,6 +266,7 @@ export default function SellerProductsPage() {
       minOrderQuantity: p.minOrderQuantity ?? 1,
       isBundle: p.isBundle ?? false,
     })
+    setVariants(productVariants)
     setShowForm(true)
   }
 
@@ -263,7 +284,7 @@ export default function SellerProductsPage() {
         const limitCheck = await checkVendorProductLimit(vendor.id)
         if (!limitCheck.allowed) {
           const limitMsg = limitCheck.limit !== null
-            ? `Limite atteinte : ${limitCheck.count}/${limitCheck.limit} produits. Passez ÃƒÂ  un plan supÃƒÂ©rieur pour ajouter plus de produits.`
+            ? `Limite atteinte : ${limitCheck.count}/${limitCheck.limit} produits. Passez à  un plan supérieur pour ajouter plus de produits.`
             : 'Limite de produits atteinte. Veuillez contacter le support.'
           setFormError(limitMsg)
           setSaving(false)
@@ -271,7 +292,7 @@ export default function SellerProductsPage() {
         }
       }
 
-      const productId = editing?.id || `v-${vendor.id.slice(0, 8)}-${Date.now()}`
+      const productId = editing?.id || `v-${vendor.id.slice(0, 8)}-${crypto.randomUUID()}`
       await upsertProduct({
         id: productId,
         nicheId: form.nicheId,
@@ -289,7 +310,6 @@ export default function SellerProductsPage() {
         vendorId: vendor.id,
       })
       await updateProductExtras(productId, {
-        vendor_id:          vendor.id,
         condition:          form.condition,
         meta_title:         form.metaTitle || null,
         meta_description:   form.metaDescription || null,
@@ -310,19 +330,15 @@ export default function SellerProductsPage() {
   }
 
   const handleDelete = async (id: string) => {
+    if (!vendor) return
     if (!confirm(sp.deleteConfirm)) return
     try {
       await deleteProduct(id)
       setProducts((prev) => prev.filter((p) => p.id !== id))
     } catch {
-      setFormError('Impossible de supprimer ce produit. RÃƒÂ©essayez.')
+      setFormError('Impossible de supprimer ce produit. Réessayez.')
     }
   }
-
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.category.toLowerCase().includes(search.toLowerCase())
-  )
 
   if (loading || !vendor) {
     return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>
@@ -341,7 +357,7 @@ export default function SellerProductsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black text-gray-900">{sp.title}</h1>
-            <p className="text-gray-500 text-sm mt-1">{sp.count.replace('{n}', String(products.length))}</p>
+            <p className="text-gray-500 text-sm mt-1">{sp.count.replace('{n}', String(totalProducts))}</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setShowImport(true)}
@@ -366,7 +382,7 @@ export default function SellerProductsPage() {
                 </div>
                 <div>
                   <h2 className="font-black text-gray-900 text-base leading-tight">{editing ? sp.editTitle : sp.newTitle}</h2>
-                  <p className="text-xs text-gray-400">ComplÃƒÂ©tez en moins d&apos;une minute</p>
+                  <p className="text-xs text-gray-400">Complétez en moins d&apos;une minute</p>
                 </div>
               </div>
               <button onClick={closeForm} aria-label={sp.cancelBtn} type="button"
@@ -377,7 +393,7 @@ export default function SellerProductsPage() {
 
             <form onSubmit={handleSave} className="divide-y divide-gray-50">
 
-              {/* Ã¢â€â‚¬Ã¢â€â‚¬ Section 1: Photos & Colors Ã¢â€â‚¬Ã¢â€â‚¬ */}
+              {/* ── Section 1: Photos & Colors ── */}
               <div className="px-6 py-5">
                 <div className="flex items-center gap-2.5 mb-4">
                   <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -385,7 +401,7 @@ export default function SellerProductsPage() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 text-sm leading-tight">Photos du produit</p>
-                    <p className="text-xs text-gray-400">Ajoutez vos photos Ã‚Â· sÃƒÂ©lectionnez une couleur pour chaque photo Ã‚Â· max 8</p>
+                    <p className="text-xs text-gray-400">Ajoutez vos photos · sélectionnez une couleur pour chaque photo · max 8</p>
                   </div>
                 </div>
                 <ImageUploader
@@ -398,7 +414,7 @@ export default function SellerProductsPage() {
                 />
               </div>
 
-              {/* Ã¢â€â‚¬Ã¢â€â‚¬ Section 3: Essential info Ã¢â€â‚¬Ã¢â€â‚¬ */}
+              {/* ── Section 3: Essential info ── */}
               <div className="px-6 py-5 space-y-4">
                 <div className="flex items-center gap-2.5 mb-1">
                   <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -407,7 +423,7 @@ export default function SellerProductsPage() {
                   <p className="font-bold text-gray-900 text-sm">Informations essentielles</p>
                 </div>
 
-                {/* Title Ã¢â‚¬â€ underline style, big and clear */}
+                {/* Title ? underline style, big and clear */}
                 <div>
                   <div className="flex items-center gap-2">
                     <input
@@ -415,7 +431,7 @@ export default function SellerProductsPage() {
                       type="text"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      placeholder="Nom du produitÃ¢â‚¬Â¦"
+                      placeholder="Nom du produit?"
                       className="w-full border-0 border-b-2 border-gray-100 focus:border-emerald-400 px-0 py-2 text-xl font-bold text-gray-900 placeholder:text-gray-300 focus:outline-none bg-transparent transition-colors"
                     />
                     {form.name && (
@@ -430,20 +446,20 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'name' && translatingField?.lang === 'ar' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'Ã°Å¸â€¡Â©Ã°Å¸â€¡Â¿ AR'
+                            '🇩🇿 AR'
                           )}
                         </button>
                         <button
                           type="button"
                           disabled={translatingField !== null}
                           onClick={() => handleTranslateField('name', 'fr')}
-                          title="Traduire en FranÃƒÂ§ais"
+                          title="Traduire en Français"
                           className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
                         >
                           {translatingField?.field === 'name' && translatingField?.lang === 'fr' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'Ã°Å¸â€¡Â«Ã°Å¸â€¡Â· FR'
+                            '🇫🇷 FR'
                           )}
                         </button>
                         <button
@@ -456,7 +472,7 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'name' && translatingField?.lang === 'en' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'Ã°Å¸â€¡Â¬Ã°Å¸â€¡Â§ EN'
+                            '🇬🇧 EN'
                           )}
                         </button>
                       </div>
@@ -480,7 +496,7 @@ export default function SellerProductsPage() {
                     <input
                       type="number" min="0" value={form.comparePrice || ''}
                       onChange={(e) => setForm({ ...form, comparePrice: Number(e.target.value) })}
-                      placeholder="Ã¢â‚¬â€"
+                      placeholder="—"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400 transition-colors"
                     />
                   </div>
@@ -518,7 +534,7 @@ export default function SellerProductsPage() {
                 </div>
               </div>
 
-              {/* Ã¢â€â‚¬Ã¢â€â‚¬ Section 3: Description Ã¢â€â‚¬Ã¢â€â‚¬ */}
+              {/* ── Section 3: Description ── */}
               <div className="px-6 py-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2.5">
@@ -529,7 +545,7 @@ export default function SellerProductsPage() {
                       <p className="font-bold text-gray-900 text-sm leading-tight">
                         Description <span className="font-normal text-gray-400">(optionnel)</span>
                       </p>
-                      <p className="text-xs text-gray-400">Astuce : utilisez une ligne par caractÃƒÂ©ristique</p>
+                      <p className="text-xs text-gray-400">Astuce : utilisez une ligne par caractéristique</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -545,20 +561,20 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'description' && translatingField?.lang === 'ar' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'Ã°Å¸â€¡Â©Ã°Å¸â€¡Â¿ AR'
+                            '🇩🇿 AR'
                           )}
                         </button>
                         <button
                           type="button"
                           disabled={translatingField !== null}
                           onClick={() => handleTranslateField('description', 'fr')}
-                          title="Traduire en FranÃƒÂ§ais"
+                          title="Traduire en Français"
                           className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
                         >
                           {translatingField?.field === 'description' && translatingField?.lang === 'fr' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'Ã°Å¸â€¡Â«Ã°Å¸â€¡Â· FR'
+                            '🇫🇷 FR'
                           )}
                         </button>
                         <button
@@ -571,7 +587,7 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'description' && translatingField?.lang === 'en' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'Ã°Å¸â€¡Â¬Ã°Å¸â€¡Â§ EN'
+                            '🇬🇧 EN'
                           )}
                         </button>
                       </div>
@@ -582,7 +598,7 @@ export default function SellerProductsPage() {
                       className="flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100 transition-colors"
                     >
                       <Sparkles className="w-3 h-3" />
-                      GÃƒÂ©nÃƒÂ©rer avec l&apos;IA
+                      Générer avec l&apos;IA
                     </button>
                   </div>
                 </div>
@@ -595,7 +611,7 @@ export default function SellerProductsPage() {
                 />
               </div>
 
-              {/* Ã¢â€â‚¬Ã¢â€â‚¬ More options (accordion) Ã¢â€â‚¬Ã¢â€â‚¬ */}
+              {/* ── More options (accordion) ── */}
               <div className="px-6 py-4">
                 <button
                   type="button"
@@ -605,7 +621,7 @@ export default function SellerProductsPage() {
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
                   <span>Plus d&apos;options</span>
                   {!showAdvanced && (
-                    <span className="text-xs font-normal text-gray-400 ml-1">ÃƒÂ©tat Ã‚Â· SEO Ã‚Â· tags Ã‚Â· MOQÃ¢â‚¬Â¦</span>
+                    <span className="text-xs font-normal text-gray-400 ml-1">état · SEO · tags · MOQ?</span>
                   )}
                 </button>
 
@@ -617,7 +633,7 @@ export default function SellerProductsPage() {
                       {[
                         { key: 'isNew',      label: sp.markNew },
                         { key: 'isFeatured', label: sp.markFeatured },
-                        { key: 'isPreOrder', label: 'PrÃƒÂ©-commande' },
+                        { key: 'isPreOrder', label: 'Pré-commande' },
                         { key: 'isBundle',   label: 'Pack / bundle' },
                       ].map(({ key, label }) => (
                         <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
@@ -635,7 +651,7 @@ export default function SellerProductsPage() {
                     {/* Pre-order date */}
                     {form.isPreOrder && (
                       <div className="max-w-xs">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Date de disponibilitÃƒÂ©</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Date de disponibilité</label>
                         <input type="date" value={form.preOrderDate}
                           onChange={(e) => setForm({ ...form, preOrderDate: e.target.value })}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
@@ -645,17 +661,17 @@ export default function SellerProductsPage() {
                     {/* Condition + MOQ */}
                     <div className="grid grid-cols-2 gap-3 max-w-sm">
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ãƒâ€°tat</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">État</label>
                         <select value={form.condition}
                           onChange={(e) => setForm({ ...form, condition: e.target.value as 'new' | 'used' | 'refurbished' })}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
                           <option value="new">Neuf</option>
                           <option value="used">Occasion</option>
-                          <option value="refurbished">ReconditionnÃƒÂ©</option>
+                          <option value="refurbished">Reconditionné</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">QtÃƒÂ© min. (MOQ)</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Qté min. (MOQ)</label>
                         <input type="number" min="1" value={form.minOrderQuantity}
                           onChange={(e) => setForm({ ...form, minOrderQuantity: Number(e.target.value) })}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
@@ -680,7 +696,7 @@ export default function SellerProductsPage() {
                         <Layers className="w-4 h-4 text-indigo-600" />
                         <div>
                           <p className="text-sm font-bold text-gray-900">Ce produit a des variantes de taille / prix</p>
-                          <p className="text-xs text-gray-500">Taille Ãƒâ€” PointureÃ¢â‚¬Â¦ avec stock et prix individuels</p>
+                          <p className="text-xs text-gray-500">Taille × Pointure? avec stock et prix individuels</p>
                         </div>
                       </div>
                     </label>
@@ -712,7 +728,7 @@ export default function SellerProductsPage() {
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Titre SEO</label>
                         <input type="text" maxLength={120} value={form.metaTitle}
                           onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
-                          placeholder="Titre affichÃƒÂ© dans Google"
+                          placeholder="Titre affiché dans Google"
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
                       </div>
                       <div>
@@ -727,7 +743,7 @@ export default function SellerProductsPage() {
                 )}
               </div>
 
-              {/* Ã¢â€â‚¬Ã¢â€â‚¬ Submit bar Ã¢â€â‚¬Ã¢â€â‚¬ */}
+              {/* ── Submit bar ── */}
               <div className="px-6 py-4 bg-gray-50 flex items-center gap-3">
                 {formError && <p className="flex-1 text-sm text-red-500">{formError}</p>}
                 <div className="flex gap-3 ml-auto">
@@ -738,7 +754,7 @@ export default function SellerProductsPage() {
                   <button type="submit" disabled={saving}
                     className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 active:scale-95 disabled:opacity-60 transition-all text-sm shadow-sm shadow-emerald-200">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    {editing ? sp.saveBtn : 'Ã°Å¸Å¡â‚¬ ' + sp.addBtn}
+                    {editing ? sp.saveBtn : '🚀 ' + sp.addBtn}
                   </button>
                 </div>
               </div>
@@ -760,11 +776,11 @@ export default function SellerProductsPage() {
             <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
               <Loader2 className="w-5 h-5 animate-spin" /> {sp.loading}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : products.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">{products.length === 0 ? sp.noProductsYet : sp.noResults}</p>
-              {products.length === 0 && (
+              <p className="font-medium">{totalProducts === 0 ? sp.noProductsYet : sp.noResults}</p>
+              {totalProducts === 0 && (
                 <button onClick={() => setShowForm(true)}
                   className="mt-3 text-emerald-600 font-bold text-sm hover:underline">{sp.addFirstProduct}</button>
               )}
@@ -773,7 +789,7 @@ export default function SellerProductsPage() {
             <>
               {/* Mobile cards */}
               <div className="sm:hidden divide-y divide-gray-100">
-                {filtered.map((p) => (
+                {products.map((p) => (
                   <div key={p.id} className="flex items-center gap-3 p-4">
                     {p.images[0] ? (
                       <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
@@ -790,7 +806,7 @@ export default function SellerProductsPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <span className="font-bold text-gray-900 text-sm">{formatPrice(p.price)}</span>
                         <span className={`text-xs font-medium ${p.stock === 0 ? 'text-red-500' : p.stock < 5 ? 'text-amber-500' : 'text-green-600'}`}>
-                          Ã‚Â· {sp.colStock}: {p.stock}
+                          · {sp.colStock}: {p.stock}
                         </span>
                       </div>
                     </div>
@@ -819,7 +835,7 @@ export default function SellerProductsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {filtered.map((p) => (
+                    {products.map((p) => (
                       <tr key={p.id} className="hover:bg-gray-50">
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
@@ -869,6 +885,31 @@ export default function SellerProductsPage() {
           )}
         </div>
 
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-gray-500">
+              Page {page} sur {totalPages} · {totalProducts} produits
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1 || loadingProds}
+                className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Précédent
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || loadingProds}
+                className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        )}
+
         {showImport && (
           <CsvImportModal onClose={() => setShowImport(false)} onImported={load} />
         )}
@@ -879,7 +920,7 @@ export default function SellerProductsPage() {
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
-                  <h3 className="font-black text-gray-900">GÃƒÂ©nÃƒÂ©rer la description avec l&apos;IA</h3>
+                  <h3 className="font-black text-gray-900">Générer la description avec l&apos;IA</h3>
                 </div>
                 <button type="button" onClick={() => { setShowAiModal(false); setAiResult(null); setAiPrompt(''); }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
                   <X className="w-4 h-4" />
@@ -890,13 +931,13 @@ export default function SellerProductsPage() {
                 {!aiResult ? (
                   <div className="space-y-4">
                     <label className="block text-sm font-semibold text-gray-700">
-                      DÃƒÂ©crivez votre produit en quelques mots (en franÃƒÂ§ais ou arabe/darija) :
+                      Décrivez votre produit en quelques mots (en français ou arabe/darija) :
                     </label>
                     <textarea
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                       rows={4}
-                      placeholder="ex: Robe kabyle moderne avec broderie fine bleu et blanc, tissu en lin lÃƒÂ©ger, confortable..."
+                      placeholder="ex: Robe kabyle moderne avec broderie fine bleu et blanc, tissu en lin léger, confortable..."
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500"
                     />
                     <button
@@ -908,12 +949,12 @@ export default function SellerProductsPage() {
                       {aiLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          GÃƒÂ©nÃƒÂ©ration en cours...
+                          Génération en cours...
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4" />
-                          GÃƒÂ©nÃƒÂ©rer la description
+                          Générer la description
                         </>
                       )}
                     </button>
@@ -933,7 +974,7 @@ export default function SellerProductsPage() {
                               : 'border-transparent text-gray-400 hover:text-gray-600'
                           }`}
                         >
-                          {lang === 'fr' ? 'FranÃƒÂ§ais' : lang === 'ar' ? 'Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â±Ã˜Â¨Ã™Å Ã˜Â©' : 'English'}
+                          {lang === 'fr' ? 'Français' : lang === 'ar' ? 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©' : 'English'}
                         </button>
                       ))}
                     </div>
@@ -954,7 +995,7 @@ export default function SellerProductsPage() {
                         onClick={() => setAiResult(null)}
                         className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50 text-gray-600"
                       >
-                        RÃƒÂ©ÃƒÂ©crire / Retour
+                        Réécrire / Retour
                       </button>
                       <button
                         type="button"
@@ -966,7 +1007,7 @@ export default function SellerProductsPage() {
                         }}
                         className="flex-grow py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md shadow-purple-100"
                       >
-                        InsÃƒÂ©rer cette version
+                        Insérer cette version
                       </button>
                     </div>
                   </div>
@@ -993,7 +1034,7 @@ export default function SellerProductsPage() {
                 {marketingLoading ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
                     <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-                    <p className="font-semibold text-sm">GÃƒÂ©nÃƒÂ©ration du kit marketing en cours...</p>
+                    <p className="font-semibold text-sm">Génération du kit marketing en cours...</p>
                   </div>
                 ) : marketingResult ? (
                   <div className="space-y-4">
@@ -1010,7 +1051,7 @@ export default function SellerProductsPage() {
                               : 'border-transparent text-gray-400 hover:text-gray-600'
                           }`}
                         >
-                          {lang === 'fr' ? 'FranÃƒÂ§ais' : lang === 'ar' ? 'Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â±Ã˜Â¨Ã™Å Ã˜Â©' : 'English'}
+                          {lang === 'fr' ? 'Français' : lang === 'ar' ? 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©' : 'English'}
                         </button>
                       ))}
                     </div>
@@ -1026,7 +1067,7 @@ export default function SellerProductsPage() {
                         >
                           {copiedField === 'sms' ? (
                             <>
-                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> CopiÃƒÂ© !
+                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> Copié !
                             </>
                           ) : (
                             <>
@@ -1046,7 +1087,7 @@ export default function SellerProductsPage() {
                     {/* Instagram/Facebook Section */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest font-mono">Publication RÃƒÂ©seaux Sociaux</label>
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest font-mono">Publication Réseaux Sociaux</label>
                         <button
                           type="button"
                           onClick={() => handleCopyText(marketingResult.instagram[marketingActiveTab], 'insta')}
@@ -1054,7 +1095,7 @@ export default function SellerProductsPage() {
                         >
                           {copiedField === 'insta' ? (
                             <>
-                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> CopiÃƒÂ© !
+                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> Copié !
                             </>
                           ) : (
                             <>

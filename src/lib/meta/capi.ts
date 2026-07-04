@@ -22,6 +22,7 @@ import type {
 } from './types'
 
 import { buildUserData, type UserDataInput } from './user-data'
+import { logger } from '@/lib/logger'
 
 // ── Configuration ──────────────────────────────────────────────────────
 
@@ -45,6 +46,74 @@ function log(label: string, data?: unknown) {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
+}
+
+// ── Token scope validation ─────────────────────────────────────────────
+// CAPI events require an access token with the ads_management permission.
+// We validate this once per token and cache the result to avoid repeated
+// Graph API calls. Missing scope is logged as a production warning so it
+// is visible in server logs without breaking the checkout flow.
+
+interface MetaPermission {
+  permission: string
+  status: 'granted' | 'declined'
+}
+
+const tokenScopeCache = new Map<string, boolean>()
+const pendingScopeChecks = new Map<string, Promise<boolean>>()
+
+async function checkTokenScope(accessToken: string): Promise<boolean> {
+  try {
+    const url = `${GRAPH_API_BASE}/me/permissions?access_token=${encodeURIComponent(accessToken)}`
+    const res = await fetchWithTimeout(url, { method: 'GET' }, TIMEOUT_MS)
+    const body = await res.json().catch(() => ({})) as {
+      data?: MetaPermission[]
+      error?: { message: string }
+    }
+
+    if (!res.ok || body.error) {
+      logger.warn('[Meta CAPI] Unable to validate token scope', {
+        status: res.status,
+        error: body.error?.message ?? 'unknown',
+      })
+      return false
+    }
+
+    const granted = body.data?.map((p) => p.permission) ?? []
+    const hasAdsManagement = granted.includes('ads_management')
+
+    if (!hasAdsManagement) {
+      logger.warn(
+        '[Meta CAPI] META_CAPI_TOKEN is missing the required ads_management scope. ' +
+        `Granted permissions: ${granted.join(', ') || 'none'}. ` +
+        'Generate a new System User token from Meta Events Manager → Settings → Conversions API → ' +
+        '"Generate access token" and include ads_management.',
+        { grantedPermissions: granted }
+      )
+    }
+
+    return hasAdsManagement
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn('[Meta CAPI] Token scope validation failed', { error: msg })
+    return false
+  }
+}
+
+async function ensureTokenScope(accessToken: string): Promise<boolean> {
+  const cached = tokenScopeCache.get(accessToken)
+  if (cached !== undefined) return cached
+
+  const pending = pendingScopeChecks.get(accessToken)
+  if (pending) return pending
+
+  const promise = checkTokenScope(accessToken).finally(() => {
+    pendingScopeChecks.delete(accessToken)
+  })
+  pendingScopeChecks.set(accessToken, promise)
+  const result = await promise
+  tokenScopeCache.set(accessToken, result)
+  return result
 }
 
 // ── Timeout wrapper ────────────────────────────────────────────────────
@@ -150,6 +219,17 @@ export async function fireStorePurchaseCAPI(
   if (!config.enabled || !config.pixelId || !config.accessToken) {
     log('Skipped — store not configured', { storeId: config.storeId, storeSlug: config.storeSlug })
     return { ok: false, status: 0, message: 'Store not configured for Meta CAPI' }
+  }
+
+  const hasScope = await ensureTokenScope(config.accessToken)
+  if (!hasScope) {
+    return {
+      ok: false,
+      status: 0,
+      message:
+        'Meta CAPI token missing ads_management scope. ' +
+        'Regenerate the token in Meta Events Manager with ads_management enabled.',
+    }
   }
 
   const userData: MetaUserData = buildUserData(userDataInput)

@@ -12,12 +12,13 @@ import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
+import { slugify, isReservedSlug } from '@/lib/validation/slug'
 
 const THEME_PRESETS = [
-  { id: 'default',  label: 'DÃƒÂ©faut',    bg: '#4f46e5', text: 'white' },
+  { id: 'default',  label: 'Défaut',    bg: '#4f46e5', text: 'white' },
   { id: 'minimal',  label: 'Minimal',   bg: '#111827', text: 'white' },
   { id: 'bold',     label: 'Audacieux', bg: '#dc2626', text: 'white' },
-  { id: 'elegant',  label: 'Ãƒâ€°lÃƒÂ©gant',   bg: '#78716c', text: 'white' },
+  { id: 'elegant',  label: 'Élégant',   bg: '#78716c', text: 'white' },
   { id: 'earthy',   label: 'Nature',    bg: '#16a34a', text: 'white' },
 ]
 
@@ -28,11 +29,7 @@ const BUSINESS_TYPES = [
   { id: 'brand',         label: 'Marque' },
 ]
 
-function slugify(s: string) {
-  return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Accordion section wrapper Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Accordion section wrapper ─────────────────────────────────────────────────
 function Section({
   id, open, onToggle, icon: Icon, title, subtitle, badge, children,
 }: {
@@ -61,7 +58,7 @@ function Section({
             <p className="font-bold text-gray-900 text-sm">{title}</p>
             {badge && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeMap[badge]}`}>
-                {badge === 'required' ? 'Requis' : badge === 'advanced' ? 'AvancÃƒÂ©' : 'Optionnel'}
+                {badge === 'required' ? 'Requis' : badge === 'advanced' ? 'Avancé' : 'Optionnel'}
               </span>
             )}
           </div>
@@ -76,7 +73,7 @@ function Section({
   )
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Field helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Field helpers ─────────────────────────────────────────────────────────────
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
@@ -90,7 +87,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 const INPUT = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400'
 const TEXTAREA = `${INPUT} resize-none`
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function SellerSettingsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
@@ -191,14 +188,12 @@ export default function SellerSettingsPage() {
     }
   }
 
-  const RESERVED_SLUGS = ['admin', 'api', 'store', 'auth', 'seller', 'dashboard', 'search', 'deals', 'pricing', 'checkout', 'orders', 'profile', 'wishlist', 'compare', 'track', 'cart', 'offline']
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!vendor) return
     const slug = slugify(form.store_slug)
-    if (RESERVED_SLUGS.includes(slug)) {
-      setError("Ce nom d'URL est rÃƒÂ©servÃƒÂ©. Choisissez un autre nom.")
+    if (isReservedSlug(slug)) {
+      setError("Ce nom d'URL est réservé. Choisissez un autre nom.")
       return
     }
     setSaving(true)
@@ -240,11 +235,11 @@ export default function SellerSettingsPage() {
           gtag_api_secret:  pixels.gtag_api_secret   || null,
         }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Ãƒâ€°chec de la sauvegarde')
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Échec de la sauvegarde')
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ãƒâ€°chec de la sauvegarde')
+      setError(err instanceof Error ? err.message : 'Échec de la sauvegarde')
     } finally {
       setSaving(false)
     }
@@ -277,8 +272,8 @@ export default function SellerSettingsPage() {
         {/* Page header */}
         <div className="mb-6 flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black text-gray-900">ParamÃƒÂ¨tres de la boutique</h1>
-            <p className="text-gray-500 text-sm mt-1">GÃƒÂ©rez votre profil et les dÃƒÂ©tails de votre boutique</p>
+            <h1 className="text-2xl font-black text-gray-900">Paramètres de la boutique</h1>
+            <p className="text-gray-500 text-sm mt-1">Gérez votre profil et les détails de votre boutique</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
@@ -293,7 +288,7 @@ export default function SellerSettingsPage() {
               className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-800 bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors"
             >
               {linkCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{linkCopied ? 'CopiÃƒÂ© !' : 'Copier le lien'}</span>
+              <span className="hidden sm:inline">{linkCopied ? 'Copié !' : 'Copier le lien'}</span>
             </button>
             <Link
               href={`/store/${vendor.store_slug}`}
@@ -306,7 +301,7 @@ export default function SellerSettingsPage() {
           </div>
         </div>
 
-        {/* Vacation mode Ã¢â‚¬â€ always visible, not inside accordion */}
+        {/* Vacation mode ? always visible, not inside accordion */}
         <div className={`mb-4 rounded-2xl p-5 shadow-sm border ${vacation.is_on_vacation ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -314,7 +309,7 @@ export default function SellerSettingsPage() {
               <div>
                 <p className="font-bold text-gray-900 text-sm">Mode vacances</p>
                 <p className="text-xs text-gray-500">
-                  {vacation.is_on_vacation ? 'Ã¢Å¡Â Ã¯Â¸Â Boutique en pause Ã¢â‚¬â€ aucune commande acceptÃƒÂ©e' : 'Boutique active Ã¢â‚¬â€ commandes acceptÃƒÂ©es'}
+                  {vacation.is_on_vacation ? '⚠️ Boutique en pause ? aucune commande acceptée' : 'Boutique active ? commandes acceptées'}
                 </p>
               </div>
             </div>
@@ -343,7 +338,7 @@ export default function SellerSettingsPage() {
                 className="flex items-center justify-center gap-2 bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm hover:bg-amber-600 disabled:opacity-60 transition-colors"
               >
                 {vacationSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : vacationSaved ? <Check className="w-4 h-4" /> : null}
-                {vacationSaved ? 'EnregistrÃƒÂ© !' : 'Enregistrer'}
+                {vacationSaved ? 'Enregistré !' : 'Enregistrer'}
               </button>
             </div>
           )}
@@ -352,11 +347,11 @@ export default function SellerSettingsPage() {
         {/* Main form */}
         <form onSubmit={handleSave} className="space-y-3">
 
-          {/* 1 Ã¢â‚¬â€ Essential */}
+          {/* 1 ? Essential */}
           <Section id="essential" open={openSection === 'essential'} onToggle={toggle}
             icon={Store} badge="required"
             title="Informations essentielles"
-            subtitle="Nom, URL, tÃƒÂ©lÃƒÂ©phone WhatsApp, description Ã¢â‚¬â€ remplissez ces champs en premier"
+            subtitle="Nom, URL, téléphone WhatsApp, description ? remplissez ces champs en premier"
           >
             <Field label="Nom de la boutique">
               <input required type="text" value={form.store_name}
@@ -364,7 +359,7 @@ export default function SellerSettingsPage() {
                 className={INPUT} />
             </Field>
 
-            <Field label="URL de votre boutique" hint="Votre lien unique : storedz.dz/store/votre-nom Ã¢â‚¬â€ uniquement des lettres, chiffres et tirets">
+            <Field label="URL de votre boutique" hint="Votre lien unique : storedz.dz/store/votre-nom ? uniquement des lettres, chiffres et tirets">
               <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
                 <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">storedz.dz/store/</span>
                 <input required type="text" value={form.store_slug}
@@ -374,7 +369,7 @@ export default function SellerSettingsPage() {
             </Field>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="TÃƒÂ©lÃƒÂ©phone WhatsApp" hint="NumÃƒÂ©ro sur lequel vous recevrez les commandes clients">
+              <Field label="Téléphone WhatsApp" hint="Numéro sur lequel vous recevrez les commandes clients">
                 <div className="flex gap-2">
                   <input type="tel" value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -395,10 +390,10 @@ export default function SellerSettingsPage() {
                   )}
                 </div>
               </Field>
-              <Field label="Wilaya" hint="UtilisÃƒÂ©e pour estimer les dÃƒÂ©lais de livraison">
+              <Field label="Wilaya" hint="Utilisée pour estimer les délais de livraison">
                 <select value={form.wilaya} onChange={(e) => setForm({ ...form, wilaya: e.target.value })}
                   className={`${INPUT} bg-white`}>
-                  <option value="">Choisir une wilayaÃ¢â‚¬Â¦</option>
+                  <option value="">Choisir une wilaya?</option>
                   {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
                 </select>
               </Field>
@@ -425,22 +420,22 @@ export default function SellerSettingsPage() {
               </Field>
             </div>
 
-            <Field label="Description de la boutique" hint={`${form.description.length}/300 Ã¢â‚¬â€ DÃƒÂ©crivez vos produits et ce qui vous rend unique`}>
+            <Field label="Description de la boutique" hint={`${form.description.length}/300 ? Décrivez vos produits et ce qui vous rend unique`}>
               <textarea value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3} maxLength={300}
-                placeholder="Ex: Boutique spÃƒÂ©cialisÃƒÂ©e dans la mode kabyle traditionnelle. Livraison dans toute l'AlgÃƒÂ©rieÃ¢â‚¬Â¦"
+                placeholder="Ex: Boutique spécialisée dans la mode kabyle traditionnelle. Livraison dans toute l'Algérie?"
                 className={TEXTAREA} />
             </Field>
           </Section>
 
-          {/* 2 Ã¢â‚¬â€ Appearance */}
+          {/* 2 ? Appearance */}
           <Section id="appearance" open={openSection === 'appearance'} onToggle={toggle}
             icon={Palette} badge="optional"
             title="Apparence de la boutique"
-            subtitle="ThÃƒÂ¨me, couleur principale, banniÃƒÂ¨re et image de couverture"
+            subtitle="Thème, couleur principale, bannière et image de couverture"
           >
-            <Field label="ThÃƒÂ¨me de couleur" hint="Choisissez le style visuel qui correspond ÃƒÂ  votre marque">
+            <Field label="Thème de couleur" hint="Choisissez le style visuel qui correspond à  votre marque">
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-1">
                 {THEME_PRESETS.map((t) => (
                   <button key={t.id} type="button"
@@ -455,7 +450,7 @@ export default function SellerSettingsPage() {
               </div>
             </Field>
 
-            <Field label="Couleur personnalisÃƒÂ©e" hint="Code hexadÃƒÂ©cimal (ex: #4f46e5)">
+            <Field label="Couleur personnalisée" hint="Code hexadécimal (ex: #4f46e5)">
               <div className="flex items-center gap-3">
                 <input type="color" value={form.accent_color}
                   onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
@@ -466,14 +461,14 @@ export default function SellerSettingsPage() {
               </div>
             </Field>
 
-            <Field label="Image banniÃƒÂ¨re" hint="Format recommandÃƒÂ© : 1200 Ãƒâ€” 300 px Ã¢â‚¬â€ apparaÃƒÂ®t en haut de votre boutique">
+            <Field label="Image bannière" hint="Format recommandé : 1200 × 300 px ? apparaît en haut de votre boutique">
               <input type="url" value={form.banner_url}
                 onChange={(e) => setForm({ ...form, banner_url: e.target.value })}
                 placeholder="https://example.com/banner.jpg"
                 className={INPUT} />
             </Field>
 
-            <Field label="Image de couverture" hint="Format recommandÃƒÂ© : 1600 Ãƒâ€” 400 px Ã¢â‚¬â€ grande image hÃƒÂ©ro">
+            <Field label="Image de couverture" hint="Format recommandé : 1600 × 400 px ? grande image héro">
               <input type="url" value={form.cover_url}
                 onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
                 placeholder="https://example.com/cover.jpg"
@@ -481,10 +476,10 @@ export default function SellerSettingsPage() {
             </Field>
           </Section>
 
-          {/* 3 Ã¢â‚¬â€ Social */}
+          {/* 3 ? Social */}
           <Section id="social" open={openSection === 'social'} onToggle={toggle}
             icon={Share2} badge="optional"
-            title="RÃƒÂ©seaux sociaux"
+            title="Réseaux sociaux"
             subtitle="Liens vers vos pages Instagram, Facebook, TikTok"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -506,7 +501,7 @@ export default function SellerSettingsPage() {
                     className="flex-1 px-3 py-3 text-sm focus:outline-none" />
                 </div>
               </Field>
-              <Field label="WhatsApp" hint="NumÃƒÂ©ro affichÃƒÂ© sur la page boutique pour contacter le vendeur">
+              <Field label="WhatsApp" hint="Numéro affiché sur la page boutique pour contacter le vendeur">
                 <div className="flex gap-2">
                   <input type="tel" value={form.social_whatsapp}
                     onChange={(e) => setForm({ ...form, social_whatsapp: e.target.value })}
@@ -536,58 +531,58 @@ export default function SellerSettingsPage() {
             </div>
           </Section>
 
-          {/* 4 Ã¢â‚¬â€ Policies */}
+          {/* 4 ? Policies */}
           <Section id="policies" open={openSection === 'policies'} onToggle={toggle}
             icon={FileText} badge="optional"
             title="Politiques de la boutique"
-            subtitle="Livraison et retours Ã¢â‚¬â€ affichÃƒÂ©es aux acheteurs sur votre boutique"
+            subtitle="Livraison et retours ? affichées aux acheteurs sur votre boutique"
           >
             <div className="bg-blue-50 rounded-xl p-3 flex gap-2 text-xs text-blue-700">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              Les boutiques avec des politiques claires convertissent mieux Ã¢â‚¬â€ les clients savent ÃƒÂ  quoi s&apos;attendre.
+              Les boutiques avec des politiques claires convertissent mieux ? les clients savent à  quoi s&apos;attendre.
             </div>
-            <Field label="Politique de livraison" hint="DÃƒÂ©lais, zones couvertes, transporteur utilisÃƒÂ©">
+            <Field label="Politique de livraison" hint="Délais, zones couvertes, transporteur utilisé">
               <textarea value={form.shipping_policy}
                 onChange={(e) => setForm({ ...form, shipping_policy: e.target.value })}
                 rows={4}
-                placeholder="Ex: Livraison sous 3-5 jours ouvrables dans toute l'AlgÃƒÂ©rie via Yalidine. Retrait possible ÃƒÂ  Alger sur rendez-vousÃ¢â‚¬Â¦"
+                placeholder="Ex: Livraison sous 3-5 jours ouvrables dans toute l'Algérie via Yalidine. Retrait possible à  Alger sur rendez-vous?"
                 className={TEXTAREA} />
             </Field>
-            <Field label="Politique de retour" hint="Conditions d'acceptation des retours et dÃƒÂ©lais">
+            <Field label="Politique de retour" hint="Conditions d'acceptation des retours et délais">
               <textarea value={form.return_policy}
                 onChange={(e) => setForm({ ...form, return_policy: e.target.value })}
                 rows={4}
-                placeholder="Ex: Retours acceptÃƒÂ©s sous 7 jours aprÃƒÂ¨s rÃƒÂ©ception, produit non utilisÃƒÂ© dans son emballage d'origineÃ¢â‚¬Â¦"
+                placeholder="Ex: Retours acceptés sous 7 jours après réception, produit non utilisé dans son emballage d'origine?"
                 className={TEXTAREA} />
             </Field>
           </Section>
 
-          {/* 5 Ã¢â‚¬â€ SEO */}
+          {/* 5 ? SEO */}
           <Section id="seo" open={openSection === 'seo'} onToggle={toggle}
             icon={Search} badge="optional"
-            title="RÃƒÂ©fÃƒÂ©rencement (SEO)"
-            subtitle="Titre et description affichÃƒÂ©s dans Google Ã¢â‚¬â€ augmentez votre visibilitÃƒÂ©"
+            title="Référencement (SEO)"
+            subtitle="Titre et description affichés dans Google ? augmentez votre visibilité"
           >
-            <Field label="Titre SEO" hint={`${form.seo_title.length}/70 caractÃƒÂ¨res Ã¢â‚¬â€ apparaÃƒÂ®t dans l'onglet du navigateur et Google`}>
+            <Field label="Titre SEO" hint={`${form.seo_title.length}/70 caractères ? apparaît dans l'onglet du navigateur et Google`}>
               <input type="text" value={form.seo_title} maxLength={70}
                 onChange={(e) => setForm({ ...form, seo_title: e.target.value })}
-                placeholder={`${form.store_name} Ã¢â‚¬â€ StoreDz`}
+                placeholder={`${form.store_name} ? StoreDz`}
                 className={INPUT} />
             </Field>
-            <Field label="MÃƒÂ©ta-description" hint={`${form.seo_description.length}/160 caractÃƒÂ¨res Ã¢â‚¬â€ rÃƒÂ©sumÃƒÂ© affichÃƒÂ© dans les rÃƒÂ©sultats Google`}>
+            <Field label="Méta-description" hint={`${form.seo_description.length}/160 caractères ? résumé affiché dans les résultats Google`}>
               <textarea value={form.seo_description} maxLength={160}
                 onChange={(e) => setForm({ ...form, seo_description: e.target.value })}
                 rows={3}
-                placeholder="Description courte de votre boutique affichÃƒÂ©e dans GoogleÃ¢â‚¬Â¦"
+                placeholder="Description courte de votre boutique affichée dans Google?"
                 className={TEXTAREA} />
             </Field>
           </Section>
 
-          {/* 6 Ã¢â‚¬â€ Bank */}
+          {/* 6 ? Bank */}
           <Section id="bank" open={openSection === 'bank'} onToggle={toggle}
             icon={Banknote} badge="optional"
-            title="CoordonnÃƒÂ©es bancaires"
-            subtitle="Pour recevoir vos virements de la plateforme Ã¢â‚¬â€ stockÃƒÂ©es de faÃƒÂ§on sÃƒÂ©curisÃƒÂ©e"
+            title="Coordonnées bancaires"
+            subtitle="Pour recevoir vos virements de la plateforme ? stockées de façon sécurisée"
           >
             <div className="bg-amber-50 rounded-xl p-3 flex gap-2 text-xs text-amber-700">
               <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -606,13 +601,13 @@ export default function SellerSettingsPage() {
                   placeholder="00000-00000-000000000000-00"
                   className={`${INPUT} font-mono`} />
               </Field>
-              <Field label="Compte CCP" hint="NumÃƒÂ©ro de compte postal">
+              <Field label="Compte CCP" hint="Numéro de compte postal">
                 <input type="text" value={form.bank_ccp}
                   onChange={(e) => setForm({ ...form, bank_ccp: e.target.value })}
-                  placeholder="0000000 / clÃƒÂ© 00"
+                  placeholder="0000000 / clé 00"
                   className={`${INPUT} font-mono`} />
               </Field>
-              <Field label="NumÃƒÂ©ro BaridiMob" hint="NumÃƒÂ©ro de tÃƒÂ©lÃƒÂ©phone liÃƒÂ© ÃƒÂ  votre compte BaridiMob">
+              <Field label="Numéro BaridiMob" hint="Numéro de téléphone lié à  votre compte BaridiMob">
                 <input type="text" value={form.bank_baridimob}
                   onChange={(e) => setForm({ ...form, bank_baridimob: e.target.value })}
                   placeholder="05xx xxx xxx"
@@ -621,45 +616,45 @@ export default function SellerSettingsPage() {
             </div>
           </Section>
 
-          {/* 7 Ã¢â‚¬â€ Stock alert */}
+          {/* 7 ? Stock alert */}
           <Section id="stock" open={openSection === 'stock'} onToggle={toggle}
             icon={Bell} badge="optional"
             title="Alerte stock bas"
             subtitle="Recevez une alerte quand un produit descend sous un seuil critique"
           >
-            <Field label="Seuil d'alerte" hint="Vous serez notifiÃƒÂ© dans le tableau de bord quand un produit a ce nombre d'unitÃƒÂ©s ou moins">
+            <Field label="Seuil d'alerte" hint="Vous serez notifié dans le tableau de bord quand un produit a ce nombre d'unités ou moins">
               <div className="flex items-center gap-3">
                 <input type="number" min={0} max={100}
                   value={form.low_stock_threshold}
                   onChange={(e) => setForm({ ...form, low_stock_threshold: parseInt(e.target.value) || 0 })}
                   className="w-28 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400"
                 />
-                <span className="text-sm text-gray-500">unitÃƒÂ©s restantes</span>
+                <span className="text-sm text-gray-500">unités restantes</span>
               </div>
             </Field>
           </Section>
 
-          {/* 8 Ã¢â‚¬â€ Pixels */}
+          {/* 8 ? Pixels */}
           <Section id="pixels" open={openSection === 'pixels'} onToggle={toggle}
             icon={BarChart3} badge="advanced"
             title="Pixels & Tracking publicitaire"
-            subtitle="Meta, Google Analytics, TikTok Ã¢â‚¬â€ pour mesurer vos campagnes (facultatif)"
+            subtitle="Meta, Google Analytics, TikTok ? pour mesurer vos campagnes (facultatif)"
           >
             <div className="bg-violet-50 rounded-xl p-3 flex gap-2 text-xs text-violet-700 mb-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              Section rÃƒÂ©servÃƒÂ©e aux vendeurs qui font de la publicitÃƒÂ© payante. Laissez vide si vous n&apos;utilisez pas ces outils.
+              Section réservée aux vendeurs qui font de la publicité payante. Laissez vide si vous n&apos;utilisez pas ces outils.
             </div>
 
             {/* Meta */}
             <div className="bg-[#f0f2ff] rounded-2xl p-4 space-y-3">
               <p className="text-xs font-bold text-[#1877F2] uppercase tracking-wider">Meta (Facebook / Instagram)</p>
-              <Field label="Pixel ID" hint="Meta Business Suite Ã¢â€ â€™ Events Manager Ã¢â€ â€™ votre pixel Ã¢â€ â€™ ParamÃƒÂ¨tres">
+              <Field label="Pixel ID" hint="Meta Business Suite → Events Manager → votre pixel → Paramètres">
                 <input type="text" value={pixels.meta_pixel_id}
                   onChange={(e) => setPixels({ ...pixels, meta_pixel_id: e.target.value })}
                   placeholder="1234567890123456"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
-              <Field label="Conversions API Token (server-side)" hint="Events Manager Ã¢â€ â€™ votre pixel Ã¢â€ â€™ ParamÃƒÂ¨tres Ã¢â€ â€™ Conversions API Ã¢â€ â€™ GÃƒÂ©nÃƒÂ©rer un token">
+              <Field label="Conversions API Token (server-side)" hint="Events Manager → votre pixel → Paramètres → Conversions API → Générer un token">
                 <input type="password" value={pixels.meta_capi_token}
                   onChange={(e) => setPixels({ ...pixels, meta_capi_token: e.target.value })}
                   placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -670,13 +665,13 @@ export default function SellerSettingsPage() {
             {/* Google */}
             <div className="bg-[#f0fdf4] rounded-2xl p-4 space-y-3">
               <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Google Analytics 4</p>
-              <Field label="Measurement ID" hint="GA4 Ã¢â€ â€™ Admin Ã¢â€ â€™ Flux de donnÃƒÂ©es Ã¢â€ â€™ votre flux web Ã¢â€ â€™ Measurement ID">
+              <Field label="Measurement ID" hint="GA4 → Admin → Flux de données → votre flux web → Measurement ID">
                 <input type="text" value={pixels.gtag_id}
                   onChange={(e) => setPixels({ ...pixels, gtag_id: e.target.value })}
                   placeholder="G-XXXXXXXXXX"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
-              <Field label="API Secret (Measurement Protocol)" hint="GA4 Ã¢â€ â€™ Admin Ã¢â€ â€™ Flux de donnÃƒÂ©es Ã¢â€ â€™ votre flux Ã¢â€ â€™ Measurement Protocol API secrets">
+              <Field label="API Secret (Measurement Protocol)" hint="GA4 → Admin → Flux de données → votre flux → Measurement Protocol API secrets">
                 <input type="password" value={pixels.gtag_api_secret}
                   onChange={(e) => setPixels({ ...pixels, gtag_api_secret: e.target.value })}
                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -687,13 +682,13 @@ export default function SellerSettingsPage() {
             {/* TikTok */}
             <div className="bg-[#fff0f3] rounded-2xl p-4 space-y-3">
               <p className="text-xs font-bold text-[#fe2c55] uppercase tracking-wider">TikTok</p>
-              <Field label="Pixel ID" hint="TikTok Ads Manager Ã¢â€ â€™ Assets Ã¢â€ â€™ Events Ã¢â€ â€™ votre pixel Ã¢â€ â€™ ParamÃƒÂ¨tres">
+              <Field label="Pixel ID" hint="TikTok Ads Manager → Assets → Events → votre pixel → Paramètres">
                 <input type="text" value={pixels.tiktok_pixel_id}
                   onChange={(e) => setPixels({ ...pixels, tiktok_pixel_id: e.target.value })}
                   placeholder="CXXXXXXXXXXXXXXXXXX"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
-              <Field label="Events API Access Token (server-side)" hint="TikTok Ads Manager Ã¢â€ â€™ Assets Ã¢â€ â€™ Events Ã¢â€ â€™ votre pixel Ã¢â€ â€™ API Access Token">
+              <Field label="Events API Access Token (server-side)" hint="TikTok Ads Manager → Assets → Events → votre pixel → API Access Token">
                 <input type="password" value={pixels.tiktok_capi_token}
                   onChange={(e) => setPixels({ ...pixels, tiktok_capi_token: e.target.value })}
                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -708,7 +703,7 @@ export default function SellerSettingsPage() {
                   <p className="text-sm font-bold text-gray-800">Pixel StoreDz (1st party)</p>
                   <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">ACTIF</span>
                 </div>
-                <p className="text-xs text-gray-500">Snippet ÃƒÂ  intÃƒÂ©grer sur n&apos;importe quelle page externe pour collecter des donnÃƒÂ©es dans votre tableau de bord StoreDz.</p>
+                <p className="text-xs text-gray-500">Snippet à  intégrer sur n&apos;importe quelle page externe pour collecter des données dans votre tableau de bord StoreDz.</p>
                 <div className="relative">
                   <pre className="bg-gray-900 text-green-400 text-[11px] rounded-xl p-3 overflow-x-auto leading-relaxed whitespace-pre-wrap break-all">
 {`<img src="https://storedz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`}
@@ -721,7 +716,7 @@ export default function SellerSettingsPage() {
                     }}
                     className="absolute top-2 right-2 flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-[11px] font-semibold px-2 py-1 rounded-lg transition-colors">
                     {pixelCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {pixelCopied ? 'CopiÃƒÂ©' : 'Copier'}
+                    {pixelCopied ? 'Copié' : 'Copier'}
                   </button>
                 </div>
               </div>
@@ -739,15 +734,15 @@ export default function SellerSettingsPage() {
           <div className="bg-white rounded-2xl shadow-sm px-6 py-4 flex items-center justify-between gap-4">
             <div className="text-xs text-gray-400">
               Commission sur vos ventes : <span className="font-bold text-emerald-600">0%</span>
-              {' Ã‚Â· '}
+              {' · '}
               Statut du compte : <span className={`font-bold ${vendor.is_approved ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {vendor.is_approved ? 'ApprouvÃƒÂ©' : 'En attente'}
+                {vendor.is_approved ? 'Approuvé' : 'En attente'}
               </span>
             </div>
             <button type="submit" disabled={saving}
               className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors whitespace-nowrap">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
-              {saved ? 'EnregistrÃƒÂ© !' : 'Enregistrer les modifications'}
+              {saved ? 'Enregistré !' : 'Enregistrer les modifications'}
             </button>
           </div>
 

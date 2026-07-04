@@ -28,6 +28,13 @@ describe('Delivery API Integration', () => {
       console.warn('Could not load .env.local:', e)
     }
 
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !key) {
+      console.log('NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set. Skipping live database test.')
+      return
+    }
+
     const supabase = createAdminClient()
     
     // Find a vendor with an ecom or yalidine configuration

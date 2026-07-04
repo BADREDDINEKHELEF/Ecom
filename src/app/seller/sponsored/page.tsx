@@ -29,15 +29,15 @@ const STATUS_CFG = {
   pending:  { label: 'En attente',  color: 'bg-blue-100 text-blue-700',      icon: Clock },
   active:   { label: 'Actif',       color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
   paused:   { label: 'En pause',    color: 'bg-gray-100 text-gray-600',      icon: AlertCircle },
-  rejected: { label: 'RefusÃ©',      color: 'bg-red-100 text-red-700',        icon: XCircle },
-  expired:  { label: 'ExpirÃ©',      color: 'bg-gray-100 text-gray-500',      icon: Clock },
+  rejected: { label: 'Refusé',      color: 'bg-red-100 text-red-700',        icon: XCircle },
+  expired:  { label: 'Expiré',      color: 'bg-gray-100 text-gray-500',      icon: Clock },
 } as const
 
 const PLACEMENTS = [
-  { id: 'homepage', label: 'Page d\'accueil', desc: 'Section "Produits SponsorisÃ©s" sur la page principale', price: 1500 },
-  { id: 'category', label: 'Page catÃ©gorie', desc: 'En haut des pages de catÃ©gorie de votre niche', price: 1000 },
-  { id: 'search',   label: 'RÃ©sultats de recherche', desc: 'Mis en avant dans les rÃ©sultats de recherche', price: 800 },
-  { id: 'all',      label: 'Toutes les pages', desc: 'PrÃ©sence maximale â€” homepage + catÃ©gorie + recherche', price: 3000 },
+  { id: 'homepage', label: 'Page d\'accueil', desc: 'Section "Produits Sponsorisés" sur la page principale', price: 1500 },
+  { id: 'category', label: 'Page catégorie', desc: 'En haut des pages de catégorie de votre niche', price: 1000 },
+  { id: 'search',   label: 'Résultats de recherche', desc: 'Mis en avant dans les résultats de recherche', price: 800 },
+  { id: 'all',      label: 'Toutes les pages', desc: 'Présence maximale ? homepage + catégorie + recherche', price: 3000 },
 ]
 
 const DURATIONS = [
@@ -107,7 +107,7 @@ export default function SellerSponsoredPage() {
         setPaymentRef('')
       }
     } catch {
-      setSubmitError('Erreur rÃ©seau. RÃ©essayez.')
+      setSubmitError('Erreur réseau. Réessayez.')
     } finally {
       setSubmitting(false)
     }
@@ -137,9 +137,9 @@ export default function SellerSponsoredPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Zap className="w-5 h-5 text-amber-500" />
-                <h1 className="text-2xl font-black text-gray-900">Produits SponsorisÃ©s</h1>
+                <h1 className="text-2xl font-black text-gray-900">Produits Sponsorisés</h1>
               </div>
-              <p className="text-gray-500 text-sm">Boostez la visibilitÃ© de vos produits sur StoreDz</p>
+              <p className="text-gray-500 text-sm">Boostez la visibilité de vos produits sur StoreDz</p>
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
@@ -154,8 +154,8 @@ export default function SellerSponsoredPage() {
             <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-emerald-800">Demande envoyÃ©e !</p>
-                <p className="text-sm text-emerald-700 mt-0.5">Notre Ã©quipe examinera votre demande dans les 24h.</p>
+                <p className="font-bold text-emerald-800">Demande envoyée !</p>
+                <p className="text-sm text-emerald-700 mt-0.5">Notre équipe examinera votre demande dans les 24h.</p>
               </div>
             </div>
           )}
@@ -167,12 +167,12 @@ export default function SellerSponsoredPage() {
 
               {/* Product selection */}
               <div className="mb-5">
-                <label className="block text-sm font-bold text-gray-700 mb-2">Produit Ã  sponsoriser</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Produit à sponsoriser</label>
                 <select
                   value={selectedProduct}
                   onChange={(e) => setSelectedProduct(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                  <option value="">SÃ©lectionnez un produitâ€¦</option>
+                  <option value="">Sélectionnez un produit?</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
@@ -203,7 +203,7 @@ export default function SellerSponsoredPage() {
 
               {/* Duration */}
               <div className="mb-5">
-                <label className="block text-sm font-bold text-gray-700 mb-2">DurÃ©e</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Durée</label>
                 <div className="flex gap-3">
                   {DURATIONS.map((d) => (
                     <button key={d.days}
@@ -220,24 +220,24 @@ export default function SellerSponsoredPage() {
               {/* Total */}
               <div className="bg-gray-50 rounded-xl px-4 py-3 mb-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600">Total Ã  payer</p>
+                  <p className="text-sm text-gray-600">Total à payer</p>
                   <p className="text-lg font-black text-emerald-600">{totalAmount.toLocaleString()} DZD</p>
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Envoyez ce montant via BaridiMob ou CCP et entrez la rÃ©fÃ©rence ci-dessous.
+                  Envoyez ce montant via BaridiMob ou CCP et entrez la référence ci-dessous.
                 </p>
               </div>
 
               {/* Payment reference */}
               <div className="mb-5">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  RÃ©fÃ©rence de paiement <span className="font-normal text-gray-400">(optionnel)</span>
+                  Référence de paiement <span className="font-normal text-gray-400">(optionnel)</span>
                 </label>
                 <input
                   type="text"
                   value={paymentRef}
                   onChange={(e) => setPaymentRef(e.target.value)}
-                  placeholder="RÃ©fÃ©rence de la transaction"
+                  placeholder="Référence de la transaction"
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -250,7 +250,7 @@ export default function SellerSponsoredPage() {
                 onClick={handleSubmit}
                 disabled={submitting || !selectedProduct}
                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 text-white font-bold px-6 py-3 rounded-xl transition-colors">
-                {submitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Envoiâ€¦</> : 'Soumettre la demande'}
+                {submitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Envoi?</> : 'Soumettre la demande'}
               </button>
             </div>
           )}
@@ -265,7 +265,7 @@ export default function SellerSponsoredPage() {
             <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
               <Zap className="w-10 h-10 text-gray-200 mx-auto mb-3" />
               <p className="text-gray-500 font-medium">Aucune promotion pour l&apos;instant</p>
-              <p className="text-sm text-gray-400 mt-1">Sponsorisez un produit pour augmenter sa visibilitÃ©.</p>
+              <p className="text-sm text-gray-400 mt-1">Sponsorisez un produit pour augmenter sa visibilité.</p>
             </div>
           ) : (
             <div className="space-y-3">

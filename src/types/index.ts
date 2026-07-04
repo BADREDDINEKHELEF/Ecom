@@ -40,8 +40,17 @@ export interface Product {
   minOrderQuantity?: number
   isBundle?: boolean
   colorVariants?: ColorVariant[]
+  variants?: ProductVariant[]
   totalOrders?: number
   vendorId?: string
+}
+
+export interface ProductVariant {
+  id: string
+  options: Record<string, string>
+  price: number
+  stock: number
+  sku: string
 }
 
 export interface CartItem {

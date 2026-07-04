@@ -1,5 +1,4 @@
 import { createAdminClient } from './admin'
-import { createClient } from './client'
 import { encryptField, decryptField, isEncrypted } from '@/lib/utils/crypto'
 
 // ── Vendor Types ───────────────────────────────────────────────────
@@ -78,7 +77,9 @@ export interface VendorDeliveryConfig {
 const VENDOR_COLS = 'id,user_id,owner_id,store_name,store_slug,logo_url,banner_url,cover_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,social_instagram,social_facebook,social_whatsapp,social_tiktok,theme_preset,business_type,is_on_vacation,vacation_message,bank_rib,bank_ccp,bank_baridimob,bank_account_name,low_stock_threshold,verified_at,return_policy,shipping_policy,referral_code,subscription_status,subscription_plan_id,subscription_expires_at,admin_note,meta_pixel_id,gtag_id,tiktok_pixel_id,pixel_id,meta_capi_token,tiktok_capi_token,gtag_api_secret,created_at'
 
 export async function getVendorByUserId(userId: string): Promise<Vendor | null> {
-  const supabase = createClient()
+  // Used from seller server components and client auth; admin client is safe
+  // and avoids browser-client failures during SSR.
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('vendors')
     .select(VENDOR_COLS)
@@ -89,7 +90,7 @@ export async function getVendorByUserId(userId: string): Promise<Vendor | null> 
 }
 
 export async function getVendorById(vendorId: string): Promise<Vendor | null> {
-  const supabase = createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('vendors')
     .select(VENDOR_COLS)
@@ -311,11 +312,13 @@ export async function getAllVendors(page: number, pageSize: number): Promise<{ v
 }
 
 export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
-  const supabase = createClient()
+  // Server components (e.g. product pages) call this; use the admin client
+  // because createClient() is a browser client and is not safe/reliable in SSR.
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('vendors')
     .select(VENDOR_COLS)
-    .eq('store_slug', slug)
+    .ilike('store_slug', slug)
     .maybeSingle()
   if (error || !data) return null
   return data as Vendor

@@ -17,7 +17,7 @@ import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { SellerAnalytics } from '@/lib/supabase/analytics'
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Colours Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Colours ───────────────────────────────────────────────────
 const PROVIDER_COLORS: Record<string, string> = {
   yalidine: '#FF6B35', zr: '#2563EB', maystro: '#059669',
   colivraison: '#7C3AED', rex: '#DC2626', procolis: '#D97706',
@@ -36,7 +36,7 @@ const DAYS_OPTIONS = [
 
 type AnalyticsTab = 'overview' | 'products' | 'geo' | 'funnel' | 'insights'
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Shared sub-components Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Shared sub-components ─────────────────────────────────────
 
 function GrowthBadge({ pct }: { pct: number }) {
   if (pct === 0) return null
@@ -148,43 +148,43 @@ function InsightCard({ type, title, body, action }: {
   )
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Insight generation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Insight generation ────────────────────────────────────────
 function generateInsights(data: SellerAnalytics, days: number) {
   const out: { type: 'good'|'warn'|'info'|'tip'; title: string; body: string; action?: string }[] = []
 
   if (data.returnRate > 25) {
-    out.push({ type: 'warn', title: `Taux de retour ÃƒÂ©levÃƒÂ© : ${data.returnRate}%`,
-      body: `La moyenne en AlgÃƒÂ©rie est 15-20%. Un taux de ${data.returnRate}% signale souvent une description produit inexacte ou un manque de confirmation avant expÃƒÂ©dition.`,
-      action: 'Appelez chaque client avant d\'expÃƒÂ©dier pour confirmer l\'adresse et la commande.' })
+    out.push({ type: 'warn', title: `Taux de retour élevé : ${data.returnRate}%`,
+      body: `La moyenne en Algérie est 15-20%. Un taux de ${data.returnRate}% signale souvent une description produit inexacte ou un manque de confirmation avant expédition.`,
+      action: 'Appelez chaque client avant d\'expédier pour confirmer l\'adresse et la commande.' })
   } else if (data.returnRate <= 10 && data.totalOrders > 5) {
     out.push({ type: 'good', title: `Excellent taux de retour : ${data.returnRate}%`,
-      body: 'En dessous de la moyenne nationale. Vos descriptions produits et votre suivi client sont efficaces Ã¢â‚¬â€ continuez ainsi.' })
+      body: 'En dessous de la moyenne nationale. Vos descriptions produits et votre suivi client sont efficaces ? continuez ainsi.' })
   }
 
   if (data.deliveryRate >= 70 && data.totalOrders > 3) {
     out.push({ type: 'good', title: `Taux de livraison fort : ${data.deliveryRate}%`,
-      body: `${data.deliveredOrders} commandes livrÃƒÂ©es sur ${data.totalOrders}. Vous ÃƒÂªtes au-dessus de la moyenne nationale (55-65%).` })
+      body: `${data.deliveredOrders} commandes livrées sur ${data.totalOrders}. Vous êtes au-dessus de la moyenne nationale (55-65%).` })
   } else if (data.deliveryRate < 50 && data.totalOrders > 5) {
-    out.push({ type: 'warn', title: `Taux de livraison ÃƒÂ  amÃƒÂ©liorer : ${data.deliveryRate}%`,
-      body: 'Moins de la moitiÃƒÂ© de vos commandes sont livrÃƒÂ©es. VÃƒÂ©rifiez la qualitÃƒÂ© des adresses et confirmez chaque commande.',
-      action: 'Filtrez "En attente" dans Commandes et confirmez avant expÃƒÂ©dition.' })
+    out.push({ type: 'warn', title: `Taux de livraison à  améliorer : ${data.deliveryRate}%`,
+      body: 'Moins de la moitié de vos commandes sont livrées. Vérifiez la qualité des adresses et confirmez chaque commande.',
+      action: 'Filtrez "En attente" dans Commandes et confirmez avant expédition.' })
   }
 
   if (data.avgOrderValue < 1500 && data.totalOrders > 3) {
     out.push({ type: 'tip', title: `Panier moyen faible : ${formatPrice(data.avgOrderValue)}`,
-      body: 'Sous 1 500 DA, la marge aprÃƒÂ¨s frais de livraison est serrÃƒÂ©e. Proposez des bundles ou une quantitÃƒÂ© minimum.',
-      action: 'CrÃƒÂ©ez une offre "2+1 gratuit" sur votre produit le plus vendu.' })
+      body: 'Sous 1 500 DA, la marge après frais de livraison est serrée. Proposez des bundles ou une quantité minimum.',
+      action: 'Créez une offre "2+1 gratuit" sur votre produit le plus vendu.' })
   } else if (data.avgOrderValue >= 3500) {
     out.push({ type: 'good', title: `Panier moyen solide : ${formatPrice(data.avgOrderValue)}`,
-      body: 'Vos clients commandent en grande quantitÃƒÂ©. Envisagez un programme de fidÃƒÂ©litÃƒÂ© pour les retenir.' })
+      body: 'Vos clients commandent en grande quantité. Envisagez un programme de fidélité pour les retenir.' })
   }
 
   if (data.revenueGrowth > 20) {
-    out.push({ type: 'good', title: `Croissance de +${data.revenueGrowth}% vs pÃƒÂ©riode prÃƒÂ©cÃƒÂ©dente`,
-      body: `Votre CA a augmentÃƒÂ© de ${data.revenueGrowth}% par rapport aux ${days} jours prÃƒÂ©cÃƒÂ©dents. Capitalisez en augmentant votre stock sur les produits phares.` })
+    out.push({ type: 'good', title: `Croissance de +${data.revenueGrowth}% vs période précédente`,
+      body: `Votre CA a augmenté de ${data.revenueGrowth}% par rapport aux ${days} jours précédents. Capitalisez en augmentant votre stock sur les produits phares.` })
   } else if (data.revenueGrowth < -15 && data.priorRevenue > 0) {
     out.push({ type: 'warn', title: `Baisse de CA de ${Math.abs(data.revenueGrowth)}%`,
-      body: `Votre CA a baissÃƒÂ© de ${Math.abs(data.revenueGrowth)}% vs la pÃƒÂ©riode prÃƒÂ©cÃƒÂ©dente. VÃƒÂ©rifiez vos stocks, prix, et si vos produits sont toujours visibles en boutique.` })
+      body: `Votre CA a baissé de ${Math.abs(data.revenueGrowth)}% vs la période précédente. Vérifiez vos stocks, prix, et si vos produits sont toujours visibles en boutique.` })
   }
 
   if (data.byDayOfWeek.length > 0) {
@@ -194,19 +194,19 @@ function generateInsights(data: SellerAnalytics, days: number) {
     if (bestDay.orders > 0) {
       out.push({ type: 'info', title: `Meilleur jour : ${bestDay.day}`,
         body: `${bestDay.orders} commandes le ${bestDay.day}. Lancez vos promotions flash ce jour pour maximiser l'impact.`,
-        action: worstDay.orders < bestDay.orders * 0.4 ? `Le ${worstDay.day} est le plus creux Ã¢â‚¬â€ bon moment pour une promo ciblÃƒÂ©e.` : undefined })
+        action: worstDay.orders < bestDay.orders * 0.4 ? `Le ${worstDay.day} est le plus creux ? bon moment pour une promo ciblée.` : undefined })
     }
   }
 
   if (data.byWilaya.length > 0) {
     const top = data.byWilaya[0]
-    out.push({ type: 'info', title: `Zone nÃ‚Â°1 : ${top.wilaya}`,
-      body: `${top.orders} commandes (${formatPrice(top.revenue)}) Ã¢â‚¬â€ taux de livraison ${top.deliveryRate}%. Ciblez cette wilaya en prioritÃƒÂ© dans vos publicitÃƒÂ©s.`,
-      action: `Proposez la livraison gratuite pour ${top.wilaya} avec un code promo dÃƒÂ©diÃƒÂ©.` })
+    out.push({ type: 'info', title: `Zone n°1 : ${top.wilaya}`,
+      body: `${top.orders} commandes (${formatPrice(top.revenue)}) ? taux de livraison ${top.deliveryRate}%. Ciblez cette wilaya en priorité dans vos publicités.`,
+      action: `Proposez la livraison gratuite pour ${top.wilaya} avec un code promo dédié.` })
     const highReturn = data.byWilaya.find((w) => w.returnRate > 35 && w.orders >= 3)
     if (highReturn) {
-      out.push({ type: 'warn', title: `Taux de retour ÃƒÂ©levÃƒÂ© ÃƒÂ  ${highReturn.wilaya} (${highReturn.returnRate}%)`,
-        body: `${highReturn.returned} retours sur ${highReturn.orders} commandes. Cette wilaya gÃƒÂ©nÃƒÂ¨re plus de pertes que de gains. Envisagez la confirmation systÃƒÂ©matique avant expÃƒÂ©dition.` })
+      out.push({ type: 'warn', title: `Taux de retour élevé à  ${highReturn.wilaya} (${highReturn.returnRate}%)`,
+        body: `${highReturn.returned} retours sur ${highReturn.orders} commandes. Cette wilaya génère plus de pertes que de gains. Envisagez la confirmation systématique avant expédition.` })
     }
   }
 
@@ -214,31 +214,31 @@ function generateInsights(data: SellerAnalytics, days: number) {
     const top  = data.topProducts[0]
     const share = data.totalRevenue > 0 ? Math.round((top.revenue / data.totalRevenue) * 100) : 0
     if (share > 60) {
-      out.push({ type: 'warn', title: `DÃƒÂ©pendance au produit "${top.name}" (${share}% du CA)`,
-        body: 'Un seul produit reprÃƒÂ©sente plus de 60% de votre chiffre d\'affaires. Diversifiez pour rÃƒÂ©duire ce risque.',
-        action: 'Testez 2-3 produits complÃƒÂ©mentaires ou des variantes de couleur/taille.' })
+      out.push({ type: 'warn', title: `Dépendance au produit "${top.name}" (${share}% du CA)`,
+        body: 'Un seul produit représente plus de 60% de votre chiffre d\'affaires. Diversifiez pour réduire ce risque.',
+        action: 'Testez 2-3 produits complémentaires ou des variantes de couleur/taille.' })
     } else if (share > 0) {
       out.push({ type: 'tip', title: `Produit star : "${top.name}"`,
-        body: `${share}% de votre CA Ã¢â‚¬â€ ${top.units} unitÃƒÂ©s vendues, panier moy. ${formatPrice(top.avgPrice)}. Une vente flash ÃƒÂ  -15% peut dÃƒÂ©cupler les ventes.`,
-        action: 'CrÃƒÂ©ez un code promo exclusif pour ce produit et partagez-le sur WhatsApp.' })
+        body: `${share}% de votre CA ? ${top.units} unités vendues, panier moy. ${formatPrice(top.avgPrice)}. Une vente flash à  -15% peut décupler les ventes.`,
+        action: 'Créez un code promo exclusif pour ce produit et partagez-le sur WhatsApp.' })
     }
   }
 
   if (data.pendingOrders > 5) {
-    out.push({ type: 'warn', title: `${data.pendingOrders} commandes non traitÃƒÂ©es`,
-      body: 'Un volume ÃƒÂ©levÃƒÂ© de commandes en attente augmente le risque de retour et nuit ÃƒÂ  la satisfaction client.',
-      action: 'Allez dans Commandes Ã¢â€ â€™ filtrez "En attente" et traitez-les.' })
+    out.push({ type: 'warn', title: `${data.pendingOrders} commandes non traitées`,
+      body: 'Un volume élevé de commandes en attente augmente le risque de retour et nuit à  la satisfaction client.',
+      action: 'Allez dans Commandes → filtrez "En attente" et traitez-les.' })
   }
 
   if (out.length === 0 && data.totalOrders === 0) {
-    out.push({ type: 'info', title: 'Pas encore de donnÃƒÂ©es',
-      body: 'Les recommandations apparaÃƒÂ®tront dÃƒÂ¨s votre premiÃƒÂ¨re commande. Partagez votre boutique pour dÃƒÂ©marrer !' })
+    out.push({ type: 'info', title: 'Pas encore de données',
+      body: 'Les recommandations apparaîtront dès votre première commande. Partagez votre boutique pour démarrer !' })
   }
 
   return out
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Page Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Page ─────────────────────────────────────────────────────
 export default function SellerAnalyticsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
@@ -265,21 +265,21 @@ export default function SellerAnalyticsPage() {
   const exportCSV = () => {
     if (!data) return
     const rows = [
-      ['MÃƒÂ©trique', 'Valeur'],
+      ['Métrique', 'Valeur'],
       ['CA Total', data.totalRevenue], ['Croissance CA %', data.revenueGrowth],
       ['Commandes', data.totalOrders], ['Croissance cmd %', data.ordersGrowth],
-      ['En attente', data.pendingOrders], ['LivrÃƒÂ©es', data.deliveredOrders],
+      ['En attente', data.pendingOrders], ['Livrées', data.deliveredOrders],
       ['Retours', data.returnedOrders], ['Panier moyen', data.avgOrderValue],
       ['Taux retour %', data.returnRate], ['Projection 30j', data.projectedRevenue],
       [''],
-      ['Top Produits'], ['Nom', 'Commandes', 'UnitÃƒÂ©s', 'CA', 'Prix moy'],
+      ['Top Produits'], ['Nom', 'Commandes', 'Unités', 'CA', 'Prix moy'],
       ...data.topProducts.map((p) => [p.name, p.orders, p.units, p.revenue, p.avgPrice]),
       [''],
       ['Par Wilaya'], ['Wilaya', 'Commandes', 'CA', 'Panier moy', 'Livraison %', 'Retour %'],
       ...data.byWilaya.map((w) => [w.wilaya, w.orders, w.revenue, w.avgOrder, w.deliveryRate, w.returnRate]),
     ]
     const csv  = rows.map((r) => (Array.isArray(r) ? r : [r]).join(',')).join('\n')
-    const blob = new Blob(['Ã¯Â»Â¿' + csv], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
     const a    = document.createElement('a')
     a.href     = URL.createObjectURL(blob)
     a.download = `analytics-${days}j-${new Date().toISOString().slice(0, 10)}.csv`
@@ -292,9 +292,9 @@ export default function SellerAnalyticsPage() {
 
   const statusData = data ? [
     { name: 'En attente', value: data.pendingOrders },
-    { name: 'LivrÃƒÂ©es',    value: data.deliveredOrders },
+    { name: 'Livrées',    value: data.deliveredOrders },
     { name: 'Retours',    value: data.returnedOrders },
-    { name: 'AnnulÃƒÂ©es',   value: data.cancelledOrders },
+    { name: 'Annulées',   value: data.cancelledOrders },
     { name: 'Autres',     value: Math.max(0, data.totalOrders - data.pendingOrders - data.deliveredOrders - data.returnedOrders - data.cancelledOrders) },
   ].filter((d) => d.value > 0) : []
 
@@ -316,7 +316,7 @@ export default function SellerAnalyticsPage() {
 
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Header Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ── Header ──────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
@@ -337,7 +337,7 @@ export default function SellerAnalyticsPage() {
               <RefreshCw className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} />
             </button>
             <button onClick={exportCSV} className="flex items-center gap-1.5 border border-gray-200 bg-white px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
-              <Download className="w-4 h-4" /><span className="hidden sm:inline">RÃƒÂ©sumÃƒÂ© CSV</span>
+              <Download className="w-4 h-4" /><span className="hidden sm:inline">Résumé CSV</span>
             </button>
             <a href="/api/seller/analytics/export" className="flex items-center gap-1.5 border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-100">
               <Download className="w-4 h-4" /><span className="hidden sm:inline">Commandes CSV</span>
@@ -345,7 +345,7 @@ export default function SellerAnalyticsPage() {
           </div>
         </div>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Tabs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ── Tabs ────────────────────────────────────────────── */}
         <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
           {([
             ['overview',  BarChart2,  'Vue d\'ensemble'],
@@ -370,14 +370,14 @@ export default function SellerAnalyticsPage() {
           </div>
         ) : !data ? null : (
           <>
-            {/* Ã¢â€¢ÂÃ¢â€¢Â OVERVIEW Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+            {/* ══ OVERVIEW ═════════════════════════════════════ */}
             {tab === 'overview' && (
               <>
                 {data.totalOrders === 0 ? (
                   <div className="text-center py-32 text-gray-400">
                     <ShoppingBag className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                    <p className="text-lg font-semibold">Aucune commande sur cette pÃƒÂ©riode</p>
-                    <p className="text-sm mt-1">Partagez votre boutique pour commencer ÃƒÂ  vendre</p>
+                    <p className="text-lg font-semibold">Aucune commande sur cette période</p>
+                    <p className="text-sm mt-1">Partagez votre boutique pour commencer à  vendre</p>
                   </div>
                 ) : (
                   <>
@@ -389,7 +389,7 @@ export default function SellerAnalyticsPage() {
                       <StatCard icon={ShoppingBag} label="Commandes"  color="blue"
                         value={String(data.totalOrders)} growth={data.ordersGrowth}
                         sub={`${data.pendingOrders} en attente`} />
-                      <StatCard icon={Truck}       label="LivrÃƒÂ©es"    color="green"
+                      <StatCard icon={Truck}       label="Livrées"    color="green"
                         value={String(data.deliveredOrders)}
                         sub={`${data.deliveryRate}% taux livraison`} />
                       <StatCard icon={RotateCcw}   label="Taux retour" color={data.returnRate > 20 ? 'red' : 'amber'}
@@ -411,7 +411,7 @@ export default function SellerAnalyticsPage() {
                           <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 flex-1">
                             <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
                             <div>
-                              <p className="text-xs text-gray-400 font-semibold">PÃƒÂ©riode prÃƒÂ©cÃƒÂ©dente ({days}j avant)</p>
+                              <p className="text-xs text-gray-400 font-semibold">Période précédente ({days}j avant)</p>
                               <p className="font-black text-gray-700 text-lg">{formatPrice(data.priorRevenue)}</p>
                             </div>
                           </div>
@@ -419,7 +419,7 @@ export default function SellerAnalyticsPage() {
                       </div>
                     )}
 
-                    {/* Revenue chart Ã¢â‚¬â€ per-day or monthly */}
+                    {/* Revenue chart ? per-day or monthly */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm mb-5">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="font-bold text-gray-900">{days <= 30 ? 'CA par jour' : 'CA dans le temps'}</h2>
@@ -434,7 +434,7 @@ export default function SellerAnalyticsPage() {
                         const xKey      = days <= 30 ? 'date' : 'month'
                         const isEmpty   = chartData.every((d) => d.revenue === 0)
                         return isEmpty ? (
-                          <p className="text-gray-400 text-sm text-center py-8">Pas de donnÃƒÂ©es pour cette pÃƒÂ©riode</p>
+                          <p className="text-gray-400 text-sm text-center py-8">Pas de données pour cette période</p>
                         ) : (
                           <ResponsiveContainer width="100%" height={240}>
                             <AreaChart data={chartData as { [k: string]: number | string }[]} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -462,7 +462,7 @@ export default function SellerAnalyticsPage() {
                       <div className="bg-white rounded-2xl p-6 shadow-sm">
                         <h2 className="font-bold text-gray-900 mb-4">Statuts des commandes</h2>
                         {statusData.length === 0 ? (
-                          <p className="text-gray-400 text-sm text-center py-8">Pas de donnÃƒÂ©es</p>
+                          <p className="text-gray-400 text-sm text-center py-8">Pas de données</p>
                         ) : (
                           <div className="flex items-center gap-6">
                             <ResponsiveContainer width={160} height={160}>
@@ -490,7 +490,7 @@ export default function SellerAnalyticsPage() {
                       <div className="bg-white rounded-2xl p-6 shadow-sm">
                         <h2 className="font-bold text-gray-900 mb-4">Par transporteur</h2>
                         {data.byProvider.length === 0 ? (
-                          <p className="text-gray-400 text-sm text-center py-8">Pas encore de donnÃƒÂ©es de livraison</p>
+                          <p className="text-gray-400 text-sm text-center py-8">Pas encore de données de livraison</p>
                         ) : (
                           <div className="flex items-center gap-6">
                             <ResponsiveContainer width={160} height={160}>
@@ -520,9 +520,9 @@ export default function SellerAnalyticsPage() {
                       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
                         <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-bold text-amber-800">Taux de retour ÃƒÂ©levÃƒÂ© ({data.returnRate}%)</p>
+                          <p className="font-bold text-amber-800">Taux de retour élevé ({data.returnRate}%)</p>
                           <p className="text-sm text-amber-700 mt-1">
-                            Moyenne nationale : 15-20%. Confirmez chaque commande par WhatsApp avant l&apos;expÃƒÂ©dition et amÃƒÂ©liorez vos descriptions produits.
+                            Moyenne nationale : 15-20%. Confirmez chaque commande par WhatsApp avant l&apos;expédition et améliorez vos descriptions produits.
                           </p>
                         </div>
                       </div>
@@ -532,13 +532,13 @@ export default function SellerAnalyticsPage() {
               </>
             )}
 
-            {/* Ã¢â€¢ÂÃ¢â€¢Â PRODUITS TAB Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+            {/* ══ PRODUITS TAB ═════════════════════════════════ */}
             {tab === 'products' && (
               <>
                 {data.topProducts.length === 0 ? (
                   <div className="text-center py-32 text-gray-400">
                     <Package className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                    <p className="text-lg font-semibold">Aucune vente sur cette pÃƒÂ©riode</p>
+                    <p className="text-lg font-semibold">Aucune vente sur cette période</p>
                   </div>
                 ) : (
                   <>
@@ -557,26 +557,26 @@ export default function SellerAnalyticsPage() {
                             </div>
                             <p className="font-black text-xl leading-tight mb-1 line-clamp-2">{top.name}</p>
                             <p className="text-2xl font-black">{formatPrice(top.revenue)}</p>
-                            <p className="text-xs opacity-70 mt-1">{top.orders} cmd Ã‚Â· {top.units} unitÃƒÂ©s Ã‚Â· {topShare}% du CA total</p>
+                            <p className="text-xs opacity-70 mt-1">{top.orders} cmd · {top.units} unités · {topShare}% du CA total</p>
                           </div>
                           <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white">
                             <div className="flex items-center gap-2 mb-3">
                               <Target className="w-5 h-5 opacity-80" />
-                              <p className="text-xs font-bold uppercase tracking-wide opacity-80">Plus vendu (unitÃƒÂ©s)</p>
+                              <p className="text-xs font-bold uppercase tracking-wide opacity-80">Plus vendu (unités)</p>
                             </div>
                             <p className="font-black text-xl leading-tight mb-1 line-clamp-2">{mostUnits.name}</p>
-                            <p className="text-2xl font-black">{mostUnits.units} unitÃƒÂ©s</p>
-                            <p className="text-xs opacity-70 mt-1">{mostUnits.orders} commandes Ã‚Â· {formatPrice(mostUnits.revenue)}</p>
+                            <p className="text-2xl font-black">{mostUnits.units} unités</p>
+                            <p className="text-xs opacity-70 mt-1">{mostUnits.orders} commandes · {formatPrice(mostUnits.revenue)}</p>
                           </div>
                           {bestAvg && (
                             <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 text-white">
                               <div className="flex items-center gap-2 mb-3">
                                 <Star className="w-5 h-5 opacity-80" />
-                                <p className="text-xs font-bold uppercase tracking-wide opacity-80">Prix unitaire le plus ÃƒÂ©levÃƒÂ©</p>
+                                <p className="text-xs font-bold uppercase tracking-wide opacity-80">Prix unitaire le plus élevé</p>
                               </div>
                               <p className="font-black text-xl leading-tight mb-1 line-clamp-2">{bestAvg.name}</p>
                               <p className="text-2xl font-black">{formatPrice(bestAvg.avgPrice)}</p>
-                              <p className="text-xs opacity-70 mt-1">moy. par unitÃƒÂ© Ã‚Â· {bestAvg.units} vendues</p>
+                              <p className="text-xs opacity-70 mt-1">moy. par unité · {bestAvg.units} vendues</p>
                             </div>
                           )}
                         </div>
@@ -589,7 +589,7 @@ export default function SellerAnalyticsPage() {
                       <ResponsiveContainer width="100%" height={Math.max(200, Math.min(data.topProducts.length, 10) * 40)}>
                         <BarChart
                           data={data.topProducts.slice(0, 10).map((p) => ({
-                            name: p.name.length > 28 ? p.name.slice(0, 26) + 'Ã¢â‚¬Â¦' : p.name,
+                            name: p.name.length > 28 ? p.name.slice(0, 26) + '?' : p.name,
                             revenue: p.revenue,
                           }))}
                           layout="vertical"
@@ -615,14 +615,14 @@ export default function SellerAnalyticsPage() {
                     {/* Detailed product table */}
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                       <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-                        <h2 className="font-bold text-gray-900">Tableau dÃƒÂ©taillÃƒÂ©</h2>
+                        <h2 className="font-bold text-gray-900">Tableau détaillé</h2>
                         <span className="text-xs text-gray-400">{data.topProducts.length} produit{data.topProducts.length > 1 ? 's' : ''}</span>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50">
                             <tr>
-                              {['#', 'Produit', 'Cmd', 'UnitÃƒÂ©s', 'CA', 'Prix moy/u', 'Part CA'].map((h) => (
+                              {['#', 'Produit', 'Cmd', 'Unités', 'CA', 'Prix moy/u', 'Part CA'].map((h) => (
                                 <th key={h} className="text-left text-xs font-bold text-gray-500 uppercase tracking-wide px-4 py-3 whitespace-nowrap">{h}</th>
                               ))}
                             </tr>
@@ -634,7 +634,7 @@ export default function SellerAnalyticsPage() {
                                 <tr key={p.name} className={`hover:bg-gray-50 ${i === 0 ? 'bg-indigo-50/30' : ''}`}>
                                   <td className="px-4 py-3.5">
                                     {i === 0
-                                      ? <span className="w-6 h-6 rounded-full bg-amber-400 text-white text-xs font-black flex items-center justify-center">Ã¢Ëœâ€¦</span>
+                                      ? <span className="w-6 h-6 rounded-full bg-amber-400 text-white text-xs font-black flex items-center justify-center">★</span>
                                       : <span className="text-gray-400 font-bold text-xs">{i + 1}</span>
                                     }
                                   </td>
@@ -675,13 +675,13 @@ export default function SellerAnalyticsPage() {
               </>
             )}
 
-            {/* Ã¢â€¢ÂÃ¢â€¢Â GEO TAB Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+            {/* ══ GEO TAB ══════════════════════════════════════ */}
             {tab === 'geo' && (
               <>
                 {data.byWilaya.length === 0 ? (
                   <div className="text-center py-32 text-gray-400">
                     <MapPin className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                    <p className="text-lg font-semibold">Aucune donnÃƒÂ©e gÃƒÂ©ographique</p>
+                    <p className="text-lg font-semibold">Aucune donnée géographique</p>
                   </div>
                 ) : (
                   <>
@@ -696,7 +696,7 @@ export default function SellerAnalyticsPage() {
                             <p className="text-xs font-bold uppercase tracking-wide opacity-80 mb-2">Plus de commandes</p>
                             <p className="font-black text-2xl">{topOrders.wilaya}</p>
                             <p className="text-3xl font-black mt-1">{topOrders.orders}</p>
-                            <p className="text-xs opacity-70 mt-1">{formatPrice(topOrders.revenue)} Ã‚Â· livraison {topOrders.deliveryRate}%</p>
+                            <p className="text-xs opacity-70 mt-1">{formatPrice(topOrders.revenue)} · livraison {topOrders.deliveryRate}%</p>
                           </div>
                           <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white">
                             <p className="text-xs font-bold uppercase tracking-wide opacity-80 mb-2">Meilleur CA</p>
@@ -709,7 +709,7 @@ export default function SellerAnalyticsPage() {
                               <p className="text-xs font-bold uppercase tracking-wide opacity-80 mb-2">Meilleure livraison</p>
                               <p className="font-black text-2xl">{bestDel.wilaya}</p>
                               <p className="text-3xl font-black mt-1">{bestDel.deliveryRate}%</p>
-                              <p className="text-xs opacity-70 mt-1">{bestDel.orders} cmd Ã‚Â· {bestDel.delivered} livrÃƒÂ©es</p>
+                              <p className="text-xs opacity-70 mt-1">{bestDel.orders} cmd · {bestDel.delivered} livrées</p>
                             </div>
                           )}
                         </div>
@@ -729,10 +729,10 @@ export default function SellerAnalyticsPage() {
                           <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                           <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#374151' }} axisLine={false} tickLine={false} width={96} />
                           <Tooltip
-                            formatter={(v, name) => [v, name === 'orders' ? 'Commandes' : 'LivrÃƒÂ©es']}
+                            formatter={(v, name) => [v, name === 'orders' ? 'Commandes' : 'Livrées']}
                             contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                           />
-                          <Legend formatter={(v) => v === 'orders' ? 'Commandes' : 'LivrÃƒÂ©es'} iconType="circle" iconSize={8} />
+                          <Legend formatter={(v) => v === 'orders' ? 'Commandes' : 'Livrées'} iconType="circle" iconSize={8} />
                           <Bar dataKey="orders"  fill="#6366F1" radius={[0, 2, 2, 0]} barSize={10} />
                           <Bar dataKey="livrees" fill="#10B981" radius={[0, 2, 2, 0]} barSize={10} />
                         </BarChart>
@@ -742,7 +742,7 @@ export default function SellerAnalyticsPage() {
                     {/* Wilaya detail table */}
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                       <div className="px-5 py-4 border-b border-gray-50">
-                        <h2 className="font-bold text-gray-900">DÃƒÂ©tail par Wilaya</h2>
+                        <h2 className="font-bold text-gray-900">Détail par Wilaya</h2>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -768,7 +768,7 @@ export default function SellerAnalyticsPage() {
                                     : w.orders < 3 ? 'bg-gray-100 text-gray-500'
                                     : 'bg-red-100 text-red-700'
                                   }`}>
-                                    {w.orders >= 2 ? `${w.deliveryRate}%` : 'Ã¢â‚¬â€'}
+                                    {w.orders >= 2 ? `${w.deliveryRate}%` : '?'}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3.5">
@@ -777,7 +777,7 @@ export default function SellerAnalyticsPage() {
                                     : w.returnRate <= 20 ? 'bg-amber-100 text-amber-700'
                                     : 'bg-red-100 text-red-700'
                                   }`}>
-                                    {w.orders >= 2 ? `${w.returnRate}%` : 'Ã¢â‚¬â€'}
+                                    {w.orders >= 2 ? `${w.returnRate}%` : '?'}
                                   </span>
                                 </td>
                               </tr>
@@ -791,12 +791,12 @@ export default function SellerAnalyticsPage() {
               </>
             )}
 
-            {/* Ã¢â€¢ÂÃ¢â€¢Â FUNNEL TAB Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+            {/* ══ FUNNEL TAB ═══════════════════════════════════ */}
             {tab === 'funnel' && (
               <div className="max-w-2xl">
                 <div className="bg-white rounded-2xl p-6 shadow-sm mb-5">
                   <h2 className="font-bold text-gray-900 mb-1">Entonnoir de conversion</h2>
-                  <p className="text-sm text-gray-500 mb-6">Parcours de chaque commande de la rÃƒÂ©ception ÃƒÂ  la livraison</p>
+                  <p className="text-sm text-gray-500 mb-6">Parcours de chaque commande de la réception à  la livraison</p>
                   {data.totalOrders === 0 ? (
                     <div className="text-center py-12 text-gray-400">
                       <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
@@ -804,12 +804,12 @@ export default function SellerAnalyticsPage() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <FunnelStep icon={ShoppingBag} label="CommandÃƒÂ©"  count={data.totalOrders}    total={data.totalOrders} color="bg-blue-50 text-blue-600" />
-                      <FunnelStep icon={CheckCircle} label="ConfirmÃƒÂ©"  count={data.confirmedOrders} total={data.totalOrders} color="bg-indigo-50 text-indigo-600"
+                      <FunnelStep icon={ShoppingBag} label="Commandé"  count={data.totalOrders}    total={data.totalOrders} color="bg-blue-50 text-blue-600" />
+                      <FunnelStep icon={CheckCircle} label="Confirmé"  count={data.confirmedOrders} total={data.totalOrders} color="bg-indigo-50 text-indigo-600"
                         rate={data.totalOrders > 0 ? Math.round((data.confirmedOrders / data.totalOrders) * 100) : 0} />
-                      <FunnelStep icon={Truck}       label="ExpÃƒÂ©diÃƒÂ©"   count={data.shippedOrders}  total={data.totalOrders} color="bg-violet-50 text-violet-600"
+                      <FunnelStep icon={Truck}       label="Expédié"   count={data.shippedOrders}  total={data.totalOrders} color="bg-violet-50 text-violet-600"
                         rate={data.confirmedOrders > 0 ? Math.round((data.shippedOrders / data.confirmedOrders) * 100) : 0} />
-                      <FunnelStep icon={CheckCircle} label="LivrÃƒÂ©"     count={data.deliveredOrders} total={data.totalOrders} color="bg-emerald-50 text-emerald-600"
+                      <FunnelStep icon={CheckCircle} label="Livré"     count={data.deliveredOrders} total={data.totalOrders} color="bg-emerald-50 text-emerald-600"
                         rate={data.shippedOrders > 0 ? Math.round((data.deliveredOrders / data.shippedOrders) * 100) : 0} isLast />
                     </div>
                   )}
@@ -820,7 +820,7 @@ export default function SellerAnalyticsPage() {
                     <div className="bg-white rounded-2xl p-5 shadow-sm">
                       <div className="flex items-center gap-2 mb-3">
                         <XCircle className="w-4 h-4 text-red-500" />
-                        <p className="font-bold text-gray-900 text-sm">AnnulÃƒÂ©es</p>
+                        <p className="font-bold text-gray-900 text-sm">Annulées</p>
                       </div>
                       <p className="text-3xl font-black text-red-600">{data.cancelledOrders}</p>
                       <p className="text-xs text-gray-500 mt-1">{Math.round((data.cancelledOrders / data.totalOrders) * 100)}% du total</p>
@@ -861,13 +861,13 @@ export default function SellerAnalyticsPage() {
               </div>
             )}
 
-            {/* Ã¢â€¢ÂÃ¢â€¢Â INSIGHTS TAB Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+            {/* ══ INSIGHTS TAB ═════════════════════════════════ */}
             {tab === 'insights' && (
               <div className="max-w-2xl">
                 <div className="flex items-center gap-2 mb-4">
                   <Lightbulb className="w-5 h-5 text-amber-500" />
-                  <h2 className="font-bold text-gray-900">Recommandations personnalisÃƒÂ©es</h2>
-                  <span className="text-xs text-gray-400 ml-auto">BasÃƒÂ© sur les {days} derniers jours</span>
+                  <h2 className="font-bold text-gray-900">Recommandations personnalisées</h2>
+                  <span className="text-xs text-gray-400 ml-auto">Basé sur les {days} derniers jours</span>
                 </div>
                 <div className="space-y-3">
                   {insights.map((insight, i) => <InsightCard key={i} {...insight} />)}

@@ -115,11 +115,11 @@ export async function POST(req: NextRequest) {
       }, { status: 403 })
     }
 
-    // Check slug uniqueness
+    // Check slug uniqueness case-insensitively
     const { data: existing } = await admin
       .from('vendors')
       .select('id')
-      .eq('store_slug', parsed.data.store_slug)
+      .ilike('store_slug', parsed.data.store_slug)
       .maybeSingle()
 
     if (existing) {

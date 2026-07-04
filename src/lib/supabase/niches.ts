@@ -1,5 +1,4 @@
 import { unstable_cache } from 'next/cache'
-import { createClient } from './client'
 import { createAdminClient } from './admin'
 import { Niche } from '@/types'
 
@@ -19,7 +18,8 @@ function dbToNiche(row: Record<string, unknown>): Niche {
 
 export const getNichesFromDB = unstable_cache(
   async (): Promise<Niche[]> => {
-    const supabase = createClient()
+    // Public cached read; admin client avoids browser-client issues in SSR.
+    const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('niches')
       .select('*')
