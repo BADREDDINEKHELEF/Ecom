@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, Store, CheckCircle, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getVendorByUserId } from '@/lib/supabase/queries'
+import { getVendorByUserId } from '@/lib/supabase/queries-server'
 import { useT } from '@/lib/store/langStore'
 
 type View = 'login' | 'forgot_phone' | 'forgot_otp'

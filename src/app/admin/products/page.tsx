@@ -6,7 +6,8 @@ import { Plus, Search, Edit2, Trash2, Package, Loader2, RefreshCw } from 'lucide
 import { niches } from '@/lib/data/niches'
 import { formatPrice } from '@/lib/utils'
 import { Product } from '@/types'
-import { getProducts, upsertProduct, deleteProduct } from '@/lib/supabase/queries'
+import { getProducts } from '@/lib/supabase/queries-server'
+import { upsertProduct, deleteProduct } from '@/lib/supabase/mutations'
 
 
 type FormState = {

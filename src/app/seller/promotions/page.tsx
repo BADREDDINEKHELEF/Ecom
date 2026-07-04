@@ -6,7 +6,7 @@ import {
   Percent, DollarSign, Clock, Trash2, Share2, Menu,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { getVendorProducts } from '@/lib/supabase/queries'
+import { getVendorProducts } from '@/lib/supabase/queries-server'
 import { formatPrice } from '@/lib/utils'
 import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'

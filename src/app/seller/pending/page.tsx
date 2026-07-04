@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Clock, XCircle, CheckCircle, LogOut, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getVendorByUserId } from '@/lib/supabase/queries'
+import { getVendorByUserId } from '@/lib/supabase/queries-server'
 import type { Vendor } from '@/lib/supabase/vendors'
 
 export default function SellerPendingPage() {

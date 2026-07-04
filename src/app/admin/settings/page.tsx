@@ -1,9 +1,11 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { Save, Store, Truck, CreditCard, Loader2, CheckCircle, ExternalLink, Zap, Circle, Banknote, Megaphone } from 'lucide-react'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
-import { getStoreSettings, saveStoreSettings, StoreSettings } from '@/lib/supabase/queries'
+import { getStoreSettings } from '@/lib/supabase/queries-server'
+import { saveStoreSettings } from '@/lib/supabase/mutations'
+import type { StoreSettings } from '@/lib/supabase/settings'
 import { useT } from '@/lib/store/langStore'
 
 const ANNOUNCEMENT_COLORS = ['amber', 'green', 'red', 'blue', 'indigo'] as const

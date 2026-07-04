@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { getVendorByUserId } from '@/lib/supabase/queries'
-import type { Vendor } from '@/lib/supabase/queries'
+import { getVendorByUserId } from '@/lib/supabase/queries-server'
+import type { Vendor } from '@/lib/supabase/vendors'
 
 export function useSellerAuth() {
   const [vendor, setVendor] = useState<Vendor | null>(null)

@@ -11,7 +11,9 @@ const isDev = process.env.NODE_ENV === 'development'
 
 // unsafe-eval is NOT required in production; Next.js compiles dependencies so
 // they do not rely on eval/new Function at runtime. Keep script-src tight.
-const BASE_SCRIPT_SRC = "script-src 'self' 'unsafe-inline'"
+const BASE_SCRIPT_SRC = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'"
 
 function buildCsp(extra: string[] = []): string {
   return [
