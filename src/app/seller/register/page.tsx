@@ -7,7 +7,7 @@ import {
   Eye, EyeOff, Loader2, CheckCircle, KeyRound, AlertCircle,
   Check, X, RefreshCw, EyeIcon
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useT, useLang } from '@/lib/store/langStore'
 import { slugify, validateStoreSlug } from '@/lib/validation/slug'
@@ -441,7 +441,15 @@ export default function SellerRegisterPage() {
     setSlugStatus('checking')
     try {
       const res = await fetch(`/api/seller/check-slug?slug=${encodeURIComponent(slug)}`)
+      if (!res.ok) {
+        setSlugStatus('idle')
+        return
+      }
       const body = await res.json()
+      if (typeof body.available !== 'boolean') {
+        setSlugStatus('idle')
+        return
+      }
       setSlugStatus(body.available ? 'available' : 'taken')
     } catch {
       setSlugStatus('idle')
@@ -552,30 +560,9 @@ export default function SellerRegisterPage() {
         return
       }
 
-      const supabase = createClient()
-      const { data: authData, error: signUpErr } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: { data: { full_name: form.fullName } },
-      })
-      if (signUpErr) {
-        setError(signUpErr.message)
-        setLoading(false)
-        return
-      }
-      if (!authData.user) {
-        setError(t.seller.registrationFailed)
-        setLoading(false)
-        return
-      }
-
-      const authToken = authData.session?.access_token
-      const regHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (authToken) regHeaders['Authorization'] = `Bearer ${authToken}`
-
       const res = await fetch('/api/seller/register', {
         method: 'POST',
-        headers: regHeaders,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           store_name: form.storeName,
           store_slug: form.storeSlug,
@@ -583,13 +570,14 @@ export default function SellerRegisterPage() {
           description: form.description || null,
           phone: form.phone || null,
           wilaya: form.wilaya || null,
-          email: form.email || null,
+          email: form.email,
+          password: form.password,
+          otp,
         }),
       })
       if (!res.ok) {
         const { error: msg } = await res.json()
         setError(res.status === 409 ? t.seller.urlTaken : (msg ?? t.seller.registrationFailed))
-        await supabase.auth.signOut()
       } else {
         setDone(true)
       }

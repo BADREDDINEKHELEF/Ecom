@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRouteClient } from '@/lib/supabase/server'
-import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
+import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { validateStoreSlug } from '@/lib/validation/slug'
+import { verifyOtpHash } from '@/lib/auth/otp'
 
 const ALLOWED_STORAGE_HOSTS = ['supabase.co', 'supabase.in']
 
@@ -26,7 +26,9 @@ const Schema = z.object({
   wilaya:      z.string().max(60).nullable().optional(),
   description: z.string().max(500).nullable().optional(),
   logo_url:    safeStorageUrl(),
-  email:       z.string().email().nullable().optional(),
+  email:       z.string().email(),
+  password:    z.string().min(8),
+  otp:         z.string().length(6).regex(/^\d+$/),
 })
 
 export async function POST(req: NextRequest) {
@@ -37,31 +39,7 @@ export async function POST(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     )
-    // Authenticate — try session cookie first, then fall back to Authorization header
-    let user_id: string | null = null
 
-    const routeClient = createRouteClient(req)
-    const { data: { user: sessionUser }, error: authErr } = await routeClient.auth.getUser()
-    if (sessionUser && !authErr) {
-      user_id = sessionUser.id
-    } else {
-      // Fallback: accept Bearer token from Authorization header
-      const authHeader = req.headers.get('authorization')
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.slice(7)
-        const supabaseAnon = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          { global: { headers: { Authorization: `Bearer ${token}` } } }
-        )
-        const { data: { user: tokenUser } } = await supabaseAnon.auth.getUser(token)
-        if (tokenUser) user_id = tokenUser.id
-      }
-    }
-
-    // Fallback for email-confirmation flows: signUp() may not return a session,
-    // but if the client passes the email we can look up the freshly-created auth
-    // user via the GoTrue admin API and create the vendor on their behalf.
     let body: unknown
     try { body = await req.json() } catch {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -75,15 +53,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!user_id) {
-      // Email-based lookup was removed: knowing a user's email address must not
-      // be enough to create a vendor record in their name. The client must
-      // authenticate via session cookie or a valid Bearer token first.
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const parsed = parsedBody
-    const { store_name, store_slug, phone, wilaya, description, logo_url, email } = parsed.data
+    const { store_name, store_slug, phone, wilaya, description, logo_url, email, password, otp } = parsed.data
 
     // Validate slug format and reserved names server-side
     const slugValidation = validateStoreSlug(store_slug)
@@ -93,7 +64,106 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Check slug uniqueness case-insensitively so "My-Shop" and "my-shop" collide.
+    // ── Verify OTP server-side (proof of email ownership) ─────────────────────
+    const otpRl = await checkOtpVerifyRateLimit(email)
+    if (!otpRl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+        { status: 429, headers: { 'Retry-After': String(otpRl.retryAfterSeconds) } }
+      )
+    }
+
+    let record = null
+    let queryErr = null
+
+    const { data: dataEmail, error: errEmail } = await supabase
+      .from('password_reset_otps')
+      .select('id, otp_hash, expires_at, used')
+      .eq('email', email)
+      .eq('used', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const isEmailColumnMissing = errEmail && (
+      errEmail.code === '42703' ||
+      String(errEmail.message).includes('column') ||
+      String(errEmail.message).includes('email')
+    )
+
+    if (isEmailColumnMissing) {
+      const { data: dataPhone, error: errPhone } = await supabase
+        .from('password_reset_otps')
+        .select('id, otp_hash, expires_at, used')
+        .eq('phone', email)
+        .eq('used', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      record = dataPhone
+      queryErr = errPhone
+    } else if (errEmail) {
+      queryErr = errEmail
+    } else if (dataEmail) {
+      record = dataEmail
+    } else {
+      const { data: dataPhone, error: errPhone } = await supabase
+        .from('password_reset_otps')
+        .select('id, otp_hash, expires_at, used')
+        .eq('phone', email)
+        .eq('used', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      record = dataPhone
+      queryErr = errPhone
+    }
+
+    if (queryErr) {
+      throw new Error(`Database query failed: ${queryErr.message} (code: ${queryErr.code})`)
+    }
+
+    if (!record) {
+      return NextResponse.json({ error: 'Code invalide ou expiré.' }, { status: 400 })
+    }
+    if (new Date(record.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 })
+    }
+    if (!verifyOtpHash(otp, record.otp_hash)) {
+      return NextResponse.json({ error: 'Code incorrect.' }, { status: 400 })
+    }
+
+    await supabase.from('password_reset_otps').update({ used: true }).eq('id', record.id)
+
+    // ── Create Supabase auth user with confirmed email ────────────────────────
+    // Email confirmation is handled by our OTP flow, so we mark the email as
+    // confirmed immediately. This lets the user sign in right away while still
+    // keeping Supabase email confirmation enabled at the project level.
+    const { data: authUser, error: createUserErr } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: '' }, // will be updated below if needed
+    })
+
+    if (createUserErr) {
+      if (createUserErr.message?.includes('already been registered') || createUserErr.code === 'user_already_exists') {
+        return NextResponse.json({ error: 'Cet e-mail est déjà inscrit.' }, { status: 409 })
+      }
+      throw new Error(`Auth user creation failed: ${createUserErr.message}`)
+    }
+
+    const user_id = authUser.user?.id
+    if (!user_id) {
+      throw new Error('Auth user creation returned no user id')
+    }
+
+    // Update user metadata with full name
+    await supabase.auth.admin.updateUserById(user_id, {
+      user_metadata: { full_name: store_name },
+    })
+
+    // ── Check business rules ──────────────────────────────────────────────────
     const { data: existing } = await supabase
       .from('vendors')
       .select('id')
@@ -104,7 +174,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'URL déjà prise. Essayez un autre nom.' }, { status: 409 })
     }
 
-    // Prevent one user from registering multiple stores.
     const { data: existingVendor } = await supabase
       .from('vendors')
       .select('id')
@@ -114,6 +183,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Vous avez déjà une boutique.' }, { status: 409 })
     }
 
+    // ── Create vendor ─────────────────────────────────────────────────────────
     const { data, error } = await supabase
       .from('vendors')
       .insert({
