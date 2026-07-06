@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'login' | 'register'
@@ -44,8 +44,16 @@ function PasswordStrength({ password }: { password: string }) {
     { label: 'Très fort',   color: 'bg-emerald-600' },
   ]
   const level = levels[Math.min(score, 4)]
+
+  const requirements = [
+    { label: 'Au moins 8 caractères', met: password.length >= 8 },
+    { label: 'Au moins une lettre majuscule', met: /[A-Z]/.test(password) },
+    { label: 'Au moins un chiffre', met: /[0-9]/.test(password) },
+    { label: 'Au moins un caractère spécial', met: /[^A-Za-z0-9]/.test(password) },
+  ]
+
   return (
-    <div className="mt-2 space-y-1">
+    <div className="mt-2 space-y-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
       <div className="flex gap-1">
         {levels.map((l, i) => (
           <div
@@ -54,7 +62,21 @@ function PasswordStrength({ password }: { password: string }) {
           />
         ))}
       </div>
-      <p className="text-xs text-gray-500">{level.label}</p>
+      <div className="flex justify-between items-center">
+        <p className="text-xs font-semibold text-gray-600">Force : <span className="font-bold text-gray-800">{level.label}</span></p>
+      </div>
+      <ul className="text-xs space-y-1 mt-1 text-gray-500">
+        {requirements.map((req, i) => (
+          <li key={i} className="flex items-center gap-1.5 transition-colors duration-200">
+            <span className={req.met ? 'text-emerald-500 font-bold' : 'text-gray-300'}>
+              {req.met ? '✓' : '•'}
+            </span>
+            <span className={req.met ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+              {req.label}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -68,10 +90,75 @@ export default function AuthPage() {
   const [success, setSuccess] = useState('')
 
   const [form, setForm] = useState({ name: '', email: '', password: '' })
-  const f = (key: keyof typeof form, val: string) => setForm((prev) => ({ ...prev, [key]: val }))
+  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; password?: boolean }>({})
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({})
+
+  const validate = (fName: string, fValue: string, currentMode = mode) => {
+    let err = ''
+    if (fName === 'name' && currentMode === 'register') {
+      if (!fValue.trim()) err = 'Le nom complet est requis.'
+      else if (fValue.trim().length < 2) err = 'Le nom complet doit comporter au moins 2 caractères.'
+    }
+    if (fName === 'email') {
+      if (!fValue.trim()) {
+        err = 'L\'adresse e-mail est requise.'
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fValue.trim())) {
+        err = 'Format d\'adresse e-mail invalide (ex: exemple@domaine.com).'
+      }
+    }
+    if (fName === 'password') {
+      if (!fValue) {
+        err = 'Le mot de passe est requis.'
+      } else if (currentMode === 'register') {
+        if (fValue.length < 8) {
+          err = 'Le mot de passe doit comporter au moins 8 caractères.'
+        } else if (!/[A-Z]/.test(fValue) || !/[0-9]/.test(fValue) || !/[^A-Za-z0-9]/.test(fValue)) {
+          err = 'Le mot de passe doit inclure majuscules, chiffres et caractères spéciaux.'
+        }
+      }
+    }
+    setErrors(prev => ({ ...prev, [fName]: err }))
+    return err
+  }
+
+  const f = (key: keyof typeof form, val: string) => {
+    setForm((prev) => ({ ...prev, [key]: val }))
+    if (touched[key]) {
+      validate(key, val)
+    }
+  }
+
+  const handleBlur = (key: keyof typeof form) => {
+    setTouched((prev) => ({ ...prev, [key]: true }))
+    validate(key, form[key])
+  }
+
+  const handleModeSwitch = (newMode: Mode) => {
+    setMode(newMode)
+    setError('')
+    setSuccess('')
+    setTouched({})
+    setErrors({})
+    setForm({ name: '', email: '', password: '' })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Mark all fields as touched
+    const newTouched = { name: mode === 'register', email: true, password: true }
+    setTouched(newTouched)
+
+    // Run validation across all fields
+    const nameErr = mode === 'register' ? validate('name', form.name) : ''
+    const emailErr = validate('email', form.email)
+    const pwdErr = validate('password', form.password)
+
+    if (nameErr || emailErr || pwdErr) {
+      setError('Veuillez corriger les erreurs de saisie ci-dessous.')
+      return
+    }
+
     setLoading(true)
     setError('')
     setSuccess('')
@@ -89,7 +176,9 @@ export default function AuthPage() {
       } else {
         setSuccess('Compte créé ! Vérifiez votre e-mail pour confirmer, puis connectez-vous.')
         setMode('login')
-        setForm((prev) => ({ ...prev, password: '' }))
+        setForm({ name: '', email: form.email, password: '' })
+        setTouched({})
+        setErrors({})
       }
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({
@@ -108,13 +197,26 @@ export default function AuthPage() {
   }
 
   const handleForgotPassword = async () => {
-    if (!form.email) { setError('Entrez votre adresse e-mail d\'abord.'); return }
+    if (!form.email) {
+      setTouched(prev => ({ ...prev, email: true }))
+      setErrors(prev => ({ ...prev, email: 'Entrez votre adresse e-mail d\'abord.' }))
+      setError('Entrez votre adresse e-mail d\'abord.')
+      return
+    }
+    const emailErr = validate('email', form.email)
+    if (emailErr) {
+      setError('Veuillez entrer une adresse e-mail valide.')
+      return
+    }
     setLoading(true)
     const supabase = createClient()
     const { error: err } = await supabase.auth.resetPasswordForEmail(form.email)
     setLoading(false)
-    if (err) { setError(friendlyAuthError(err.message)) }
-    else { setSuccess('E-mail de réinitialisation envoyé. Vérifiez votre boîte de réception.') }
+    if (err) {
+      setError(friendlyAuthError(err.message))
+    } else {
+      setSuccess('E-mail de réinitialisation envoyé. Vérifiez votre boîte de réception.')
+    }
   }
 
   return (
@@ -145,19 +247,20 @@ export default function AuthPage() {
           </div>
 
           {success && (
-            <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-sm text-green-700">
+            <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-4 text-sm text-emerald-700">
               <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               {success}
             </div>
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">
-              {error}
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+              <span>{error}</span>
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nom complet</label>
@@ -165,13 +268,25 @@ export default function AuthPage() {
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
+                    required
                     autoComplete="name"
                     value={form.name}
                     onChange={(e) => f('name', e.target.value)}
+                    onBlur={() => handleBlur('name')}
                     placeholder="Mohammed Amiri"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-colors"
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                      touched.name && errors.name
+                        ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                        : 'border-gray-200 focus:border-indigo-400'
+                    }`}
                   />
                 </div>
+                {touched.name && errors.name && (
+                  <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                    <AlertCircle className="w-3 h-3 text-red-500" />
+                    {errors.name}
+                  </p>
+                )}
               </div>
             )}
 
@@ -185,10 +300,21 @@ export default function AuthPage() {
                   autoComplete={mode === 'login' ? 'username' : 'email'}
                   value={form.email}
                   onChange={(e) => f('email', e.target.value)}
+                  onBlur={() => handleBlur('email')}
                   placeholder="vous@exemple.com"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-colors"
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                    touched.email && errors.email
+                      ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                      : 'border-gray-200 focus:border-indigo-400'
+                  }`}
                 />
               </div>
+              {touched.email && errors.email && (
+                <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                  <AlertCircle className="w-3 h-3 text-red-500" />
+                  {errors.email}
+                </p>
+              )}
             </div>
 
             <div>
@@ -198,12 +324,16 @@ export default function AuthPage() {
                 <input
                   type={showPwd ? 'text' : 'password'}
                   required
-                  minLength={8}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={form.password}
                   onChange={(e) => f('password', e.target.value)}
+                  onBlur={() => handleBlur('password')}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-colors"
+                  className={`w-full pl-10 pr-12 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                    touched.password && errors.password
+                      ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                      : 'border-gray-200 focus:border-indigo-400'
+                  }`}
                 />
                 <button
                   type="button"
@@ -214,6 +344,12 @@ export default function AuthPage() {
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {touched.password && errors.password && (
+                <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                  <AlertCircle className="w-3 h-3 text-red-500" />
+                  {errors.password}
+                </p>
+              )}
               {mode === 'register' && form.password.length > 0 && (
                 <PasswordStrength password={form.password} />
               )}
@@ -224,7 +360,7 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-xs text-indigo-600 hover:underline font-medium"
+                  className="text-xs text-indigo-600 hover:underline font-medium animate-pulse-slow"
                 >
                   Mot de passe oublié ?
                 </button>
@@ -234,7 +370,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
+              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none hover:shadow-lg hover:shadow-indigo-500/20 active:scale-[0.98]"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
@@ -244,7 +380,7 @@ export default function AuthPage() {
           <p className="text-center text-sm text-gray-500 mt-6">
             {mode === 'login' ? 'Pas encore de compte ? ' : 'Déjà inscrit ? '}
             <button
-              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess('') }}
+              onClick={() => handleModeSwitch(mode === 'login' ? 'register' : 'login')}
               className="text-indigo-600 font-bold hover:underline"
             >
               {mode === 'login' ? 'S\'inscrire' : 'Se connecter'}

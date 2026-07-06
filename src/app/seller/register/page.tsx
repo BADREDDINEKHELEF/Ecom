@@ -3,17 +3,103 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Lock, User, Store, Phone, MapPin, FileText, Eye, EyeOff, Loader2, CheckCircle, KeyRound } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, User, Store, Phone, MapPin, FileText, Eye, EyeOff, Loader2, CheckCircle, KeyRound, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
-import { useT } from '@/lib/store/langStore'
-import { slugify, isReservedSlug } from '@/lib/validation/slug'
+import { useT, useLang } from '@/lib/store/langStore'
+import { slugify, isReservedSlug, validateStoreSlug } from '@/lib/validation/slug'
+import { isValidAlgerianPhone } from '@/lib/validation/phone'
 
 type View = 'form' | 'otp'
+
+const validationMsgs = {
+  fr: {
+    fullName: 'Le nom complet doit comporter au moins 2 caractères.',
+    email: 'Adresse e-mail invalide (ex: exemple@domaine.com).',
+    password: 'Le mot de passe doit comporter au moins 8 caractères.',
+    storeName: 'Le nom de la boutique est requis.',
+    phone: 'Numéro algérien invalide (ex: 05xx xxx xxx ou +213...)',
+    wilaya: 'Veuillez sélectionner une wilaya.',
+  },
+  en: {
+    fullName: 'Full name must be at least 2 characters.',
+    email: 'Invalid email address (e.g. example@domain.com).',
+    password: 'Password must be at least 8 characters.',
+    storeName: 'Store name is required.',
+    phone: 'Invalid Algerian number (e.g. 05xx xxx xxx or +213...)',
+    wilaya: 'Please select a wilaya.',
+  },
+  ar: {
+    fullName: 'يجب أن يكون الاسم الكامل حرفين على الأقل.',
+    email: 'عنوان بريد إلكتروني غير صحيح.',
+    password: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل.',
+    storeName: 'اسم المتجر مطلوب.',
+    phone: 'رقم هاتف جزائري غير صحيح.',
+    wilaya: 'يرجى اختيار الولاية.',
+  }
+}
+
+function passwordScore(pwd: string): number {
+  let score = 0
+  if (pwd.length >= 8)  score++
+  if (pwd.length >= 12) score++
+  if (/[A-Z]/.test(pwd)) score++
+  if (/[0-9]/.test(pwd)) score++
+  if (/[^A-Za-z0-9]/.test(pwd)) score++
+  return score
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  const score = passwordScore(password)
+  const levels = [
+    { label: 'Très faible', color: 'bg-red-500' },
+    { label: 'Faible',      color: 'bg-orange-400' },
+    { label: 'Moyen',       color: 'bg-yellow-400' },
+    { label: 'Fort',        color: 'bg-emerald-400' },
+    { label: 'Très fort',   color: 'bg-emerald-600' },
+  ]
+  const level = levels[Math.min(score, 4)]
+
+  const requirements = [
+    { label: 'Au moins 8 caractères', met: password.length >= 8 },
+    { label: 'Au moins une lettre majuscule', met: /[A-Z]/.test(password) },
+    { label: 'Au moins un chiffre', met: /[0-9]/.test(password) },
+    { label: 'Au moins un caractère spécial', met: /[^A-Za-z0-9]/.test(password) },
+  ]
+
+  return (
+    <div className="mt-2 space-y-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+      <div className="flex gap-1">
+        {levels.map((l, i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors ${i < score ? level.color : 'bg-gray-200'}`}
+          />
+        ))}
+      </div>
+      <div className="flex justify-between items-center">
+        <p className="text-xs font-semibold text-gray-600">Force : <span className="font-bold text-emerald-600">{level.label}</span></p>
+      </div>
+      <ul className="text-xs space-y-1 mt-1 text-gray-500">
+        {requirements.map((req, i) => (
+          <li key={i} className="flex items-center gap-1.5 transition-colors duration-200">
+            <span className={req.met ? 'text-emerald-500 font-bold' : 'text-gray-300'}>
+              {req.met ? '✓' : '•'}
+            </span>
+            <span className={req.met ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+              {req.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 export default function SellerRegisterPage() {
   useRouter()
   const t = useT()
+  const lang = useLang()
   const [view, setView]       = useState<View>('form')
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -24,19 +110,100 @@ export default function SellerRegisterPage() {
     fullName: '', email: '', password: '',
     storeName: '', storeSlug: '', phone: '', wilaya: '', description: '',
   })
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const validate = (fName: string, fValue: string) => {
+    let err = ''
+    const msgs = validationMsgs[lang] || validationMsgs.fr
+
+    if (fName === 'fullName') {
+      if (!fValue.trim()) err = msgs.fullName
+      else if (fValue.trim().length < 2) err = msgs.fullName
+    }
+    if (fName === 'email') {
+      if (!fValue.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fValue.trim())) {
+        err = msgs.email
+      }
+    }
+    if (fName === 'password') {
+      if (!fValue) {
+        err = msgs.password
+      } else {
+        if (fValue.length < 8) {
+          err = msgs.password
+        } else if (!/[A-Z]/.test(fValue) || !/[0-9]/.test(fValue) || !/[^A-Za-z0-9]/.test(fValue)) {
+          err = lang === 'ar' 
+            ? 'كلمة المرور يجب أن تحتوي على أحرف كبيرة وأرقام ورموز خاصة.'
+            : 'Le mot de passe doit inclure majuscules, chiffres et caractères spéciaux.'
+        }
+      }
+    }
+    if (fName === 'storeName') {
+      if (!fValue.trim()) err = msgs.storeName
+    }
+    if (fName === 'storeSlug') {
+      const slugVal = validateStoreSlug(fValue)
+      if (!slugVal.ok) {
+        err = slugVal.error
+      }
+    }
+    if (fName === 'phone') {
+      if (!fValue.trim() || !isValidAlgerianPhone(fValue)) {
+        err = msgs.phone
+      }
+    }
+    if (fName === 'wilaya') {
+      if (!fValue) {
+        err = msgs.wilaya
+      }
+    }
+
+    setErrors(prev => ({ ...prev, [fName]: err }))
+    return err
+  }
 
   const f = (key: keyof typeof form, val: string) => {
     const next = { ...form, [key]: val }
-    if (key === 'storeName') next.storeSlug = slugify(val)
+    if (key === 'storeName') {
+      next.storeSlug = slugify(val)
+      if (touched.storeSlug) {
+        validate('storeSlug', next.storeSlug)
+      }
+    }
     setForm(next)
+    if (touched[key]) {
+      validate(key, val)
+    }
+  }
+
+  const handleBlur = (key: keyof typeof form) => {
+    setTouched((prev) => ({ ...prev, [key]: true }))
+    validate(key, form[key])
   }
 
   // Step 1 ? validate form + send OTP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
-    if (isReservedSlug(form.storeSlug)) { setError(t.seller.urlTaken); return }
-    if (!form.email) { setError('Adresse e-mail requise pour vérifier votre compte.'); return }
+
+    const step1Fields = ['fullName', 'email', 'password', 'storeName', 'storeSlug', 'phone', 'wilaya']
+    const newTouched: Record<string, boolean> = {}
+    step1Fields.forEach(field => {
+      newTouched[field] = true
+    })
+    setTouched(prev => ({ ...prev, ...newTouched }))
+
+    let hasErrors = false
+    step1Fields.forEach(field => {
+      const err = validate(field, form[field as keyof typeof form])
+      if (err) hasErrors = true
+    })
+
+    if (hasErrors) {
+      setError(lang === 'ar' ? 'يرجى تصحيح الأخطاء في النموذج.' : 'Veuillez corriger les erreurs de saisie ci-dessous.')
+      return
+    }
+
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/seller/send-email-otp', {
@@ -157,7 +324,7 @@ export default function SellerRegisterPage() {
             <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               {view === 'otp' ? <KeyRound className="w-6 h-6 text-white" /> : <Store className="w-6 h-6 text-white" />}
             </div>
-<h1 className="text-2xl font-black text-gray-900">
+            <h1 className="text-2xl font-black text-gray-900">
                {view === 'otp' ? 'Vérifiez votre e-mail' : t.seller.registerTitle}
              </h1>
              <p className="text-gray-500 text-sm mt-1">
@@ -166,7 +333,10 @@ export default function SellerRegisterPage() {
            </div>
 
            {error && (
-             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">{error}</div>
+             <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">
+               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+               <span>{error}</span>
+             </div>
            )}
 
            {/* ? OTP verification step ? */}
@@ -198,7 +368,7 @@ export default function SellerRegisterPage() {
            )}
 
            {/* ? Registration form ? */}
-           {view === 'form' && <form onSubmit={handleSubmit} className="space-y-4">
+           {view === 'form' && <form onSubmit={handleSubmit} className="space-y-4" noValidate>
              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2">{t.seller.accountInfo}</p>
 
              <div>
@@ -206,9 +376,20 @@ export default function SellerRegisterPage() {
                <div className="relative">
                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                  <input required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
+                   onBlur={() => handleBlur('fullName')}
                    placeholder="Mohammed Amiri"
-                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                   className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                     touched.fullName && errors.fullName
+                       ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                       : 'border-gray-200 focus:border-emerald-400'
+                   }`} />
                </div>
+               {touched.fullName && errors.fullName && (
+                 <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                   <AlertCircle className="w-3 h-3 text-red-500" />
+                   {errors.fullName}
+                 </p>
+               )}
              </div>
 
              <div>
@@ -216,24 +397,49 @@ export default function SellerRegisterPage() {
                <div className="relative">
                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                  <input required type="email" value={form.email} onChange={(e) => f('email', e.target.value)}
+                   onBlur={() => handleBlur('email')}
                    placeholder="you@example.com"
-                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                   className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                     touched.email && errors.email
+                       ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                       : 'border-gray-200 focus:border-emerald-400'
+                   }`} />
                </div>
+               {touched.email && errors.email && (
+                 <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                   <AlertCircle className="w-3 h-3 text-red-500" />
+                   {errors.email}
+                 </p>
+               )}
              </div>
 
              <div>
                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.passwordLabel}</label>
                <div className="relative">
                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                 <input required type={showPwd ? 'text' : 'password'} minLength={8}
+                 <input required type={showPwd ? 'text' : 'password'}
                    value={form.password} onChange={(e) => f('password', e.target.value)}
+                   onBlur={() => handleBlur('password')}
                    placeholder={t.seller.passwordMin}
-                   className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                   className={`w-full pl-10 pr-12 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                     touched.password && errors.password
+                       ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                       : 'border-gray-200 focus:border-emerald-400'
+                   }`} />
                  <button type="button" onClick={() => setShowPwd(!showPwd)}
                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                    {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                  </button>
                </div>
+               {touched.password && errors.password && (
+                 <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                   <AlertCircle className="w-3 h-3 text-red-500" />
+                   {errors.password}
+                 </p>
+               )}
+               {form.password.length > 0 && (
+                 <PasswordStrength password={form.password} />
+               )}
              </div>
 
              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2">{t.seller.storeInfo}</p>
@@ -243,20 +449,42 @@ export default function SellerRegisterPage() {
                <div className="relative">
                  <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                  <input required type="text" value={form.storeName} onChange={(e) => f('storeName', e.target.value)}
+                   onBlur={() => handleBlur('storeName')}
                    placeholder={t.seller.myAlgerianShop}
-                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                   className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                     touched.storeName && errors.storeName
+                       ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                       : 'border-gray-200 focus:border-emerald-400'
+                   }`} />
                </div>
+               {touched.storeName && errors.storeName && (
+                 <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                   <AlertCircle className="w-3 h-3 text-red-500" />
+                   {errors.storeName}
+                 </p>
+               )}
              </div>
 
              <div>
                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.storeUrlLabel}</label>
-               <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400">
+               <div className={`flex items-center border rounded-xl overflow-hidden transition-all ${
+                 touched.storeSlug && errors.storeSlug
+                   ? 'border-red-300 focus-within:border-red-500 bg-red-50/10'
+                   : 'border-gray-200 focus-within:border-emerald-400'
+               }`}>
                  <span className="px-3 py-3 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">storedz.dz/shop/</span>
                  <input required type="text" value={form.storeSlug}
                    onChange={(e) => f('storeSlug', slugify(e.target.value))}
+                   onBlur={() => handleBlur('storeSlug')}
                    placeholder="my-shop"
-                   className="flex-1 px-3 py-3 text-sm focus:outline-none" />
+                   className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent" />
                </div>
+               {touched.storeSlug && errors.storeSlug && (
+                 <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                   <AlertCircle className="w-3 h-3 text-red-500" />
+                   {errors.storeSlug}
+                 </p>
+               )}
              </div>
 
              <div className="grid grid-cols-2 gap-4">
@@ -265,20 +493,42 @@ export default function SellerRegisterPage() {
                  <div className="relative">
                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                    <input type="tel" required value={form.phone} onChange={(e) => f('phone', e.target.value)}
+                     onBlur={() => handleBlur('phone')}
                      placeholder={t.seller.phonePHRegister}
-                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                     className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                       touched.phone && errors.phone
+                         ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                         : 'border-gray-200 focus:border-emerald-400'
+                     }`} />
                  </div>
+                 {touched.phone && errors.phone && (
+                   <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                     <AlertCircle className="w-3 h-3 text-red-500 text-xs flex-shrink-0" />
+                     <span className="leading-tight">{errors.phone}</span>
+                   </p>
+                 )}
                </div>
                <div>
                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.seller.wilayaLabel}</label>
                  <div className="relative">
                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                    <select value={form.wilaya} onChange={(e) => f('wilaya', e.target.value)}
-                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 bg-white">
+                     onBlur={() => handleBlur('wilaya')}
+                     className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none bg-white transition-all ${
+                       touched.wilaya && errors.wilaya
+                         ? 'border-red-300 focus:border-red-500 bg-red-50/10'
+                         : 'border-gray-200 focus:border-emerald-400'
+                     }`}>
                      <option value="">{t.seller.selectWilaya}</option>
                      {ALL_WILAYAS.map((w) => <option key={w} value={w}>{w}</option>)}
                    </select>
                  </div>
+                 {touched.wilaya && errors.wilaya && (
+                   <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+                     <AlertCircle className="w-3 h-3 text-red-500" />
+                     {errors.wilaya}
+                   </p>
+                 )}
                </div>
              </div>
 
@@ -300,8 +550,8 @@ export default function SellerRegisterPage() {
 
              <p className="text-xs text-gray-400 text-center">{t.seller.terms}</p>
            </form>}
-         </div>
-       </div>
-     </div>
-   )
- }
+        </div>
+      </div>
+    </div>
+  )
+}
