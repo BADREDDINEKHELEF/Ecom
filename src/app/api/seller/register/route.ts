@@ -124,13 +124,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!record) {
-      return NextResponse.json({ error: 'Code invalide ou expiré.' }, { status: 400 })
+      return NextResponse.json({ error: 'Code invalide. Aucun code trouvé pour cet e-mail.' }, { status: 400 })
     }
     if (new Date(record.expires_at) < new Date()) {
-      return NextResponse.json({ error: 'Code expiré. Demandez un nouveau code.' }, { status: 400 })
+      return NextResponse.json({ error: 'Code expiré. Cliquez sur « Renvoyer le code » pour en recevoir un nouveau.' }, { status: 400 })
     }
     if (!verifyOtpHash(otp, record.otp_hash)) {
-      return NextResponse.json({ error: 'Code incorrect.' }, { status: 400 })
+      return NextResponse.json({ error: 'Code incorrect. Vérifiez les 6 chiffres et réessayez.' }, { status: 400 })
     }
 
     await supabase.from('password_reset_otps').update({ used: true }).eq('id', record.id)

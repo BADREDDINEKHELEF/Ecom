@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       try { await supabase.from('password_reset_otps').delete().eq('email', email) } catch {}
 
       const otp = generateOTP()
-      const expiryStr = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      const expiryStr = new Date(Date.now() + 15 * 60 * 1000).toISOString()
       const hashed = hashOtp(otp)
 
       let insertErr = null
