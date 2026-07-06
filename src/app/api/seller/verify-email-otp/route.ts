@@ -89,10 +89,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Code incorrect. Vérifiez et réessayez.' }, { status: 400 })
     }
 
-    const { error: updateErr } = await supabase.from('password_reset_otps').update({ used: true }).eq('id', record.id)
-    if (updateErr) {
-      logger.warn('[verify-email-otp] failed to mark OTP as used', { error: updateErr.message })
-    }
+    // Do NOT mark the OTP as used here. The registration endpoint will verify
+    // the OTP again and mark it used atomically when creating the vendor.
+    // Password-reset flows use /api/seller/verify-otp, which marks it used.
 
     return NextResponse.json({ success: true })
   } catch (err) {

@@ -26,9 +26,9 @@ const Schema = z.object({
   wilaya:      z.string().max(60).nullable().optional(),
   description: z.string().max(500).nullable().optional(),
   logo_url:    safeStorageUrl(),
-  email:       z.string().email(),
+  email:       z.string().email().transform((v) => v.trim().toLowerCase()),
   password:    z.string().min(8),
-  otp:         z.string().length(6).regex(/^\d+$/),
+  otp:         z.string().trim().length(6).regex(/^\d+$/),
 })
 
 export async function POST(req: NextRequest) {
@@ -76,6 +76,8 @@ export async function POST(req: NextRequest) {
     let record = null
     let queryErr = null
 
+    logger.info('[register] looking up OTP', { email })
+
     const { data: dataEmail, error: errEmail } = await supabase
       .from('password_reset_otps')
       .select('id, otp_hash, expires_at, used')
@@ -84,6 +86,8 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    logger.info('[register] OTP lookup by email', { found: !!dataEmail, error: errEmail?.message })
 
     const isEmailColumnMissing = errEmail && (
       errEmail.code === '42703' ||
@@ -102,6 +106,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
       record = dataPhone
       queryErr = errPhone
+      logger.info('[register] OTP lookup by phone (fallback)', { found: !!dataPhone, error: errPhone?.message })
     } else if (errEmail) {
       queryErr = errEmail
     } else if (dataEmail) {
@@ -117,6 +122,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
       record = dataPhone
       queryErr = errPhone
+      logger.info('[register] OTP lookup by phone (fallback)', { found: !!dataPhone, error: errPhone?.message })
     }
 
     if (queryErr) {
@@ -124,12 +130,26 @@ export async function POST(req: NextRequest) {
     }
 
     if (!record) {
+      logger.warn('[register] no OTP record found', { email })
       return NextResponse.json({ error: 'Code invalide. Aucun code trouvé pour cet e-mail.' }, { status: 400 })
     }
-    if (new Date(record.expires_at) < new Date()) {
+
+    const now = new Date()
+    const expiresAt = new Date(record.expires_at)
+    logger.info('[register] OTP record found', {
+      id: record.id,
+      expiresAt: record.expires_at,
+      serverNow: now.toISOString(),
+      expired: expiresAt < now,
+      hasHash: !!record.otp_hash,
+      hashFormat: record.otp_hash?.includes(':') ? 'salt:hash' : 'missing-separator',
+    })
+
+    if (expiresAt < now) {
       return NextResponse.json({ error: 'Code expiré. Cliquez sur « Renvoyer le code » pour en recevoir un nouveau.' }, { status: 400 })
     }
     if (!verifyOtpHash(otp, record.otp_hash)) {
+      logger.warn('[register] OTP hash mismatch', { email, otpLength: otp.length })
       return NextResponse.json({ error: 'Code incorrect. Vérifiez les 6 chiffres et réessayez.' }, { status: 400 })
     }
 

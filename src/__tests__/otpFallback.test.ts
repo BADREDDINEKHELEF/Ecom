@@ -217,8 +217,9 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     const res = await POST(req)
     expect(res.status).toBe(200)
 
-    // Verify it marked the OTP as used
-    expect(mockUpdate).toHaveBeenCalledWith({ used: true })
+    // verify-email-otp no longer marks the OTP as used; /api/seller/register does that
+    // after verifying it again during vendor creation.
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 
   it('forgot-password falls back to auth user and backfills vendor email if missing in vendors table', async () => {
