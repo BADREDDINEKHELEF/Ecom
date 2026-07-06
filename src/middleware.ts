@@ -89,7 +89,10 @@ export async function middleware(req: NextRequest) {
   // Individual handlers still perform full vendor resolution.
   // Public auth endpoints are excluded so unauthenticated users can register
   // or reset their password.
-  if (pathname.startsWith('/api/seller/') && !PUBLIC_SELLER_API_PATHS.has(pathname)) {
+  if (pathname.startsWith('/api/seller/')) {
+    if (PUBLIC_SELLER_API_PATHS.has(pathname)) {
+      return NextResponse.next()
+    }
     if (!hasSupabaseSession(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
