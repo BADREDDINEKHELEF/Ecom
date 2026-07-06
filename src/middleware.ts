@@ -78,6 +78,7 @@ const PUBLIC_SELLER_API_PATHS = new Set([
   '/api/seller/verify-otp',
   '/api/seller/send-email-otp',
   '/api/seller/verify-email-otp',
+  '/api/seller/check-slug',
 ])
 
 export async function middleware(req: NextRequest) {
