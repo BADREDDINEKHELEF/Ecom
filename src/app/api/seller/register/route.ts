@@ -76,29 +76,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (!user_id) {
-      const email = parsedBody.data.email
-      if (email) {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-        if (supabaseUrl && serviceKey) {
-          try {
-            const lookupRes = await fetch(
-              `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}&per_page=1`,
-              { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
-            )
-            if (lookupRes.ok) {
-              const lookupJson = await lookupRes.json() as { users?: { id: string; email?: string }[] }
-              const authUser = lookupJson?.users?.[0]
-              if (authUser) user_id = authUser.id
-            }
-          } catch (err) {
-            logger.warn('[POST /api/seller/register] email auth lookup failed', { error: err instanceof Error ? err.message : String(err) })
-          }
-        }
-      }
+      // Email-based lookup was removed: knowing a user's email address must not
+      // be enough to create a vendor record in their name. The client must
+      // authenticate via session cookie or a valid Bearer token first.
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    if (!user_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const parsed = parsedBody
     const { store_name, store_slug, phone, wilaya, description, logo_url, email } = parsed.data

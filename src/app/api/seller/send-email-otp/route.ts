@@ -5,8 +5,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
 import { sendEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
-import fs from 'fs'
-import path from 'path'
 import { getClientIp } from '@/lib/utils/ip'
 import { logSecurityFailure } from '@/lib/auth/securityEvents'
 import { hashOtp } from '@/lib/auth/otp'
@@ -66,7 +64,7 @@ export async function POST(req: NextRequest) {
       const otp = generateOTP()
       const expiryStr = new Date(Date.now() + 5 * 60 * 1000).toISOString()
       const hashed = hashOtp(otp)
-      
+
       let insertErr = null
       const { error } = await supabase.from('password_reset_otps').insert({
         phone:    email,
@@ -76,22 +74,11 @@ export async function POST(req: NextRequest) {
       })
       insertErr = error
 
-      // Fallback: email column doesn't exist — retry without it
+      // Fallback: email column doesn't exist on older deployments — retry without it
       if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('email'))) {
         const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
           phone:    email,
           otp_hash: hashed,
-          expires_at: expiryStr,
-        })
-        insertErr = fallbackErr
-      }
-
-      // Fallback: otp_hash column doesn't exist — retry old schema (otp only)
-      if (insertErr && (insertErr.code === 'PGRST204' || String(insertErr.message).includes('otp_hash'))) {
-        const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
-          phone:    email,
-          email:    email,
-          otp,
           expires_at: expiryStr,
         })
         insertErr = fallbackErr
@@ -119,13 +106,6 @@ export async function POST(req: NextRequest) {
           ipAddress: ip,
           meta: { error: emailError.slice(0, 1000) }
         })
-
-        try {
-          fs.appendFileSync(
-            path.join(process.cwd(), 'email-error.log'),
-            `[${new Date().toISOString()}] send-email-otp error to ${email}:\n${emailError}\n\n`
-          )
-        } catch {}
 
         return NextResponse.json(
           { error: 'Impossible d\'envoyer l\'e-mail de vérification. Veuillez réessayer.' },

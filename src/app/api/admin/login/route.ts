@@ -14,19 +14,17 @@ export async function POST(req: NextRequest) {
     const ua = req.headers.get('user-agent') ?? 'unknown'
 
     // Layer 1 — Rate limiting (5 attempts / 15 min / IP)
-    // TEMPORARILY DISABLED: x-real-ip fallback to 0.0.0.0 causes all users to
-    // share one global bucket. Re-enable after fixing IP extraction.
-    // const rateCheck = await checkRateLimit(ip)
-    // if (!rateCheck.allowed) {
-    //   void writeAuditLog({
-    //     action: 'admin_login_failure', ip, userAgent: ua,
-    //     result: 'failure', meta: { reason: 'rate_limited' },
-    //   })
-    //   return NextResponse.json(
-    //     { error: 'Too many attempts. Try again later.' },
-    //     { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
-    //   )
-    // }
+    const rateCheck = await checkRateLimit(ip)
+    if (!rateCheck.allowed) {
+      void writeAuditLog({
+        action: 'admin_login_failure', ip, userAgent: ua,
+        result: 'failure', meta: { reason: 'rate_limited' },
+      })
+      return NextResponse.json(
+        { error: 'Too many attempts. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
+      )
+    }
 
     const body = await req.json().catch(() => ({}))
     const { password, totpCode } = body as { password?: string; totpCode?: string }

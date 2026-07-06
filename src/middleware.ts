@@ -70,13 +70,25 @@ function hasSupabaseSession(req: NextRequest): boolean {
   return false
 }
 
+// Public seller-facing auth endpoints that must remain reachable before the
+// user has a Supabase session (registration, password reset, email OTP).
+const PUBLIC_SELLER_API_PATHS = new Set([
+  '/api/seller/register',
+  '/api/seller/forgot-password',
+  '/api/seller/verify-otp',
+  '/api/seller/send-email-otp',
+  '/api/seller/verify-email-otp',
+])
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // ── Seller API routes ──────────────────────────────────────────────────────
   // Defense-in-depth: require a Supabase session cookie at the middleware layer.
   // Individual handlers still perform full vendor resolution.
-  if (pathname.startsWith('/api/seller/')) {
+  // Public auth endpoints are excluded so unauthenticated users can register
+  // or reset their password.
+  if (pathname.startsWith('/api/seller/') && !PUBLIC_SELLER_API_PATHS.has(pathname)) {
     if (!hasSupabaseSession(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -98,13 +110,6 @@ export async function middleware(req: NextRequest) {
   if (!isPublicAdminPath) {
     const adminToken = req.cookies.get(getAdminCookieName())?.value
     const jwtValid = adminToken ? await verifyAdminJwt(adminToken) : false
-    console.error('[Middleware DEBUG]', {
-      pathname,
-      cookieName: getAdminCookieName(),
-      hasToken: !!adminToken,
-      jwtValid,
-      ip,
-    })
     if (!adminToken || !jwtValid) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

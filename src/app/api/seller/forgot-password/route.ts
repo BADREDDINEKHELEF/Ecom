@@ -5,8 +5,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpSendRateLimit } from '@/lib/auth/rateLimit'
 import { sendEmail } from '@/lib/notifications/email'
 import { logger } from '@/lib/logger'
-import fs from 'fs'
-import path from 'path'
 import { getClientIp } from '@/lib/utils/ip'
 import { hashOtp } from '@/lib/auth/otp'
 
@@ -102,40 +100,27 @@ export async function POST(req: NextRequest) {
       await supabase.from('password_reset_otps').delete().eq('email', email)
     } catch {}
 
-    // Generate and store OTP
+    // Generate and store OTP (hashed only — plaintext otp column was removed)
     const otp = generateOTP()
     const expiryStr = new Date(Date.now() + 5 * 60 * 1000).toISOString()
     const hashed = hashOtp(otp)
-    
+
     let otpStoreErr: string | null = null
     try {
       let insertErr = null
       const { error } = await supabase.from('password_reset_otps').insert({
         phone:    email,
         email:    email,
-        otp,        // plaintext — satisfies old schema NOT NULL constraint
         otp_hash: hashed,
         expires_at: expiryStr,
       })
       insertErr = error
 
-      // Fallback: email column doesn't exist — retry without it
+      // Fallback: email column doesn't exist on older deployments — retry without it
       if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('email'))) {
         const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
           phone:    email,
-          otp,
           otp_hash: hashed,
-          expires_at: expiryStr,
-        })
-        insertErr = fallbackErr
-      }
-
-      // Fallback: otp_hash column doesn't exist — retry old schema (otp only)
-      if (insertErr && (insertErr.code === 'PGRST204' || String(insertErr.message).includes('otp_hash'))) {
-        const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
-          phone:    email,
-          email:    email,
-          otp,
           expires_at: expiryStr,
         })
         insertErr = fallbackErr
@@ -158,20 +143,20 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       emailError = err instanceof Error ? `${err.message}\n${err.stack}` : String(err)
       logger.warn('[forgot-password] email delivery failed', { error: emailError })
-      try {
-        fs.appendFileSync(
-          path.join(process.cwd(), 'email-error.log'),
-          `[${new Date().toISOString()}] forgot-password error to ${email}:\n${emailError}\n\n`
-        )
-      } catch {}
     }
 
     if (emailError) {
-      return NextResponse.json({
-        success: true,
-        _devOtp: otp,
-        _emailError: emailError,
-      })
+      // Only leak the OTP back to the client in development/test. In production
+      // we still return success to avoid email enumeration, but the OTP stays
+      // server-side and the user must retry or contact support.
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        return NextResponse.json({
+          success: true,
+          _devOtp: otp,
+          _emailError: emailError,
+        })
+      }
+      return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({ success: true })

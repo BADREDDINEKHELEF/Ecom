@@ -7,13 +7,10 @@ const analyzeBundles = withBundleAnalyzer({ enabled: process.env.ANALYZE === 'tr
 // ── Security Headers ────────────────────────────────────────────────────────
 // Applied to all routes. Admin routes get a stricter override below.
 
-const isDev = process.env.NODE_ENV === 'development'
-
-// unsafe-eval is NOT required in production; Next.js compiles dependencies so
-// they do not rely on eval/new Function at runtime. Keep script-src tight.
-const BASE_SCRIPT_SRC = isDev
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'"
+// unsafe-eval is NOT required in development or production; Next.js compiles
+// dependencies so they do not rely on eval/new Function at runtime. Keep
+// script-src tight everywhere to avoid accidentally shipping unsafe CSPs.
+const BASE_SCRIPT_SRC = "script-src 'self' 'unsafe-inline'"
 
 function buildCsp(extra: string[] = []): string {
   return [

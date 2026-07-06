@@ -9,7 +9,7 @@ import { getClientIp } from '@/lib/utils/ip'
 
 
 const RevealSchema = z.object({
-  phoneHash: z.string().regex(/^[0-9a-f]{16}$/, 'Invalid phone hash'),
+  phoneHash: z.string().regex(/^[0-9a-f]{64}$/, 'Invalid phone hash'),
 })
 
 export async function POST(req: NextRequest) {

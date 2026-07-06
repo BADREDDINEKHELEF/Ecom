@@ -75,7 +75,7 @@ describe('maskEmail — never exposes full local part', () => {
 
 describe('sellerAudit.logSellerDataAccess — never throws', () => {
   it('resolves silently even when Supabase is unavailable', async () => {
-    vi.mock('@/lib/supabase/admin', () => ({
+    vi.doMock('@/lib/supabase/admin', () => ({
       createAdminClient: () => ({
         from: () => ({
           insert: () => Promise.reject(new Error('connection refused')),
@@ -131,8 +131,8 @@ describe('/api/seller/customers/reveal — source audit', () => {
     'utf-8'
   )
 
-  it('validates phoneHash is 16 hex chars', () => {
-    expect(src).toContain('/^[0-9a-f]{16}$/')
+  it('validates phoneHash is 64 hex chars', () => {
+    expect(src).toContain('/^[0-9a-f]{64}$/')
   })
 
   it('has IP-level rate limiting', () => {

@@ -28,9 +28,10 @@ export function computeCheckToken(orderId: string, phone: string): string {
 export function verifyCheckToken(orderId: string, phone: string, token: string): boolean {
   const secret = process.env.PAYMENT_CHECK_SECRET
   if (!secret) {
-    // Dev/test fallback — log loudly so this is never silently skipped in production.
-    logger.warn('[payment/check] PAYMENT_CHECK_SECRET not set — ownership check skipped (dev fallback only)')
-    return true
+    // Missing secret is a server misconfiguration. Never accept tokens in
+    // this state — it would let anyone poll order payment status.
+    logger.error('[payment/check] PAYMENT_CHECK_SECRET not set — ownership check rejected')
+    return false
   }
   const expected = computeCheckToken(orderId, phone)
   try {

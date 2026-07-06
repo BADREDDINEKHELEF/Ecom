@@ -2,7 +2,7 @@ import { createAdminClient } from './admin'
 import { maskPhone } from '@/lib/utils/mask'
 
 export interface CustomerSummary {
-  phoneHash:     string  // SHA-256 first 16 hex — stable opaque ID, never raw phone
+  phoneHash:     string  // full SHA-256 hex (64 chars) — stable opaque ID, never raw phone
   maskedPhone:   string  // 0555****78
   displayName:   string  // from most recent order full_name
   wilaya:        string | null
@@ -32,7 +32,7 @@ export async function getVendorCustomers(vendorId: string): Promise<CustomerSumm
   // Required DB function signature:
   //   create or replace function get_vendor_customers(p_vendor_id uuid)
   //   returns table (
-  //     phone_hash     text,
+  //     phone_hash     text,        -- full SHA-256 hex (64 chars)
   //     masked_phone   text,
   //     display_name   text,
   //     wilaya         text,
@@ -97,7 +97,7 @@ export async function getCustomerDetail(vendorId: string, phoneHash: string): Pr
   // Required DB function signature:
   //   create or replace function get_vendor_customer_detail(
   //     p_vendor_id  uuid,
-  //     p_phone_hash text        -- first 16 hex chars of sha256(lower(trim(phone)))
+  //     p_phone_hash text        -- full SHA-256 hex of lower(trim(phone))
   //   )
   //   returns table (
   //     order_id     uuid,
@@ -121,7 +121,7 @@ export async function getCustomerDetail(vendorId: string, phoneHash: string): Pr
   //     from order_items oi
   //     join orders o on o.id = oi.order_id
   //     where oi.vendor_id = p_vendor_id
-  //       and left(encode(sha256(lower(trim(o.phone))::bytea), 'hex'), 16) = p_phone_hash
+  //       and encode(sha256(lower(trim(o.phone))::bytea), 'hex') = p_phone_hash
   //     order by o.created_at desc;
   //   $$;
   const admin = createAdminClient()
@@ -173,20 +173,20 @@ export async function getCustomerDetail(vendorId: string, phoneHash: string): Pr
 // the entire order history into JS memory and scanning it for a hash match.
 //
 // Required DB function signature:
-//   create or replace function resolve_vendor_phone_by_hash(
-//     p_vendor_id  uuid,
-//     p_phone_hash text        -- first 16 hex chars of sha256(lower(trim(phone)))
-//   )
-//   returns text              -- the raw phone, or null if not found
-//   language sql stable as $$
-//     select o.phone
-//     from order_items oi
-//     join orders o on o.id = oi.order_id
-//     where oi.vendor_id = p_vendor_id
-//       and left(encode(sha256(lower(trim(o.phone))::bytea), 'hex'), 16) = p_phone_hash
-//       and o.phone is not null
-//     limit 1;
-//   $$;
+  //   create or replace function resolve_vendor_phone_by_hash(
+  //     p_vendor_id  uuid,
+  //     p_phone_hash text        -- full SHA-256 hex of lower(trim(phone))
+  //   )
+  //   returns text              -- the raw phone, or null if not found
+  //   language sql stable as $$
+  //     select o.phone
+  //     from order_items oi
+  //     join orders o on o.id = oi.order_id
+  //     where oi.vendor_id = p_vendor_id
+  //       and encode(sha256(lower(trim(o.phone))::bytea), 'hex') = p_phone_hash
+  //       and o.phone is not null
+  //     limit 1;
+  //   $$;
 export async function resolvePhoneByHash(vendorId: string, phoneHash: string): Promise<string | null> {
   const admin = createAdminClient()
 

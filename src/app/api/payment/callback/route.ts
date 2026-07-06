@@ -16,10 +16,10 @@ const SATIM_ID_RE = /^[0-9a-f-]{8,36}$/i
 function verifySatimSignature(req: NextRequest): boolean {
   const secret = process.env.SATIM_SHARED_SECRET
   if (!secret) {
-    // If no secret is configured, skip signature check (dev/test fallback).
-    // In production SATIM_SHARED_SECRET MUST be set.
-    logger.warn('[payment/callback] SATIM_SHARED_SECRET not set — skipping HMAC check')
-    return true
+    // Missing secret is a server misconfiguration. Never accept unsigned
+    // callbacks — this would let anyone mark orders as paid.
+    logger.error('[payment/callback] SATIM_SHARED_SECRET not set — rejecting callback')
+    return false
   }
   const { searchParams } = new URL(req.url)
   const checksum = searchParams.get('checksum')
@@ -52,6 +52,10 @@ export async function GET(req: NextRequest) {
 
   // Bug 3 fix: validate HMAC signature before touching any state.
   if (!verifySatimSignature(req)) {
+    if (!process.env.SATIM_SHARED_SECRET) {
+      logger.error('[payment/callback] SATIM_SHARED_SECRET is not configured — rejecting callback', { ip })
+      return NextResponse.json({ error: 'Server misconfigured' }, { status: 503 })
+    }
     logger.warn('[payment/callback] Invalid or missing HMAC signature — rejecting', { ip })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }

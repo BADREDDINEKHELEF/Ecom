@@ -94,7 +94,13 @@ describe('Gemini AI Helper Utility Tests', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock.mock.calls[0][0]).toContain('key=fake-api-key')
+    expect(fetchMock.mock.calls[0][0]).not.toContain('key=')
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      'x-goog-api-key': 'fake-api-key',
+    })
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body.systemInstruction).toBeDefined()
+    expect(body.contents[0].parts[0].text).toContain('Product Name:')
     expect(result.fr).toBe('Description FR')
     expect(result.ar).toBe('الوصف AR')
     expect(result.en).toBe('Description EN')
