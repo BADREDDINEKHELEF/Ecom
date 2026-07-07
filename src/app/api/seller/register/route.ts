@@ -80,25 +80,25 @@ export async function POST(req: NextRequest) {
 
     const { data: dataEmail, error: errEmail } = await supabase
       .from('password_reset_otps')
-      .select('id, otp_hash, expires_at, used')
+      .select('id, otp_hash, expires_at, used, purpose')
       .eq('email', email)
       .eq('used', false)
+      .eq('purpose', 'registration')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     logger.info('[register] OTP lookup by email', { found: !!dataEmail, error: errEmail?.message })
 
-    const isEmailColumnMissing = errEmail && (
+    const isColumnMissing = errEmail && (
       errEmail.code === '42703' ||
-      String(errEmail.message).includes('column') ||
-      String(errEmail.message).includes('email')
+      String(errEmail.message).includes('column')
     )
 
-    if (isEmailColumnMissing) {
+    if (isColumnMissing) {
       const { data: dataPhone, error: errPhone } = await supabase
         .from('password_reset_otps')
-        .select('id, otp_hash, expires_at, used')
+        .select('id, otp_hash, expires_at, used, purpose')
         .eq('phone', email)
         .eq('used', false)
         .order('created_at', { ascending: false })
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { data: dataPhone, error: errPhone } = await supabase
         .from('password_reset_otps')
-        .select('id, otp_hash, expires_at, used')
+        .select('id, otp_hash, expires_at, used, purpose')
         .eq('phone', email)
         .eq('used', false)
         .order('created_at', { ascending: false })
@@ -152,8 +152,6 @@ export async function POST(req: NextRequest) {
       logger.warn('[register] OTP hash mismatch', { email, otpLength: otp.length })
       return NextResponse.json({ error: 'Code incorrect. Vérifiez les 6 chiffres et réessayez.' }, { status: 400 })
     }
-
-    await supabase.from('password_reset_otps').update({ used: true }).eq('id', record.id)
 
     // ── Create Supabase auth user with confirmed email ────────────────────────
     // Email confirmation is handled by our OTP flow, so we mark the email as
@@ -229,6 +227,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'URL déjà prise. Essayez un autre nom.' }, { status: 409 })
       }
       throw error
+    }
+
+    // Mark OTP as used only after the vendor has been successfully created.
+    // The email is now registered, so this OTP cannot be reused for another
+    // registration even if the update fails; we still log the failure.
+    const { error: markUsedErr } = await supabase
+      .from('password_reset_otps')
+      .update({ used: true })
+      .eq('id', record.id)
+    if (markUsedErr) {
+      logger.error('[register] failed to mark OTP as used', { otpId: record.id, error: markUsedErr.message })
     }
 
     return NextResponse.json({ vendor: data }, { status: 201 })

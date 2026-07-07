@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
 import {
@@ -35,37 +35,38 @@ const PatchShipmentSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'shipments_create', 20, 60)
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
+  ))
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   const userRl = await checkUserDualRateLimit(user.id, 'shipments', {
     burstMax: 5, burstWindowSecs: 60,
     sustainedMax: 30, sustainedWindowSecs: 3600,
   })
-  if (!userRl.allowed) return NextResponse.json(
+  if (!userRl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Limite atteinte. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-  )
+  ))
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
   }
 
   const parsed = CreateShipmentSchema.safeParse(body)
   if (!parsed.success) {
     const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
-    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 }))
   }
 
   const { orderId, provider, trackingNumber, isStopDesk, stopDeskCause, autoCreate, notes } = parsed.data
@@ -79,8 +80,8 @@ export async function POST(req: NextRequest) {
       admin.from('order_items').select('product_name, quantity').eq('order_id', orderId).eq('vendor_id', vendor.id),
     ])
 
-    if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    if (!vendorItems || vendorItems.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!order) return copyCookies(response, NextResponse.json({ error: 'Order not found' }, { status: 404 }))
+    if (!vendorItems || vendorItems.length === 0) return copyCookies(response, NextResponse.json({ error: 'Forbidden' }, { status: 403 }))
 
     let finalTracking = trackingNumber ?? ''
     let labelUrl: string | undefined
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .maybeSingle()
     if (existingShipment) {
-      return NextResponse.json({ error: 'A shipment already exists for this order' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'A shipment already exists for this order' }, { status: 409 }))
     }
 
     const config = provider !== 'manual' ? await getVendorDeliveryConfig(vendor.id) : null
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
       } catch (providerErr) {
         const msg = providerErr instanceof Error ? providerErr.message : String(providerErr)
         logger.error(`[POST /api/seller/shipments] provider=${provider} error`, { error: msg })
-        return NextResponse.json({ error: 'Delivery provider error. Please check your configuration and try again.' }, { status: 502 })
+        return copyCookies(response, NextResponse.json({ error: 'Delivery provider error. Please check your configuration and try again.' }, { status: 502 }))
       }
       finalTracking  = result.tracking
       labelUrl       = result.labelUrl
@@ -193,26 +194,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ shipment, requiresManual })
+    return copyCookies(response, NextResponse.json({ shipment, requiresManual }))
   } catch (err) {
     logger.error('[POST /api/seller/shipments]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'shipments_read', 60, 60)
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
+  ))
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   try {
     const { searchParams } = new URL(req.url)
@@ -221,36 +223,37 @@ export async function GET(req: NextRequest) {
     const provider = searchParams.get('provider') ?? undefined
 
     const result = await getVendorShipments(vendor.id, page, 50, { status, provider })
-    return NextResponse.json(result)
+    return copyCookies(response, NextResponse.json(result))
   } catch (err) {
     logger.error('[GET /api/seller/shipments]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 export async function PATCH(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'shipments_patch', 20, 60)
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
+  ))
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
   }
 
   const parsed = PatchShipmentSchema.safeParse(body)
   if (!parsed.success) {
     const details = process.env.NODE_ENV === 'development' ? parsed.error.flatten() : undefined
-    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 }))
   }
 
   const { shipmentId, trackingNumber, status, detail } = parsed.data
@@ -265,8 +268,8 @@ export async function PATCH(req: NextRequest) {
       .eq('id', shipmentId)
       .single()
 
-    if (!existing) return NextResponse.json({ error: 'Shipment not found' }, { status: 404 })
-    if (existing.vendor_id !== vendor.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!existing) return copyCookies(response, NextResponse.json({ error: 'Shipment not found' }, { status: 404 }))
+    if (existing.vendor_id !== vendor.id) return copyCookies(response, NextResponse.json({ error: 'Forbidden' }, { status: 403 }))
 
     if (trackingNumber) {
       await admin.from('shipments').update({ tracking_number: trackingNumber }).eq('id', shipmentId)
@@ -277,9 +280,9 @@ export async function PATCH(req: NextRequest) {
       await updateShipmentStatus(shipmentId, status, detail)
     }
 
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/shipments]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

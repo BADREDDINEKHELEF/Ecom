@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -17,17 +17,18 @@ const AddressSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkPublicRateLimit(ip, 'addresses_read')
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
+    ))
 
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -38,33 +39,34 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return NextResponse.json(data ?? [])
+    return copyCookies(response, NextResponse.json(data ?? []))
   } catch (err) {
     logger.error('[GET /api/addresses]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkPublicRateLimit(ip, 'addresses_write')
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
+    ))
 
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = AddressSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+    if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'Validation failed' }, { status: 400 }))
 
     const admin = createAdminClient()
 
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
     if ((count ?? 0) >= 10) {
-      return NextResponse.json({ error: 'Maximum 10 adresses enregistrées' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Maximum 10 adresses enregistrées' }, { status: 400 }))
     }
 
     // Clear existing default before setting a new one.
@@ -91,9 +93,9 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) throw error
-    return NextResponse.json(data, { status: 201 })
+    return copyCookies(response, NextResponse.json(data, { status: 201 }))
   } catch (err) {
     logger.error('[POST /api/addresses]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

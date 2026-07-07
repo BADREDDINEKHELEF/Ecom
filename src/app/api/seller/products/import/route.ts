@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
@@ -41,35 +41,36 @@ function parseCSV(text: string): Record<string, string>[] {
 }
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     // IP-level gate first — before any auth or body parsing
     const ip = getClientIp(req)
     const ipRl = await checkSellerRateLimit(ip, 'import', 5, 60 * 60)
-    if (!ipRl.allowed) return NextResponse.json(
+    if (!ipRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(ipRl.retryAfterSeconds) } }
-    )
+    ))
 
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     // Per-account gate — prevents one seller exhausting the limit for a shared NAT
     const userRl = await checkUserRateLimit(user.id, 'import', 3, 60 * 60)
-    if (!userRl.allowed) return NextResponse.json(
+    if (!userRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Limite atteinte. Maximum 3 imports par heure.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    ))
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     const text = await req.text()
-    if (!text.trim()) return NextResponse.json({ error: 'CSV vide' }, { status: 400 })
+    if (!text.trim()) return copyCookies(response, NextResponse.json({ error: 'CSV vide' }, { status: 400 }))
 
     const rows = parseCSV(text)
-    if (rows.length === 0) return NextResponse.json({ error: 'Aucune ligne valide dans le CSV' }, { status: 400 })
-    if (rows.length > 200) return NextResponse.json({ error: 'Maximum 200 produits par import' }, { status: 400 })
+    if (rows.length === 0) return copyCookies(response, NextResponse.json({ error: 'Aucune ligne valide dans le CSV' }, { status: 400 }))
+    if (rows.length > 200) return copyCookies(response, NextResponse.json({ error: 'Maximum 200 produits par import' }, { status: 400 }))
 
     // Enforce subscription product limit before importing
     const limitCheck = await checkVendorProductLimit(vendor.id)
@@ -79,14 +80,14 @@ export async function POST(req: NextRequest) {
       return !!name && !isNaN(price) && price > 0
     })
     if (limitCheck.limit !== null && limitCheck.count + validRows.length > limitCheck.limit) {
-      return NextResponse.json(
+      return copyCookies(response, NextResponse.json(
         {
           error: `Limite de produits dépassée. Vous avez ${limitCheck.count}/${limitCheck.limit} produits. Cet import en ajouterait ${validRows.length}.`,
           count: limitCheck.count,
           limit: limitCheck.limit,
         },
         { status: 403 }
-      )
+      ))
     }
 
     let imported = 0
@@ -131,9 +132,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ imported, errors }, { status: 201 })
+    return copyCookies(response, NextResponse.json({ imported, errors }, { status: 201 }))
   } catch (err) {
     logger.error('[POST /api/seller/products/import]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

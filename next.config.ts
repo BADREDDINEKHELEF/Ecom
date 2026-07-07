@@ -109,6 +109,11 @@ const nextConfig: NextConfig = {
   // Compress responses
   compress: true,
 
+  experimental: {
+    // Tree-shake heavy icon/chart packages instead of bundling them whole
+    optimizePackageImports: ['recharts', 'lucide-react', '@radix-ui/react-icons'],
+  },
+
   // Strict mode: fail build on type errors
   typescript: {
     ignoreBuildErrors: false,

@@ -100,6 +100,25 @@ export async function getVendorById(vendorId: string): Promise<Vendor | null> {
   return data as Vendor
 }
 
+export async function getVendorsByIds(
+  vendorIds: string[]
+): Promise<Record<string, Pick<Vendor, 'id' | 'store_name' | 'store_slug'>>> {
+  if (vendorIds.length === 0) return {}
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('vendors')
+    .select('id,store_name,store_slug')
+    .in('id', vendorIds)
+  if (error || !data) return {}
+  return (data as Array<Pick<Vendor, 'id' | 'store_name' | 'store_slug'>>).reduce(
+    (map, vendor) => {
+      if (vendor.id) map[vendor.id] = vendor
+      return map
+    },
+    {} as Record<string, Pick<Vendor, 'id' | 'store_name' | 'store_slug'>>
+  )
+}
+
 export async function getVendorByUserIdServer(userId: string): Promise<Vendor | null> {
   const supabase = createAdminClient()
   const { data, error } = await supabase

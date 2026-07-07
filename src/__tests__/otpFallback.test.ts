@@ -6,6 +6,7 @@ import { hashOtp } from '@/lib/auth/otp'
 vi.mock('@/lib/auth/rateLimit', () => ({
   checkOtpSendRateLimit: () => Promise.resolve({ allowed: true }),
   checkOtpVerifyRateLimit: () => Promise.resolve({ allowed: true }),
+  checkOtpVerifyFrontendRateLimit: () => Promise.resolve({ allowed: true }),
 }))
 
 vi.mock('@/lib/notifications/email', () => ({
@@ -115,6 +116,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
       email: 'user@example.com',
       otp_hash: expect.any(String),
       expires_at: expect.any(String),
+      purpose: 'registration',
     })
     // Second try fallback with phone only
     expect(mockInsert.mock.calls[1][0]).toEqual({

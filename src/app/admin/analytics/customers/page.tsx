@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { Users, AlertTriangle, Crown, RefreshCw, Download } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { exportToCSV } from '@/lib/analytics/export'
+import { useRecharts } from '@/lib/charts/useRecharts'
 
 interface CustomerRow {
   phone: string; orderCount: number; totalSpend: number; avgOrder: number
@@ -22,7 +22,7 @@ const SEGMENT_COLOR: Record<string, string> = {
   Nouveau:   '#F59E0B',
 }
 
-export default function CustomersPage() {
+function CustomersContent() {
   const [data, setData]       = useState<CustomerData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -39,6 +39,8 @@ export default function CustomersPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = useRecharts()
 
   if (loading && !data) {
     return (
@@ -169,5 +171,19 @@ export default function CustomersPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <CustomersContent />
+    </Suspense>
   )
 }

@@ -1,11 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts'
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, Truck,
   Users, Package, CreditCard, RefreshCw, Download, ArrowRight,
@@ -14,6 +10,7 @@ import {
 import { formatPrice } from '@/lib/utils'
 import type { AdminStats } from '@/lib/supabase/analytics'
 import { useT } from '@/lib/store/langStore'
+import { useRecharts } from '@/lib/charts/useRecharts'
 
 const PALETTE = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#EC4899', '#14B8A6']
 
@@ -88,7 +85,7 @@ function RevTooltip({ active, payload, label }: { active?: boolean; payload?: { 
   )
 }
 
-export default function AdminAnalyticsPage() {
+function AdminAnalyticsContent() {
   const t = useT()
   const a = t.admin
 
@@ -108,6 +105,11 @@ export default function AdminAnalyticsPage() {
   }, [days])
 
   useEffect(() => { load() }, [load])
+
+  const {
+    AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  } = useRecharts()
 
   if (loading && !data) {
     return (
@@ -455,5 +457,19 @@ export default function AdminAnalyticsPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function AdminAnalyticsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <AdminAnalyticsContent />
+    </Suspense>
   )
 }

@@ -11,10 +11,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Vendor } from '@/lib/supabase/vendors'
 import { type VendorRole, type Permission, hasPermission } from './permissions'
+import { isSessionRevoked } from './sellerSessions'
+import { getClientIp } from '@/lib/utils/ip'
 
 export interface VendorContext {
   user:   { id: string; email?: string }
@@ -36,11 +38,27 @@ const VENDOR_COLS = [
 /**
  * Resolve vendor + role for the current Supabase-authenticated user.
  * Priority: owner (vendors.user_id) → team member (vendor_members.user_id).
+ *
+ * Pass the outgoing `response` when called from a route handler so any
+ * refreshed auth cookies are written to the response that will be returned.
  */
-export async function getVendorContext(req: NextRequest): Promise<VendorContext | null> {
-  const supabase = createRouteClient(req)
+export async function getVendorContext(
+  req: NextRequest,
+  response?: NextResponse,
+): Promise<VendorContext | null> {
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return null
+
+  // Enforce device-level seller session revocation.
+  // If the seller_sessions row for this device is revoked or expired, treat
+  // the request as unauthenticated. New devices without a row are allowed.
+  const revoked = await isSessionRevoked(
+    user.id,
+    req.headers.get('user-agent') ?? 'unknown',
+    getClientIp(req),
+  )
+  if (revoked) return null
 
   const admin = createAdminClient()
 
@@ -86,24 +104,35 @@ export async function getVendorContext(req: NextRequest): Promise<VendorContext 
  * Returns { ctx: VendorContext } on success, NextResponse on failure.
  *
  * Usage:
- *   const result = await requireVendorPermission(req, 'customers:reveal_phone')
+ *   const response = NextResponse.next()
+ *   const result = await requireVendorPermission(req, 'customers:reveal_phone', response)
  *   if (result instanceof NextResponse) return result
  *   const { ctx } = result
+ *
+ * When `response` is provided, auth cookie refreshes are written to it and
+ * copied to any error response returned by this guard.
  */
 export async function requireVendorPermission(
   req: NextRequest,
   permission: Permission,
+  response?: NextResponse,
 ): Promise<{ ctx: VendorContext } | NextResponse> {
-  const ctx = await getVendorContext(req)
+  const ctx = await getVendorContext(req, response)
 
   if (!ctx) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return copyCookies(
+      response ?? NextResponse.next(),
+      NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    )
   }
 
   if (!hasPermission(ctx.role, permission)) {
-    return NextResponse.json(
-      { error: 'Forbidden', required: permission, yourRole: ctx.role },
-      { status: 403 }
+    return copyCookies(
+      response ?? NextResponse.next(),
+      NextResponse.json(
+        { error: 'Forbidden', required: permission, yourRole: ctx.role },
+        { status: 403 }
+      ),
     )
   }
 
@@ -118,6 +147,7 @@ export async function requireVendorPermission(
  */
 export async function requireVendorOwner(
   req: NextRequest,
+  response?: NextResponse,
 ): Promise<{ ctx: VendorContext } | NextResponse> {
-  return requireVendorPermission(req, 'settings:update') // any owner-only permission works
+  return requireVendorPermission(req, 'settings:update', response) // any owner-only permission works
 }

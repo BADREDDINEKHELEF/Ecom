@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { copyCookies } from '@/lib/supabase/server'
 import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { isAssignableRole } from '@/lib/auth/permissions'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -20,11 +21,12 @@ const UpdateRoleSchema = z.object({
 
 // GET /api/seller/team — list all team members for the vendor
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'team_list')
-  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 }))
 
-  const result = await requireVendorPermission(req, 'members:read')
+  const result = await requireVendorPermission(req, 'members:read', response)
   if (result instanceof NextResponse) return result
   const { ctx } = result
 
@@ -37,30 +39,31 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (error) throw error
-    return NextResponse.json(data ?? [])
+    return copyCookies(response, NextResponse.json(data ?? []))
   } catch (err) {
     logger.error('[GET /api/seller/team]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 // POST /api/seller/team — invite a user by email with a role
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'team_invite', 10, 3600)
-  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 }))
 
-  const result = await requireVendorPermission(req, 'members:invite')
+  const result = await requireVendorPermission(req, 'members:invite', response)
   if (result instanceof NextResponse) return result
   const { ctx } = result
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
   }
 
   const parsed = InviteSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+  if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'Données invalides' }, { status: 400 }))
 
   try {
     const admin = createAdminClient()
@@ -71,12 +74,12 @@ export async function POST(req: NextRequest) {
 
     const targetUser = users.find((u) => u.email?.toLowerCase() === parsed.data.email)
     if (!targetUser) {
-      return NextResponse.json({ error: 'Aucun compte trouvé avec cet email' }, { status: 404 })
+      return copyCookies(response, NextResponse.json({ error: 'Aucun compte trouvé avec cet email' }, { status: 404 }))
     }
 
     // Cannot add oneself
     if (targetUser.id === ctx.user.id) {
-      return NextResponse.json({ error: 'Vous ne pouvez pas vous ajouter vous-même' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Vous ne pouvez pas vous ajouter vous-même' }, { status: 400 }))
     }
 
     // Cannot add the platform owner (vendors.user_id of another vendor)
@@ -87,7 +90,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (existingOwner && existingOwner.id !== ctx.vendor.id) {
-      return NextResponse.json({ error: 'Cet utilisateur est déjà propriétaire d\'une autre boutique' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'Cet utilisateur est déjà propriétaire d\'une autre boutique' }, { status: 409 }))
     }
 
     const { error: upsertErr } = await admin.from('vendor_members').upsert({
@@ -109,30 +112,31 @@ export async function POST(req: NextRequest) {
       meta:      { role: parsed.data.role, invitedBy: ctx.user.id },
     })
 
-    return NextResponse.json({ ok: true }, { status: 201 })
+    return copyCookies(response, NextResponse.json({ ok: true }, { status: 201 }))
   } catch (err) {
     logger.error('[POST /api/seller/team]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 // PATCH /api/seller/team — change a member's role
 export async function PATCH(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'team_update', 20, 60)
-  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 }))
 
-  const result = await requireVendorPermission(req, 'members:invite')
+  const result = await requireVendorPermission(req, 'members:invite', response)
   if (result instanceof NextResponse) return result
   const { ctx } = result
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
   }
 
   const parsed = UpdateRoleSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+  if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'Validation failed' }, { status: 400 }))
 
   try {
     const admin = createAdminClient()
@@ -145,7 +149,7 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle()
 
     if (error) throw error
-    if (!data) return NextResponse.json({ error: 'Membre introuvable' }, { status: 404 })
+    if (!data) return copyCookies(response, NextResponse.json({ error: 'Membre introuvable' }, { status: 404 }))
 
     void logSecurityEvent({
       actorType: 'seller',
@@ -157,16 +161,17 @@ export async function PATCH(req: NextRequest) {
       meta:      { newRole: parsed.data.role },
     })
 
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/team]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 // DELETE /api/seller/team?userId=xxx — remove a team member
 export async function DELETE(req: NextRequest) {
-  const result = await requireVendorPermission(req, 'members:remove')
+  const response = NextResponse.next()
+  const result = await requireVendorPermission(req, 'members:remove', response)
   if (result instanceof NextResponse) return result
   const { ctx } = result
 
@@ -174,12 +179,12 @@ export async function DELETE(req: NextRequest) {
   const targetUserId = searchParams.get('userId')
 
   if (!targetUserId || !/^[0-9a-f-]{36}$/.test(targetUserId)) {
-    return NextResponse.json({ error: 'userId invalide' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'userId invalide' }, { status: 400 }))
   }
 
   // Owner cannot remove themselves — they are not in vendor_members anyway
   if (targetUserId === ctx.user.id) {
-    return NextResponse.json({ error: 'Vous ne pouvez pas vous retirer vous-même' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Vous ne pouvez pas vous retirer vous-même' }, { status: 400 }))
   }
 
   const ip = getClientIp(req)
@@ -204,9 +209,9 @@ export async function DELETE(req: NextRequest) {
       meta:      { removedBy: ctx.user.id },
     })
 
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[DELETE /api/seller/team]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

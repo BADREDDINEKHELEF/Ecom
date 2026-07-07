@@ -42,6 +42,7 @@ vi.mock('@/lib/supabase/server', () => ({
       getUser: mockGetUser,
     },
   }),
+  copyCookies: (_response: Response, result: Response) => result,
 }))
 
 // Mock vendor helpers

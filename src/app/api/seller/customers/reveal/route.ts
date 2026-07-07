@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { copyCookies } from '@/lib/supabase/server'
 import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { resolvePhoneByHash } from '@/lib/supabase/customers'
 import { logSellerDataAccess } from '@/lib/auth/sellerAudit'
@@ -13,6 +14,7 @@ const RevealSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
 
@@ -26,15 +28,15 @@ export async function POST(req: NextRequest) {
         ipAddress: ip,
         result:    'blocked',
       })
-      return NextResponse.json(
+      return copyCookies(response, NextResponse.json(
         { error: 'Trop de requêtes.' },
         { status: 429, headers: { 'Retry-After': String(ipRl.retryAfterSeconds) } }
-      )
+      ))
     }
 
     // Gate 2: Permission — only 'owner' role can reveal phones
     // This also handles auth (returns 401 if not authenticated)
-    const result = await requireVendorPermission(req, 'customers:reveal_phone')
+    const result = await requireVendorPermission(req, 'customers:reveal_phone', response)
     if (result instanceof NextResponse) {
       if (result.status === 403) {
         void logSecurityEvent({
@@ -52,22 +54,22 @@ export async function POST(req: NextRequest) {
     // Gate 3: Per-user hourly cap — max 20 reveals per hour per seller account
     const userRl = await checkUserRateLimit(ctx.user.id, 'reveal_phone', 20, 3600)
     if (!userRl.allowed) {
-      return NextResponse.json(
+      return copyCookies(response, NextResponse.json(
         { error: 'Limite de révélations atteinte. Maximum 20 par heure.' },
         { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-      )
+      ))
     }
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = RevealSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+    if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'Validation failed' }, { status: 400 }))
 
     const phone = await resolvePhoneByHash(ctx.vendor.id, parsed.data.phoneHash)
-    if (!phone) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    if (!phone) return copyCookies(response, NextResponse.json({ error: 'Customer not found' }, { status: 404 }))
 
     // Fire-and-forget audit entries (both seller-level and security-level)
     void logSellerDataAccess({
@@ -90,9 +92,9 @@ export async function POST(req: NextRequest) {
       meta:      { role: ctx.role },
     })
 
-    return NextResponse.json({ phone })
+    return copyCookies(response, NextResponse.json({ phone }))
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: msg }, { status: 500 }))
   }
 }

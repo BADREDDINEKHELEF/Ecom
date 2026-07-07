@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { Truck, RefreshCw, Download, AlertCircle } from 'lucide-react'
 import { exportToCSV } from '@/lib/analytics/export'
+import { useRecharts } from '@/lib/charts/useRecharts'
 
 interface Provider {
   provider: string; total: number; delivered: number; returned: number
@@ -20,7 +20,7 @@ const PERIOD_OPTIONS = [
   { label: '7 j', days: 7 }, { label: '30 j', days: 30 }, { label: '90 j', days: 90 }, { label: '1 an', days: 365 },
 ]
 
-export default function DeliveryPage() {
+function DeliveryContent() {
   const [data, setData]   = useState<DeliveryData | null>(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays]   = useState(30)
@@ -38,6 +38,8 @@ export default function DeliveryPage() {
   }, [days])
 
   useEffect(() => { load() }, [load])
+
+  const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = useRecharts()
 
   if (loading && !data) {
     return (
@@ -182,5 +184,19 @@ export default function DeliveryPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DeliveryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <DeliveryContent />
+    </Suspense>
   )
 }

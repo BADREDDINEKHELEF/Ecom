@@ -1,11 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Sun, Moon } from 'lucide-react'
 import { useThemeStore } from '@/lib/store/themeStore'
 
 export default function ThemeToggle() {
   const { theme, setTheme } = useThemeStore()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const root = document.documentElement
@@ -26,7 +31,19 @@ export default function ThemeToggle() {
     }
   }, [theme])
 
-  const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  // Render a stable placeholder during SSR/hydration to avoid mismatch
+  if (!mounted) {
+    return (
+      <button
+        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        aria-label="Basculer le thème"
+      >
+        <Moon className="w-4 h-4 text-gray-600" />
+      </button>
+    )
+  }
+
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   return (
     <button

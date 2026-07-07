@@ -18,7 +18,7 @@ const root = resolve(__dirname, '..')
 describe('deviceHash — deterministic fingerprinting', () => {
   it('returns exactly 16 hex characters', async () => {
     const { deviceHash } = await import('../lib/auth/sellerSessions')
-    const hash = deviceHash('Mozilla/5.0 (Windows NT 10.0)', '41.200.0.1')
+    const hash = await deviceHash('Mozilla/5.0 (Windows NT 10.0)', '41.200.0.1')
     expect(hash).toMatch(/^[0-9a-f]{16}$/)
   })
 
@@ -26,20 +26,20 @@ describe('deviceHash — deterministic fingerprinting', () => {
     const { deviceHash } = await import('../lib/auth/sellerSessions')
     const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
     const ip = '105.105.0.99'
-    expect(deviceHash(ua, ip)).toBe(deviceHash(ua, ip))
+    expect(await deviceHash(ua, ip)).toBe(await deviceHash(ua, ip))
   })
 
   it('different IPs produce different hashes', async () => {
     const { deviceHash } = await import('../lib/auth/sellerSessions')
     const ua = 'SameAgent/1.0'
-    expect(deviceHash(ua, '1.2.3.4')).not.toBe(deviceHash(ua, '5.6.7.8'))
+    expect(await deviceHash(ua, '1.2.3.4')).not.toBe(await deviceHash(ua, '5.6.7.8'))
   })
 
   it('different user-agents produce different hashes', async () => {
     const { deviceHash } = await import('../lib/auth/sellerSessions')
     const ip = '41.200.0.1'
-    const h1 = deviceHash('Chrome/120', ip)
-    const h2 = deviceHash('Safari/17.0', ip)
+    const h1 = await deviceHash('Chrome/120', ip)
+    const h2 = await deviceHash('Safari/17.0', ip)
     expect(h1).not.toBe(h2)
   })
 
@@ -47,7 +47,7 @@ describe('deviceHash — deterministic fingerprinting', () => {
     const { deviceHash } = await import('../lib/auth/sellerSessions')
     const ua = 'Mozilla/5.0 TestAgent'
     const ip = '192.168.1.100'
-    const hash = deviceHash(ua, ip)
+    const hash = await deviceHash(ua, ip)
     expect(hash).not.toContain('Mozilla')
     expect(hash).not.toContain('192.168')
     expect(hash).not.toContain(ip)
@@ -56,7 +56,7 @@ describe('deviceHash — deterministic fingerprinting', () => {
 
   it('empty inputs still produce a 16-char hash', async () => {
     const { deviceHash } = await import('../lib/auth/sellerSessions')
-    const hash = deviceHash('', '')
+    const hash = await deviceHash('', '')
     expect(hash).toMatch(/^[0-9a-f]{16}$/)
   })
 })
@@ -95,7 +95,7 @@ describe('sellerSessions.ts — source audit: security invariants', () => {
   })
 
   it('deviceHash uses SHA-256 (not MD5 or SHA-1)', () => {
-    expect(src).toContain("createHash('sha256')")
+    expect(src).toContain("crypto.subtle.digest('SHA-256'")
     expect(src).not.toContain("createHash('md5')")
     expect(src).not.toContain("createHash('sha1')")
   })

@@ -128,6 +128,10 @@ export async function upsertProduct(
 
   validateProductInput(product)
 
+  if (!ctx.vendorId && !ctx.isAdmin) {
+    throw new Error('Session vendeur invalide: impossible de déterminer le vendorId. Déconnectez-vous et reconnectez-vous.')
+  }
+
   let vendorId = ctx.vendorId
   if (ctx.isAdmin) {
     vendorId = product.vendorId

@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import {
   ShoppingCart, TrendingUp, MapPin, Calendar,
   RefreshCw, AlertTriangle, CheckCircle,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
+import { useRecharts } from '@/lib/charts/useRecharts'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 
 interface AbandonedAnalytics {
@@ -40,7 +40,7 @@ function StatCard({ icon: Icon, label, value, sub, color = 'indigo' }: {
   )
 }
 
-export default function SellerAbandonedPage() {
+function SellerAbandonedContent() {
   const { vendor, loading: authLoading, signOut } = useSellerAuth()
   const [data, setData]           = useState<AbandonedAnalytics | null>(null)
   const [loading, setLoading]     = useState(true)
@@ -63,6 +63,8 @@ export default function SellerAbandonedPage() {
   }, [vendor])
 
   useEffect(() => { if (!authLoading && vendor) fetchData() }, [authLoading, vendor, fetchData])
+
+  const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = useRecharts()
 
   if (authLoading || !vendor) return null
 
@@ -167,5 +169,19 @@ export default function SellerAbandonedPage() {
         ) : null}
       </main>
     </div>
+  )
+}
+
+export default function SellerAbandonedPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <SellerAbandonedContent />
+    </Suspense>
   )
 }

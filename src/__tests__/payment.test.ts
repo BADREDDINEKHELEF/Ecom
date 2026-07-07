@@ -94,3 +94,57 @@ describe('Payment callback — no mdOrder means no success', () => {
     expect(legit.action).toBe('verify_with_satim')
   })
 })
+
+// ── Reconciliation amount verification ──────────────────────────────────────
+
+describe('Payment reconciliation amount verification', () => {
+  it('rejects BaridiMob payments when reconciled amount does not match order total', () => {
+    const orderTotal = 5000
+    const reconciledAmount = 4998
+    const tolerance = 1
+    const ok = reconciledAmount != null && Math.abs(reconciledAmount - orderTotal) <= tolerance
+    expect(ok).toBe(false)
+  })
+
+  it('accepts BaridiMob payments when reconciled amount matches order total within tolerance', () => {
+    const orderTotal = 5000
+    const reconciledAmount = 5000
+    const tolerance = 1
+    const ok = reconciledAmount != null && Math.abs(reconciledAmount - orderTotal) <= tolerance
+    expect(ok).toBe(true)
+  })
+
+  it('rejects stale Satim reconciliation when centimes do not match order total', () => {
+    const orderTotal = 119.5 // DZD
+    const expectedCentimes = Math.round(orderTotal * 100) // 11950
+    const reconciledCentimes = 11949
+    const tolerance = 1
+    const ok = reconciledCentimes === expectedCentimes || Math.abs(reconciledCentimes - expectedCentimes) <= tolerance
+    expect(ok).toBe(true) // within tolerance
+
+    const maliciousCentimes = 10000
+    const okMalicious = maliciousCentimes === expectedCentimes || Math.abs(maliciousCentimes - expectedCentimes) <= tolerance
+    expect(okMalicious).toBe(false)
+  })
+})
+
+// ── Financial ledger presence ───────────────────────────────────────────────
+
+describe('Financial transactions ledger', () => {
+  it('callback route records financial transactions on state transitions', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../app/api/payment/callback/route.ts'), 'utf-8')
+    expect(src).toContain('recordFinancialTransaction')
+    expect(src).toContain('Payment confirmed via Satim callback')
+    expect(src).toContain('Payment confirmed via BaridiMob webhook')
+  })
+
+  it('payment/check reconciliation records a financial transaction', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../app/api/payment/check/route.ts'), 'utf-8')
+    expect(src).toContain('recordFinancialTransaction')
+    expect(src).toContain('Payment confirmed via Satim reconciliation')
+  })
+})

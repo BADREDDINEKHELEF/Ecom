@@ -7,6 +7,7 @@ import { satimGetOrderStatus, satimConfigured } from '@/lib/payment/satim'
 import { verifyCheckToken } from '@/lib/payment/checkToken'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
+import { recordFinancialTransaction } from '@/lib/supabase/orders'
 
 // How long (ms) a pending_payment order must be stuck before we attempt
 // a background Satim reconciliation. Override with PAYMENT_CHECK_STALE_MS env var.
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     // Fetch the order — include phone (ownership key) and satim_order_id (for reconciliation).
     const { data: order, error } = await createAdminClient()
       .from('orders')
-      .select('id, status, payment_status, phone, satim_order_id, created_at')
+      .select('id, status, payment_status, phone, satim_order_id, total, payment_method, created_at')
       .eq('id', orderId)
       .single()
 
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
       if (ageMs >= STALE_PENDING_MS && !reconciling.has(orderId)) {
         reconciling.add(orderId)
         // Fire-and-forget reconciliation — do not block the polling response.
-        reconcileWithSatim(orderId, order.satim_order_id as string)
+        reconcileWithSatim(orderId, order.satim_order_id as string, order)
           .finally(() => reconciling.delete(orderId))
           .catch((err) =>
             logger.error('[payment/check] background reconciliation failed', {
@@ -105,7 +106,11 @@ export async function GET(req: NextRequest) {
  * paid confirmation is actioned. Ambiguous states are left for manual review
  * or the next reconciliation pass.
  */
-async function reconcileWithSatim(orderId: string, satimOrderId: string): Promise<void> {
+async function reconcileWithSatim(
+  orderId: string,
+  satimOrderId: string,
+  order: { total: number; payment_method?: string | null; status?: string | null; payment_status?: string | null }
+): Promise<void> {
   logger.info('[payment/check] reconciling stale order with Satim', { orderId, satimOrderId })
   const satimStatus = await satimGetOrderStatus(satimOrderId)
   if (satimStatus.orderStatus !== 2) {
@@ -113,6 +118,18 @@ async function reconcileWithSatim(orderId: string, satimOrderId: string): Promis
       orderId,
       satimOrderId,
       satimStatus: satimStatus.orderStatus,
+    })
+    return
+  }
+
+  // Verify reconciled amount matches order total before mutating state.
+  const expectedCentimes = Math.round(order.total * 100)
+  if (satimStatus.amount !== expectedCentimes && Math.abs(satimStatus.amount - expectedCentimes) > 1) {
+    logger.error('[payment/check] reconciliation amount mismatch', {
+      orderId,
+      satimOrderId,
+      expected: expectedCentimes,
+      received: satimStatus.amount,
     })
     return
   }
@@ -141,6 +158,18 @@ async function reconcileWithSatim(orderId: string, satimOrderId: string): Promis
   }
 
   logger.info('[payment/check] reconciliation: order marked paid', { orderId, satimOrderId })
+
+  await recordFinancialTransaction({
+    orderId,
+    amount: order.total,
+    statusBefore: order.status ?? undefined,
+    statusAfter: 'confirmed',
+    paymentStatusBefore: order.payment_status ?? undefined,
+    paymentStatusAfter: 'paid',
+    paymentMethod: order.payment_method,
+    gatewayRef: satimOrderId,
+    reason: 'Payment confirmed via Satim reconciliation',
+  })
 
   if (updated.email) {
     const { count } = await createAdminClient()

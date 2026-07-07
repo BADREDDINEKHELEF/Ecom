@@ -3,6 +3,93 @@ import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 import { getAdminCookieName } from '@/cookie'
 import { getClientIp } from '@/lib/utils/ip'
+import { isSessionRevoked } from '@/lib/auth/sellerSessions'
+
+const SUPABASE_AUTH_COOKIE_NAME = process.env.NEXT_PUBLIC_SUPABASE_AUTH_COOKIE_NAME
+
+function base64UrlDecode(input: string): string {
+  const padded = input.replace(/-/g, '+').replace(/_/g, '/').padEnd(
+    input.length + (4 - (input.length % 4)) % 4,
+    '='
+  )
+  try {
+    return atob(padded)
+  } catch {
+    return ''
+  }
+}
+
+/** Lightweight structural validation of a Supabase auth JWT cookie.
+ *  Verifies the cookie looks like a JWT (3 base64url segments), decodes the
+ *  payload, checks `exp` and `iss`, and confirms the `sub` claim is a UUID.
+ *  This prevents trivial fake-cookie bypasses without the cost of a full
+ *  cryptographic verification on every request (handlers do that).
+ */
+function isValidSupabaseSessionCookie(value: string): boolean {
+  const parts = value.split('.')
+  if (parts.length !== 3) return false
+  const payloadStr = base64UrlDecode(parts[1])
+  if (!payloadStr) return false
+  let payload: Record<string, unknown>
+  try {
+    payload = JSON.parse(payloadStr) as Record<string, unknown>
+  } catch {
+    return false
+  }
+  if (typeof payload.exp !== 'number') return false
+  if (payload.exp * 1000 < Date.now()) return false
+  const issuer = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (issuer && payload.iss !== issuer) return false
+  const sub = typeof payload.sub === 'string' ? payload.sub : ''
+  if (!sub) return false
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)
+}
+
+function findSupabaseSessionCookie(req: NextRequest): string | undefined {
+  // Prefer exact env-configured name. Supabase may chunk large sessions into
+  // multiple cookies (sb-...-auth-token.0, sb-...-auth-token.1). For the
+  // middleware gate we only need to validate the first chunk; the handler will
+  // reassemble the full session.
+  const preferredName = SUPABASE_AUTH_COOKIE_NAME
+  if (preferredName) {
+    const exact = req.cookies.get(preferredName)?.value
+    if (exact) return exact
+  }
+  for (const [name, cookie] of req.cookies) {
+    if (name.startsWith('sb-') && name.includes('-auth-token')) {
+      return cookie.value
+    }
+  }
+  return undefined
+}
+
+function hasValidSupabaseSession(req: NextRequest): boolean {
+  const cookieValue = findSupabaseSessionCookie(req)
+  if (!cookieValue) return false
+  return isValidSupabaseSessionCookie(cookieValue)
+}
+
+/** Extracts the user id (sub claim) from the Supabase session cookie without
+ *  verifying the signature. The handlers perform full verification; this is
+ *  only used for an early revocation check in the seller middleware gate.
+ */
+function getSupabaseSessionUserId(req: NextRequest): string | null {
+  const cookieValue = findSupabaseSessionCookie(req)
+  if (!cookieValue) return null
+  const parts = cookieValue.split('.')
+  if (parts.length !== 3) return null
+  const payloadStr = base64UrlDecode(parts[1])
+  if (!payloadStr) return null
+  try {
+    const payload = JSON.parse(payloadStr) as Record<string, unknown>
+    const sub = typeof payload.sub === 'string' ? payload.sub : ''
+    if (!sub) return null
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) return null
+    return sub
+  } catch {
+    return null
+  }
+}
 
 function isIpAllowed(ip: string): boolean {
   const allowlist = process.env.ADMIN_IP_ALLOWLIST
@@ -41,9 +128,13 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
       // In development/test, skip revocation check when Redis is not configured.
       return true
     }
-    const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${jti}`
+    const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(jti)}?nocache=${Date.now()}`
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
+      headers: {
+        Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+        'Cache-Control': 'no-store',
+      },
+      cache: 'no-store',
     })
     if (!res.ok) return false
     const data = (await res.json()) as { result: string | null }
@@ -54,21 +145,7 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
   }
 }
 
-/** Validate that a Supabase JWT cookie is at least structurally present.
- *  This is a lightweight existence/format check only — full vendor resolution
- *  happens inside each route handler.  The goal is a defense-in-depth catch-all
- *  so accidentally unprotected seller routes fail closed.
- */
-function hasSupabaseSession(req: NextRequest): boolean {
-  // Supabase stores its session in a cookie whose name begins with `sb-` and ends
-  // with `-auth-token`.  We check for the existence of any such cookie.
-  for (const [name] of req.cookies) {
-    if (name.startsWith('sb-') && name.endsWith('-auth-token')) {
-      return true
-    }
-  }
-  return false
-}
+
 
 // Public seller-facing auth endpoints that must remain reachable before the
 // user has a Supabase session (registration, password reset, email OTP).
@@ -93,9 +170,29 @@ export async function middleware(req: NextRequest) {
     if (PUBLIC_SELLER_API_PATHS.has(pathname)) {
       return NextResponse.next()
     }
-    if (!hasSupabaseSession(req)) {
+    if (!hasValidSupabaseSession(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Defense-in-depth: check seller session revocation at the edge before
+    // the handler runs. A missing row means a new/untracked device and is
+    // allowed; the handler's full Supabase auth check remains authoritative.
+    const sellerUserId = getSupabaseSessionUserId(req)
+    if (sellerUserId) {
+      try {
+        const revoked = await isSessionRevoked(
+          sellerUserId,
+          req.headers.get('user-agent') ?? 'unknown',
+          getClientIp(req),
+        )
+        if (revoked) {
+          return NextResponse.json({ error: 'Session revoked' }, { status: 401 })
+        }
+      } catch {
+        // Fail open: if the revocation check errors, let the handler decide.
+      }
+    }
+
     return NextResponse.next()
   }
 

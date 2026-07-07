@@ -15,12 +15,15 @@ export default function BottomNav() {
   const cartCount = itemCount()
   const t = useT()
 
-  // Hide on seller/admin/store pages
+  // Hide on seller/admin/store pages only after hydration to avoid SSR/CSR mismatch
   if (
-    pathname.startsWith('/seller') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/store/') ||
-    pathname.startsWith('/shop/')
+    mounted &&
+    (
+      pathname.startsWith('/seller') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/store/') ||
+      pathname.startsWith('/shop/')
+    )
   ) return null
 
   const isActive = (href: string) =>

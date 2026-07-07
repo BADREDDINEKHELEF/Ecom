@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { Search, AlertCircle, Download, RefreshCw } from 'lucide-react'
 import { exportToCSV } from '@/lib/analytics/export'
+import { useRecharts } from '@/lib/charts/useRecharts'
 
 interface SearchTerm {
   term: string; count: number; avgResults: number; zeroResultCount: number; zeroResultPct: number
@@ -16,7 +16,7 @@ const PERIOD_OPTIONS = [
   { label: '7 j', days: 7 }, { label: '30 j', days: 30 }, { label: '90 j', days: 90 },
 ]
 
-export default function SearchAnalyticsPage() {
+function SearchAnalyticsContent() {
   const [data, setData]   = useState<SearchData | null>(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays]   = useState(7)
@@ -34,6 +34,8 @@ export default function SearchAnalyticsPage() {
   }, [days])
 
   useEffect(() => { load() }, [load])
+
+  const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = useRecharts()
 
   const Skeleton = () => (
     <div className="p-4 sm:p-8 space-y-6">
@@ -149,5 +151,19 @@ export default function SearchAnalyticsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SearchAnalyticsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <SearchAnalyticsContent />
+    </Suspense>
   )
 }

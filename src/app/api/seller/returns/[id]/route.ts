@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
@@ -21,42 +21,43 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'returns_write', 30, 60)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
+    ))
 
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const userRl = await checkUserDualRateLimit(user.id, 'returns_write', {
       burstMax: 10, burstWindowSecs: 60,
       sustainedMax: 60, sustainedWindowSecs: 3600,
     })
-    if (!userRl.allowed) return NextResponse.json(
+    if (!userRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Limite de modifications atteinte.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    ))
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     const { id } = await params
-    if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+    if (!UUID_RE.test(id)) return copyCookies(response, NextResponse.json({ error: 'Invalid id' }, { status: 400 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = PatchReturnSchema.safeParse(body)
     if (!parsed.success) {
       const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
-      return NextResponse.json({ error: 'Données invalides', ...(details && { details }) }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Données invalides', ...(details && { details }) }, { status: 400 }))
     }
 
     const admin = createAdminClient()
@@ -70,7 +71,7 @@ export async function PATCH(
       .maybeSingle()
 
     if (!existingReturn) {
-      return NextResponse.json({ error: 'Retour introuvable ou accès refusé' }, { status: 404 })
+      return copyCookies(response, NextResponse.json({ error: 'Retour introuvable ou accès refusé' }, { status: 404 }))
     }
 
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -87,9 +88,9 @@ export async function PATCH(
 
     if (updateErr) throw updateErr
 
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/returns/[id]]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

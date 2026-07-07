@@ -94,10 +94,10 @@ export async function POST(req: NextRequest) {
 
     // Delete old unused OTPs for this email
     try {
-      await supabase.from('password_reset_otps').delete().eq('phone', email)
+      await supabase.from('password_reset_otps').delete().eq('phone', email).eq('purpose', 'password_reset')
     } catch {}
     try {
-      await supabase.from('password_reset_otps').delete().eq('email', email)
+      await supabase.from('password_reset_otps').delete().eq('email', email).eq('purpose', 'password_reset')
     } catch {}
 
     // Generate and store OTP (hashed only — plaintext otp column was removed)
@@ -108,16 +108,18 @@ export async function POST(req: NextRequest) {
     let otpStoreErr: string | null = null
     try {
       let insertErr = null
-      const { error } = await supabase.from('password_reset_otps').insert({
+      const otpPayload = {
         phone:    email,
         email:    email,
         otp_hash: hashed,
         expires_at: expiryStr,
-      })
+        purpose:  'password_reset' as const,
+      }
+      const { error } = await supabase.from('password_reset_otps').insert(otpPayload)
       insertErr = error
 
-      // Fallback: email column doesn't exist on older deployments — retry without it
-      if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('email'))) {
+      // Fallback: older deployments without email/purpose columns — retry with phone only
+      if (insertErr && (insertErr.code === '42703' || String(insertErr.message).includes('column'))) {
         const { error: fallbackErr } = await supabase.from('password_reset_otps').insert({
           phone:    email,
           otp_hash: hashed,

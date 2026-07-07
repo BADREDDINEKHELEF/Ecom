@@ -2,10 +2,11 @@
 
 import { useEffect } from 'react'
 
-// Silently refreshes the admin JWT every 7 hours so a full workday session
-// never expires mid-task. The server validates the existing token before issuing
-// a new one, so this cannot be used to escalate from an expired session.
-const REFRESH_INTERVAL_MS = 7 * 60 * 60 * 1000  // 7h (token expires at 8h)
+// Silently refreshes the admin JWT at 80% of its 2-hour lifetime. The server
+// validates the existing token before issuing a new one, so this cannot be used
+// to escalate from an expired session.
+const ADMIN_TOKEN_MAX_AGE_MS = 2 * 60 * 60 * 1000
+const REFRESH_INTERVAL_MS = Math.floor(ADMIN_TOKEN_MAX_AGE_MS * 0.8)
 
 export default function AdminSessionRefresh() {
   useEffect(() => {

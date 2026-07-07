@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Package, Search } from 'lucide-react'
 import { searchProducts } from '@/lib/supabase/queries'
-import { getVendorById } from '@/lib/supabase/vendors'
+import { getVendorsByIds } from '@/lib/supabase/vendors'
 import { formatPrice } from '@/lib/utils'
 import { getServerT } from '@/lib/i18n/server'
 
@@ -26,7 +26,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const ts = t.store
 
   const { products, total, totalPages } = await searchProducts(q, { page, limit: 24 })
-  const totalVendors = new Set(products.map((p) => p.vendorId).filter(Boolean)).size
+  const vendorIds = Array.from(
+    new Set(products.map((p) => p.vendorId).filter((v): v is string => typeof v === 'string' && v.length > 0))
+  )
+  const vendorsMap = await getVendorsByIds(vendorIds)
+  const totalVendors = Object.keys(vendorsMap).length
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] pt-6 pb-16">
@@ -64,7 +68,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10">
                 {products.map((product) => (
-                  <SearchProductCard key={product.id} product={product} />
+                  <SearchProductCard
+                    key={product.id}
+                    product={product}
+                    vendor={product.vendorId ? vendorsMap[product.vendorId] : undefined}
+                  />
                 ))}
               </div>
 
@@ -95,8 +103,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   )
 }
 
-async function SearchProductCard({ product }: { product: Awaited<ReturnType<typeof searchProducts>>['products'][number] }) {
-  const vendor = product.vendorId ? await getVendorById(product.vendorId) : null
+function SearchProductCard({
+  product,
+  vendor,
+}: {
+  product: Awaited<ReturnType<typeof searchProducts>>['products'][number]
+  vendor?: Pick<Awaited<ReturnType<typeof getVendorsByIds>>[string], 'store_name' | 'store_slug'>
+}) {
   const storeSlug = vendor?.store_slug ?? ''
   const href = storeSlug ? `/store/${storeSlug}/${product.id}` : '#'
 

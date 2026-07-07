@@ -1,5 +1,7 @@
 import { createAdminClient } from './admin'
 import { incrementPromoUses } from './promo'
+import { redeemPoints, restorePoints } from '@/lib/loyalty'
+import { logger } from '@/lib/logger'
 import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
 import { getVendorDeliveryConfig } from './vendors'
 import { normalizePhone, getPhoneVariants } from '@/lib/utils/phone'
@@ -47,6 +49,7 @@ export interface OrderRow {
   rex_label_url?:       string | null
   is_stopdesk?:         boolean
   stop_desk_cause?:     string | null
+  points_redeemed?:     number
   created_at:          string
   order_items?:        OrderItemRow[]
 }
@@ -58,6 +61,7 @@ export interface CreateOrderInput {
   city:               string
   address:            string
   paymentMethod:      string
+  userId?:            string | null
   promoCodeId?:       string
   discountAmount?:    number
   giftCardCode?:      string
@@ -237,7 +241,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   if (input.promoCodeId) {
     const { data: promo } = await supabase
       .from('promo_codes')
-      .select('discount_type, discount_value, min_order, max_uses, uses_count, expires_at, is_active')
+      .select('discount_type, discount_value, min_order, max_uses, uses_count, expires_at, is_active, one_per_buyer')
       .eq('id', input.promoCodeId)
       .single()
     if (
@@ -247,6 +251,36 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       !(promo.max_uses !== null && promo.uses_count >= promo.max_uses) &&
       computedSubtotal >= (promo.min_order ?? 0)
     ) {
+      // Enforce one-per-buyer: authenticated user_id when available, otherwise phone/email.
+      if (promo.one_per_buyer) {
+        const normalizedPhone = normalizePhone(input.phone)
+        let usedOrder: { id: string } | null = null
+        if (input.userId) {
+          const { data } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('promo_code_id', input.promoCodeId)
+            .eq('user_id', input.userId)
+            .limit(1)
+            .maybeSingle()
+          usedOrder = data
+        } else {
+          const orFilters = [`phone.eq.${normalizedPhone}`]
+          if (input.email) orFilters.push(`email.eq.${input.email.toLowerCase()}`)
+          const { data } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('promo_code_id', input.promoCodeId)
+            .or(orFilters.join(','))
+            .limit(1)
+            .maybeSingle()
+          usedOrder = data
+        }
+        if (usedOrder) {
+          throw new Error(`Promo code already used`)
+        }
+      }
+
       discountAmount = promo.discount_type === 'percentage'
         ? Math.round((computedSubtotal * promo.discount_value) / 100)
         : Math.min(promo.discount_value, computedSubtotal)
@@ -269,7 +303,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // BUGFIX (C-01): Compute shipping server-side to prevent client-side manipulation.
   const shippingCost = await resolveShippingCost(input.wilaya, computedSubtotal, validatedItems, input.isStopDesk)
 
-  const pointsDeduction   = Math.max(0, input.pointsRedeemed   ?? 0)
+  // Guests are not allowed to earn or redeem loyalty points. If a guest payload
+  // includes pointsRedeemed we ignore it instead of giving a discount they did not earn.
+  const pointsRequested = Math.max(0, input.pointsRedeemed ?? 0)
+  const pointsDeduction = input.userId ? pointsRequested : 0
+  if (pointsRequested > 0 && !input.userId) {
+    console.warn('[createOrder] guest checkout attempted points redemption — ignored')
+  }
   const subtotalAfterDiscounts = computedSubtotal + shippingCost - discountAmount - pointsDeduction
 
   // Server-side gift card validation and atomic deduction (Bug-2 fix).
@@ -349,9 +389,9 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // to prevent race conditions if order creation fails after stock is reserved.
   // Bug-1 fix: check restoreStock() result and log failures to a dead-letter table.
   // Bug-9 fix: also roll back promo use count so a failed order does not consume a promo slot.
-  async function restoreStock() {
+  async function restoreStock(opts?: { skipStock?: boolean }) {
     if (decrementedItems.length === 0 && !(input.giftCardCode && giftCardDeduction > 0)) return
-    if (decrementedItems.length > 0) {
+    if (decrementedItems.length > 0 && !opts?.skipStock) {
       const { error: restoreErr } = await supabase.rpc('restore_product_stocks', { items: decrementedItems })
       if (restoreErr) {
         // Log to dead-letter table so ops can manually correct permanently over-decremented stock.
@@ -412,6 +452,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       is_stopdesk:      input.isStopDesk ?? (input.deliveryType === 'stop_desk'),
       delivery_type:    input.deliveryType ?? 'home',
       stop_desk_cause:  input.stopDeskCause ?? null,
+      points_redeemed:  pointsDeduction,
       ...(input.email ? { email: input.email } : {}),
       ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey } : {}),
     })
@@ -456,6 +497,23 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     throw itemsErr
   }
 
+  // ── 7. Redeem loyalty points (bound to this order) ─────────────────
+  // Deduct points only after the order row and items are committed. If the
+  // deduction fails (stale balance, concurrency), cancel the order and roll
+  // back everything else so the customer is not charged twice.
+  if (pointsDeduction > 0 && input.userId) {
+    const redeemed = await redeemPoints(input.userId, pointsDeduction, order.id)
+    if (!redeemed) {
+      // Roll back promo/gift-card but leave stock for the cancellation trigger.
+      await restoreStock({ skipStock: true })
+      await supabase
+        .from('orders')
+        .update({ status: 'cancelled', payment_status: 'failed' })
+        .eq('id', order.id)
+      throw new Error('Loyalty points redemption failed')
+    }
+  }
+
   return {
     id: order.id,
     total,
@@ -491,6 +549,16 @@ export async function cancelOrderAndRollback(
 ) {
   const supabase = createAdminClient()
 
+  // 0. Capture buyer context before the order is mutated.
+  const { data: orderCtx, error: ctxErr } = await supabase
+    .from('orders')
+    .select('user_id, points_redeemed')
+    .eq('id', orderId)
+    .single()
+  if (ctxErr) {
+    console.error('[cancelOrderAndRollback] failed to read order context', { orderId, error: ctxErr })
+  }
+
   // 1. Mark order cancelled only if it is still pending_payment (idempotent).
   // The trg_restore_stock_on_cancel trigger will restore product stock.
   const { error: cancelErr } = await supabase
@@ -523,6 +591,12 @@ export async function cancelOrderAndRollback(
       console.error('[cancelOrderAndRollback] promo rollback failed', { orderId, error: promoErr })
     }
   }
+
+  // 4. Restore loyalty points if the order had redeemed any.
+  const pointsRedeemed = orderCtx?.points_redeemed ?? 0
+  if (pointsRedeemed > 0 && orderCtx?.user_id) {
+    await restorePoints(orderCtx.user_id as string, Number(pointsRedeemed), orderId)
+  }
 }
 
 export async function getOrderById(id: string): Promise<OrderRow | null> {
@@ -537,7 +611,7 @@ export async function getOrderById(id: string): Promise<OrderRow | null> {
       'yalidine_tracking,yalidine_label_url,procolis_tracking,procolis_label_url,' +
       'zr_tracking,zr_label_url,colivraison_tracking,colivraison_label_url,' +
       'maystro_tracking,maystro_label_url,rex_tracking,rex_label_url,' +
-      'is_stopdesk,stop_desk_cause,created_at,' +
+      'is_stopdesk,stop_desk_cause,points_redeemed,created_at,' +
       'order_items(id,product_id,product_name,product_image,product_price,quantity,subtotal,vendor_id,selected_color)'
     )
     .eq('id', id)
@@ -575,7 +649,7 @@ export async function getAllOrders(
     'yalidine_tracking,yalidine_label_url,procolis_tracking,procolis_label_url,' +
     'zr_tracking,zr_label_url,colivraison_tracking,colivraison_label_url,' +
     'maystro_tracking,maystro_label_url,rex_tracking,rex_label_url,' +
-    'is_stopdesk,stop_desk_cause,created_at'
+    'is_stopdesk,stop_desk_cause,points_redeemed,created_at'
   const EXPLICIT_ITEM_COLS = 'id,product_id,product_name,product_image,product_price,quantity,subtotal,vendor_id,selected_color'
 
   const from = page * pageSize
@@ -697,6 +771,36 @@ export async function updateVendorOrderStatus(
     .update({ status })
     .eq('id', item.order_id)
   if (error) throw error
+}
+
+export async function recordFinancialTransaction(params: {
+  orderId: string
+  amount: number
+  currency?: string
+  statusBefore?: string | null
+  statusAfter?: string
+  paymentStatusBefore?: string | null
+  paymentStatusAfter?: string
+  paymentMethod?: string | null
+  gatewayRef?: string | null
+  reason?: string
+}): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase.rpc('record_financial_transaction', {
+    p_order_id: params.orderId,
+    p_amount: params.amount,
+    p_currency: params.currency ?? 'DZD',
+    p_status_before: params.statusBefore ?? null,
+    p_status_after: params.statusAfter,
+    p_payment_status_before: params.paymentStatusBefore ?? null,
+    p_payment_status_after: params.paymentStatusAfter,
+    p_payment_method: params.paymentMethod ?? null,
+    p_gateway_ref: params.gatewayRef ?? null,
+    p_reason: params.reason ?? '',
+  })
+  if (error) {
+    logger.error('[recordFinancialTransaction] failed', { orderId: params.orderId, error: error.message })
+  }
 }
 
 export async function updateDeliveryOutcome(

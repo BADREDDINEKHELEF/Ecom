@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import {
   getSellerSessions, revokeSellerSession, revokeAllSellerSessions,
 } from '@/lib/auth/sellerSessions'
@@ -12,37 +12,39 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // GET /api/seller/sessions — list active sessions for the current user
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'seller_sessions_list')
-  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 }))
 
-  const supabase = createRouteClient(req)
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   try {
     const sessions = await getSellerSessions(user.id)
-    return NextResponse.json(sessions)
+    return copyCookies(response, NextResponse.json(sessions))
   } catch (err) {
     logger.error('[GET /api/seller/sessions]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 // DELETE /api/seller/sessions?id=<sessionId|all> — revoke one or all sessions
 export async function DELETE(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'session_revoke')
-  if (!rl.allowed) return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 })
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 }))
 
-  const supabase = createRouteClient(req)
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   const { searchParams } = new URL(req.url)
   const sessionId = searchParams.get('id')
 
-  if (!sessionId) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  if (!sessionId) return copyCookies(response, NextResponse.json({ error: 'id required' }, { status: 400 }))
 
   try {
     if (sessionId === 'all') {
@@ -54,15 +56,15 @@ export async function DELETE(req: NextRequest) {
         ipAddress: ip,
         result:    'success',
       })
-      return NextResponse.json({ ok: true })
+      return copyCookies(response, NextResponse.json({ ok: true }))
     }
 
     if (!UUID_RE.test(sessionId)) {
-      return NextResponse.json({ error: 'Invalid session id' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid session id' }, { status: 400 }))
     }
 
     const ok = await revokeSellerSession(user.id, sessionId)
-    if (!ok) return NextResponse.json({ error: 'Session introuvable' }, { status: 404 })
+    if (!ok) return copyCookies(response, NextResponse.json({ error: 'Session introuvable' }, { status: 404 }))
 
     void logSecurityEvent({
       actorType: 'seller',
@@ -73,9 +75,9 @@ export async function DELETE(req: NextRequest) {
       result:    'success',
     })
 
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[DELETE /api/seller/sessions]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

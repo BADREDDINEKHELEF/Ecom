@@ -39,19 +39,53 @@ export async function awardPoints(userId: string, orderId: string, orderTotal: n
   }
 }
 
-export async function redeemPoints(userId: string, points: number): Promise<boolean> {
+export async function redeemPoints(
+  userId: string,
+  points: number,
+  orderId?: string,
+  reason?: string
+): Promise<boolean> {
   if (points <= 0) return false
   try {
     const supabase = createAdminClient()
     // Atomic UPDATE WHERE points_balance >= points via RPC — no separate read, no race window.
-    const { data, error } = await supabase.rpc('redeem_loyalty_points', {
-      p_user_id: userId,
-      p_points:  points,
-    })
+    // The order-bound variant writes order_id into points_transactions so the deduction is
+    // auditable and cannot be double-spent across retries.
+    const { data, error } = orderId
+      ? await supabase.rpc('redeem_loyalty_points_for_order', {
+          p_user_id:  userId,
+          p_points:   points,
+          p_order_id: orderId,
+          p_reason:   reason ?? 'Utilisation en caisse',
+        })
+      : await supabase.rpc('redeem_loyalty_points', {
+          p_user_id: userId,
+          p_points:  points,
+        })
     if (error) throw error
     return Boolean(data)
   } catch (err) {
     logger.error('[loyalty] redeemPoints failed', { error: err instanceof Error ? err.message : String(err) })
     return false
+  }
+}
+
+export async function restorePoints(
+  userId: string,
+  points: number,
+  orderId: string,
+  reason?: string
+): Promise<void> {
+  if (points <= 0) return
+  try {
+    const supabase = createAdminClient()
+    await supabase.rpc('restore_loyalty_points', {
+      p_user_id:  userId,
+      p_points:   points,
+      p_order_id: orderId,
+      p_reason:   reason ?? 'Remboursement points - annulation commande',
+    })
+  } catch (err) {
+    logger.error('[loyalty] restorePoints failed', { error: err instanceof Error ? err.message : String(err) })
   }
 }

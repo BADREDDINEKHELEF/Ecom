@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { maskPhone, maskEmail } from '@/lib/utils/mask'
@@ -12,18 +12,19 @@ import { getClientIp } from '@/lib/utils/ip'
 //   cancelled  — orders that contain this vendor's items and have status=cancelled
 //   abandoned  — recent abandoned_checkouts (store-wide, last 30 days)
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'cancelled_abandoned', 60, 60)
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
+  ))
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   const admin = createAdminClient()
   const since = new Date()
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
       abandonedRows = []
     }
 
-    return NextResponse.json({
+    return copyCookies(response, NextResponse.json({
       cancelled: cancelled ?? [],
       abandoned: (abandonedRows ?? []).map((r) => ({
         sessionId: r.session_id,
@@ -96,11 +97,11 @@ export async function GET(req: NextRequest) {
         cartTotal: r.cart_total,
         updatedAt: r.updated_at,
       })),
-    })
+    }))
   } catch (err) {
     logger.error('[GET /api/seller/cancelled-and-abandoned]', {
       error: err instanceof Error ? err.message : String(err),
     })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

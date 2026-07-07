@@ -666,6 +666,73 @@ describe('SATIM payment callback — security source audit', () => {
   })
 })
 
+// ── Loyalty points order binding ────────────────────────────────────────────
+
+describe('Loyalty points — order-bound redemption', () => {
+  it('createOrder ignores pointsRedeemed for guests', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../lib/supabase/orders.ts'), 'utf-8')
+    expect(src).toContain('Guests are not allowed to earn or redeem loyalty points')
+    expect(src).toContain('input.userId ? pointsRequested : 0')
+  })
+
+  it('redeemPoints passes orderId to the order-bound RPC', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../lib/loyalty.ts'), 'utf-8')
+    expect(src).toContain('redeem_loyalty_points_for_order')
+    expect(src).toContain('p_order_id: orderId')
+  })
+
+  it('cancelOrderAndRollback restores redeemed points', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../lib/supabase/orders.ts'), 'utf-8')
+    expect(src).toContain('restorePoints')
+    expect(src).toContain('points_redeemed')
+  })
+})
+
+// ── Promo one-per-buyer enforcement ─────────────────────────────────────────
+
+describe('Promo codes — one per buyer enforcement', () => {
+  it('validatePromoCode checks user_id for authenticated buyers', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../lib/supabase/promo.ts'), 'utf-8')
+    expect(src).toContain(".eq('user_id', userId)")
+  })
+
+  it('validatePromoCode falls back to phone/email for guests', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../lib/supabase/promo.ts'), 'utf-8')
+    expect(src).toContain('phone.eq.')
+    expect(src).toContain('email.eq.')
+  })
+
+  it('promo validate endpoint accepts a phone for guest one-per-buyer checks', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../app/api/promo/validate/route.ts'), 'utf-8')
+    expect(src).toContain('phone:')
+    expect(src).toContain('normalizePhone')
+  })
+})
+
+// ── Financial transactions ledger source audit ──────────────────────────────
+
+describe('Financial transactions ledger', () => {
+  it('database migration creates financial_transactions table', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../../supabase/migration_055_payment_integrity.sql'), 'utf-8')
+    expect(src).toContain('CREATE TABLE IF NOT EXISTS public.financial_transactions')
+    expect(src).toContain('record_financial_transaction')
+  })
+})
+
 // ── Order status state machine ──────────────────────────────────────────────
 
 describe('Seller order status transitions', () => {

@@ -8,15 +8,17 @@
  * last_seen_at fresh. Use the 30-minute debounce to avoid a DB write per request.
  */
 
-import { createHash } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-/** Stable opaque fingerprint — same UA+IP always yields same hash. */
-export function deviceHash(userAgent: string, ip: string): string {
-  return createHash('sha256')
-    .update(`${userAgent}||${ip}`)
-    .digest('hex')
-    .slice(0, 16)
+/** Stable opaque fingerprint — same UA+IP always yields same hash.
+ *  Uses the Web Crypto API so it works in both Node.js and Edge Runtime.
+ */
+export async function deviceHash(userAgent: string, ip: string): Promise<string> {
+  const input = `${userAgent}||${ip}`
+  const encoder = new TextEncoder()
+  const buffer = await crypto.subtle.digest('SHA-256', encoder.encode(input))
+  const bytes = Array.from(new Uint8Array(buffer))
+  return bytes.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16)
 }
 
 export interface SellerSession {
@@ -28,6 +30,7 @@ export interface SellerSession {
   created_at:   string
   is_revoked:   boolean
   revoked_at:   string | null
+  expires_at:   string | null
 }
 
 /**
@@ -43,7 +46,7 @@ export async function upsertSellerSession(params: {
 }): Promise<void> {
   try {
     const admin = createAdminClient()
-    const hash  = deviceHash(params.userAgent, params.ip)
+    const hash  = await deviceHash(params.userAgent, params.ip)
     const now   = new Date().toISOString()
 
     await admin.from('seller_sessions').upsert(
@@ -70,7 +73,7 @@ export async function getSellerSessions(userId: string): Promise<SellerSession[]
   const admin = createAdminClient()
   const { data } = await admin
     .from('seller_sessions')
-    .select('id, device_hash, ip_address, user_agent, last_seen_at, created_at, is_revoked, revoked_at')
+    .select('id, device_hash, ip_address, user_agent, last_seen_at, created_at, is_revoked, revoked_at, expires_at')
     .eq('user_id', userId)
     .order('last_seen_at', { ascending: false })
     .limit(20)
@@ -105,20 +108,23 @@ export async function revokeAllSellerSessions(userId: string): Promise<void> {
 }
 
 /**
- * Returns true if the given device+user combination has an active (non-revoked) session.
+ * Returns true if the given device+user combination has a revoked or expired session.
  * Used to block requests from revoked devices without full Supabase re-auth.
  */
 export async function isSessionRevoked(userId: string, ua: string, ip: string): Promise<boolean> {
   const admin = createAdminClient()
-  const hash = deviceHash(ua, ip)
+  const hash = await deviceHash(ua, ip)
   const { data } = await admin
     .from('seller_sessions')
-    .select('is_revoked')
+    .select('is_revoked, revoked_at, expires_at')
     .eq('user_id', userId)
     .eq('device_hash', hash)
     .maybeSingle()
 
   // No session record → not revoked (new device, session tracking not yet active)
   if (!data) return false
-  return data.is_revoked === true
+  if (data.is_revoked === true) return true
+  if (data.revoked_at != null) return true
+  if (data.expires_at != null && new Date(data.expires_at) < new Date()) return true
+  return false
 }

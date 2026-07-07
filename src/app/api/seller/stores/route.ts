@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -25,16 +25,17 @@ const PatchStoreSchema = z.object({
 
 // GET /api/seller/stores — list all stores owned by the authenticated user
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'stores_read', 60, 60)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
+    ))
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -44,40 +45,41 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (error) throw error
-    return NextResponse.json({ stores: data ?? [] })
+    return copyCookies(response, NextResponse.json({ stores: data ?? [] }))
   } catch (err) {
     logger.error('[GET /api/seller/stores]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 // POST /api/seller/stores — create a new store for the authenticated user
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'stores_write', 5, 3600)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
+    ))
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const userRl = await checkUserRateLimit(user.id, 'stores_write', 3, 3600)
-    if (!userRl.allowed) return NextResponse.json(
+    if (!userRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Limite atteinte. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    ))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = CreateStoreSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'store_name and store_slug are required' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'store_name and store_slug are required' }, { status: 400 }))
     }
 
     const admin = createAdminClient()
@@ -109,10 +111,10 @@ export async function POST(req: NextRequest) {
     const maxStores = planLimits[(subData as { plan_id: string } | null)?.plan_id ?? 'basic'] ?? 1
 
     if ((count ?? 0) >= maxStores) {
-      return NextResponse.json({
+      return copyCookies(response, NextResponse.json({
         error: `Your plan allows up to ${maxStores} store${maxStores === 1 ? '' : 's'}. Upgrade to add more.`,
         upgradeRequired: true,
-      }, { status: 403 })
+      }, { status: 403 }))
     }
 
     // Check slug uniqueness case-insensitively
@@ -123,7 +125,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (existing) {
-      return NextResponse.json({ error: 'This store URL is already taken.' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'This store URL is already taken.' }, { status: 409 }))
     }
 
     const { data: newStore, error: insertErr } = await admin
@@ -145,34 +147,35 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (insertErr) throw insertErr
-    return NextResponse.json({ store: newStore }, { status: 201 })
+    return copyCookies(response, NextResponse.json({ store: newStore }, { status: 201 }))
   } catch (err) {
     logger.error('[POST /api/seller/stores]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 // PATCH /api/seller/stores — update a store (must be owned by user)
 export async function PATCH(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'stores_write', 20, 60)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
+    ))
 
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = PatchStoreSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'id is required' }, { status: 400 }))
 
     const admin = createAdminClient()
 
@@ -184,7 +187,7 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle()
 
     if (!store || (store.user_id !== user.id && store.owner_id !== user.id)) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+      return copyCookies(response, NextResponse.json({ error: 'Not authorized' }, { status: 403 }))
     }
 
     const updates: Record<string, unknown> = {}
@@ -196,9 +199,9 @@ export async function PATCH(req: NextRequest) {
 
     const { error } = await admin.from('vendors').update(updates).eq('id', parsed.data.id)
     if (error) throw error
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/stores]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

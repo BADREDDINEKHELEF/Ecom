@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { getVendorContext } from '@/lib/auth/vendorAuth'
@@ -17,28 +17,29 @@ const CollectSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'analytics_collect')
-  if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ ok: false }, { status: 429 }))
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ ok: false }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ ok: false }, { status: 400 }))
   }
 
   const parsed = CollectSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
+  if (!parsed.success) return copyCookies(response, NextResponse.json({ ok: false }, { status: 400 }))
 
   // Optionally resolve authenticated seller's vendor context
   let userId: string | null = null
   let vendorId: string | null = null
   try {
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user } } = await supabase.auth.getUser()
     userId = user?.id ?? null
 
     // Resolve vendor context to get the authenticated seller's vendor ID
-    const vendorCtx = await getVendorContext(req)
+    const vendorCtx = await getVendorContext(req, response)
     if (vendorCtx) {
       // If vendor_id was provided in request body, verify ownership or reject
       if (parsed.data.vendor_id && parsed.data.vendor_id !== vendorCtx.vendor.id) {
@@ -66,5 +67,5 @@ export async function POST(req: NextRequest) {
      metadata:    parsed.data.metadata ?? {},
    })
   // Fire-and-forget — always return 200 to caller
-  return NextResponse.json({ ok: true })
+  return copyCookies(response, NextResponse.json({ ok: true }))
 }

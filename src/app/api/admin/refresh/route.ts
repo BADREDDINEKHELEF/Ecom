@@ -10,7 +10,8 @@ import { rotateSessionJti, createSession } from '@/lib/auth/sessions'
 
 // POST /api/admin/refresh — re-issues the admin cookie without a password check.
 // Only works when the current token is valid (not expired, not tampered, not revoked).
-// The admin UI calls this at the 1h50m mark to maintain a seamless 2-hour session.
+// The admin UI calls this at the 1h36m mark (80% of the 2-hour lifetime) to
+// maintain a seamless 2-hour session.
 //
 // Rotation strategy:
 //   1. Old JTI → revocation blocklist (old token is immediately dead)

@@ -1,10 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag, RotateCcw,
   Truck, Download, RefreshCw, AlertTriangle, BarChart2,
@@ -14,6 +10,7 @@ import {
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
 import { useRTL } from '@/lib/store/langStore'
+import { useRecharts } from '@/lib/charts/useRecharts'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import type { SellerAnalytics } from '@/lib/supabase/analytics'
 
@@ -239,7 +236,7 @@ function generateInsights(data: SellerAnalytics, days: number) {
 }
 
 // ── Page ─────────────────────────────────────────────────────
-export default function SellerAnalyticsPage() {
+function SellerAnalyticsContent() {
   const { vendor, loading, signOut } = useSellerAuth()
   const isRTL = useRTL()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -261,6 +258,11 @@ export default function SellerAnalyticsPage() {
   }, [vendor, days])
 
   useEffect(() => { load() }, [load])
+
+  const {
+    AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  } = useRecharts()
 
   const exportCSV = () => {
     if (!data) return
@@ -878,5 +880,19 @@ export default function SellerAnalyticsPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function SellerAnalyticsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <SellerAnalyticsContent />
+    </Suspense>
   )
 }

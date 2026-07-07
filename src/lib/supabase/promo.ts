@@ -1,4 +1,5 @@
 import { createAdminClient } from './admin'
+import { normalizePhone } from '@/lib/utils/phone'
 
 export interface PromoCode {
   id:             string
@@ -16,7 +17,9 @@ export interface PromoCode {
 export async function validatePromoCode(
   code: string,
   orderTotal: number,
-  userId?: string
+  userId?: string,
+  phone?: string,
+  email?: string | null
 ): Promise<
   | { valid: true; promo: PromoCode; discountAmount: number }
   | { valid: false; message: string }
@@ -39,14 +42,31 @@ export async function validatePromoCode(
   if (promo.max_uses !== null && promo.uses_count >= promo.max_uses)
     return { valid: false, message: 'maxed' }
 
-  if (promo.one_per_buyer && userId) {
-    const { data: usedOrder } = await supabase
-      .from('orders')
-      .select('id')
-      .eq('promo_code_id', promo.id)
-      .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle()
+  if (promo.one_per_buyer) {
+    let usedOrder: { id: string } | null = null
+    if (userId) {
+      const { data } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('promo_code_id', promo.id)
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle()
+      usedOrder = data
+    } else if (phone || email) {
+      const normalizedPhone = phone ? normalizePhone(phone) : null
+      const filters: string[] = []
+      if (normalizedPhone) filters.push(`phone.eq.${normalizedPhone}`)
+      if (email) filters.push(`email.eq.${email.toLowerCase()}`)
+      const { data } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('promo_code_id', promo.id)
+        .or(filters.join(','))
+        .limit(1)
+        .maybeSingle()
+      usedOrder = data
+    }
     if (usedOrder) {
       return { valid: false, message: 'already_used' }
     }

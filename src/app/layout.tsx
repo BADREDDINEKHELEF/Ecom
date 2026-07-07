@@ -1,21 +1,10 @@
 import type { Metadata } from 'next'
-import { Inter, Cairo } from 'next/font/google'
 import './globals.css'
-import Footer from '@/components/layout/Footer'
 import Header from '@/components/layout/Header'
-import CartSidebar from '@/components/shop/CartSidebar'
-import Toaster from '@/components/ui/Toast'
 import RTLWrapper from '@/components/layout/RTLWrapper'
-import ScrollToTop from '@/components/ui/ScrollToTop'
 import HideOnStore from '@/components/layout/HideOnStore'
-import BottomNav from '@/components/layout/BottomNav'
+import ClientShell from '@/components/layout/ClientShell'
 import AnalyticsScripts from '@/components/analytics/AnalyticsScripts'
-import PageViewTracker from '@/components/analytics/PageViewTracker'
-import PixelLoadingBar from '@/components/effects/PixelLoadingBar'
-import NavigationEvents from '@/components/effects/NavigationEvents'
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
-const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ecom-dz.net'),
@@ -55,8 +44,14 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" dir="ltr" className={`${inter.variable} ${cairo.variable}`}>
+    <html lang="fr" dir="ltr">
       <head>
+        <style>{`
+          :root {
+            --font-inter: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --font-cairo: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          }
+        `}</style>
         <meta name="theme-color" content="#4f46e5" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -121,16 +116,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <RTLWrapper>
-          <CartSidebar />
-          <Toaster />
           <HideOnStore><Header /></HideOnStore>
           <main className="pb-16 md:pb-0">{children}</main>
-          <ScrollToTop />
-          <HideOnStore><Footer /></HideOnStore>
-          <BottomNav />
-          <PageViewTracker />
-          <PixelLoadingBar />
-          <NavigationEvents />
+          <ClientShell />
         </RTLWrapper>
       </body>
     </html>

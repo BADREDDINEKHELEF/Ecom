@@ -4,6 +4,64 @@ import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { logger } from '@/lib/logger'
 import { verifyOtpHash } from '@/lib/auth/otp'
 
+type OtpRecord = {
+  id: string
+  otp_hash: string
+  expires_at: string
+  used: boolean
+  purpose: string | null
+}
+
+async function findActiveOtp(supabase: ReturnType<typeof createAdminClient>, email: string, purpose: string): Promise<{ record: OtpRecord | null; queryErr: Error | null }> {
+  let record: OtpRecord | null = null
+  let queryErr: Error | null = null
+
+  const { data: dataEmail, error: errEmail } = await supabase
+    .from('password_reset_otps')
+    .select('id, otp_hash, expires_at, used, purpose')
+    .eq('email', email)
+    .eq('used', false)
+    .eq('purpose', purpose)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const isColumnMissing = errEmail && (
+    errEmail.code === '42703' ||
+    String(errEmail.message).includes('column')
+  )
+
+  if (isColumnMissing) {
+    const { data: dataPhone, error: errPhone } = await supabase
+      .from('password_reset_otps')
+      .select('id, otp_hash, expires_at, used, purpose')
+      .eq('phone', email)
+      .eq('used', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    record = dataPhone as OtpRecord | null
+    queryErr = errPhone ? new Error(`Database query failed: ${errPhone.message} (code: ${errPhone.code})`) : null
+  } else if (errEmail) {
+    queryErr = new Error(`Database query failed: ${errEmail.message} (code: ${errEmail.code})`)
+  } else if (dataEmail) {
+    record = dataEmail as OtpRecord
+  } else {
+    const { data: dataPhone, error: errPhone } = await supabase
+      .from('password_reset_otps')
+      .select('id, otp_hash, expires_at, used, purpose')
+      .eq('phone', email)
+      .eq('used', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    record = dataPhone as OtpRecord | null
+    queryErr = errPhone ? new Error(`Database query failed: ${errPhone.message} (code: ${errPhone.code})`) : null
+  }
+
+  return { record, queryErr }
+}
+
 /**
  * Signs out all active Supabase sessions for a user via the GoTrue admin REST
  * API. Called after a successful password reset so a compromised session cannot
@@ -56,58 +114,9 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient()
 
-    let record = null
-    let queryErr = null
-
-    // Try to query by email column first
-    const { data: dataEmail, error: errEmail } = await supabase
-      .from('password_reset_otps')
-      .select('id, otp_hash, expires_at, used')
-      .eq('email', email)
-      .eq('used', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const isEmailColumnMissing = errEmail && (
-      errEmail.code === '42703' ||
-      String(errEmail.message).includes('column') ||
-      String(errEmail.message).includes('email')
-    )
-
-    if (isEmailColumnMissing) {
-      // Fallback: query by phone column
-      const { data: dataPhone, error: errPhone } = await supabase
-        .from('password_reset_otps')
-        .select('id, otp_hash, expires_at, used')
-        .eq('phone', email)
-        .eq('used', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      record = dataPhone
-      queryErr = errPhone
-    } else if (errEmail) {
-      queryErr = errEmail
-    } else if (dataEmail) {
-      record = dataEmail
-    } else {
-      // Column exists but returned no record. Fall back to phone column
-      // in case the OTP was created with phone only.
-      const { data: dataPhone, error: errPhone } = await supabase
-        .from('password_reset_otps')
-        .select('id, otp_hash, expires_at, used')
-        .eq('phone', email)
-        .eq('used', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      record = dataPhone
-      queryErr = errPhone
-    }
-
+    const { record, queryErr } = await findActiveOtp(supabase, email, 'password_reset')
     if (queryErr) {
-      throw new Error(`Database query failed: ${queryErr.message} (code: ${queryErr.code})`)
+      throw queryErr
     }
 
     if (!record) {
@@ -132,9 +141,6 @@ export async function POST(req: NextRequest) {
       vendor = vData
     } else {
       // Fallback: look up in auth.users by email.
-      // getUserByEmail is unavailable in this SDK version, so query the GoTrue
-      // admin REST endpoint with an email filter — this is an O(1) indexed
-      // lookup and avoids scanning the full users table.
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
       const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
       const userLookupRes = await fetch(

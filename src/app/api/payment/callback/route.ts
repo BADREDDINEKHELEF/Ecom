@@ -8,6 +8,7 @@ import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
+import { recordFinancialTransaction } from '@/lib/supabase/orders'
 
 // ── Bug 6 fix: satimId format validator ──────────────────────────────────────
 const SATIM_ID_RE = /^[0-9a-f-]{8,36}$/i
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data: order, error: orderErr } = await createAdminClient()
       .from('orders')
-      .select('id, status, payment_status, total, satim_order_id, email, full_name, wilaya, is_stopdesk, stop_desk_cause')
+      .select('id, status, payment_status, total, payment_method, satim_order_id, email, full_name, wilaya, is_stopdesk, stop_desk_cause')
       .eq('id', orderId)
       .single()
 
@@ -147,7 +148,7 @@ export async function GET(req: NextRequest) {
 
     const status = await satimGetOrderStatus(satimId)
     if (status.orderStatus !== 2) {
-      await markOrderFailed(orderId)
+      await markOrderFailed(orderId, order, 'Payment not paid per Satim')
       // Bug 2 fix: use `result` only as a display hint here, never as a trigger for state mutation.
       const reason = (result === 'fail' || result === 'failure') ? 'payment_declined' : 'not_paid'
       return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=${reason}`)
@@ -164,12 +165,12 @@ export async function GET(req: NextRequest) {
         expected: expectedCentimes,
         received: status.amount,
       })
-      await markOrderFailed(orderId)
+      await markOrderFailed(orderId, order, 'Amount mismatch')
       return NextResponse.redirect(`${appUrl}/payment/failure?orderId=${orderId}&reason=amount_mismatch`)
     }
 
     await satimConfirmOrder(satimId)
-    await markOrderPaid(orderId, satimId)
+    await markOrderPaid(orderId, satimId, order)
 
     if (order.email) {
       const { count } = await createAdminClient()
@@ -196,7 +197,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function markOrderPaid(orderId: string, satimOrderId: string) {
+async function markOrderPaid(
+  orderId: string,
+  gatewayRef: string,
+  order: { total: number; payment_method?: string | null; status?: string | null; payment_status?: string | null }
+) {
   const supabase = createAdminClient()
   // Bug 4 fix: match against 'processing_payment' because the atomic claim
   // already transitioned the order out of 'pending_payment'. The WHERE guard
@@ -206,7 +211,7 @@ async function markOrderPaid(orderId: string, satimOrderId: string) {
     .update({
       status: 'confirmed',
       payment_status: 'paid',
-      satim_order_id: satimOrderId,
+      satim_order_id: gatewayRef,
     })
     .eq('id', orderId)
     .eq('status', 'processing_payment')
@@ -214,9 +219,25 @@ async function markOrderPaid(orderId: string, satimOrderId: string) {
     logger.error('[payment/callback] markOrderPaid failed', { orderId, error: error.message })
     throw new Error(`Failed to confirm order ${orderId}: ${error.message}`)
   }
+
+  await recordFinancialTransaction({
+    orderId,
+    amount: order.total,
+    statusBefore: order.status ?? undefined,
+    statusAfter: 'confirmed',
+    paymentStatusBefore: order.payment_status ?? undefined,
+    paymentStatusAfter: 'paid',
+    paymentMethod: order.payment_method,
+    gatewayRef,
+    reason: 'Payment confirmed via Satim callback',
+  })
 }
 
-async function markOrderFailed(orderId: string) {
+async function markOrderFailed(
+  orderId: string,
+  order?: { total: number; payment_method?: string | null; status?: string | null; payment_status?: string | null },
+  reason = 'Payment failed'
+) {
   const supabase = createAdminClient()
   // Bug 4 fix: match against 'processing_payment' because after the atomic claim
   // the order is no longer in 'pending_payment'. The IN filter prevents
@@ -226,7 +247,23 @@ async function markOrderFailed(orderId: string) {
     .update({ status: 'cancelled', payment_status: 'failed' })
     .eq('id', orderId)
     .in('status', ['pending_payment', 'processing_payment'])
-  if (error) logger.error('[payment/callback] markOrderFailed failed', { orderId, error: error.message })
+  if (error) {
+    logger.error('[payment/callback] markOrderFailed failed', { orderId, error: error.message })
+    return
+  }
+
+  if (order) {
+    await recordFinancialTransaction({
+      orderId,
+      amount: order.total,
+      statusBefore: order.status ?? undefined,
+      statusAfter: 'cancelled',
+      paymentStatusBefore: order.payment_status ?? undefined,
+      paymentStatusAfter: 'failed',
+      paymentMethod: order.payment_method,
+      reason,
+    })
+  }
 }
 
 // ── BaridiMob push webhook (POST) ────────────────────────────────────────────
@@ -275,7 +312,7 @@ export async function POST(req: NextRequest) {
   try {
     const { data: order, error: orderErr } = await createAdminClient()
       .from('orders')
-      .select('id, status, payment_status, total, email, phone, full_name, wilaya, is_stopdesk, stop_desk_cause')
+      .select('id, status, payment_status, total, payment_method, email, phone, full_name, wilaya, is_stopdesk, stop_desk_cause')
       .eq('id', orderId)
       .single()
 
@@ -307,7 +344,19 @@ export async function POST(req: NextRequest) {
     const verification = await baridimobVerifyPayment(paymentId)
     if (!verification.paid) {
       logger.info('[payment/callback/baridimob] payment not paid per gateway', { orderId, paymentId, status: verification.status })
-      await markOrderFailed(orderId)
+      await markOrderFailed(orderId, order, 'Payment not paid per BaridiMob')
+      return NextResponse.json({ received: true })
+    }
+
+    // Verify reconciled amount matches order total before marking paid.
+    if (verification.amount == null || Math.abs(verification.amount - order.total) > 1) {
+      logger.error('[payment/callback/baridimob] amount mismatch', {
+        orderId,
+        paymentId,
+        expected: order.total,
+        received: verification.amount,
+      })
+      await markOrderFailed(orderId, order, 'BaridiMob amount mismatch')
       return NextResponse.json({ received: true })
     }
 
@@ -324,6 +373,18 @@ export async function POST(req: NextRequest) {
       logger.error('[payment/callback/baridimob] confirm update failed', { orderId, paymentId, error: confirmErr.message })
       throw new Error(`Failed to confirm BaridiMob order ${orderId}: ${confirmErr.message}`)
     }
+
+    await recordFinancialTransaction({
+      orderId,
+      amount: order.total,
+      statusBefore: order.status ?? undefined,
+      statusAfter: 'confirmed',
+      paymentStatusBefore: order.payment_status ?? undefined,
+      paymentStatusAfter: 'paid',
+      paymentMethod: order.payment_method,
+      gatewayRef: paymentId,
+      reason: 'Payment confirmed via BaridiMob webhook',
+    })
 
     if (order.email) {
       const { count } = await createAdminClient()

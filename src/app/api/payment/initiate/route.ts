@@ -9,6 +9,7 @@ import { getClientIp } from '@/lib/utils/ip'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
 import { logger } from '@/lib/logger'
 import { computeCheckToken } from '@/lib/payment/checkToken'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 
 const OrderItemSchema = z.object({
   productId:    z.string().min(1),
@@ -42,7 +43,7 @@ const InitiateSchema = z.object({
   stopDeskCause:    z.string().max(300).optional().nullable(),
   items:            z.array(OrderItemSchema).min(1).max(50),
   selectedColor:    z.string().max(100).nullable().optional(),
-  idempotency_key:  z.string().uuid().optional().nullable(),
+  idempotency_key:  z.string().uuid(),
 })
 
 function normalizePhone(p: string) {
@@ -50,21 +51,22 @@ function normalizePhone(p: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkCheckoutRateLimit(ip)
   if (!rl.allowed) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    return copyCookies(response, NextResponse.json({ error: 'Too many requests' }, { status: 429 }))
   }
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
   }
 
   const parsed = InitiateSchema.safeParse(body)
   if (!parsed.success) {
     const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
-    return NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Validation failed', ...(details && { details }) }, { status: 400 }))
   }
 
   const {
@@ -87,14 +89,17 @@ export async function POST(req: NextRequest) {
   const phone = normalizePhone(rest.phone)
   const buyerEmail = rawEmail ?? null
 
+  const routeClient = createRouteClient(req, response)
+  const { data: { user } } = await routeClient.auth.getUser()
+
   // Verify gateway config BEFORE creating an order — avoids orphaned orders
   // that consume stock and increment promo uses when the gateway is unavailable.
   if (paymentMethod === 'baridimob') {
     if (!baridimobConfigured()) {
-      return NextResponse.json({ error: 'BaridiMob not configured' }, { status: 503 })
+      return copyCookies(response, NextResponse.json({ error: 'BaridiMob not configured' }, { status: 503 }))
     }
   } else if (!satimConfigured()) {
-    return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
+    return copyCookies(response, NextResponse.json({ error: 'Online payment not configured' }, { status: 503 }))
   }
 
   try {
@@ -124,7 +129,8 @@ export async function POST(req: NextRequest) {
       stopDeskCause: stopDeskCause ?? null,
       email:    buyerEmail,
       status: 'pending_payment',
-      idempotencyKey: idempotencyKey ?? null,
+      userId: user?.id ?? null,
+      idempotencyKey,
     })
 
     // Use the server-computed total (DZD) returned by createOrder — never trust client amounts.
@@ -134,7 +140,7 @@ export async function POST(req: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
     if (!appUrl) {
       logger.error('[POST /api/payment/initiate] NEXT_PUBLIC_APP_URL env var is not set')
-      return NextResponse.json({ error: 'Payment gateway not configured' }, { status: 503 })
+      return copyCookies(response, NextResponse.json({ error: 'Payment gateway not configured' }, { status: 503 }))
     }
     const orderAmountCentimes = Math.round(total * 100)
 
@@ -189,7 +195,7 @@ export async function POST(req: NextRequest) {
           description: `Commande StoreDz #${orderId.slice(0, 8)}`,
           callbackUrl: `${appUrl}/api/payment/callback`,
         })
-        return NextResponse.json({ orderId, checkToken, qrCodeData: bmResult.qrCodeData, deepLink: bmResult.deepLink, expiresAt: bmResult.expiresAt, method: 'baridimob' }, { status: 201 })
+        return copyCookies(response, NextResponse.json({ orderId, checkToken, qrCodeData: bmResult.qrCodeData, deepLink: bmResult.deepLink, expiresAt: bmResult.expiresAt, method: 'baridimob' }, { status: 201 }))
       }
 
       // CIB / Edahabia / Card → Satim
@@ -202,7 +208,7 @@ export async function POST(req: NextRequest) {
         language:       'fr',
       })
 
-      return NextResponse.json({ orderId, checkToken, formUrl: satimResult.formUrl, satimOrderId: satimResult.satimOrderId, method: 'satim' }, { status: 201 })
+      return copyCookies(response, NextResponse.json({ orderId, checkToken, formUrl: satimResult.formUrl, satimOrderId: satimResult.satimOrderId, method: 'satim' }, { status: 201 }))
     } catch (gatewayErr) {
       // Bug 4 fix: cancel the orphaned order so stock and promo uses are released.
       // Bug audit fix: also restore gift-card balance and promo uses.
@@ -221,11 +227,11 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : 'Payment initiation failed'
     logger.error('[POST /api/payment/initiate]', { error: msg })
     if (msg.includes('stock') || msg.includes('Insufficient')) {
-      return NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 }))
     }
     if (msg.includes('not found') || msg.includes('not available') || msg.includes('no longer')) {
-      return NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 }))
     }
-    return NextResponse.json({ error: 'Une erreur est survenue.' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Une erreur est survenue.' }, { status: 500 }))
   }
 }

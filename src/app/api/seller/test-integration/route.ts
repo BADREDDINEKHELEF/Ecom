@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { getVendorByUserIdServer, getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -16,25 +16,26 @@ import { fireStorePurchaseCAPI } from '@/lib/meta/capi'
 import { getMetaConfigById } from '@/lib/meta/store'
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'test_integration', 15, 60)
-  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Too many requests' }, { status: 429 }))
 
-  const supabase = createRouteClient(req)
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   const userRl = await checkUserRateLimit(user.id, 'test_integration', 15, 60)
-  if (!userRl.allowed) return NextResponse.json({ error: 'Limit reached' }, { status: 429 })
+  if (!userRl.allowed) return copyCookies(response, NextResponse.json({ error: 'Limit reached' }, { status: 429 }))
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   let body: { integrationName?: string; action?: string; params?: { wilaya?: string } }
-  try { body = (await req.json()) as { integrationName?: string; action?: string; params?: { wilaya?: string } } } catch { return NextResponse.json({ error: 'Invalid body' }, { status: 400 }) }
+  try { body = (await req.json()) as { integrationName?: string; action?: string; params?: { wilaya?: string } } } catch { return copyCookies(response, NextResponse.json({ error: 'Invalid body' }, { status: 400 })) }
   const { integrationName, action, params } = body
 
-  if (!integrationName || !action) return NextResponse.json({ error: 'Missing integrationName or action' }, { status: 400 })
+  if (!integrationName || !action) return copyCookies(response, NextResponse.json({ error: 'Missing integrationName or action' }, { status: 400 }))
 
   const config = await getVendorDeliveryConfig(vendor.id)
   
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
         const apiId = config?.yalidine_api_id
         if (!token || !apiId) {
           await saveIntegrationHealth(vendor.id, 'yalidine', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await fetch('https://api.yalidine.app/v1/agencies/', {
@@ -76,14 +77,14 @@ export async function POST(req: NextRequest) {
           const status = res.status
           const resBody = await res.json().catch(() => ({}))
           await recordResult(ok, { status, error: ok ? null : `Yalidine API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('yalidine', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
         const token = config?.zr_token
         if (!token) {
           await saveIntegrationHealth(vendor.id, 'zr', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await fetch('https://www.zrexpress.dz/api/tarif/16', {
@@ -103,14 +104,14 @@ export async function POST(req: NextRequest) {
           const status = res.status
           const resBody = await res.json().catch(() => ({}))
           await recordResult(ok, { status, error: ok ? null : `ZR Express API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('zr', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
         const token = config?.maystro_token
         if (!token) {
           await saveIntegrationHealth(vendor.id, 'maystro', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await fetch('https://maystro-delivery.com/api/v1/shipping-prices/?wilaya=Alger', {
@@ -130,14 +131,14 @@ export async function POST(req: NextRequest) {
           const status = res.status
           const resBody = await res.json().catch(() => ({}))
           await recordResult(ok, { status, error: ok ? null : `Maystro API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('maystro', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
         const token = config?.procolis_token
         if (!token) {
           await saveIntegrationHealth(vendor.id, 'procolis', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await fetch('https://procolis.com/api_v2/tarif?Wilaya=Alger', {
@@ -157,14 +158,14 @@ export async function POST(req: NextRequest) {
           const status = res.status
           const resBody = await res.json().catch(() => ({}))
           await recordResult(ok, { status, error: ok ? null : `Procolis API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('procolis', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
         const token = config?.colivraison_token
         if (!token) {
           await saveIntegrationHealth(vendor.id, 'colivraison', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await fetch('https://api.colivraison.com/api/pricing?wilaya=Alger', {
@@ -184,14 +185,14 @@ export async function POST(req: NextRequest) {
           const status = res.status
           const resBody = await res.json().catch(() => ({}))
           await recordResult(ok, { status, error: ok ? null : `Colivraison API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('colivraison', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -200,7 +201,7 @@ export async function POST(req: NextRequest) {
         const token = config?.rex_token
         if (!token) {
           await saveIntegrationHealth(vendor.id, 'rex', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await fetch('https://rexlivraison.com/api/v1/rates?wilaya=Alger', {
@@ -211,14 +212,14 @@ export async function POST(req: NextRequest) {
           const status = res.status
           const resBody = await res.json().catch(() => ({}))
           await recordResult(ok, { status, error: ok ? null : `Rex API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('rex', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -227,16 +228,16 @@ export async function POST(req: NextRequest) {
         const token = config?.yassir_api_key
         if (!token) {
           await saveIntegrationHealth(vendor.id, 'yassir', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await yassirListParcels(token, 1)
           const ok = res !== null
           await recordResult(ok, { error: ok ? null : 'Yassir connection failed' })
-          return NextResponse.json({ ok, raw: res })
+          return copyCookies(response, NextResponse.json({ ok, raw: res }))
         }
         if (action === 'test_quote') {
-          return NextResponse.json({ error: 'Yassir does not support live quoting' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ error: 'Yassir does not support live quoting' }, { status: 400 }))
         }
         break
       }
@@ -246,20 +247,20 @@ export async function POST(req: NextRequest) {
         const tk = config?.ecom_api_token
         if (!key || !tk) {
           await saveIntegrationHealth(vendor.id, 'ecom', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const parcels = await ecomListParcels(key, tk, 1)
           const ok = parcels !== null
           await recordResult(ok, { error: ok ? null : 'Ecom API connection failed' })
-          return NextResponse.json({ ok, raw: parcels })
+          return copyCookies(response, NextResponse.json({ ok, raw: parcels }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('ecom', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -269,7 +270,7 @@ export async function POST(req: NextRequest) {
         const apiId = config?.apec_api_id
         if (!token || !apiId) {
           await saveIntegrationHealth(vendor.id, 'apec', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await fetch('https://api.apec.dz/v1/delivery-fees/?to_wilaya_name=Alger', {
@@ -280,14 +281,14 @@ export async function POST(req: NextRequest) {
           const status = res.status
           const resBody = await res.json().catch(() => ({}))
           await recordResult(ok, { status, error: ok ? null : `APEC API returned HTTP ${status}` })
-          return NextResponse.json({ ok, status, raw: resBody })
+          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
           const rate = await dispatchGetRate('apec', wilaya, config ?? undefined, false)
           const ok = !!rate
           await recordResult(ok, { error: ok ? null : 'Failed to fetch quote', quoteFee: rate?.homeDelivery, quoteResponse: rate })
-          return NextResponse.json({ ok, rate })
+          return copyCookies(response, NextResponse.json({ ok, rate }))
         }
         break
       }
@@ -297,7 +298,7 @@ export async function POST(req: NextRequest) {
         const config = await getMetaConfigById(vendor.id)
         if (!config?.enabled || !config.pixelId || !config.accessToken) {
           await saveIntegrationHealth(vendor.id, 'meta_capi', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'send_test_event') {
           const effectiveConfig = {
@@ -311,7 +312,7 @@ export async function POST(req: NextRequest) {
             clientUserAgent: 'Mozilla/5.0 (Test Sandbox)',
           })
           await recordResult(res.ok, { status: res.status, error: res.ok ? null : res.message })
-          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null })
+          return copyCookies(response, NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null }))
         }
         break
       }
@@ -324,7 +325,7 @@ export async function POST(req: NextRequest) {
 
         if (!pixelId || !rawToken) {
           await saveIntegrationHealth(vendor.id, 'tiktok_capi', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'send_test_event') {
           const res = await fireTikTokPurchase({
@@ -339,7 +340,7 @@ export async function POST(req: NextRequest) {
             clientUserAgent: 'Mozilla/5.0 (Test Sandbox)'
           })
           await recordResult(res.ok, { status: res.status, error: res.ok ? null : res.message })
-          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null })
+          return copyCookies(response, NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null }))
         }
         break
       }
@@ -352,7 +353,7 @@ export async function POST(req: NextRequest) {
 
         if (!gtagId || !rawSecret) {
           await saveIntegrationHealth(vendor.id, 'google_capi', { health_status: 'needs_configuration' })
-          return NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'send_test_event') {
           const res = await fireGA4Purchase({
@@ -363,19 +364,19 @@ export async function POST(req: NextRequest) {
             items: [{ id: 'test-prod', name: 'Test Product', price: 1500, quantity: 1 }]
           })
           await recordResult(res.ok, { status: res.status, error: res.ok ? null : res.message })
-          return NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null })
+          return copyCookies(response, NextResponse.json({ ok: res.ok, status: res.status, message: res.message, raw: typeof res.raw === 'object' && res.raw !== null ? { id: (res.raw as Record<string, unknown>).id, ok: true } : null }))
         }
         break
       }
 
       default:
-        return NextResponse.json({ error: 'Unsupported integration' }, { status: 400 })
+        return copyCookies(response, NextResponse.json({ error: 'Unsupported integration' }, { status: 400 }))
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err)
     await recordResult(false, { error: errorMsg })
-    return NextResponse.json({ ok: false, error: errorMsg })
+    return copyCookies(response, NextResponse.json({ ok: false, error: errorMsg }))
   }
 
-  return NextResponse.json({ error: 'Action not handled' }, { status: 400 })
+  return copyCookies(response, NextResponse.json({ error: 'Action not handled' }, { status: 400 }))
 }

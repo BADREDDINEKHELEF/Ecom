@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
@@ -13,37 +13,38 @@ const UpdateSchema = z.object({
 })
 
 export async function PATCH(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'inventory_stock', 30, 60)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
+    ))
 
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const userRl = await checkUserRateLimit(user.id, 'inventory_stock', 60, 3600)
-    if (!userRl.allowed) return NextResponse.json(
+    if (!userRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Limite atteinte. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    ))
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Not a vendor' }, { status: 403 })
+    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Not a vendor' }, { status: 403 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = UpdateSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid input' }, { status: 400 }))
     }
 
     const { productId, newStock } = parsed.data
@@ -60,9 +61,9 @@ export async function PATCH(req: NextRequest) {
     revalidateTag(`inventory-${vendor.id}`)
     revalidateTag(`products`)
 
-    return NextResponse.json({ success: true })
+    return copyCookies(response, NextResponse.json({ success: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/inventory/stock]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Erreur serveur. Réessayez.' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Erreur serveur. Réessayez.' }, { status: 500 }))
   }
 }

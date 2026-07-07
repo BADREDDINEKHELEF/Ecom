@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer, getVendorDeliveryConfig } from '@/lib/supabase/vendors'
 import { updateShipmentStatus } from '@/lib/supabase/shipments'
@@ -13,27 +13,28 @@ import { getClientIp } from '@/lib/utils/ip'
 // Fetches live status from each provider for all active (non-terminal) shipments
 // and updates them in the database. Returns { synced, skipped, errors }.
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'shipments_sync', 10, 60)
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const supabase = createRouteClient(req)
+  ))
+  const supabase = createRouteClient(req, response)
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
   const userRl = await checkUserDualRateLimit(user.id, 'shipments_sync', {
     burstMax: 3, burstWindowSecs: 60,
     sustainedMax: 20, sustainedWindowSecs: 3600,
   })
-  if (!userRl.allowed) return NextResponse.json(
+  if (!userRl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Limite atteinte. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-  )
+  ))
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   const admin = createAdminClient()
 
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   if (fetchErr) {
     logger.error('[POST /api/seller/shipments/sync] fetch error', { error: fetchErr.message })
-    return NextResponse.json({ error: 'Failed to fetch shipments' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Failed to fetch shipments' }, { status: 500 }))
   }
 
   const config = await getVendorDeliveryConfig(vendor.id)
@@ -106,5 +107,5 @@ export async function POST(req: NextRequest) {
     })
   )
 
-  return NextResponse.json({ synced, skipped, errors })
+  return copyCookies(response, NextResponse.json({ synced, skipped, errors }))
 }

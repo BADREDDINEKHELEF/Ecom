@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
@@ -9,19 +9,20 @@ import { logger } from '@/lib/logger'
 
 // GET /api/seller/sponsored — list this vendor's sponsored products
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'sponsored_read', 60, 60)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
+    ))
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -31,10 +32,10 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return NextResponse.json({ sponsored: data ?? [] })
+    return copyCookies(response, NextResponse.json({ sponsored: data ?? [] }))
   } catch (err) {
     logger.error('[GET /api/seller/sponsored]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
@@ -53,33 +54,34 @@ const PatchSponsoredSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'sponsored_write', 5, 3600)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
+    ))
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const userRl = await checkUserRateLimit(user.id, 'sponsored_write', 3, 3600)
-    if (!userRl.allowed) return NextResponse.json(
+    if (!userRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Limite atteinte. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    ))
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = CreateSponsoredSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'product_id is required' }, { status: 400 })
+    if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'product_id is required' }, { status: 400 }))
 
     const { product_id, placement, duration_days, amount_dzd, payment_reference } = parsed.data
 
@@ -93,7 +95,7 @@ export async function POST(req: NextRequest) {
       .eq('vendor_id', vendor.id)
       .single()
 
-    if (!product) return NextResponse.json({ error: 'Product not found or not yours' }, { status: 404 })
+    if (!product) return copyCookies(response, NextResponse.json({ error: 'Product not found or not yours' }, { status: 404 }))
 
     const startsAt = new Date()
     const endsAt = new Date(startsAt)
@@ -115,37 +117,38 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) throw error
-    return NextResponse.json({ sponsored: data }, { status: 201 })
+    return copyCookies(response, NextResponse.json({ sponsored: data }, { status: 201 }))
   } catch (err) {
     logger.error('[POST /api/seller/sponsored]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
 // PATCH /api/seller/sponsored — pause or update a pending promotion
 export async function PATCH(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'sponsored_write', 20, 60)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
+    ))
 
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = PatchSponsoredSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'id is required' }, { status: 400 }))
 
     const admin = createAdminClient()
     const { error } = await admin
@@ -156,9 +159,9 @@ export async function PATCH(req: NextRequest) {
       .in('status', ['pending', 'paused'])
 
     if (error) throw error
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/sponsored]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

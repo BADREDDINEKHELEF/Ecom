@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -22,28 +22,29 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const response = NextResponse.next()
   const { id } = await params
-  if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+  if (!UUID_RE.test(id)) return copyCookies(response, NextResponse.json({ error: 'Invalid id' }, { status: 400 }))
 
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'addresses_write')
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
+  ))
 
   try {
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = PatchSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+    if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'Validation failed' }, { status: 400 }))
 
     const admin = createAdminClient()
 
@@ -60,11 +61,11 @@ export async function PATCH(
       .single()
 
     if (error) throw error
-    if (!updated) return NextResponse.json({ error: 'Adresse introuvable' }, { status: 404 })
-    return NextResponse.json({ ok: true })
+    if (!updated) return copyCookies(response, NextResponse.json({ error: 'Adresse introuvable' }, { status: 404 }))
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[PATCH /api/addresses/[id]]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
 
@@ -72,20 +73,21 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const response = NextResponse.next()
   const { id } = await params
-  if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+  if (!UUID_RE.test(id)) return copyCookies(response, NextResponse.json({ error: 'Invalid id' }, { status: 400 }))
 
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'addresses_write')
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
+  ))
 
   try {
-    const supabase = createRouteClient(req)
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const admin = createAdminClient()
     const { error } = await admin
@@ -95,9 +97,9 @@ export async function DELETE(
       .eq('user_id', user.id)
 
     if (error) throw error
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[DELETE /api/addresses/[id]]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

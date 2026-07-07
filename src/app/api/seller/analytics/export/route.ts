@@ -1,29 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
 export async function GET(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkSellerRateLimit(ip, 'analytics_export', 10, 3600)
-  if (!rl.allowed) return NextResponse.json(
+  if (!rl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-  )
-  const routeClient = createRouteClient(req)
+  ))
+  const routeClient = createRouteClient(req, response)
   const { data: { user } } = await routeClient.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  if (!user) return copyCookies(response, NextResponse.json({ error: 'Non authentifié' }, { status: 401 }))
 
   const userRl = await checkUserRateLimit(user.id, 'analytics_export', 3, 3600)
-  if (!userRl.allowed) return NextResponse.json(
+  if (!userRl.allowed) return copyCookies(response, NextResponse.json(
     { error: 'Limite atteinte. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-  )
+  ))
 
   const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return NextResponse.json({ error: 'Vendeur introuvable' }, { status: 403 })
+  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendeur introuvable' }, { status: 403 }))
 
   const supabase = createAdminClient()
 
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
     .limit(2000)
 
   if (itemsError) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 
   const orderIds = [...new Set((items ?? []).map((i) => i.order_id))].filter(Boolean)
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (ordersError) {
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
     }
     orders = ordersData ?? []
   }

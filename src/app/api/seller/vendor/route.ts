@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { getVendorByUserIdServer, updateVendor } from '@/lib/supabase/vendors'
 import { encryptField, isEncrypted } from '@/lib/utils/crypto'
 import { logger } from '@/lib/logger'
@@ -64,45 +64,46 @@ const PatchSchema = z.object({
 })
 
 export async function PATCH(req: NextRequest) {
+  const response = NextResponse.next()
   try {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'vendor_settings', 20, 60)
-    if (!rl.allowed) return NextResponse.json(
+    if (!rl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
-    const supabase = createRouteClient(req)
+    ))
+    const supabase = createRouteClient(req, response)
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
 
     const userRl = await checkUserRateLimit(user.id, 'vendor_settings', 10, 3600)
-    if (!userRl.allowed) return NextResponse.json(
+    if (!userRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Limite atteinte. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
-    )
+    ))
 
     const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return NextResponse.json({ error: 'Vendor not found' }, { status: 403 })
+    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+      return copyCookies(response, NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }))
     }
 
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) {
       const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
-      return NextResponse.json(
+      return copyCookies(response, NextResponse.json(
         { error: 'Validation failed', ...(details && { details }) },
         { status: 400 }
-      )
+      ))
     }
 
     // Validate slug format and reserved names server-side when changing slug
     if (parsed.data.store_slug !== undefined && parsed.data.store_slug !== null) {
       const slugValidation = validateStoreSlug(parsed.data.store_slug)
       if (!slugValidation.ok) {
-        return NextResponse.json({ error: slugValidation.error }, { status: 400 })
+        return copyCookies(response, NextResponse.json({ error: slugValidation.error }, { status: 400 }))
       }
       // Ensure uniqueness case-insensitively (exclude current vendor)
       const { data: existing } = await supabase
@@ -112,7 +113,7 @@ export async function PATCH(req: NextRequest) {
         .neq('id', vendor.id)
         .maybeSingle()
       if (existing) {
-        return NextResponse.json({ error: 'URL déjà prise. Essayez un autre nom.' }, { status: 409 })
+        return copyCookies(response, NextResponse.json({ error: 'URL déjà prise. Essayez un autre nom.' }, { status: 409 }))
       }
     }
 
@@ -138,9 +139,9 @@ export async function PATCH(req: NextRequest) {
         throw dbErr
       }
     }
-    return NextResponse.json({ ok: true })
+    return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/vendor]', { error: err instanceof Error ? err.message : String(err) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }

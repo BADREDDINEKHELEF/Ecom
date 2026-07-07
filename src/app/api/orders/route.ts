@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createOrder } from '@/lib/supabase/orders'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRouteClient } from '@/lib/supabase/server'
+import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { createSellerNotification } from '@/lib/notifications/seller'
-import { awardPoints, redeemPoints } from '@/lib/loyalty'
+import { awardPoints } from '@/lib/loyalty'
 import { fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
 import { fireStorePurchaseCAPI, fireMultiStorePurchaseCAPI } from '@/lib/meta/capi'
 import { getMetaConfigsByIds, getPlatformMetaConfig } from '@/lib/meta/store'
@@ -43,7 +43,7 @@ const OrderItemSchema = z.object({
   stopDeskCause: z.string().max(300).optional().nullable(),
   paymentMethod: z.enum(['cash', 'card', 'edahabia', 'cib', 'baridimob']),
   // shippingCost is intentionally removed to prevent client-side manipulation (C-01)
-  idempotencyKey:   z.string().uuid().optional().nullable(),
+  idempotencyKey:   z.string().uuid(),
   promoCodeId:      z.string().uuid().optional().nullable(),
   discountAmount:   z.number().min(0).max(1_000_000).optional().default(0),
   giftCardCode:     z.string().max(100).optional().nullable(),
@@ -63,27 +63,28 @@ const OrderItemSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkCheckoutRateLimit(ip)
   if (!rl.allowed) {
-    return NextResponse.json(
+    return copyCookies(response, NextResponse.json(
       { error: 'Trop de commandes. Veuillez patienter quelques minutes.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
-    )
+    ))
   }
 
   let body: unknown
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }))
   }
 
   const parsed = CreateOrderSchema.safeParse(body)
   if (!parsed.success) {
     logger.warn('[POST /api/orders] validation failed', { issues: parsed.error.issues })
     const details = process.env.NODE_ENV === 'development' ? parsed.error.issues : undefined
-    return NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 })
+    return copyCookies(response, NextResponse.json({ error: 'Invalid order data', ...(details && { details }) }, { status: 400 }))
   }
 
   const {
@@ -104,10 +105,14 @@ export async function POST(req: NextRequest) {
     idempotencyKey,
     ...rest
   } = parsed.data
+  const routeClient = createRouteClient(req, response)
+  const { data: { user } } = await routeClient.auth.getUser()
+
   const input = {
     ...rest,
     phone: utilNormalizePhone(parsed.data.phone),
-    idempotencyKey:   idempotencyKey ?? null,
+    idempotencyKey,
+    userId: user?.id ?? null,
     promoCodeId:      rawPromoCodeId ?? undefined,
     giftCardCode:     rawGiftCardCode?.trim().toUpperCase() || undefined,
     notes: rawNotes ?? null,
@@ -133,16 +138,6 @@ export async function POST(req: NextRequest) {
     // Skip all side-effect notifications for idempotent duplicate lookups
     // (already sent on the first successful call).
     if (!isDuplicate) {
-    // Redeem loyalty points (non-blocking)
-    if (pointsRedeemed > 0) {
-      const routeClient = createRouteClient(req)
-      routeClient.auth.getUser()
-        .then(({ data: { user } }) => {
-          if (user) return redeemPoints(user.id, pointsRedeemed)
-        })
-        .catch((err) => logger.error('[loyalty] redeem failed', { error: err instanceof Error ? err.message : String(err) }))
-    }
-
     // Fire WhatsApp notification — non-blocking, never fails the order
     notifyOrderConfirmed({
       phone:     input.phone,
@@ -293,14 +288,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Award loyalty points for this order (non-blocking)
-    createRouteClient(req).auth.getUser()
+    createRouteClient(req, response).auth.getUser()
       .then(({ data: { user } }) => {
         if (user) return awardPoints(user.id, orderId, total)
       })
       .catch((err) => logger.error('[loyalty] award failed', { error: err instanceof Error ? err.message : String(err) }))
     }
 
-    return NextResponse.json({ orderId }, { status: 201 })
+    return copyCookies(response, NextResponse.json({ orderId }, { status: 201 }))
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 
       typeof err === 'object' && err !== null && 'message' in err 
@@ -312,15 +307,21 @@ export async function POST(req: NextRequest) {
     logger.error('[POST /api/orders]', { error: message, code, type: typeof err })
 
     if (message.includes('stock') || message.includes('Insufficient') || code === 'PGRST204') {
-      return NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 }))
     }
     if (message.includes('not found') || message.includes('not available') || message.includes('no longer')) {
-      return NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 }))
     }
     if (message.includes('validate products') || message.includes('Product not found')) {
-      return NextResponse.json({ error: 'Could not validate your cart. Please refresh and try again.' }, { status: 409 })
+      return copyCookies(response, NextResponse.json({ error: 'Could not validate your cart. Please refresh and try again.' }, { status: 409 }))
+    }
+    if (message.includes('Promo code already used')) {
+      return copyCookies(response, NextResponse.json({ error: 'Ce code promo a déjà été utilisé.' }, { status: 409 }))
+    }
+    if (message.includes('Loyalty points redemption failed')) {
+      return copyCookies(response, NextResponse.json({ error: 'Échec de l\'utilisation des points de fidélité. Veuillez réessayer.' }, { status: 409 }))
     }
 
-    return NextResponse.json({ error: 'Une erreur est survenue. Réessayez.' }, { status: 500 })
+    return copyCookies(response, NextResponse.json({ error: 'Une erreur est survenue. Réessayez.' }, { status: 500 }))
   }
 }

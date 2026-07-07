@@ -131,23 +131,17 @@ function checkInMemory(
   return { allowed: true, retryAfterSeconds: 0 }
 }
 
+function isProductionWithoutRedis(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    process.env.NODE_ENV === 'production' &&
+    (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN)
+  )
+}
+
 function resetInMemory(namespace: string, key: string): void {
   evictStale(namespace)
   getStore(namespace).delete(key)
-}
-
-// Warn once at startup if running in production without Redis (rate limit is per-instance only)
-if (
-  typeof process !== 'undefined' &&
-  process.env.NODE_ENV === 'production' &&
-  !process.env.UPSTASH_REDIS_REST_URL
-) {
-  console.warn(
-    '[rateLimit] WARNING: UPSTASH_REDIS_REST_URL is not set. ' +
-    'Rate limiting is in-memory and per-instance — it will NOT protect against ' +
-    'concurrent requests across Vercel serverless instances. ' +
-    'Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN to enable shared Redis rate limiting.'
-  )
 }
 
 // ── Unified check helper ────────────────────────────────────────────────────
@@ -158,6 +152,17 @@ async function check(
   maxRequests: number,
   windowSeconds: number
 ): Promise<RateLimitResult> {
+  if (isProductionWithoutRedis()) {
+    // In production without shared Redis the in-memory store is unsafe across
+    // serverless instances. Fail closed rather than give a false sense of
+    // security. Admins can explicitly opt out by setting
+    // ALLOW_IN_MEMORY_RATE_LIMIT=true only if they run a single instance.
+    if (process.env.ALLOW_IN_MEMORY_RATE_LIMIT !== 'true') {
+      logger.error('[rateLimit] production rate limiting disabled: UPSTASH_REDIS_REST_URL/TOKEN missing')
+      return { allowed: false, retryAfterSeconds: 60 }
+    }
+  }
+
   const result = isUpstashConfigured()
     ? await checkUpstash(namespace, key, maxRequests, windowSeconds)
     : checkInMemory(namespace, key, maxRequests, windowSeconds * 1000)
@@ -227,6 +232,12 @@ export async function checkOtpSendRateLimit(ip: string, phone: string): Promise<
 /** OTP verify: 10 attempts per 15 min per phone/email (brute-force guard) */
 export async function checkOtpVerifyRateLimit(phone: string): Promise<RateLimitResult> {
   return check('otp_verify', phone.trim().toLowerCase(), 10, 15 * 60)
+}
+
+/** OTP verify from the registration frontend step: more lenient because the
+ *  user may typo the code a few times before the final /register call. */
+export async function checkOtpVerifyFrontendRateLimit(phone: string): Promise<RateLimitResult> {
+  return check('otp_verify_frontend', phone.trim().toLowerCase(), 30, 15 * 60)
 }
 
 /**

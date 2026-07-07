@@ -22,6 +22,7 @@ interface BaridiMobInitiateResponse {
 interface BaridiMobStatusResponse {
   status: string
   paid?: boolean
+  amount?: number
 }
 
 // ── Strict type guard for the status response ────────────────────────────────
@@ -131,7 +132,9 @@ export async function baridimobInitiatePayment(params: {
   return { paymentId, qrCodeData, deepLink: deepLink ?? '', expiresAt: expiresAt ?? '' }
 }
 
-export async function baridimobVerifyPayment(paymentId: string): Promise<{ paid: boolean; status: string }> {
+export async function baridimobVerifyPayment(
+  paymentId: string
+): Promise<{ paid: boolean; status: string; amount?: number }> {
   if (!baridimobConfigured()) throw new Error('BaridiMob not configured')
 
   let res: Response
@@ -175,5 +178,5 @@ export async function baridimobVerifyPayment(paymentId: string): Promise<{ paid:
 
   // Fix: case-insensitive comparison so 'PAID', 'Paid', 'paid' all match.
   const isPaid = data.status?.toLowerCase() === 'paid' || data.paid === true
-  return { paid: isPaid, status: data.status }
+  return { paid: isPaid, status: data.status, amount: data.amount }
 }

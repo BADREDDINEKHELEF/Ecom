@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { DollarSign, RefreshCw, Download, CheckCircle, Clock } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { exportToCSV } from '@/lib/analytics/export'
+import { useRecharts } from '@/lib/charts/useRecharts'
 
 interface VendorCommission {
   id: string; name: string; slug: string
@@ -38,7 +38,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default function RevenuePage() {
+function RevenueContent() {
   const [data, setData]     = useState<RevenueData | null>(null)
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState<string | null>(null)
@@ -56,6 +56,8 @@ export default function RevenuePage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = useRecharts()
 
   const markPaid = async (id: string) => {
     setPaying(id)
@@ -236,5 +238,19 @@ export default function RevenuePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RevenuePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RevenueContent />
+    </Suspense>
   )
 }
