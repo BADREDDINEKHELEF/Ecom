@@ -5,6 +5,8 @@ import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 interface Params { params: Promise<{ productId: string }> }
 
 const ReviewSchema = z.object({
@@ -21,6 +23,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   try {
     const { productId } = await params
+    if (!UUID_RE.test(productId)) return NextResponse.json([], { status: 400 })
     const reviews = await getReviews(productId)
     return NextResponse.json(reviews)
   } catch (err) {
@@ -41,6 +44,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     const { productId } = await params
+    if (!UUID_RE.test(productId)) return NextResponse.json({ error: 'Invalid product' }, { status: 400 })
 
     let body: unknown
     try { body = await req.json() } catch {

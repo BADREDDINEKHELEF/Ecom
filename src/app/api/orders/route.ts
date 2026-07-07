@@ -13,7 +13,8 @@ import { fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
 import { fireStorePurchaseCAPI, fireMultiStorePurchaseCAPI } from '@/lib/meta/capi'
 import { getMetaConfigsByIds, getPlatformMetaConfig } from '@/lib/meta/store'
 import { decryptField, isEncrypted } from '@/lib/utils/crypto'
-import { logger } from '@/lib/logger'
+import { logger, pii } from '@/lib/logger'
+import { withRequestContext } from '@/lib/api/requestContext'
 import { normalizePhone as utilNormalizePhone } from '@/lib/utils/phone'
 
 function decryptCred(v: string | null | undefined): string | null {
@@ -62,7 +63,7 @@ const OrderItemSchema = z.object({
   }
 })
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkCheckoutRateLimit(ip)
@@ -125,11 +126,14 @@ export async function POST(req: NextRequest) {
     isStopDesk: isStopDesk ?? (deliveryType === 'stop_desk'),
     deliveryType: deliveryType ?? 'home',
     stopDeskCause: stopDeskCause ?? null,
+    clientIp: ip,
+    clientUserAgent: req.headers.get('user-agent') ?? null,
   }
   const buyerEmail = rawEmail ?? null
 
   try {
     const { id: orderId, total, isDuplicate } = await createOrder(input)
+    logger.setContext({ orderId })
 
     // NOTE: gift-card balance is already deducted atomically inside createOrder()
     // via the claim_gift_card RPC. Do NOT call a second redemption here — that
@@ -304,7 +308,15 @@ export async function POST(req: NextRequest) {
     const code = typeof err === 'object' && err !== null && 'code' in err
       ? String((err as Record<string, unknown>).code)
       : undefined
-    logger.error('[POST /api/orders]', { error: message, code, type: typeof err })
+    logger.error('[POST /api/orders]', {
+      error: message,
+      code,
+      type: typeof err,
+      phone: pii.maskPhone(input.phone),
+      email: pii.maskEmail(buyerEmail),
+      ip,
+      action: 'create_order',
+    })
 
     if (message.includes('stock') || message.includes('Insufficient') || code === 'PGRST204') {
       return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 }))
@@ -325,3 +337,5 @@ export async function POST(req: NextRequest) {
     return copyCookies(response, NextResponse.json({ error: 'Une erreur est survenue. Réessayez.' }, { status: 500 }))
   }
 }
+
+export const POST = withRequestContext(postHandler, { action: 'create_order' })

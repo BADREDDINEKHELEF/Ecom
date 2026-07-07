@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/auth/adminAuth'
 import { logger } from '@/lib/logger'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { writeAuditLog } from '@/lib/auth/auditLog'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -31,6 +32,15 @@ export async function POST(
       .eq('id', id)
 
     if (error) throw error
+
+    await writeAuditLog({
+      action: 'vendor_verified',
+      ip,
+      userAgent: req.headers.get('user-agent') ?? 'unknown',
+      result: 'success',
+      meta: { vendor_id: id },
+    })
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     logger.error('[POST /api/admin/vendors/[id]/verify]', { error: err instanceof Error ? err.message : String(err) })

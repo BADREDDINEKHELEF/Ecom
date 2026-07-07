@@ -34,14 +34,29 @@ import {
   trackPurchase as pixelPurchase,
 } from './pixel'
 
+export interface MetaUserDataInput {
+  em?: string | null
+  ph?: string | null
+}
+
 /**
  * Ensure a store's pixel is initialized before firing events.
  * Safe to call multiple times — pixel init is idempotent.
  */
-export function initializeMeta(config: StoreMetaConfig): void {
+export function initializeMeta(config: StoreMetaConfig, userData?: MetaUserDataInput): void {
   if (typeof window === 'undefined') return
   if (!config.enabled || !config.pixelId) return
-  initMetaPixel(config.pixelId, config.testEventCode)
+  
+  if (userData?.em || userData?.ph) {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('init', config.pixelId, {
+        ...(userData.em && { em: userData.em.trim().toLowerCase() }),
+        ...(userData.ph && { ph: userData.ph }),
+      })
+    }
+  } else {
+    initMetaPixel(config.pixelId, config.testEventCode)
+  }
 }
 
 // ── 8 standard events ─────────────────────────────────────────────────
@@ -89,8 +104,12 @@ export function trackAddToCart(config: StoreMetaConfig, params: AddToCartParams)
 /**
  * InitiateCheckout — fires when a user starts the checkout process.
  */
-export function trackInitiateCheckout(config: StoreMetaConfig, params: InitiateCheckoutParams): void {
-  initializeMeta(config)
+export function trackInitiateCheckout(
+  config: StoreMetaConfig,
+  params: InitiateCheckoutParams,
+  userData?: MetaUserDataInput,
+): void {
+  initializeMeta(config, userData)
   pixelInitiateCheckout(params)
 }
 
@@ -106,8 +125,12 @@ export function trackAddPaymentInfo(config: StoreMetaConfig, params: AddPaymentI
  * Purchase — fires after a successful order.
  * Returns the config for optional server-side CAPI call.
  */
-export function trackPurchase(config: StoreMetaConfig, params: PurchaseParams): StoreMetaConfig {
-  initializeMeta(config)
+export function trackPurchase(
+  config: StoreMetaConfig,
+  params: PurchaseParams,
+  userData?: MetaUserDataInput,
+): StoreMetaConfig {
+  initializeMeta(config, userData)
   pixelPurchase(params)
   return config
 }

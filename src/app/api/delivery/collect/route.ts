@@ -6,8 +6,7 @@ import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
-
-const TRACKING_REGEX = /^[A-Za-z0-9]{6,20}$/
+import { DeliveryCollectQuerySchema } from '@/lib/validation/apiSchemas'
 
 function staticRate(wilaya: string) {
   const zone = WILAYA_DATA[wilaya]?.zone ?? 3
@@ -37,14 +36,14 @@ export async function GET(req: NextRequest) {
   if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
 
   const { searchParams } = new URL(req.url)
-  const wilaya    = searchParams.get('wilaya')?.trim()
-  const tracking  = searchParams.get('tracking')?.trim()
-  const storeSlug = searchParams.get('storeSlug')?.trim()
+  const parsed = DeliveryCollectQuerySchema.safeParse({
+    wilaya: searchParams.get('wilaya')?.trim(),
+    tracking: searchParams.get('tracking')?.trim() || undefined,
+    storeSlug: searchParams.get('storeSlug')?.trim() || undefined,
+  })
+  if (!parsed.success) return NextResponse.json({ error: 'paramètres invalides' }, { status: 400 })
 
-  if (!wilaya) return NextResponse.json({ error: 'wilaya required' }, { status: 400 })
-  if (tracking && !TRACKING_REGEX.test(tracking)) {
-    return NextResponse.json({ error: 'Invalid tracking number format' }, { status: 400 })
-  }
+  const { wilaya, tracking, storeSlug } = parsed.data
 
   let vendorCreds: Record<string, string | undefined> | undefined
   let defaultProvider

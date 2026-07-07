@@ -9,9 +9,139 @@ import { logger } from '@/lib/logger'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { recordFinancialTransaction } from '@/lib/supabase/orders'
+import { BaridiMobWebhookSchema } from '@/lib/validation/apiSchemas'
+import { fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
+import { fireStorePurchaseCAPI, fireMultiStorePurchaseCAPI } from '@/lib/meta/capi'
+import { getMetaConfigsByIds, getPlatformMetaConfig } from '@/lib/meta/store'
+import { decryptField, isEncrypted } from '@/lib/utils/crypto'
 
 // ── Bug 6 fix: satimId format validator ──────────────────────────────────────
 const SATIM_ID_RE = /^[0-9a-f-]{8,36}$/i
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function decryptCred(v: string | null | undefined): string | null {
+  if (!v) return null
+  return isEncrypted(v) ? decryptField(v) : v
+}
+
+async function triggerCAPIOnSuccess(orderId: string) {
+  try {
+    const supabase = createAdminClient()
+    const { data: order, error: orderErr } = await supabase
+      .from('orders')
+      .select('id, total, email, phone, client_ip, client_user_agent')
+      .eq('id', orderId)
+      .single()
+
+    if (orderErr || !order) {
+      logger.error('[payment/callback/capi] order not found for CAPI', { orderId, error: orderErr?.message })
+      return
+    }
+
+    const { data: items, error: itemsErr } = await supabase
+      .from('order_items')
+      .select('product_id, product_name, product_price, quantity, vendor_id')
+      .eq('order_id', orderId)
+
+    if (itemsErr || !items?.length) {
+      logger.error('[payment/callback/capi] order items not found for CAPI', { orderId, error: itemsErr?.message })
+      return
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    const buyerEmail = order.email ?? null
+    const clientIp = order.client_ip ?? undefined
+    const clientUserAgent = order.client_user_agent ?? undefined
+    const total = order.total
+
+    // 1. Platform-level Meta CAPI
+    const platformConfig = getPlatformMetaConfig()
+    if (platformConfig) {
+      fireStorePurchaseCAPI(
+        platformConfig, orderId, total,
+        {
+          email: buyerEmail, phone: order.phone,
+          clientIp, clientUserAgent,
+          eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+        },
+        {
+          contentIds: items.map(i => i.product_id),
+          numItems:   items.reduce((s, i) => s + i.quantity, 0),
+        },
+      ).catch((err) => logger.error('[payment/callback/capi] platform Meta CAPI failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+
+    // 2. Platform-level TikTok CAPI
+    if (process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID && process.env.TIKTOK_CAPI_TOKEN) {
+      const capiItems = items.map(i => ({ id: i.product_id, name: i.product_name, price: i.product_price, quantity: i.quantity }))
+      fireTikTokPurchase({
+        pixelId:     process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID,
+        accessToken: process.env.TIKTOK_CAPI_TOKEN,
+        orderId, total, items: capiItems,
+        email: buyerEmail, phone: order.phone,
+        clientIp, clientUserAgent,
+      }).catch((err) => logger.error('[payment/callback/capi] platform TikTok CAPI failed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+
+    // 3. Vendor-level Meta, TikTok, GA4 CAPI
+    const vendorIds = Array.from(new Set(items.map((i) => i.vendor_id).filter((v): v is string => typeof v === 'string' && v.length > 0)))
+    if (vendorIds.length > 0) {
+      const metaConfigs = (await getMetaConfigsByIds(vendorIds)).map(c => ({
+        ...c,
+        accessToken: decryptCred(c.accessToken),
+      }))
+
+      if (metaConfigs.some(c => c.pixelId && c.accessToken)) {
+        const purchaseMeta = {
+          contentIds: items.map(i => i.product_id),
+          numItems:   items.reduce((s, i) => s + i.quantity, 0),
+        }
+        fireMultiStorePurchaseCAPI(
+          metaConfigs, orderId, total,
+          {
+            email: buyerEmail, phone: order.phone,
+            clientIp, clientUserAgent,
+            eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+          },
+          purchaseMeta,
+        ).catch((err) => logger.error('[payment/callback/capi] multi-store Meta CAPI failed', { error: err instanceof Error ? err.message : String(err) }))
+      }
+
+      // TikTok + GA4 per-vendor CAPI
+      const { data: vendors } = await supabase
+        .from('vendors')
+        .select('tiktok_pixel_id, tiktok_capi_token, gtag_id, gtag_api_secret')
+        .in('id', vendorIds)
+
+      if (vendors?.length) {
+        const capiItems = items.map(i => ({ id: i.product_id, name: i.product_name, price: i.product_price, quantity: i.quantity }))
+        const otherVendorCalls = vendors.map((v: Record<string, string | null>) => {
+          const calls: Promise<unknown>[] = []
+          if (v.tiktok_pixel_id && v.tiktok_capi_token) {
+            calls.push(fireTikTokPurchase({
+              pixelId:     v.tiktok_pixel_id,
+              accessToken: decryptCred(v.tiktok_capi_token)!,
+              orderId, total, items: capiItems,
+              email: buyerEmail, phone: order.phone,
+              clientIp, clientUserAgent,
+            }))
+          }
+          if (v.gtag_id && v.gtag_api_secret) {
+            calls.push(fireGA4Purchase({
+              measurementId: v.gtag_id!,
+              apiSecret:     decryptCred(v.gtag_api_secret)!,
+              orderId, total, items: capiItems,
+            }))
+          }
+          return Promise.allSettled(calls)
+        })
+        await Promise.allSettled(otherVendorCalls)
+      }
+    }
+  } catch (err) {
+    logger.error('[payment/callback/capi] triggerCAPIOnSuccess failed', { orderId, error: err instanceof Error ? err.message : String(err) })
+  }
+}
 
 // ── Bug 3 fix: HMAC-SHA256 signature verification ────────────────────────────
 function verifySatimSignature(req: NextRequest): boolean {
@@ -73,6 +203,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/payment/failure?reason=missing_order`)
   }
 
+  // Validate orderId format before any DB lookup or redirect construction.
+  if (!UUID_RE.test(orderId)) {
+    logger.warn('[payment/callback] orderId failed UUID validation', { orderId })
+    return NextResponse.redirect(`${appUrl}/payment/failure?reason=invalid_order`)
+  }
+
   // Bug 2 fix: removed the optimistic fail-on-parameter path.
   // The `result=fail` param is attacker-controlled; never mutate order state
   // based on it alone. We use it only as a hint (below) to skip success redirect.
@@ -92,7 +228,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data: order, error: orderErr } = await createAdminClient()
       .from('orders')
-      .select('id, status, payment_status, total, payment_method, satim_order_id, email, full_name, wilaya, is_stopdesk, stop_desk_cause')
+      .select('id, status, payment_status, total, payment_method, satim_order_id, email, phone, full_name, wilaya, is_stopdesk, stop_desk_cause, client_ip, client_user_agent')
       .eq('id', orderId)
       .single()
 
@@ -189,6 +325,29 @@ export async function GET(req: NextRequest) {
         stopDeskCause: (order as typeof order & { stop_desk_cause?: string | null }).stop_desk_cause ?? null,
       }).catch((err) => logger.error('[email callback] confirmation failed', { error: err instanceof Error ? err.message : String(err) }))
     }
+
+    if (order.phone) {
+      const { count: itemCount } = await createAdminClient()
+        .from('order_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('order_id', orderId)
+
+      notifyOrderConfirmed({
+        phone:     order.phone,
+        fullName:  order.full_name,
+        orderId,
+        total:     order.total,
+        wilaya:    order.wilaya ?? '',
+        itemCount: itemCount ?? 0,
+      }).catch((err) =>
+        logger.error('[payment/callback] WhatsApp notification failed', {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      )
+    }
+
+    // Trigger non-blocking server-side CAPI event tracking
+    void triggerCAPIOnSuccess(orderId)
 
     return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
   } catch (err) {
@@ -293,26 +452,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  let payload: Record<string, unknown>
+  let rawPayload: Record<string, unknown>
   try {
-    payload = JSON.parse(rawBody.toString('utf-8')) as Record<string, unknown>
+    rawPayload = JSON.parse(rawBody.toString('utf-8')) as Record<string, unknown>
   } catch {
     logger.warn('[payment/callback/baridimob] invalid JSON in webhook body')
     return NextResponse.json({ error: 'Bad request' }, { status: 400 })
   }
 
-  const paymentId = typeof payload.payment_id === 'string' ? payload.payment_id : null
-  const orderId   = typeof payload.order_id   === 'string' ? payload.order_id   : null
-
-  if (!paymentId || !orderId) {
-    logger.warn('[payment/callback/baridimob] webhook body missing payment_id or order_id', { payload })
+  const parsedPayload = BaridiMobWebhookSchema.safeParse(rawPayload)
+  if (!parsedPayload.success) {
+    logger.warn('[payment/callback/baridimob] webhook body failed schema validation', { issues: parsedPayload.error.issues })
     return NextResponse.json({ error: 'Bad request' }, { status: 400 })
   }
+
+  const { payment_id: paymentId, order_id: orderId } = parsedPayload.data
 
   try {
     const { data: order, error: orderErr } = await createAdminClient()
       .from('orders')
-      .select('id, status, payment_status, total, payment_method, email, phone, full_name, wilaya, is_stopdesk, stop_desk_cause')
+      .select('id, total, payment_method, status, payment_status, email, phone, full_name, wilaya, is_stopdesk, stop_desk_cause, client_ip, client_user_agent')
       .eq('id', orderId)
       .single()
 
@@ -373,6 +532,9 @@ export async function POST(req: NextRequest) {
       logger.error('[payment/callback/baridimob] confirm update failed', { orderId, paymentId, error: confirmErr.message })
       throw new Error(`Failed to confirm BaridiMob order ${orderId}: ${confirmErr.message}`)
     }
+
+    // Trigger non-blocking server-side CAPI event tracking
+    void triggerCAPIOnSuccess(orderId)
 
     await recordFinancialTransaction({
       orderId,

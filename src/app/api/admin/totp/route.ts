@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import { generateTotpSecret, generateQrCode } from '@/lib/auth/totp'
 import { checkTotpSetupRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { AdminTotpSchema } from '@/lib/validation/apiSchemas'
 
 // POST /api/admin/totp — one-time bootstrap setup only. Locked once ADMIN_TOTP_SECRET is set.
 // Requires ADMIN_SECRET password in the request body as a bootstrap credential, so an
@@ -29,8 +30,13 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const body = await req.json().catch(() => ({}))
-  const { password } = body as { password?: string }
+  let rawBody: unknown
+  try { rawBody = await req.json() } catch { rawBody = {} }
+  const parsed = AdminTotpSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  }
+  const { password } = parsed.data
 
   let passwordMatch = false
   try {

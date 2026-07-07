@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { logger } from '@/lib/logger'
+import { logger, pii } from '@/lib/logger'
 
 /**
  * Centralised API error handler.
@@ -59,4 +59,36 @@ export function handleUnknownError(err: unknown): NextResponse {
     if (msg.includes('BOOKING_CONFLICT'))                             return apiError('BOOKING_CONFLICT', err)
   }
   return apiError('INTERNAL', err)
+}
+
+/**
+ * Safe 500 response for unexpected errors.
+ * In production only a generic message is returned; stack traces and raw
+ * error messages are logged server-side and never leaked to the client.
+ */
+export function safeInternalServerError(err: unknown, requestLabel?: string): NextResponse {
+  const isProd = process.env.NODE_ENV === 'production'
+  const errorObj = err instanceof Error ? err : new Error(String(err))
+
+  logger.error(`[${requestLabel ?? 'route'}] unhandled error`, {
+    error: errorObj.message,
+    ...(!isProd ? { stack: errorObj.stack } : {}),
+  })
+
+  return NextResponse.json(
+    {
+      error: isProd
+        ? 'Erreur interne. Nous travaillons dessus.'
+        : errorObj.message,
+      code: 'INTERNAL',
+    },
+    { status: 500 }
+  )
+}
+
+/**
+ * Mask sensitive fields before logging request bodies that may contain PII.
+ */
+export function safeLogPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  return pii.maskObject(payload)
 }

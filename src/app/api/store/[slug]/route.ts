@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
+const STORE_SLUG_RE = /^[a-z0-9-]{1,50}$/
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -13,6 +15,9 @@ export async function GET(
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   const { slug } = await params
+  if (!STORE_SLUG_RE.test(slug)) {
+    return NextResponse.json({ error: 'Invalid store slug' }, { status: 400 })
+  }
 
   const vendor = await getVendorBySlug(slug)
   if (!vendor) {

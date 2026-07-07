@@ -2,6 +2,16 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
+function isSecureEnvironment(): boolean {
+  return process.env.NODE_ENV === 'production' || !!process.env.VERCEL
+}
+
+const supabaseCookieOptions: CookieOptions = {
+  secure: isSecureEnvironment(),
+  sameSite: 'lax',
+  path: '/',
+}
+
 /**
  * Creates an SSR-capable Supabase client for use in Route Handlers.
  * Reads the Supabase auth session from the incoming request's cookies,
@@ -38,6 +48,7 @@ export function createRouteClient(req: NextRequest, response?: NextResponse) {
     getSupabaseUrl(),
     getSupabaseAnonKey(),
     {
+      cookieOptions: supabaseCookieOptions,
       cookies: {
         getAll: () => req.cookies.getAll(),
         setAll: (cookiesToSet) => {
@@ -74,6 +85,7 @@ export async function createServerActionClient() {
     getSupabaseUrl(),
     getSupabaseAnonKey(),
     {
+      cookieOptions: supabaseCookieOptions,
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (cookiesToSet) => {

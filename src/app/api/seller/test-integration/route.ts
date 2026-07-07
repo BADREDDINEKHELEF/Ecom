@@ -14,6 +14,7 @@ import { ecomListParcels } from '@/lib/delivery/ecom'
 import { fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
 import { fireStorePurchaseCAPI } from '@/lib/meta/capi'
 import { getMetaConfigById } from '@/lib/meta/store'
+import { TestIntegrationSchema } from '@/lib/validation/apiSchemas'
 
 export async function POST(req: NextRequest) {
   const response = NextResponse.next()
@@ -31,11 +32,11 @@ export async function POST(req: NextRequest) {
   const vendor = await getVendorByUserIdServer(user.id)
   if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
-  let body: { integrationName?: string; action?: string; params?: { wilaya?: string } }
-  try { body = (await req.json()) as { integrationName?: string; action?: string; params?: { wilaya?: string } } } catch { return copyCookies(response, NextResponse.json({ error: 'Invalid body' }, { status: 400 })) }
-  const { integrationName, action, params } = body
-
-  if (!integrationName || !action) return copyCookies(response, NextResponse.json({ error: 'Missing integrationName or action' }, { status: 400 }))
+  let rawBody: unknown
+  try { rawBody = await req.json() } catch { return copyCookies(response, NextResponse.json({ error: 'Invalid body' }, { status: 400 })) }
+  const parsed = TestIntegrationSchema.safeParse(rawBody)
+  if (!parsed.success) return copyCookies(response, NextResponse.json({ error: 'Invalid body', details: parsed.error.flatten() }, { status: 400 }))
+  const { integrationName, action, params } = parsed.data
 
   const config = await getVendorDeliveryConfig(vendor.id)
   

@@ -353,12 +353,12 @@ export default function SellerProductsPage() {
         subscriptionStatus={vendor.subscription_status}
         isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
       <main className={`flex-1 ${isRTL ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-8 min-w-0`}>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-black text-gray-900">{sp.title}</h1>
             <p className="text-gray-500 text-sm mt-1">{sp.count.replace('{n}', String(totalProducts))}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end">
             <button onClick={() => setShowImport(true)}
               className="flex items-center gap-2 border border-gray-200 text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm">
               <Upload className="w-4 h-4" /> CSV
@@ -480,7 +480,7 @@ export default function SellerProductsPage() {
                 </div>
 
                 {/* Price / Compare / Stock in one row */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Prix (DA) *</label>
                     <input
@@ -510,7 +510,7 @@ export default function SellerProductsPage() {
                 </div>
 
                 {/* Niche + Category */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{sp.nicheLabel}</label>
                     <select
@@ -743,15 +743,15 @@ export default function SellerProductsPage() {
               </div>
 
               {/* ── Submit bar ── */}
-              <div className="px-6 py-4 bg-gray-50 flex items-center gap-3">
-                {formError && <p className="flex-1 text-sm text-red-500">{formError}</p>}
-                <div className="flex gap-3 ml-auto">
+              <div className="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row items-center gap-3">
+                {formError && <p className="w-full sm:flex-1 text-sm text-red-500 text-center sm:text-left">{formError}</p>}
+                <div className="flex gap-3 w-full sm:w-auto justify-end sm:ml-auto">
                   <button type="button" onClick={closeForm}
-                    className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-white transition-colors text-gray-600">
+                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-white transition-colors text-gray-600">
                     {sp.cancelBtn}
                   </button>
                   <button type="submit" disabled={saving}
-                    className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 active:scale-95 disabled:opacity-60 transition-all text-sm shadow-sm shadow-emerald-200">
+                    className="flex-grow sm:flex-initial flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 active:scale-95 disabled:opacity-60 transition-all text-sm shadow-sm shadow-emerald-200">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                     {editing ? sp.saveBtn : '🚀 ' + sp.addBtn}
                   </button>

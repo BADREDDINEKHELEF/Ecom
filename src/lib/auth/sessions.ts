@@ -81,19 +81,21 @@ export async function createSession({
 }): Promise<void> {
   try {
     const admin = createAdminClient()
-    await admin.from('admin_sessions').insert({
+    const { error } = await admin.from('admin_sessions').insert({
       jti,
       device_fingerprint: buildDeviceFingerprint(userAgent, ip),
       ip_address: ip,
       user_agent: userAgent,
       expires_at: expiresAt.toISOString(),
     })
+    if (error) throw error
     // Mirror the active JTI in Redis so edge middleware can validate it cheaply.
     await setJtiValid(jti, expiresAt)
   } catch (err) {
     logger.error('[sessions] createSession failed', {
       error: err instanceof Error ? err.message : String(err),
     })
+    throw err
   }
 }
 
@@ -108,7 +110,7 @@ export async function rotateSessionJti(
 ): Promise<void> {
   try {
     const admin = createAdminClient()
-    await admin
+    const { error } = await admin
       .from('admin_sessions')
       .update({
         jti: newJti,
@@ -116,6 +118,7 @@ export async function rotateSessionJti(
         expires_at: newExpiresAt.toISOString(),
       })
       .eq('jti', oldJti)
+    if (error) throw error
     // Rotate the Redis mirror: old JTI is no longer valid, new one is.
     await deleteJti(oldJti)
     await setJtiValid(newJti, newExpiresAt)
@@ -123,6 +126,7 @@ export async function rotateSessionJti(
     logger.error('[sessions] rotateSessionJti failed', {
       error: err instanceof Error ? err.message : String(err),
     })
+    throw err
   }
 }
 

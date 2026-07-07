@@ -17,6 +17,8 @@ import { useAbandonedCheckout } from '@/hooks/useAbandonedCheckout'
 import { trackPurchase, trackInitiateCheckout } from '@/lib/analytics'
 import { track } from '@/lib/analytics/track'
 import { trackPurchase as trackMetaPurchase, trackInitiateCheckout as trackMetaInitiateCheckout } from '@/lib/meta/events'
+import { createClient } from '@/lib/supabase/client'
+import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScripts'
 
 function normalizeW(s: string) {
   return s.toLowerCase()
@@ -70,7 +72,7 @@ export default function CheckoutContent() {
   const [submitted, setSubmitted] = useState(false)
   const [confettiDone, setConfettiDone] = useState(false)
   const [form, setForm] = useState({
-    fullName: '', phone: '', address: '', city: '', wilaya: '', notes: '', stopDeskCause: '',
+    fullName: '', phone: '', address: '', city: '', wilaya: '', notes: '', stopDeskCause: '', email: '',
   })
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
@@ -80,6 +82,42 @@ export default function CheckoutContent() {
   const [saveError, setSaveError] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const { save: saveAbandoned, markRecovered } = useAbandonedCheckout()
+  const [vendorPixelConfig, setVendorPixelConfig] = useState<{
+    metaPixelId: string | null
+    gtagId: string | null
+    tiktokPixelId: string | null
+    pixelId: string | null
+    metaEnabled: boolean
+    metaTestEventCode: string | null
+  } | null>(null)
+
+  useEffect(() => {
+    if (!_hasHydrated || !cartStoreSlug) return
+    const supabase = createClient()
+    
+    async function fetchVendor() {
+      try {
+        const { data } = await supabase
+          .from('vendors')
+          .select('meta_pixel_id, gtag_id, tiktok_pixel_id, pixel_id, meta_enabled, meta_test_event_code')
+          .eq('store_slug', cartStoreSlug)
+          .maybeSingle()
+
+        if (data) {
+          setVendorPixelConfig({
+            metaPixelId: data.meta_pixel_id,
+            gtagId: data.gtag_id,
+            tiktokPixelId: data.tiktok_pixel_id,
+            pixelId: data.pixel_id,
+            metaEnabled: data.meta_enabled !== false,
+            metaTestEventCode: data.meta_test_event_code,
+          })
+        }
+      } catch {}
+    }
+    
+    void fetchVendor()
+  }, [_hasHydrated, cartStoreSlug])
 
   const [b2b, setB2b] = useState<B2BFields>({ isB2B: false, companyName: '', nif: '', nis: '', rc: '' })
   const [customCommune, setCustomCommune] = useState('')
@@ -119,15 +157,24 @@ export default function CheckoutContent() {
   const [isLiveRates, setIsLiveRates] = useState(false)
   const [rateError, setRateError] = useState('')
 
+  const initiatedRef = useRef(false)
+  const vendorInitiatedRef = useRef(false)
+
   useEffect(() => {
     fetch('/api/loyalty')
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.balance > 0) setLoyaltyBalance(d.balance) })
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!_hasHydrated || items.length === 0 || initiatedRef.current) return
+    initiatedRef.current = true
+
     track('checkout_start', {})
-    // Fire pixel InitiateCheckout once — uses closure values from mount
-    const { items: cartItems, total: getTotal } = useCartStore.getState()
-    trackInitiateCheckout({ total: getTotal(), numItems: cartItems.reduce((s, i) => s + i.quantity, 0) })
+    const mappedItems = items.map(i => ({ id: i.product.id, name: i.product.name, price: i.product.price, quantity: i.quantity }))
+    trackInitiateCheckout({ total: cartTotal, items: mappedItems })
+
     const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
     if (metaPixelId) {
       trackMetaInitiateCheckout(
@@ -141,13 +188,44 @@ export default function CheckoutContent() {
           enabled:       true,
         },
         {
-          value:     getTotal(),
+          value:     cartTotal,
           currency:  'DZD',
-          num_items: cartItems.reduce((s, i) => s + i.quantity, 0),
+          num_items: items.reduce((s, i) => s + i.quantity, 0),
+          content_ids: items.map(i => i.product.id),
+          content_type: 'product',
+          contents: items.map(i => ({ id: i.product.id, quantity: i.quantity, price: i.product.price })),
         },
       )
     }
-  }, [])
+  }, [_hasHydrated, items, cartTotal])
+
+  useEffect(() => {
+    if (!vendorPixelConfig || items.length === 0 || vendorInitiatedRef.current) return
+    vendorInitiatedRef.current = true
+
+    if (vendorPixelConfig.metaPixelId && vendorPixelConfig.metaEnabled) {
+      trackMetaInitiateCheckout(
+        {
+          storeId:       cartStoreSlug ?? '',
+          storeSlug:     cartStoreSlug ?? '',
+          pixelId:       vendorPixelConfig.metaPixelId,
+          accessToken:   null,
+          testEventCode: vendorPixelConfig.metaTestEventCode,
+          datasetId:     null,
+          enabled:       true,
+        },
+        {
+          value:     cartTotal,
+          currency:  'DZD',
+          num_items: items.reduce((s, i) => s + i.quantity, 0),
+          content_ids: items.map(i => i.product.id),
+          content_type: 'product',
+          contents: items.map(i => ({ id: i.product.id, quantity: i.quantity, price: i.product.price })),
+        },
+        { em: form.email || null, ph: form.phone || null }
+      )
+    }
+  }, [vendorPixelConfig, items, cartTotal, cartStoreSlug, form.email, form.phone])
 
   // Stable vendorId derived from items — avoids re-firing on every render due to new array reference (Fix 7)
   const primaryVendorId = useMemo(
@@ -473,7 +551,13 @@ export default function CheckoutContent() {
           submittingRef.current = false
           return
         }
-        trackPurchase({ transactionId: resolvedOrderId, total: orderTotal, items: cartSnapshot })
+        trackPurchase({
+          transactionId: resolvedOrderId,
+          total: orderTotal,
+          items: cartSnapshot,
+          email: form.email || null,
+          phone: form.phone,
+        })
         const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
         if (metaPixelId) {
           trackMetaPurchase(
@@ -495,6 +579,30 @@ export default function CheckoutContent() {
               contents:     cartSnapshot.map(i => ({ id: i.id, quantity: i.quantity, price: i.price })),
               transactionId: resolvedOrderId,
             },
+            { em: form.email || null, ph: form.phone }
+          )
+        }
+        if (vendorPixelConfig?.metaPixelId && vendorPixelConfig.metaEnabled) {
+          trackMetaPurchase(
+            {
+              storeId:       cartStoreSlug ?? '',
+              storeSlug:     cartStoreSlug ?? '',
+              pixelId:       vendorPixelConfig.metaPixelId,
+              accessToken:   null,
+              testEventCode: vendorPixelConfig.metaTestEventCode,
+              datasetId:     null,
+              enabled:       true,
+            },
+            {
+              value:        orderTotal,
+              currency:     'DZD',
+              content_ids:  cartSnapshot.map(i => i.id),
+              content_type: 'product',
+              num_items:    cartSnapshot.reduce((s, i) => s + i.quantity, 0),
+              contents:     cartSnapshot.map(i => ({ id: i.id, quantity: i.quantity, price: i.price })),
+              transactionId: resolvedOrderId,
+            },
+            { em: form.email || null, ph: form.phone }
           )
         }
         track('checkout_complete', { order_id: resolvedOrderId, total: orderTotal, payment_method: 'cash', wilaya: form?.wilaya })
@@ -1179,6 +1287,14 @@ export default function CheckoutContent() {
           </div>
         </div>
       </div>
+      {vendorPixelConfig && (
+        <VendorAnalyticsScripts
+          metaPixelId={vendorPixelConfig.metaPixelId}
+          gtagId={vendorPixelConfig.gtagId}
+          tiktokPixelId={vendorPixelConfig.tiktokPixelId}
+          pixelId={vendorPixelConfig.pixelId}
+        />
+      )}
     </div>
   )
 }

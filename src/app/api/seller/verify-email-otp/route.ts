@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyFrontendRateLimit } from '@/lib/auth/rateLimit'
 import { logger } from '@/lib/logger'
 import { verifyOtpHash } from '@/lib/auth/otp'
+import { VerifyEmailOtpSchema } from '@/lib/validation/apiSchemas'
 
 type OtpRecord = {
   id: string
@@ -34,13 +35,13 @@ async function findActiveOtp(supabase: ReturnType<typeof createAdminClient>, ema
   if (isColumnMissing) {
     const { data: dataPhone, error: errPhone } = await supabase
       .from('password_reset_otps')
-      .select('id, otp_hash, expires_at, used, purpose')
+      .select('id, otp_hash, expires_at, used')
       .eq('phone', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    record = dataPhone as OtpRecord | null
+    record = dataPhone ? { ...dataPhone, purpose: null } as OtpRecord : null
     queryErr = errPhone ? new Error(`Database query failed: ${errPhone.message} (code: ${errPhone.code})`) : null
   } else if (errEmail) {
     queryErr = new Error(`Database query failed: ${errEmail.message} (code: ${errEmail.code})`)
@@ -64,14 +65,16 @@ async function findActiveOtp(supabase: ReturnType<typeof createAdminClient>, ema
 
 export async function POST(req: NextRequest) {
   try {
-    const { email: emailInput, otp: otpInput } = await req.json() as { email?: string; otp?: string }
-
-    if (!emailInput || !otpInput) {
-      return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
+    let rawBody: unknown
+    try { rawBody = await req.json() } catch {
+      return NextResponse.json({ error: 'Données invalides.' }, { status: 400 })
+    }
+    const parsed = VerifyEmailOtpSchema.safeParse(rawBody)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Données invalides.' }, { status: 400 })
     }
 
-    const email = emailInput.trim().toLowerCase()
-    const otp = otpInput.trim()
+    const { email, otp } = parsed.data
 
     const rl = await checkOtpVerifyFrontendRateLimit(email)
     if (!rl.allowed) {

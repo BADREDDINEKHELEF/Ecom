@@ -11,7 +11,11 @@ declare global {
     gtag?:     (...args: unknown[]) => void
     dataLayer?: unknown[]
     __pixel?:  (event: string, meta?: Record<string, unknown>) => void
-    ttq?:      { track: (event: string, params?: Record<string, unknown>, options?: Record<string, unknown>) => void; page: () => void }
+    ttq?: {
+      track: (event: string, params?: Record<string, unknown>, options?: Record<string, unknown>) => void
+      page: () => void
+      identify: (params: Record<string, unknown>) => void
+    }
   }
 }
 
@@ -74,25 +78,91 @@ export function trackAddToCart(product: {
   _ttq('AddToCart', { content_id: product.id, content_name: product.name, quantity: product.quantity, value: product.price * product.quantity, currency: 'DZD' })
 }
 
-export function trackInitiateCheckout(cart: { total: number; numItems: number }) {
+function clientNormalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.startsWith('213')) return '+' + digits
+  if (digits.startsWith('0')) return '+213' + digits.slice(1)
+  return '+' + digits
+}
+
+export function trackInitiateCheckout(cart: {
+  total: number
+  items: Array<{ id: string; name: string; price: number; quantity: number }>
+  email?: string | null
+  phone?: string | null
+}) {
+  const { total, items, email, phone } = cart
+  const normPhone = phone ? clientNormalizePhone(phone) : undefined
+  const normEmail = email?.trim().toLowerCase() || undefined
+
+  if (normEmail || normPhone) {
+    // GA4 Enhanced Conversions
+    _gtag('set', 'user_data', {
+      ...(normEmail && { email: normEmail }),
+      ...(normPhone && { phone_number: normPhone }),
+    })
+    // TikTok identify
+    try {
+      if (typeof window !== 'undefined' && window.ttq) {
+        window.ttq.identify({
+          ...(normEmail && { email: normEmail }),
+          ...(normPhone && { phone_number: normPhone }),
+        })
+      }
+    } catch {}
+  }
+
   _gtag('event', 'begin_checkout', {
     currency: 'DZD',
-    value:    cart.total,
+    value:    total,
+    items:    items.map(i => ({ item_id: i.id, item_name: i.name, price: i.price, quantity: i.quantity })),
   })
-  _ttq('InitiateCheckout', { value: cart.total, currency: 'DZD' })
-  _pixel('InitiateCheckout', { total: cart.total, num_items: cart.numItems, currency: 'DZD' })
+  _ttq('InitiateCheckout', {
+    value: total,
+    currency: 'DZD',
+    contents: items.map(i => ({ content_id: i.id, content_name: i.name, quantity: i.quantity, price: i.price })),
+  })
+  _pixel('InitiateCheckout', {
+    total: total,
+    num_items: items.reduce((s, i) => s + i.quantity, 0),
+    currency: 'DZD',
+    content_ids: items.map(i => i.id),
+  })
 }
 
 export function trackPurchase(order: {
   transactionId: string
   total:         number
   items: Array<{ id: string; name: string; price: number; quantity: number }>
+  email?: string | null
+  phone?: string | null
 }) {
+  const { transactionId, total, items, email, phone } = order
+  const normPhone = phone ? clientNormalizePhone(phone) : undefined
+  const normEmail = email?.trim().toLowerCase() || undefined
+
+  if (normEmail || normPhone) {
+    // GA4 Enhanced Conversions
+    _gtag('set', 'user_data', {
+      ...(normEmail && { email: normEmail }),
+      ...(normPhone && { phone_number: normPhone }),
+    })
+    // TikTok identify
+    try {
+      if (typeof window !== 'undefined' && window.ttq) {
+        window.ttq.identify({
+          ...(normEmail && { email: normEmail }),
+          ...(normPhone && { phone_number: normPhone }),
+        })
+      }
+    } catch {}
+  }
+
   _gtag('event', 'purchase', {
-    transaction_id: order.transactionId,
-    value:          order.total,
+    transaction_id: transactionId,
+    value:          total,
     currency:       'DZD',
-    items: order.items.map(i => ({
+    items: items.map(i => ({
       item_id:   i.id,
       item_name: i.name,
       price:     i.price,
@@ -100,22 +170,19 @@ export function trackPurchase(order: {
     })),
   })
   _pixel('Purchase', {
-    transaction_id: order.transactionId,
-    total:          order.total,
+    transaction_id: transactionId,
+    total:          total,
     currency:       'DZD',
-    num_items:      order.items.reduce((s, i) => s + i.quantity, 0),
-    product_ids:    order.items.map(i => i.id),
+    num_items:      items.reduce((s, i) => s + i.quantity, 0),
+    product_ids:    items.map(i => i.id),
   })
-  // TikTok purchase standard event is 'CompletePayment' (not 'PlaceAnOrder')
-  // event_id must be in the third `options` argument (not inside properties) for
-  // server-side deduplication per TikTok Pixel JS SDK spec: ttq.track(event, props, options)
   _ttq(
     'CompletePayment',
     {
-      value:    order.total,
+      value:    total,
       currency: 'DZD',
-      contents: order.items.map(i => ({ content_id: i.id, content_name: i.name, quantity: i.quantity, price: i.price })),
+      contents: items.map(i => ({ content_id: i.id, content_name: i.name, quantity: i.quantity, price: i.price })),
     },
-    { event_id: order.transactionId },
+    { event_id: transactionId },
   )
 }

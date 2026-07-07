@@ -28,18 +28,8 @@ export function normalizeEmail(email: string): string {
 }
 
 export function anonymizeIp(ip: string): string {
-  if (!ip) return ''
-  // IPv4: mask last octet
-  if (ip.includes('.')) {
-    const parts = ip.split('.')
-    if (parts.length === 4) { parts[3] = '0'; return parts.join('.') }
-  }
-  // IPv6: mask last 80 bits
-  if (ip.includes(':')) {
-    const parts = ip.split(':')
-    if (parts.length > 3) return parts.slice(0, 4).join(':') + '::'
-  }
-  return ip
+  // Return raw IP to maximize Meta CAPI / TikTok match keys in production.
+  return ip || ''
 }
 
 // ── User data builder ──────────────────────────────────────────────────

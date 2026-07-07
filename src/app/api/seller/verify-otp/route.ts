@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkOtpVerifyRateLimit } from '@/lib/auth/rateLimit'
 import { logger } from '@/lib/logger'
 import { verifyOtpHash } from '@/lib/auth/otp'
+import { VerifyOtpSchema } from '@/lib/validation/apiSchemas'
 
 type OtpRecord = {
   id: string
@@ -34,13 +35,13 @@ async function findActiveOtp(supabase: ReturnType<typeof createAdminClient>, ema
   if (isColumnMissing) {
     const { data: dataPhone, error: errPhone } = await supabase
       .from('password_reset_otps')
-      .select('id, otp_hash, expires_at, used, purpose')
+      .select('id, otp_hash, expires_at, used')
       .eq('phone', email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    record = dataPhone as OtpRecord | null
+    record = dataPhone ? { ...dataPhone, purpose: null } as OtpRecord : null
     queryErr = errPhone ? new Error(`Database query failed: ${errPhone.message} (code: ${errPhone.code})`) : null
   } else if (errEmail) {
     queryErr = new Error(`Database query failed: ${errEmail.message} (code: ${errEmail.code})`)
@@ -86,23 +87,23 @@ async function signOutAllUserSessions(userId: string): Promise<void> {
 
 export async function POST(req: NextRequest) {
   try {
-    // The 'phone' field here is actually the user's email for this flow.
-    const { email: emailInput, phone, otp: otpInput, newPassword } = await req.json() as {
-      email?: string
-      phone?: string
-      otp?: string
-      newPassword?: string
+    let rawBody: unknown
+    try { rawBody = await req.json() } catch {
+      return NextResponse.json({ error: 'Données invalides.' }, { status: 400 })
     }
-    const rawEmail = emailInput || phone
+    const parsed = VerifyOtpSchema.safeParse(rawBody)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Données invalides.' }, { status: 400 })
+    }
 
-    if (!rawEmail || !otpInput || !newPassword) {
+    // The 'phone' field here is actually the user's email for this flow.
+    const rawEmail = parsed.data.email || parsed.data.phone
+    const { otp, newPassword } = parsed.data
+
+    if (!rawEmail) {
       return NextResponse.json({ error: 'Données manquantes.' }, { status: 400 })
     }
     const email = rawEmail.trim().toLowerCase()
-    const otp = otpInput.trim()
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères.' }, { status: 400 })
-    }
 
     const rl = await checkOtpVerifyRateLimit(email)
     if (!rl.allowed) {

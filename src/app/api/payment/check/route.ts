@@ -8,6 +8,7 @@ import { verifyCheckToken } from '@/lib/payment/checkToken'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { recordFinancialTransaction } from '@/lib/supabase/orders'
+import { PaymentCheckQuerySchema } from '@/lib/validation/apiSchemas'
 
 // How long (ms) a pending_payment order must be stuck before we attempt
 // a background Satim reconciliation. Override with PAYMENT_CHECK_STALE_MS env var.
@@ -29,15 +30,15 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const orderId = req.nextUrl.searchParams.get('orderId')
-    const token   = req.nextUrl.searchParams.get('token')
-
-    if (!orderId) {
-      return NextResponse.json({ error: 'orderId requis' }, { status: 400 })
+    const query = {
+      orderId: req.nextUrl.searchParams.get('orderId') ?? '',
+      token: req.nextUrl.searchParams.get('token') ?? '',
     }
-    if (!token) {
-      return NextResponse.json({ error: 'token requis' }, { status: 400 })
+    const parsedQuery = PaymentCheckQuerySchema.safeParse(query)
+    if (!parsedQuery.success) {
+      return NextResponse.json({ error: 'orderId ou token invalide' }, { status: 400 })
     }
+    const { orderId, token } = parsedQuery.data
 
     // Fetch the order — include phone (ownership key) and satim_order_id (for reconciliation).
     const { data: order, error } = await createAdminClient()

@@ -7,6 +7,8 @@ vi.mock('@/lib/auth/rateLimit', () => ({
   checkOtpSendRateLimit: () => Promise.resolve({ allowed: true }),
   checkOtpVerifyRateLimit: () => Promise.resolve({ allowed: true }),
   checkOtpVerifyFrontendRateLimit: () => Promise.resolve({ allowed: true }),
+  checkSellerRateLimit: () => Promise.resolve({ allowed: true }),
+  checkUserRateLimit: () => Promise.resolve({ allowed: true }),
 }))
 
 vi.mock('@/lib/notifications/email', () => ({
@@ -25,6 +27,7 @@ vi.mock('@/lib/logger', () => ({
 const mockFrom = vi.fn()
 const mockUpdateUserById = vi.fn()
 const mockListUsers = vi.fn()
+const mockCreateUser = vi.fn()
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
@@ -33,6 +36,7 @@ vi.mock('@/lib/supabase/admin', () => ({
       admin: {
         updateUserById: mockUpdateUserById,
         listUsers: mockListUsers,
+        createUser: mockCreateUser,
       },
     },
   }),
@@ -44,6 +48,7 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     mockFrom.mockReset()
     mockUpdateUserById.mockReset()
     mockListUsers.mockReset()
+    mockCreateUser.mockReset()
   })
 
   // Helper to construct a request
@@ -332,5 +337,162 @@ describe('OTP Fallback and Case Insensitivity Queries', () => {
     expect(fetchSpy).toHaveBeenCalled()
     // Verify it backfilled email column in vendors table
     expect(mockUpdateVendors).toHaveBeenCalledWith({ email: 'legacy@example.com' })
+  })
+
+  it('verify-otp handles missing email/purpose columns (42703) on fallback by omitting purpose in select', async () => {
+    const mockEq = vi.fn().mockReturnThis()
+    const mockOrder = vi.fn().mockReturnThis()
+    const mockLimit = vi.fn().mockReturnThis()
+    const mockMaybeSingle = vi.fn()
+      // First call (querying email column on password_reset_otps) -> fails with 42703
+      .mockResolvedValueOnce({ data: null, error: { code: '42703', message: 'column "email" does not exist' } })
+      // Second call (fallback: querying phone column on password_reset_otps) -> valid record
+      .mockResolvedValueOnce({
+        data: { id: 'otp-1', otp_hash: hashOtp('123456'), expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
+        error: null,
+      })
+      // Third call (querying email on vendors) -> returns vendor
+      .mockResolvedValueOnce({ data: { user_id: 'u-1' }, error: null })
+
+    const mockSelect = vi.fn().mockReturnValue({
+      eq: mockEq,
+      order: mockOrder,
+      limit: mockLimit,
+      maybeSingle: mockMaybeSingle,
+    })
+
+    const mockIlike = vi.fn().mockReturnValue({
+      maybeSingle: mockMaybeSingle,
+    })
+
+    const mockUpdate = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+
+    mockFrom.mockImplementation((table) => {
+      if (table === 'password_reset_otps') {
+        return { select: mockSelect, update: mockUpdate }
+      }
+      if (table === 'vendors') {
+        return { select: vi.fn().mockReturnValue({ ilike: mockIlike }) }
+      }
+      return {}
+    })
+
+    mockUpdateUserById.mockResolvedValue({ error: null })
+
+    const { POST } = await import('../app/api/seller/verify-otp/route')
+    const req = makeReq('http://localhost/api/seller/verify-otp', {
+      email: 'user@example.com',
+      otp: '123456',
+      newPassword: 'new-secure-password-123',
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+
+    // Verify it called select with the fallback fields (no 'purpose')
+    expect(mockSelect).toHaveBeenCalledWith('id, otp_hash, expires_at, used')
+  })
+
+  it('verify-email-otp handles missing email/purpose columns (42703) on fallback by omitting purpose in select', async () => {
+    const mockEq = vi.fn().mockReturnThis()
+    const mockOrder = vi.fn().mockReturnThis()
+    const mockLimit = vi.fn().mockReturnThis()
+    const mockMaybeSingle = vi.fn()
+      // First call (querying email column on password_reset_otps) -> fails with 42703
+      .mockResolvedValueOnce({ data: null, error: { code: '42703', message: 'column "email" does not exist' } })
+      // Second call (fallback: querying phone column on password_reset_otps) -> valid record
+      .mockResolvedValueOnce({
+        data: { id: 'otp-2', otp_hash: hashOtp('654321'), expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
+        error: null,
+      })
+
+    const mockSelect = vi.fn().mockReturnValue({
+      eq: mockEq,
+      order: mockOrder,
+      limit: mockLimit,
+      maybeSingle: mockMaybeSingle,
+    })
+
+    const mockUpdate = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+
+    mockFrom.mockImplementation((table) => {
+      if (table === 'password_reset_otps') {
+        return { select: mockSelect, update: mockUpdate }
+      }
+      return {}
+    })
+
+    const { POST } = await import('../app/api/seller/verify-email-otp/route')
+    const req = makeReq('http://localhost/api/seller/verify-email-otp', {
+      email: 'register@example.com',
+      otp: '654321',
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+
+    // Verify it called select with the fallback fields (no 'purpose')
+    expect(mockSelect).toHaveBeenCalledWith('id, otp_hash, expires_at, used')
+  })
+
+  it('register handles missing email/purpose columns (42703) on fallback by omitting purpose in select', async () => {
+    const mockEq = vi.fn().mockReturnThis()
+    const mockOrder = vi.fn().mockReturnThis()
+    const mockLimit = vi.fn().mockReturnThis()
+    const mockMaybeSingle = vi.fn()
+      // First call (querying email column on password_reset_otps) -> fails with 42703
+      .mockResolvedValueOnce({ data: null, error: { code: '42703', message: 'column "email" does not exist' } })
+      // Second call (fallback: querying phone column on password_reset_otps) -> valid record
+      .mockResolvedValueOnce({
+        data: { id: 'otp-3', otp_hash: hashOtp('123456'), expires_at: new Date(Date.now() + 60000).toISOString(), used: false },
+        error: null,
+      })
+
+    const mockSelect = vi.fn().mockReturnValue({
+      eq: mockEq,
+      order: mockOrder,
+      limit: mockLimit,
+      maybeSingle: mockMaybeSingle,
+    })
+
+    const mockMaybeSingleVendors = vi.fn().mockResolvedValue({ data: null, error: null })
+    const mockSelectVendors = vi.fn().mockReturnValue({
+      ilike: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingleVendors }),
+      or: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingleVendors }),
+    })
+
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: 'v-1', store_slug: 'test-store' }, error: null })
+      })
+    })
+    const mockUpdate = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+
+    mockFrom.mockImplementation((table) => {
+      if (table === 'password_reset_otps') {
+        return { select: mockSelect, update: mockUpdate }
+      }
+      if (table === 'vendors') {
+        return { select: mockSelectVendors, insert: mockInsert }
+      }
+      return {}
+    })
+
+    mockCreateUser.mockResolvedValue({
+      data: { user: { id: 'u-1', email: 'new@example.com' } },
+      error: null,
+    })
+
+    const { POST } = await import('../app/api/seller/register/route')
+    const req = makeReq('http://localhost/api/seller/register', {
+      store_name: 'Test Store',
+      store_slug: 'test-store',
+      email: 'new@example.com',
+      password: 'secure-pass-123',
+      otp: '123456',
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(201)
+
+    // Verify it called select with the fallback fields (no 'purpose')
+    expect(mockSelect).toHaveBeenCalledWith('id, otp_hash, expires_at, used')
   })
 })

@@ -5,6 +5,7 @@ import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { dispatchGetRate } from '@/lib/delivery/dispatch'
 import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
+import { DeliveryRatesQuerySchema } from '@/lib/validation/apiSchemas'
 
 function staticRate(wilaya: string): { homeDelivery: number; deskDelivery: number; provider: string; live: boolean } {
   const zone = WILAYA_DATA[wilaya]?.zone ?? 3
@@ -19,11 +20,14 @@ export async function GET(req: NextRequest) {
   if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
 
   const { searchParams } = new URL(req.url)
-  const storeSlug = searchParams.get('storeSlug')?.trim()
-  const vendorId  = searchParams.get('vendorId')?.trim()
-  const wilaya    = searchParams.get('wilaya')?.trim()
+  const parsed = DeliveryRatesQuerySchema.safeParse({
+    storeSlug: searchParams.get('storeSlug')?.trim() || undefined,
+    vendorId: searchParams.get('vendorId')?.trim() || undefined,
+    wilaya: searchParams.get('wilaya')?.trim(),
+  })
+  if (!parsed.success) return NextResponse.json({ error: 'paramètres invalides' }, { status: 400 })
 
-  if (!wilaya) return NextResponse.json({ error: 'wilaya required' }, { status: 400 })
+  const { storeSlug, vendorId, wilaya } = parsed.data
 
   // No storeSlug or vendorId → return static zone pricing immediately
   if (!storeSlug && !vendorId) {

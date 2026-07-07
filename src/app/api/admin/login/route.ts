@@ -7,8 +7,11 @@ import { writeAuditLog } from '@/lib/auth/auditLog'
 import { getClientIp } from '@/lib/utils/ip'
 import { getAdminCookieName, getAdminCookieOptions, ADMIN_COOKIE_NAME } from '@/cookie'
 import { createSession, isTotpCounterUsed, markTotpCounterUsed } from '@/lib/auth/sessions'
+import { AdminLoginSchema } from '@/lib/validation/apiSchemas'
+import { withRequestContext } from '@/lib/api/requestContext'
+import { safeInternalServerError } from '@/lib/api/errorHandler'
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   try {
     const ip = getClientIp(req)
     const ua = req.headers.get('user-agent') ?? 'unknown'
@@ -26,8 +29,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = await req.json().catch(() => ({}))
-    const { password, totpCode } = body as { password?: string; totpCode?: string }
+    let rawBody: unknown
+    try { rawBody = await req.json() } catch {
+      rawBody = {}
+    }
+    const parsed = AdminLoginSchema.safeParse(rawBody)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    }
+    const { password, totpCode } = parsed.data
 
     // Layer 2 — Password check (timing-safe comparison prevents timing attacks)
     const adminSecret = process.env.ADMIN_SECRET
@@ -116,7 +126,8 @@ export async function POST(req: NextRequest) {
     }
     return res
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return safeInternalServerError(err, 'POST /api/admin/login')
   }
 }
+
+export const POST = withRequestContext(postHandler, { action: 'admin_login' })

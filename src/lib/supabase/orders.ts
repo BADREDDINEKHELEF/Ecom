@@ -78,6 +78,8 @@ export interface CreateOrderInput {
   stopDeskCause?:     string | null
   email?:             string | null
   idempotencyKey?:    string | null
+  clientIp?:          string | null
+  clientUserAgent?:   string | null
   items: {
     productId:     string
     productName:   string
@@ -453,6 +455,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       delivery_type:    input.deliveryType ?? 'home',
       stop_desk_cause:  input.stopDeskCause ?? null,
       points_redeemed:  pointsDeduction,
+      client_ip:        input.clientIp ?? null,
+      client_user_agent: input.clientUserAgent ?? null,
       ...(input.email ? { email: input.email } : {}),
       ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey } : {}),
     })

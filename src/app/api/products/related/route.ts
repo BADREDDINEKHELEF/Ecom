@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { dbToProduct } from '@/lib/supabase/products'
 import { checkPublicRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { RelatedProductsQuerySchema } from '@/lib/validation/apiSchemas'
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req)
@@ -12,11 +13,14 @@ export async function GET(req: NextRequest) {
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
   )
   const { searchParams } = req.nextUrl
-  const nicheId   = searchParams.get('nicheId')
-  const excludeId = searchParams.get('excludeId')
-  const limit     = Math.min(Number(searchParams.get('limit') ?? 8), 20)
+  const parsed = RelatedProductsQuerySchema.safeParse({
+    nicheId: searchParams.get('nicheId'),
+    excludeId: searchParams.get('excludeId') ?? undefined,
+    limit: Number(searchParams.get('limit') ?? 8),
+  })
+  if (!parsed.success) return NextResponse.json({ error: 'paramètres invalides' }, { status: 400 })
 
-  if (!nicheId) return NextResponse.json({ error: 'nicheId required' }, { status: 400 })
+  const { nicheId, excludeId, limit } = parsed.data
 
   const supabase = createAdminClient()
   let query = supabase

@@ -7,7 +7,8 @@ import { sendOrderPendingPaymentEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { getClientIp } from '@/lib/utils/ip'
 import { checkCheckoutRateLimit } from '@/lib/auth/rateLimit'
-import { logger } from '@/lib/logger'
+import { logger, pii } from '@/lib/logger'
+import { withRequestContext } from '@/lib/api/requestContext'
 import { computeCheckToken } from '@/lib/payment/checkToken'
 import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 
@@ -50,7 +51,7 @@ function normalizePhone(p: string) {
   return p.replace(/[\s\-().+]/g, '')
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkCheckoutRateLimit(ip)
@@ -131,7 +132,10 @@ export async function POST(req: NextRequest) {
       status: 'pending_payment',
       userId: user?.id ?? null,
       idempotencyKey,
+      clientIp: ip,
+      clientUserAgent: req.headers.get('user-agent') ?? null,
     })
+    logger.setContext({ orderId })
 
     // Use the server-computed total (DZD) returned by createOrder — never trust client amounts.
     // Satim expects centimes (DZD × 100).
@@ -225,7 +229,13 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Payment initiation failed'
-    logger.error('[POST /api/payment/initiate]', { error: msg })
+    logger.error('[POST /api/payment/initiate]', {
+      error: msg,
+      phone: pii.maskPhone(phone),
+      email: pii.maskEmail(buyerEmail),
+      ip,
+      action: 'initiate_payment',
+    })
     if (msg.includes('stock') || msg.includes('Insufficient')) {
       return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 }))
     }
@@ -235,3 +245,5 @@ export async function POST(req: NextRequest) {
     return copyCookies(response, NextResponse.json({ error: 'Une erreur est survenue.' }, { status: 500 }))
   }
 }
+
+export const POST = withRequestContext(postHandler, { action: 'initiate_payment' })

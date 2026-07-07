@@ -98,13 +98,13 @@ export async function POST(req: NextRequest) {
     if (isColumnMissing) {
       const { data: dataPhone, error: errPhone } = await supabase
         .from('password_reset_otps')
-        .select('id, otp_hash, expires_at, used, purpose')
+        .select('id, otp_hash, expires_at, used')
         .eq('phone', email)
         .eq('used', false)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-      record = dataPhone
+      record = dataPhone ? { ...dataPhone, purpose: null } : null
       queryErr = errPhone
       logger.info('[register] OTP lookup by phone (fallback)', { found: !!dataPhone, error: errPhone?.message })
     } else if (errEmail) {

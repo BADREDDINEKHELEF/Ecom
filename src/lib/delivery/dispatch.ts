@@ -186,15 +186,19 @@ export async function dispatchShipment(
 
 // Maps raw provider status strings/codes → our internal status enum
 export function normalizeProviderStatus(raw: unknown): string {
-  const s = String(raw ?? '').toLowerCase().replace(/[- ]/g, '_')
-  if (['delivered', 'livré', 'livre', 'livraison_effectuee', 'success', '4'].includes(s)) return 'delivered'
-  if (['returned', 'retour', 'retourné', 'retourne', 'return', '5', '6'].includes(s)) return 'returned'
+  const s = String(raw ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[- ]/g, '_')
+  if (['delivered', 'livre', 'livraison_effectuee', 'success', '4'].includes(s)) return 'delivered'
+  if (['returned', 'retour', 'retourne', 'return', '5', '6'].includes(s)) return 'returned'
   if (['out_for_delivery', 'en_livraison', 'en_cours_de_livraison', 'dernier_km', '3'].includes(s)) return 'out_for_delivery'
   if (['in_transit', 'en_transit', 'en_route', 'transit', 'dispatched', 'shipped', '2'].includes(s)) return 'in_transit'
-  if (['picked_up', 'enlevé', 'enleve', 'collected', 'pris_en_charge', 'ramassé', 'ramasse', '1'].includes(s)) return 'picked_up'
-  if (['failed', 'echec', 'échoué', 'failed_delivery'].includes(s)) return 'failed'
-  if (['cancelled', 'annulé', 'annule', 'canceled', '7'].includes(s)) return 'cancelled'
-  if (['pending', 'waiting', 'wait_for_pickup', 'created', '0'].includes(s)) return 'pending'
+  if (['picked_up', 'enleve', 'collected', 'pris_en_charge', 'ramasse', '1'].includes(s)) return 'picked_up'
+  if (['failed', 'echec', 'echoue', 'failed_delivery'].includes(s)) return 'failed'
+  if (['cancelled', 'annule', 'canceled', '7'].includes(s)) return 'cancelled'
+  if (['pending', 'waiting', 'wait_for_pickup', 'created', '0', 'pret_a_expedier'].includes(s)) return 'pending'
   // Unknown status — log so new provider status codes can be added above.
   // Return 'unknown' rather than 'in_transit' so the cron does not poll indefinitely
   // for shipments whose terminal state it cannot classify.
@@ -205,6 +209,21 @@ export function normalizeProviderStatus(raw: unknown): string {
 export interface TrackResult {
   status: string
   detail?: string
+}
+
+function getParcelStatusAndDetail(data: unknown): TrackResult | null {
+  if (!data || typeof data !== 'object') return null
+  const d = data as Record<string, unknown>
+  const parcel = Array.isArray(d)
+    ? d[0]
+    : (Array.isArray(d.data)
+      ? d.data[0]
+      : (Array.isArray(d.Colis) ? d.Colis[0] : d))
+  if (!parcel || typeof parcel !== 'object') return null
+  const p = parcel as Record<string, unknown>
+  const raw = p.status ?? p.etat ?? p.state ?? p.Statut ?? p.Etat ?? p.StatutColis
+  const detail = p.status_detail ?? p.detail ?? p.notes ?? raw
+  return { status: normalizeProviderStatus(raw), detail: detail ? String(detail) : undefined }
 }
 
 export async function dispatchTrack(
@@ -232,76 +251,57 @@ export async function dispatchTrack(
         const tk = vendorCreds?.yalidine_api_token ?? process.env.YALIDINE_API_TOKEN ?? ''
         if (!id || !tk) return null
         const data = await yalidineTrack(trackingNumber, id, tk)
-        if (!data) return null
-        const raw = data.status ?? data.etat ?? data.state
-        return { status: normalizeProviderStatus(raw), detail: data.status_detail ?? undefined }
+        return getParcelStatusAndDetail(data)
       }
       case 'procolis': {
         const token = vendorCreds?.procolis_token ?? process.env.PROCOLIS_TOKEN ?? ''
         if (!token) return null
         const data = await procolisTrack(trackingNumber, token)
-        if (!data) return null
-        const parcel = Array.isArray(data?.Colis) ? data.Colis[0] : data
-        const raw = parcel?.Statut ?? parcel?.status ?? parcel?.etat
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       case 'zr': {
         const token = vendorCreds?.zr_token ?? process.env.ZR_TOKEN ?? ''
         if (!token) return null
         const data = await zrTrack(trackingNumber, token)
-        if (!data) return null
-        const raw = data.Etat ?? data.status ?? data.etat
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       case 'colivraison': {
         const token = vendorCreds?.colivraison_token ?? process.env.COLIVRAISON_TOKEN ?? ''
         if (!token) return null
         const data = await colivraisonTrack(trackingNumber, token)
-        if (!data) return null
-        const raw = data.status ?? data.etat ?? data.state
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       case 'maystro': {
         const token = vendorCreds?.maystro_token ?? process.env.MAYSTRO_TOKEN ?? ''
         if (!token) return null
         const data = await maystroTrack(trackingNumber, token)
-        if (!data) return null
-        const raw = data.status ?? data.etat
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       case 'rex': {
         const token = vendorCreds?.rex_token ?? process.env.REX_TOKEN ?? ''
         if (!token) return null
         const data = await rexTrack(trackingNumber, token)
-        if (!data) return null
-        const raw = data.status ?? data.etat
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       case 'yassir': {
         const apiKey = vendorCreds?.yassir_api_key ?? process.env.YASSIR_API_KEY ?? ''
         if (!apiKey) return null
         const data = await yassirTrack(trackingNumber, apiKey)
-        if (!data) return null
-        const raw = data.status ?? data.state
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       case 'ecom': {
         const key = vendorCreds?.ecom_api_key ?? process.env.ECOM_API_KEY ?? ''
         const tk = vendorCreds?.ecom_api_token ?? process.env.ECOM_API_TOKEN ?? ''
         if (!key || !tk) return null
         const data = await ecomTrack(trackingNumber, key, tk)
-        if (!data) return null
-        const raw = data.status ?? data.etat
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       case 'apec': {
         const id = vendorCreds?.apec_api_id ?? process.env.APEC_API_ID ?? ''
         const tk = vendorCreds?.apec_api_token ?? process.env.APEC_API_TOKEN ?? ''
         if (!id || !tk) return null
         const data = await apecTrack(trackingNumber, id, tk)
-        if (!data) return null
-        const raw = data.status ?? data.etat
-        return { status: normalizeProviderStatus(raw), detail: String(raw ?? '') }
+        return getParcelStatusAndDetail(data)
       }
       default:
         return null

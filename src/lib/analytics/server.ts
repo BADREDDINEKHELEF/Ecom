@@ -29,7 +29,10 @@ export async function fireTikTokPurchase(opts: {
     if (clientIp) user.ip        = anonymizeIp(clientIp)
     if (clientUserAgent) user.user_agent = clientUserAgent
     if (email) user.email        = sha256(email)
-    if (phone) user.phone_number = sha256(normalizePhone(phone))
+    if (phone) {
+      const digits = normalizePhone(phone)
+      user.phone_number = sha256('+' + digits)
+    }
 
     const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
       method:  'POST',

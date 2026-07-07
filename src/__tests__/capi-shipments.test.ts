@@ -118,8 +118,8 @@ describe('TikTok CAPI and Seller Shipments Product List Tests', () => {
     expect(body.events[0].event).toBe('CompletePayment')
     expect(body.events[0].event_id).toBe('order-abc')
     
-    // Check that IP is anonymized (last octet is zeroed for IPv4)
-    expect(body.events[0].user.ip).toBe('197.112.56.0')
+    // Check that IP is forwarded raw
+    expect(body.events[0].user.ip).toBe('197.112.56.78')
     expect(body.events[0].user.user_agent).toBe('Mozilla/5.0 (Windows NT 10.0)')
   })
 
