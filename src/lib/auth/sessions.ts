@@ -21,13 +21,23 @@ function redisConfigured(): boolean {
   return !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN
 }
 
+function getCleanRedisConfig(): { url: string; token: string } | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return null
+  return {
+    url: url.replace(/^["'](.*)["']$/, '$1').replace(/\/+$/, ''),
+    token: token.replace(/^["'](.*)["']$/, '$1'),
+  }
+}
+
 async function redisCommand<T>(command: string, ...args: string[]): Promise<T | null> {
-  if (!redisConfigured()) return null
-  const baseUrl = process.env.UPSTASH_REDIS_REST_URL!.replace(/\/+$/, '')
-  const url = `${baseUrl}/${command}/${args.map(encodeURIComponent).join('/')}`
+  const config = getCleanRedisConfig()
+  if (!config) return null
+  const url = `${config.url}/${command}/${args.map(encodeURIComponent).join('/')}`
   try {
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
+      headers: { Authorization: `Bearer ${config.token}` },
       cache: 'no-store',
     })
     if (!res.ok) {

@@ -117,7 +117,10 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
     if (payload.role !== 'admin') return false
     const jti = payload.jti as string | undefined
     if (!jti) return false
-    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const rawUrl = process.env.UPSTASH_REDIS_REST_URL
+    const rawToken = process.env.UPSTASH_REDIS_REST_TOKEN
+
+    if (!rawUrl || !rawToken) {
       if (process.env.NODE_ENV === 'production') {
         console.error(
           '[SECURITY] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are not set. ' +
@@ -128,11 +131,14 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
       // In development/test, skip revocation check when Redis is not configured.
       return true
     }
-    const baseUrl = process.env.UPSTASH_REDIS_REST_URL.replace(/\/+$/, '')
-    const url = `${baseUrl}/get/${encodeURIComponent(jti)}?nocache=${Date.now()}`
+
+    const cleanUrl = rawUrl.replace(/^["'](.*)["']$/, '$1').replace(/\/+$/, '')
+    const cleanToken = rawToken.replace(/^["'](.*)["']$/, '$1')
+
+    const url = `${cleanUrl}/get/${encodeURIComponent(jti)}?nocache=${Date.now()}`
     const res = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+        Authorization: `Bearer ${cleanToken}`,
         'Cache-Control': 'no-store',
       },
       cache: 'no-store',
