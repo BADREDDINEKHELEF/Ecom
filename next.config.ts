@@ -25,6 +25,7 @@ function buildCsp(extra: string[] = []): string {
       'https://picsum.photos',
       'https://*.supabase.co',
       'https://www.facebook.com',
+      'https://connect.facebook.net',
       'https://www.googletagmanager.com',
       'https://analytics.tiktok.com',
     ].join(' '),
@@ -37,6 +38,7 @@ function buildCsp(extra: string[] = []): string {
       'https://*.sentry.io',
       'https://graph.facebook.com',
       'https://www.facebook.com',
+      'https://connect.facebook.net',
       'https://business-api.tiktok.com',
       'https://www.google-analytics.com',
     ].join(' '),
@@ -72,7 +74,7 @@ const securityHeaders = [
 const adminSecurityHeaders = [
   {
     key:   'Content-Security-Policy',
-    value: buildCsp(["upgrade-insecure-requests"]),
+    value: buildCsp(),
   },
   { key: 'X-Frame-Options',              value: 'DENY' },
   { key: 'X-Content-Type-Options',       value: 'nosniff' },

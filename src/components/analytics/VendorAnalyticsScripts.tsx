@@ -12,11 +12,26 @@ function jsStr(value: string): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
 
+function isValidMetaPixelId(id: string | undefined | null): boolean {
+  if (!id) return false
+  return /^\d{10,20}$/.test(id)
+}
+
+function isValidGtagId(id: string | undefined | null): boolean {
+  if (!id) return false
+  return /^G-[A-Z0-9]{10}$/i.test(id) || /^UA-\d{4,}-\d+$/i.test(id)
+}
+
+function isValidTikTokPixelId(id: string | undefined | null): boolean {
+  if (!id) return false
+  return /^[A-Za-z0-9]{10,}$/.test(id)
+}
+
 export default function VendorAnalyticsScripts({ metaPixelId, gtagId, pixelId, tiktokPixelId }: Props) {
   return (
     <>
       {/* ── Vendor Meta Pixel ──────────────────────────────────── */}
-      {metaPixelId && (
+      {isValidMetaPixelId(metaPixelId) && (
         <Script
           id={`vendor-meta-pixel-${metaPixelId}`}
           strategy="afterInteractive"
@@ -41,7 +56,7 @@ if(window.fbq){
       )}
 
       {/* ── Vendor Google Tag ──────────────────────────────────── */}
-      {gtagId && (
+      {isValidGtagId(gtagId) && (
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gtagId)}`}
@@ -63,7 +78,7 @@ gtag('config',${jsStr(gtagId)},{send_page_view:false});
       )}
 
       {/* ── Vendor TikTok Pixel ────────────────────────────────── */}
-      {tiktokPixelId && (
+      {isValidTikTokPixelId(tiktokPixelId) && (
         <Script
           id={`vendor-ttq-${tiktokPixelId}`}
           strategy="afterInteractive"

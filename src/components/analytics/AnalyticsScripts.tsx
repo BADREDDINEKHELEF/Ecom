@@ -4,11 +4,26 @@ const PIXEL_ID   = process.env.NEXT_PUBLIC_META_PIXEL_ID
 const GTAG_ID    = process.env.NEXT_PUBLIC_GTAG_ID
 const TIKTOK_ID  = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID
 
+function isValidMetaPixelId(id: string | undefined): boolean {
+  if (!id) return false
+  return /^\d{10,20}$/.test(id)
+}
+
+function isValidGtagId(id: string | undefined): boolean {
+  if (!id) return false
+  return /^G-[A-Z0-9]{10}$/i.test(id) || /^UA-\d{4,}-\d+$/i.test(id)
+}
+
+function isValidTikTokPixelId(id: string | undefined): boolean {
+  if (!id) return false
+  return /^[A-Za-z0-9]{10,}$/.test(id)
+}
+
 export default function AnalyticsScripts() {
   return (
     <>
       {/* ── Meta Pixel ─────────────────────────────────────────── */}
-      {PIXEL_ID && (
+      {isValidMetaPixelId(PIXEL_ID) && (
         <>
           <Script
             id="meta-pixel"
@@ -40,7 +55,7 @@ fbq('track','PageView');
       )}
 
       {/* ── Google Tag (gtag.js / GA4 / Google Ads) ────────────── */}
-      {GTAG_ID && (
+      {isValidGtagId(GTAG_ID) && (
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${GTAG_ID}`}
@@ -61,7 +76,7 @@ gtag('config',${JSON.stringify(GTAG_ID)},{send_page_view:false});
         </>
       )}
       {/* ── TikTok Pixel ───────────────────────────────────────── */}
-      {TIKTOK_ID && (
+      {isValidTikTokPixelId(TIKTOK_ID) && (
         <Script
           id="tiktok-pixel"
           strategy="afterInteractive"
