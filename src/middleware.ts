@@ -109,46 +109,62 @@ function isIpAllowed(ip: string): boolean {
   return allowed.includes(ip)
 }
 
-async function verifyAdminJwt(token: string): Promise<boolean> {
+async function verifyAdminJwt(token: string): Promise<{ valid: boolean; reason?: string }> {
   try {
     const secret = process.env.ADMIN_JWT_SECRET
-    if (!secret) return false
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
-    if (payload.role !== 'admin') return false
+    if (!secret) return { valid: false, reason: 'missing_secret' }
+    let payload
+    try {
+      const verified = await jwtVerify(token, new TextEncoder().encode(secret))
+      payload = verified.payload
+    } catch (e) {
+      return { valid: false, reason: `jwt_verify_failed_${e instanceof Error ? e.message : 'unknown'}` }
+    }
+    if (payload.role !== 'admin') return { valid: false, reason: 'invalid_role' }
     const jti = payload.jti as string | undefined
-    if (!jti) return false
+    if (!jti) return { valid: false, reason: 'missing_jti' }
+
     const rawUrl = process.env.UPSTASH_REDIS_REST_URL
     const rawToken = process.env.UPSTASH_REDIS_REST_TOKEN
 
     if (!rawUrl || !rawToken) {
       if (process.env.NODE_ENV === 'production') {
-        console.error(
-          '[SECURITY] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are not set. ' +
-            'Redis-backed JTI revocation is required in production. Denying admin JWT as a fail-safe.'
-        )
-        return false
+        return { valid: false, reason: 'missing_redis_env_in_production' }
       }
-      // In development/test, skip revocation check when Redis is not configured.
-      return true
+      return { valid: true }
     }
 
     const cleanUrl = rawUrl.replace(/^["'](.*)["']$/, '$1').replace(/\/+$/, '')
     const cleanToken = rawToken.replace(/^["'](.*)["']$/, '$1')
 
     const url = `${cleanUrl}/get/${encodeURIComponent(jti)}?nocache=${Date.now()}`
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${cleanToken}`,
-        'Cache-Control': 'no-store',
-      },
-      cache: 'no-store',
-    })
-    if (!res.ok) return false
-    const data = (await res.json()) as { result: string | null }
-    if (data.result !== 'valid') return false
-    return true
-  } catch {
-    return false
+    let res
+    try {
+      res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${cleanToken}`,
+          'Cache-Control': 'no-store',
+        },
+        cache: 'no-store',
+      })
+    } catch (e) {
+      return { valid: false, reason: `redis_fetch_error_${e instanceof Error ? e.message : 'unknown'}` }
+    }
+    if (!res.ok) {
+      return { valid: false, reason: `redis_status_${res.status}` }
+    }
+    let data
+    try {
+      data = (await res.json()) as { result: string | null }
+    } catch {
+      return { valid: false, reason: 'redis_invalid_json' }
+    }
+    if (data.result !== 'valid') {
+      return { valid: false, reason: `redis_jti_state_${data.result}` }
+    }
+    return { valid: true }
+  } catch (e) {
+    return { valid: false, reason: `unexpected_${e instanceof Error ? e.message : 'unknown'}` }
   }
 }
 
@@ -217,17 +233,17 @@ export async function middleware(req: NextRequest) {
 
   if (!isPublicAdminPath) {
     const adminToken = req.cookies.get(getAdminCookieName())?.value
-    const jwtValid = adminToken ? await verifyAdminJwt(adminToken) : false
-    if (!adminToken || !jwtValid) {
+    const authResult = adminToken ? await verifyAdminJwt(adminToken) : { valid: false, reason: 'no_token' }
+    if (!adminToken || !authResult.valid) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json(
-          { error: 'Unauthorized', code: 'MIDDLEWARE_AUTH_FAILED' },
+          { error: 'Unauthorized', code: 'MIDDLEWARE_AUTH_FAILED', reason: authResult.reason },
           {
             status: 401,
             headers: {
               'X-Auth-Denied-By': 'Middleware',
               'X-Token-Present': adminToken ? 'true' : 'false',
-              'X-Token-Valid': jwtValid ? 'true' : 'false',
+              'X-Token-Valid': authResult.valid ? 'true' : authResult.reason ?? 'false',
             },
           }
         )
