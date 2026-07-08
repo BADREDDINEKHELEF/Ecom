@@ -220,7 +220,17 @@ export async function middleware(req: NextRequest) {
     const jwtValid = adminToken ? await verifyAdminJwt(adminToken) : false
     if (!adminToken || !jwtValid) {
       if (pathname.startsWith('/api/')) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'MIDDLEWARE_AUTH_FAILED' },
+          {
+            status: 401,
+            headers: {
+              'X-Auth-Denied-By': 'Middleware',
+              'X-Token-Present': adminToken ? 'true' : 'false',
+              'X-Token-Valid': jwtValid ? 'true' : 'false',
+            },
+          }
+        )
       }
       const loginUrl = new URL('/admin/login', req.url)
       // Strict allowlist: only plain relative paths with no encoded characters,

@@ -15,10 +15,20 @@ import { deleteJti } from './sessions'
  */
 export async function requireAdmin(req: NextRequest): Promise<NextResponse | null> {
   const token = req.cookies.get(getAdminCookieName())?.value
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Unauthorized', code: 'REQUIRE_ADMIN_NO_COOKIE' },
+      { status: 401, headers: { 'X-Auth-Denied-By': 'requireAdmin_NoCookie' } }
+    )
+  }
 
   const payload = await verifyAdminToken(token)
-  if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!payload) {
+    return NextResponse.json(
+      { error: 'Unauthorized', code: 'REQUIRE_ADMIN_INVALID_TOKEN' },
+      { status: 401, headers: { 'X-Auth-Denied-By': 'requireAdmin_InvalidToken' } }
+    )
+  }
 
   if (payload.jti) {
     try {
@@ -28,12 +38,20 @@ export async function requireAdmin(req: NextRequest): Promise<NextResponse | nul
         .select('jti')
         .eq('jti', payload.jti)
         .maybeSingle()
-      if (data !== null) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      if (data !== null) {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'REQUIRE_ADMIN_REVOKED_TOKEN' },
+          { status: 401, headers: { 'X-Auth-Denied-By': 'requireAdmin_RevokedToken' } }
+        )
+      }
     } catch (err) {
       logger.error('[requireAdmin] Revocation check failed — denying request', {
         error: err instanceof Error ? err.message : String(err)
       })
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'REQUIRE_ADMIN_DB_ERROR' },
+        { status: 401, headers: { 'X-Auth-Denied-By': 'requireAdmin_DbError' } }
+      )
     }
   }
 
