@@ -29,8 +29,10 @@ export async function requireAdmin(req: NextRequest): Promise<NextResponse | nul
         .eq('jti', payload.jti)
         .maybeSingle()
       if (data !== null) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    } catch {
-      logger.error('[requireAdmin] Revocation check failed — denying request')
+    } catch (err) {
+      logger.error('[requireAdmin] Revocation check failed — denying request', {
+        error: err instanceof Error ? err.message : String(err)
+      })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }

@@ -23,7 +23,8 @@ function redisConfigured(): boolean {
 
 async function redisCommand<T>(command: string, ...args: string[]): Promise<T | null> {
   if (!redisConfigured()) return null
-  const url = `${process.env.UPSTASH_REDIS_REST_URL}/${command}/${args.map(encodeURIComponent).join('/')}`
+  const baseUrl = process.env.UPSTASH_REDIS_REST_URL!.replace(/\/+$/, '')
+  const url = `${baseUrl}/${command}/${args.map(encodeURIComponent).join('/')}`
   try {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },

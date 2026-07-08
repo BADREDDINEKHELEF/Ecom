@@ -128,7 +128,8 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
       // In development/test, skip revocation check when Redis is not configured.
       return true
     }
-    const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(jti)}?nocache=${Date.now()}`
+    const baseUrl = process.env.UPSTASH_REDIS_REST_URL.replace(/\/+$/, '')
+    const url = `${baseUrl}/get/${encodeURIComponent(jti)}?nocache=${Date.now()}`
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
