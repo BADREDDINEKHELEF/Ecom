@@ -19,6 +19,20 @@ function base64UrlDecode(input: string): string {
   }
 }
 
+function extractJwtFromSupabaseCookie(value: string): string | null {
+  if (value.startsWith('base64-')) {
+    try {
+      const b64 = value.slice(7)
+      const decoded = atob(b64.replace(/-/g, '+').replace(/_/g, '/'))
+      const json = JSON.parse(decoded) as { access_token?: string }
+      return json.access_token ?? null
+    } catch {
+      return null
+    }
+  }
+  return value
+}
+
 /** Lightweight structural validation of a Supabase auth JWT cookie.
  *  Verifies the cookie looks like a JWT (3 base64url segments), decodes the
  *  payload, checks `exp` and `iss`, and confirms the `sub` claim is a UUID.
@@ -26,7 +40,9 @@ function base64UrlDecode(input: string): string {
  *  cryptographic verification on every request (handlers do that).
  */
 function isValidSupabaseSessionCookie(value: string): boolean {
-  const parts = value.split('.')
+  const jwt = extractJwtFromSupabaseCookie(value)
+  if (!jwt) return false
+  const parts = jwt.split('.')
   if (parts.length !== 3) return false
   const payloadStr = base64UrlDecode(parts[1])
   if (!payloadStr) return false
@@ -76,7 +92,9 @@ function hasValidSupabaseSession(req: NextRequest): boolean {
 function getSupabaseSessionUserId(req: NextRequest): string | null {
   const cookieValue = findSupabaseSessionCookie(req)
   if (!cookieValue) return null
-  const parts = cookieValue.split('.')
+  const jwt = extractJwtFromSupabaseCookie(cookieValue)
+  if (!jwt) return null
+  const parts = jwt.split('.')
   if (parts.length !== 3) return null
   const payloadStr = base64UrlDecode(parts[1])
   if (!payloadStr) return null
