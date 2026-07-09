@@ -107,6 +107,7 @@ export default function SellerSettingsPage() {
   const [pixels, setPixels] = useState({
     meta_pixel_id: '', gtag_id: '', tiktok_pixel_id: '',
     meta_capi_token: '', tiktok_capi_token: '', gtag_api_secret: '',
+    meta_test_event_code: '',
   })
   const [form, setForm] = useState({
     store_name: '', store_slug: '', phone: '', wilaya: '', description: '',
@@ -132,6 +133,7 @@ export default function SellerSettingsPage() {
       meta_capi_token:  vendor.meta_capi_token   ?? '',
       tiktok_capi_token: vendor.tiktok_capi_token ?? '',
       gtag_api_secret:  vendor.gtag_api_secret   ?? '',
+      meta_test_event_code: vendor.meta_test_event_code ?? '',
     })
     setForm({
       store_name:       vendor.store_name ?? '',
@@ -233,6 +235,7 @@ export default function SellerSettingsPage() {
           meta_capi_token:  pixels.meta_capi_token   || null,
           tiktok_capi_token: pixels.tiktok_capi_token || null,
           gtag_api_secret:  pixels.gtag_api_secret   || null,
+          meta_test_event_code: pixels.meta_test_event_code || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Échec de la sauvegarde')
@@ -658,6 +661,12 @@ export default function SellerSettingsPage() {
                 <input type="password" value={pixels.meta_capi_token}
                   onChange={(e) => setPixels({ ...pixels, meta_capi_token: e.target.value })}
                   placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  className={`${INPUT} font-mono bg-white`} />
+              </Field>
+              <Field label="Test Event Code (facultatif)" hint="Events Manager → Test Events → Code d'événement de test (ex: TEST12345)">
+                <input type="text" value={pixels.meta_test_event_code}
+                  onChange={(e) => setPixels({ ...pixels, meta_test_event_code: e.target.value })}
+                  placeholder="TEST12345"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
             </div>

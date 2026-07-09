@@ -54,6 +54,7 @@ const PatchSchema = z.object({
   shipping_policy:  z.string().max(2000).nullable().optional(),
   // Vendor-specific pixels (client-side) — strict format validation prevents script injection
   meta_pixel_id:    z.string().regex(/^\d{10,20}$/).nullable().optional(),
+  meta_test_event_code: z.string().max(50).nullable().optional(),
   gtag_id:          z.string().regex(/^(G|GTM|AW)-[A-Z0-9]{4,20}$/).nullable().optional(),
   tiktok_pixel_id:  z.string().regex(/^[A-Z0-9]{10,30}$/).nullable().optional(),
   meta_enabled:     z.boolean().optional(),
