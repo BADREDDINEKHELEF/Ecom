@@ -10,7 +10,7 @@ import {
   Settings, MapPin, Phone, Image, Tag, Shield,
 } from 'lucide-react'
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
-import { getVendorProducts } from '@/lib/supabase/products'
+import { getVendorProducts } from '@/lib/supabase/queries-server'
 import { type VendorOrderSummary } from '@/lib/supabase/orders'
 import { DELIVERY_PROVIDERS } from '@/lib/delivery/providers'
 import { formatPrice } from '@/lib/utils'

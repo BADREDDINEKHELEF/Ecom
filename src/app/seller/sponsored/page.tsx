@@ -6,7 +6,7 @@ import { Zap, Plus, Eye, MousePointerClick, ShoppingCart, Clock, CheckCircle2, X
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { useRTL } from '@/lib/store/langStore'
 import SellerSidebar from '@/components/seller/SellerSidebar'
-import { getVendorProducts } from '@/lib/supabase/products'
+import { getVendorProducts } from '@/lib/supabase/queries-server'
 import type { Product } from '@/types'
 
 interface SponsoredProduct {
