@@ -142,7 +142,8 @@ export async function PATCH(req: NextRequest) {
     }
     return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
-    logger.error('[PATCH /api/seller/vendor]', { error: err instanceof Error ? err.message : String(err) })
-    return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
+    const message = err instanceof Error ? err.message : String(err)
+    logger.error('[PATCH /api/seller/vendor]', { error: message })
+    return copyCookies(response, NextResponse.json({ error: `Internal server error: ${message}` }, { status: 500 }))
   }
 }
