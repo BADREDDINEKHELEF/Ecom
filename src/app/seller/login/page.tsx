@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, Store, CheckCircle, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getVendorByUserId } from '@/lib/supabase/queries-server'
 import { useT } from '@/lib/store/langStore'
 
 type View = 'login' | 'forgot_phone' | 'forgot_otp'
@@ -51,8 +50,13 @@ export default function SellerLoginPage() {
     })
     if (err) { setError(friendlyAuthError(err.message)); setLoading(false); return }
 
-    const vendor = await getVendorByUserId(data.user.id)
-    if (!vendor) {
+    const { data: vendor, error: vendorErr } = await supabase
+      .from('vendors')
+      .select('id, store_name, store_slug, is_approved, is_active')
+      .eq('user_id', data.user.id)
+      .maybeSingle()
+
+    if (vendorErr || !vendor) {
       setError(t.seller.noSellerFound)
       await supabase.auth.signOut(); setLoading(false); return
     }
