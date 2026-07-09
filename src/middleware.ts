@@ -55,7 +55,11 @@ function isValidSupabaseSessionCookie(value: string): boolean {
   if (typeof payload.exp !== 'number') return false
   if (payload.exp * 1000 < Date.now()) return false
   const issuer = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (issuer && payload.iss !== issuer) return false
+  if (issuer) {
+    const cleanIssuer = issuer.replace(/\/+$/, '')
+    const expectedIss = `${cleanIssuer}/auth/v1`
+    if (payload.iss !== cleanIssuer && payload.iss !== expectedIss) return false
+  }
   const sub = typeof payload.sub === 'string' ? payload.sub : ''
   if (!sub) return false
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)
