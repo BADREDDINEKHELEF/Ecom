@@ -48,6 +48,7 @@ export interface Vendor {
   meta_capi_token:       string | null
   tiktok_capi_token:     string | null
   gtag_api_secret:       string | null
+  meta_test_event_code:  string | null
   created_at:            string
   updated_at:            string
 }
