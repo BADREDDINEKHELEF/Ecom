@@ -44,7 +44,7 @@ const InitiateSchema = z.object({
   stopDeskCause:    z.string().max(300).optional().nullable(),
   items:            z.array(OrderItemSchema).min(1).max(50),
   selectedColor:    z.string().max(100).nullable().optional(),
-  idempotency_key:  z.string().uuid(),
+  idempotencyKey:   z.string().uuid(),
 })
 
 function normalizePhone(p: string) {
@@ -84,7 +84,7 @@ async function postHandler(req: NextRequest) {
     isStopDesk,
     deliveryType,
     stopDeskCause,
-    idempotency_key: idempotencyKey,
+    idempotencyKey,
     ...rest
   } = parsed.data
   const phone = normalizePhone(rest.phone)

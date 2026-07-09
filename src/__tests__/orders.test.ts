@@ -253,8 +253,8 @@ describe('Order creation idempotency', () => {
     const { readFileSync } = await import('fs')
     const { resolve } = await import('path')
     const src = readFileSync(resolve(__dirname, '../app/api/payment/initiate/route.ts'), 'utf-8')
-    expect(src).toContain('idempotency_key:  z.string().uuid()')
-    expect(src).not.toContain('idempotency_key:  z.string().uuid().optional().nullable()')
+    expect(src).toContain('idempotencyKey:   z.string().uuid()')
+    expect(src).not.toContain('idempotencyKey:   z.string().uuid().optional().nullable()')
   })
 })
 
