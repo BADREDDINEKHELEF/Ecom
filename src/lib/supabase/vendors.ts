@@ -347,10 +347,14 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
 
 export async function updateVendor(vendorId: string, updates: Partial<Vendor>): Promise<void> {
   const supabase = createAdminClient()
-  await supabase
+  const { error } = await supabase
     .from('vendors')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', vendorId)
+  if (error) {
+    console.error('[updateVendor] Error:', error)
+    throw error
+  }
 }
 
 export async function getAllVendorSubscriptions(opts: {
@@ -377,8 +381,12 @@ export async function updateVendorSubscription(
   updates: Partial<Pick<VendorSubscription, 'status' | 'expires_at' | 'grace_period_ends_at' | 'started_at'>>
 ): Promise<void> {
   const supabase = createAdminClient()
-  await supabase
+  const { error } = await supabase
     .from('vendor_subscriptions')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', subscriptionId)
+  if (error) {
+    console.error('[updateVendorSubscription] Error:', error)
+    throw error
+  }
 }
