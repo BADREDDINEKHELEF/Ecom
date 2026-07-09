@@ -297,9 +297,21 @@ export async function POST(req: NextRequest) {
       case 'meta_capi': {
         const { decryptField, isEncrypted } = await import('@/lib/utils/crypto')
         const config = await getMetaConfigById(vendor.id)
-        if (!config?.enabled || !config.pixelId || !config.accessToken) {
+        if (!config) {
           await saveIntegrationHealth(vendor.id, 'meta_capi', { health_status: 'needs_configuration' })
-          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Meta configuration row not found in database' }, { status: 400 }))
+        }
+        if (!config.pixelId) {
+          await saveIntegrationHealth(vendor.id, 'meta_capi', { health_status: 'needs_configuration' })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Meta Pixel ID is empty or not configured' }, { status: 400 }))
+        }
+        if (!config.accessToken) {
+          await saveIntegrationHealth(vendor.id, 'meta_capi', { health_status: 'needs_configuration' })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Meta Conversions API Token is empty or not configured' }, { status: 400 }))
+        }
+        if (!config.enabled) {
+          await saveIntegrationHealth(vendor.id, 'meta_capi', { health_status: 'needs_configuration' })
+          return copyCookies(response, NextResponse.json({ ok: false, error: 'Meta integration is disabled (meta_enabled is false in database)' }, { status: 400 }))
         }
         if (action === 'send_test_event') {
           const effectiveConfig = {
