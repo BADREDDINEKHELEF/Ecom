@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { getVendorByUserId } from '@/lib/supabase/queries-server'
 import type { Vendor } from '@/lib/supabase/vendors'
 
 const MAX_RETRIES = 3
@@ -47,7 +46,13 @@ export function useSellerAuth() {
           return
         }
 
-        const v = await getVendorByUserId(user.id)
+        const { data: v, error: vendorErr } = await supabase
+          .from('vendors')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (vendorErr) throw vendorErr
 
         if (cancelled) return
 

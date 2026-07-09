@@ -12,9 +12,18 @@ import { checkVendorProductLimit as checkVendorProductLimitDb } from './server-u
 
 export async function getVendorByUserId(userId: string) {
   const supabase = await createServerActionClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.id !== userId) {
-    throw new Error('Unauthorized')
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr) {
+    console.error('[getVendorByUserId] auth error:', authErr)
+    throw new Error(`Unauthorized: Auth error: ${authErr.message}`)
+  }
+  if (!user) {
+    console.error('[getVendorByUserId] user is null')
+    throw new Error('Unauthorized: user is null')
+  }
+  if (user.id !== userId) {
+    console.error('[getVendorByUserId] ID mismatch:', user.id, 'vs', userId)
+    throw new Error('Unauthorized: user ID mismatch')
   }
   return getVendorByUserIdDb(userId)
 }
