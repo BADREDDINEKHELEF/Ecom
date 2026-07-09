@@ -137,7 +137,7 @@ async function verifyAdminJwt(token: string): Promise<{ valid: boolean; reason?:
     const cleanUrl = rawUrl.replace(/^["'](.*)["']$/, '$1').replace(/\/+$/, '')
     const cleanToken = rawToken.replace(/^["'](.*)["']$/, '$1')
 
-    const url = `${cleanUrl}/get/${encodeURIComponent(jti)}?nocache=${Date.now()}`
+    const url = `${cleanUrl}/get/${encodeURIComponent(jti)}`
     let res
     try {
       res = await fetch(url, {
