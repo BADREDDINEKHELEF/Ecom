@@ -81,11 +81,11 @@ async function verifyProductOwnership(
     .from('products')
     .select('vendor_id')
     .eq('id', productId)
-    .single()
-  if (error || !data) {
-    throw new Error('Produit introuvable')
+    .maybeSingle()
+  if (error) {
+    throw new Error('Erreur de base de données lors de la vérification de propriété')
   }
-  if (data.vendor_id !== vendorId) {
+  if (data && data.vendor_id !== vendorId) {
     throw new Error('Action non autorisée sur ce produit')
   }
 }

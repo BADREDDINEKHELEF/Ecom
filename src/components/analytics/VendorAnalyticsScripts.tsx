@@ -8,8 +8,8 @@ interface Props {
 }
 
 /** Safely encode a vendor-supplied string for inline JS: JSON-encode then escape </ to prevent </script> tag injection. */
-function jsStr(value: string): string {
-  return JSON.stringify(value).replace(/</g, '\\u003c')
+function jsStr(value: string | null | undefined): string {
+  return JSON.stringify(value ?? '').replace(/</g, '\\u003c')
 }
 
 function isValidMetaPixelId(id: string | undefined | null): boolean {
@@ -59,7 +59,7 @@ if(window.fbq){
       {isValidGtagId(gtagId) && (
         <>
           <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gtagId)}`}
+            src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gtagId as string)}`}
             strategy="afterInteractive"
           />
           <Script

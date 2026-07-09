@@ -221,17 +221,6 @@ export async function fireStorePurchaseCAPI(
     return { ok: false, status: 0, message: 'Store not configured for Meta CAPI' }
   }
 
-  const hasScope = await ensureTokenScope(config.accessToken)
-  if (!hasScope) {
-    return {
-      ok: false,
-      status: 0,
-      message:
-        'Meta CAPI token missing ads_management scope. ' +
-        'Regenerate the token in Meta Events Manager with ads_management enabled.',
-    }
-  }
-
   const userData: MetaUserData = buildUserData(userDataInput)
 
   const body: MetaCAPIRequestBody = {

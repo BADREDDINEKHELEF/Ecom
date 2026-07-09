@@ -1,5 +1,6 @@
 'use server'
 
+import { createServerActionClient } from './server'
 import { getVendorByUserId as getVendorByUserIdDb } from './vendors'
 import {
   getVendorProductsPaginated as getVendorProductsPaginatedDb,
@@ -10,6 +11,11 @@ import { getStoreSettings as getStoreSettingsDb } from './settings'
 import { checkVendorProductLimit as checkVendorProductLimitDb } from './server-utils'
 
 export async function getVendorByUserId(userId: string) {
+  const supabase = await createServerActionClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || user.id !== userId) {
+    throw new Error('Unauthorized')
+  }
   return getVendorByUserIdDb(userId)
 }
 
@@ -39,5 +45,14 @@ export async function getStoreSettings() {
 }
 
 export async function checkVendorProductLimit(vendorId: string) {
+  const supabase = await createServerActionClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const vendor = await getVendorByUserIdDb(user.id)
+  if (!vendor || vendor.id !== vendorId) {
+    throw new Error('Unauthorized')
+  }
+
   return checkVendorProductLimitDb(vendorId)
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
 import { Plus, Search, Edit2, Trash2, Package, Loader2, RefreshCw } from 'lucide-react'
 import { niches } from '@/lib/data/niches'
 import { formatPrice } from '@/lib/utils'
@@ -225,11 +224,11 @@ export default function AdminProductsPage() {
                     <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
                             {(product.images?.[0]) ? (
-                              <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="48px" />
+                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                             ) : (
-                              <Package className="w-6 h-6 text-gray-300 m-auto" />
+                              <Package className="w-6 h-6 text-gray-300" />
                             )}
                           </div>
                           <div>
