@@ -1,4 +1,4 @@
-﻿import { createAdminClient } from './admin'
+import { createAdminClient } from './admin'
 import { encryptField, decryptField, isEncrypted } from '@/lib/utils/crypto'
 
 // â”€â”€ Vendor Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -51,7 +51,7 @@ export interface Vendor {
   meta_test_event_code:  string | null
   meta_enabled:          boolean
   created_at:            string
-  updated_at:            string
+  updated_at?:           string
 }
 
 export interface VendorDeliveryConfig {
@@ -366,7 +366,7 @@ export async function updateVendor(vendorId: string, updates: Partial<Vendor>): 
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('vendors')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq('id', vendorId)
   if (error) {
     console.error('[updateVendor] Error:', error)
