@@ -223,9 +223,9 @@ describe('User-level limits key on user.id, not IP', () => {
     expect(rl).toContain('export async function checkUserRateLimit(\n  userId: string')
   })
 
-  it('upload route passes user.id to checkUserDualRateLimit', () => {
+  it('upload route passes ctx.user.id to checkUserDualRateLimit', () => {
     const content = src('app/api/seller/upload/route.ts')
-    expect(content).toContain('checkUserDualRateLimit(user.id')
+    expect(content).toContain('checkUserDualRateLimit(ctx.user.id')
   })
 
   it('shipments route passes user.id to checkUserDualRateLimit', () => {
