@@ -17,9 +17,6 @@ import { logger } from '@/lib/logger'
 
 // ── Redis-backed JTI validation (used by middleware) ─────────────────────────
 
-function redisConfigured(): boolean {
-  return !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN
-}
 
 function getCleanRedisConfig(): { url: string; token: string } | null {
   const url = process.env.UPSTASH_REDIS_REST_URL

@@ -128,16 +128,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     let attemptsLeft = 6
-    let currentData = { ...dataToSave }
+    const currentData: Record<string, unknown> = { ...dataToSave }
     while (attemptsLeft > 0) {
       try {
         await updateVendor(vendor.id, currentData)
         break
       } catch (dbErr) {
         attemptsLeft--
-        const getMsg = (e: any) => {
+        const getMsg = (e: unknown) => {
           if (e instanceof Error) return e.message
-          if (e && typeof e === 'object' && 'message' in e) return String(e.message)
+          if (e && typeof e === 'object' && 'message' in e) return String((e as Record<string, unknown>).message)
           return String(e)
         }
         const msg = getMsg(dbErr)
@@ -146,7 +146,7 @@ export async function PATCH(req: NextRequest) {
           if (match && match[1]) {
             const col = match[1]
             logger.warn(`[PATCH /api/seller/vendor] Column "${col}" does not exist in DB. Removing field and retrying.`, { col })
-            delete (currentData as any)[col]
+            delete currentData[col]
             continue
           }
         }
@@ -155,9 +155,9 @@ export async function PATCH(req: NextRequest) {
     }
     return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
-    const getMsg = (e: any) => {
+    const getMsg = (e: unknown) => {
       if (e instanceof Error) return e.message
-      if (e && typeof e === 'object' && 'message' in e) return String(e.message)
+      if (e && typeof e === 'object' && 'message' in e) return String((e as Record<string, unknown>).message)
       return String(e)
     }
     const message = getMsg(err)

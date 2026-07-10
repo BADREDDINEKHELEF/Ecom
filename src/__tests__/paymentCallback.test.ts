@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createHmac, randomUUID } from 'crypto'
+import { createHmac } from 'crypto'
 
 vi.mock('@/lib/logger', () => ({
   logger: {
