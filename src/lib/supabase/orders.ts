@@ -457,6 +457,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       points_redeemed:  pointsDeduction,
       client_ip:        input.clientIp ?? null,
       client_user_agent: input.clientUserAgent ?? null,
+      user_id:          input.userId ?? null,
       ...(input.email ? { email: input.email } : {}),
       ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey } : {}),
     })

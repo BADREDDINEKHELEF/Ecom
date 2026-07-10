@@ -224,7 +224,10 @@ export async function searchProducts(
     .eq('is_active', true)
 
   if (q) {
-    dbQuery = dbQuery.or(`name.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%,tags.cs.{${q}}`)
+    // Escape PostgREST wildcard (%) so the query cannot be broadened by user input,
+    // and remove characters that would break the filter grammar (, { } ).
+    const safeQ = q.replace(/%/g, '\\%').replace(/[,{}]/g, '')
+    dbQuery = dbQuery.or(`name.ilike.%${safeQ}%,description.ilike.%${safeQ}%,category.ilike.%${safeQ}%,tags.cs.{${safeQ}}`)
   }
 
   const { data, error, count } = await dbQuery

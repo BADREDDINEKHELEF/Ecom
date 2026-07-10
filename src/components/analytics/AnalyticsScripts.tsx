@@ -35,9 +35,14 @@ n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('set','agent','pl-nextjs');
-fbq('init',${JSON.stringify(PIXEL_ID)});
-fbq('track','PageView');
+const pid = ${JSON.stringify(PIXEL_ID)};
+fbq('set','agent','pl-nextjs',pid);
+window.__fb_pixels = window.__fb_pixels || {};
+if (!window.__fb_pixels[pid]) {
+  fbq('init',pid);
+  fbq('track','PageView');
+  window.__fb_pixels[pid] = true;
+}
 `,
             }}
           />
