@@ -258,4 +258,35 @@ describe('Order creation idempotency', () => {
   })
 })
 
+// ── Authenticated buyer order history ────────────────────────────────────────
+
+describe('Buyer authenticated order history', () => {
+  it('orders.ts exports getOrdersByUserId that filters by user_id', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../lib/supabase/orders.ts'), 'utf-8')
+    expect(src).toContain('export async function getOrdersByUserId')
+    expect(src).toContain(".eq('user_id', userId)")
+  })
+
+  it('/api/orders/my exists and uses createRouteClient + checkUserRateLimit', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../app/api/orders/my/route.ts'), 'utf-8')
+    expect(src).toContain('createRouteClient(req, response)')
+    expect(src).toContain("supabase.auth.getUser()")
+    expect(src).toContain('checkUserRateLimit(user.id')
+    expect(src).toContain('getOrdersByUserId(user.id)')
+    expect(src).toContain('status: 401')
+  })
+
+  it('/orders page attempts authenticated fetch on mount', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../app/orders/page.tsx'), 'utf-8')
+    expect(src).toContain("fetch('/api/orders/my'")
+    expect(src).toContain('setIsAuthenticated(true)')
+  })
+})
+
 

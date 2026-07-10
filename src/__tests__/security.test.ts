@@ -362,6 +362,14 @@ describe('Image upload — magic byte verification', () => {
     const src = readFileSync(resolve(__dirname, '../app/api/seller/upload/route.ts'), 'utf-8')
     expect(src).toContain('validateImageUpload')
   })
+
+  it('upload route uses requireVendorPermission so team members can upload', async () => {
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const src = readFileSync(resolve(__dirname, '../app/api/seller/upload/route.ts'), 'utf-8')
+    expect(src).toContain('requireVendorPermission')
+    expect(src).toContain("'products:create'")
+  })
 })
 
 // ── Rate limiting presence ─────────────────────────────────────────────────

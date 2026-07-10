@@ -637,6 +637,22 @@ export async function getOrdersByPhone(phone: string): Promise<OrderRow[]> {
 }
 
 /**
+ * Authenticated buyer order history. Returns all orders linked to the user's
+ * Supabase auth id via orders.user_id. Guest orders are not included; guests
+ * should continue to use getOrdersByPhone.
+ */
+export async function getOrdersByUserId(userId: string): Promise<OrderRow[]> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id,full_name,phone,wilaya,city,address,status,total,delivery_outcome,yalidine_tracking,procolis_tracking,zr_tracking,colivraison_tracking,maystro_tracking,rex_tracking,delivery_provider,is_stopdesk,payment_method,created_at,order_items(id,product_name,quantity,subtotal,product_image,product_price)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as OrderRow[]
+}
+
+/**
  * Paginated order list for admin dashboard.
  * source='admin'  → orders containing at least one item with vendor_id IS NULL (platform products)
  * source='vendor' → orders containing at least one item with vendor_id IS NOT NULL (marketplace)

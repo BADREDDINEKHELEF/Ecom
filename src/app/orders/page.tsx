@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Package, ArrowRight, ShoppingBag, Search, Loader2, Phone, X, RotateCcw } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
@@ -19,7 +19,32 @@ export default function OrdersPage() {
   const [phone, setPhone]   = useState('')
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [error, setError]   = useState('')
+
+  // Try to load authenticated buyer orders on mount. If the user is not
+  // logged in we fall back to the phone-lookup guest flow.
+  useEffect(() => {
+    let cancelled = false
+    async function loadAuthOrders() {
+      try {
+        const res = await fetch('/api/orders/my', { credentials: 'same-origin' })
+        if (cancelled) return
+        if (res.ok) {
+          const json = await res.json()
+          setOrders(json.orders ?? [])
+          setIsAuthenticated(true)
+        }
+      } catch {
+        // Ignore — guest phone lookup remains available.
+      } finally {
+        if (!cancelled) setAuthLoading(false)
+      }
+    }
+    loadAuthOrders()
+    return () => { cancelled = true }
+  }, [])
   const [cancelling, setCancelling]         = useState<string | null>(null)
   const [cancelError, setCancelError]       = useState('')
   const [returningId, setReturningId]       = useState<string | null>(null)
@@ -107,32 +132,41 @@ export default function OrdersPage() {
         </Link>
       </div>
 
-      {/* Phone lookup */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-        <p className="text-sm text-gray-500 mb-4">{t.orders.phoneHint}</p>
-        <form onSubmit={handleSearch} className="flex gap-3">
-          <div className="relative flex-1">
-            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="0555 00 00 00"
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading || !phone.trim()}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            {t.orders.searchBtn}
-          </button>
-        </form>
-        {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
-        {cancelError && <p className="text-red-500 text-sm mt-3">{cancelError}</p>}
-      </div>
+      {/* Phone lookup — only shown for guests (and while we are checking auth). */}
+      {(!isAuthenticated || authLoading) && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+          <p className="text-sm text-gray-500 mb-4">{t.orders.phoneHint}</p>
+          <form onSubmit={handleSearch} className="flex gap-3">
+            <div className="relative flex-1">
+              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0555 00 00 00"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !phone.trim() || authLoading}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              {t.orders.searchBtn}
+            </button>
+          </form>
+          {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+          {cancelError && <p className="text-red-500 text-sm mt-3">{cancelError}</p>}
+        </div>
+      )}
+
+      {/* Authenticated empty state hint */}
+      {isAuthenticated && orders !== null && orders.length === 0 && (
+        <div className="bg-indigo-50 rounded-2xl p-4 mb-6 text-sm text-indigo-800">
+          Vous êtes connecté. Les commandes passées en tant qu’invité ne s’afficheront ici que si vous les recherchez par téléphone.
+        </div>
+      )}
 
       {/* Results */}
       {orders !== null && (
