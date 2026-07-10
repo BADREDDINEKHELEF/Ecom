@@ -127,22 +127,40 @@ export async function PATCH(req: NextRequest) {
       ...(parsed.data.gtag_api_secret   !== undefined && { gtag_api_secret:   encryptIfNeeded(parsed.data.gtag_api_secret) }),
     }
 
-    try {
-      await updateVendor(vendor.id, dataToSave)
-    } catch (dbErr) {
-      // If migration_033 hasn't been applied yet, retry without the new pixel/CAPI columns
-      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr)
-      if (msg.includes('column') && msg.includes('does not exist')) {
-        const { tiktok_pixel_id, meta_capi_token, tiktok_capi_token, gtag_api_secret, ...safe } = dataToSave
-        void tiktok_pixel_id; void meta_capi_token; void tiktok_capi_token; void gtag_api_secret
-        await updateVendor(vendor.id, safe)
-      } else {
+    let attemptsLeft = 6
+    let currentData = { ...dataToSave }
+    while (attemptsLeft > 0) {
+      try {
+        await updateVendor(vendor.id, currentData)
+        break
+      } catch (dbErr) {
+        attemptsLeft--
+        const getMsg = (e: any) => {
+          if (e instanceof Error) return e.message
+          if (e && typeof e === 'object' && 'message' in e) return String(e.message)
+          return String(e)
+        }
+        const msg = getMsg(dbErr)
+        if (msg.includes('column') && msg.includes('does not exist') && attemptsLeft > 0) {
+          const match = msg.match(/column "([^"]+)"/)
+          if (match && match[1]) {
+            const col = match[1]
+            logger.warn(`[PATCH /api/seller/vendor] Column "${col}" does not exist in DB. Removing field and retrying.`, { col })
+            delete (currentData as any)[col]
+            continue
+          }
+        }
         throw dbErr
       }
     }
     return copyCookies(response, NextResponse.json({ ok: true }))
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    const getMsg = (e: any) => {
+      if (e instanceof Error) return e.message
+      if (e && typeof e === 'object' && 'message' in e) return String(e.message)
+      return String(e)
+    }
+    const message = getMsg(err)
     logger.error('[PATCH /api/seller/vendor]', { error: message })
     return copyCookies(response, NextResponse.json({ error: `Internal server error: ${message}` }, { status: 500 }))
   }
