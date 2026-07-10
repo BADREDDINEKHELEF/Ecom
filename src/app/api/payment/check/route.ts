@@ -9,6 +9,7 @@ import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
 import { recordFinancialTransaction } from '@/lib/supabase/orders'
 import { PaymentCheckQuerySchema } from '@/lib/validation/apiSchemas'
+import { triggerConversionsApiOnSuccess } from '@/lib/analytics/server'
 
 // How long (ms) a pending_payment order must be stuck before we attempt
 // a background Satim reconciliation. Override with PAYMENT_CHECK_STALE_MS env var.
@@ -159,6 +160,9 @@ async function reconcileWithSatim(
   }
 
   logger.info('[payment/check] reconciliation: order marked paid', { orderId, satimOrderId })
+
+  // Trigger non-blocking server-side CAPI event tracking
+  void triggerConversionsApiOnSuccess(orderId)
 
   await recordFinancialTransaction({
     orderId,

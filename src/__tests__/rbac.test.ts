@@ -320,7 +320,54 @@ describe('team endpoint — source audit: owner-only operations', () => {
   })
 })
 
-// ── 7. Security event constants — completeness ────────────────────────────────
+// ── 7. Migrated seller routes — source audit: requireVendorPermission ─────────
+
+describe('Migrated seller routes — source audit: team member RBAC', () => {
+  function routeSpec(path: string, permission: string) {
+    const src = readFileSync(resolve(root, path), 'utf-8')
+    it(`${path} uses requireVendorPermission`, () => {
+      expect(src).toContain('requireVendorPermission')
+      expect(src).not.toContain('getVendorByUserIdServer')
+    })
+    it(`${path} requires '${permission}'`, () => {
+      expect(src).toContain(`'${permission}'`)
+    })
+  }
+
+  routeSpec('app/api/seller/inventory/route.ts', 'products:read')
+  routeSpec('app/api/seller/inventory/stock/route.ts', 'products:update')
+  routeSpec('app/api/seller/orders/route.ts', 'orders:read')
+  routeSpec('app/api/seller/pending-orders/route.ts', 'orders:read')
+  routeSpec('app/api/seller/returns/route.ts', 'orders:read')
+  routeSpec('app/api/seller/returns/[id]/route.ts', 'orders:update')
+  routeSpec('app/api/seller/customers/route.ts', 'customers:read')
+  routeSpec('app/api/seller/customers/reveal/route.ts', 'customers:reveal_phone')
+  routeSpec('app/api/seller/analytics/route.ts', 'analytics:read')
+  routeSpec('app/api/seller/analytics/export/route.ts', 'analytics:export')
+  routeSpec('app/api/seller/abandoned-analytics/route.ts', 'analytics:read')
+  routeSpec('app/api/seller/messages/route.ts', 'messages:read')
+  routeSpec('app/api/seller/vendor/route.ts', 'settings:update')
+  routeSpec('app/api/seller/vendor/vacation/route.ts', 'settings:update')
+  routeSpec('app/api/seller/delivery-config/route.ts', 'delivery:config')
+  routeSpec('app/api/seller/delivery-dashboard/route.ts', 'delivery:read')
+  routeSpec('app/api/seller/shipments/route.ts', 'delivery:read')
+  routeSpec('app/api/seller/shipments/sync/route.ts', 'delivery:update')
+  routeSpec('app/api/seller/subscription/route.ts', 'billing:read')
+  routeSpec('app/api/seller/sponsored/route.ts', 'sponsored:read')
+  routeSpec('app/api/seller/promo-codes/route.ts', 'promotions:read')
+  routeSpec('app/api/seller/flash-sales/route.ts', 'promotions:read')
+  routeSpec('app/api/seller/products/import/route.ts', 'products:import')
+  routeSpec('app/api/seller/notifications/route.ts', 'settings:read')
+  routeSpec('app/api/seller/integration-health/route.ts', 'delivery:read')
+  routeSpec('app/api/seller/sessions/route.ts', 'sessions:read')
+  routeSpec('app/api/seller/test-yalidine/route.ts', 'delivery:config')
+  routeSpec('app/api/seller/test-apec/route.ts', 'delivery:config')
+  routeSpec('app/api/seller/test-integration/route.ts', 'delivery:config')
+  routeSpec('app/api/seller/questions/[questionId]/answer/route.ts', 'messages:send')
+  routeSpec('app/api/seller/cancelled-and-abandoned/route.ts', 'orders:read')
+})
+
+// ── 8. Security event constants — completeness ────────────────────────────────
 
 describe('SecurityEvents — SEC_EVENT constants', () => {
   it('covers all critical security events', async () => {

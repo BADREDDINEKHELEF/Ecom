@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { copyCookies } from '@/lib/supabase/server'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { logger } from '@/lib/logger'
 import {
   createShipment, getVendorShipments, updateShipmentStatus,
@@ -12,6 +12,8 @@ import { dispatchShipment, dispatchGetRate } from '@/lib/delivery/dispatch'
 import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
+import { notifyOrderShipped } from '@/lib/notifications/whatsapp'
+import { sendShippingUpdateEmail } from '@/lib/notifications/email'
 
 const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
 const SHIPMENT_STATUSES   = ['pending', 'in_transit', 'picked_up', 'out_for_delivery', 'delivered', 'returned', 'failed', 'cancelled'] as const
@@ -42,9 +44,9 @@ export async function POST(req: NextRequest) {
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
   ))
-  const supabase = createRouteClient(req, response)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+  const result = await requireVendorPermission(req, 'delivery:update', response)
+  if (result instanceof NextResponse) return result
+  const { ctx: { user, vendor } } = result
 
   const userRl = await checkUserDualRateLimit(user.id, 'shipments', {
     burstMax: 5, burstWindowSecs: 60,
@@ -54,9 +56,6 @@ export async function POST(req: NextRequest) {
     { error: 'Limite atteinte. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
   ))
-
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   let body: unknown
   try { body = await req.json() } catch {
@@ -76,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     // Verify the order exists and contains at least one item from this vendor
     const [{ data: order }, { data: vendorItems }] = await Promise.all([
-      admin.from('orders').select('full_name, phone, wilaya, city, address, total, status, is_stopdesk, stop_desk_cause').eq('id', orderId).single(),
+      admin.from('orders').select('full_name, phone, email, wilaya, city, address, total, status, is_stopdesk, stop_desk_cause').eq('id', orderId).single(),
       admin.from('order_items').select('product_name, quantity').eq('order_id', orderId).eq('vendor_id', vendor.id),
     ])
 
@@ -192,6 +191,23 @@ export async function POST(req: NextRequest) {
       if (order.status && ['pending', 'confirmed'].includes(order.status)) {
         await updateOrderStatus(orderId, 'shipped')
       }
+
+      if (order.phone) {
+        notifyOrderShipped(order.phone, order.full_name, finalTracking, provider, 'fr').catch((err) =>
+          logger.error('[seller/shipments] WhatsApp shipped notification failed', { error: err })
+        )
+      }
+      if (order.email) {
+        sendShippingUpdateEmail({
+          to: order.email,
+          fullName: order.full_name,
+          orderId,
+          trackingNumber: finalTracking,
+          provider,
+        }).catch((err) =>
+          logger.error('[seller/shipments] Email shipped notification failed', { error: err })
+        )
+      }
     }
 
     return copyCookies(response, NextResponse.json({ shipment, requiresManual }))
@@ -209,12 +225,9 @@ export async function GET(req: NextRequest) {
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
   ))
-  const supabase = createRouteClient(req, response)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
+  const result = await requireVendorPermission(req, 'delivery:read', response)
+  if (result instanceof NextResponse) return result
+  const { ctx: { vendor } } = result
 
   try {
     const { searchParams } = new URL(req.url)
@@ -238,12 +251,9 @@ export async function PATCH(req: NextRequest) {
     { error: 'Trop de requêtes. Réessayez plus tard.' },
     { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
   ))
-  const supabase = createRouteClient(req, response)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
+  const result = await requireVendorPermission(req, 'delivery:update', response)
+  if (result instanceof NextResponse) return result
+  const { ctx: { vendor } } = result
 
   let body: unknown
   try { body = await req.json() } catch {

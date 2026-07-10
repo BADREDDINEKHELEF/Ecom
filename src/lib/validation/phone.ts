@@ -3,12 +3,12 @@
  *
  * Valid formats:
  *   Local:         0[5-7]XXXXXXXX  (10 digits, starts with 0)
- *   International: +213[5-7]XXXXXXXX or 213[5-7]XXXXXXXX (12/13 chars)
+ *   International: +213[5-7]XXXXXXXX, 00213[5-7]XXXXXXXX, or 213[5-7]XXXXXXXX (12/14 chars)
  *
  * Used by API route validators, form components, and Zod schemas.
  */
 
-export const ALGERIAN_PHONE_REGEX = /^(\+?213|0)[5-7]\d{8}$/
+export const ALGERIAN_PHONE_REGEX = /^(\+?213|00213|0)[5-7]\d{8}$/
 
 export function isValidAlgerianPhone(phone: string): boolean {
   return ALGERIAN_PHONE_REGEX.test(phone.replace(/[\s\-().]/g, ''))

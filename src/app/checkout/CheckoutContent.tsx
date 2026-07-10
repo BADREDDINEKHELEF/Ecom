@@ -1,12 +1,13 @@
-'use client'
+﻿'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useId } from 'react'
 import dynamic from 'next/dynamic'
 const PixelConfetti = dynamic(() => import('@/components/effects/PixelConfetti'), { ssr: false })
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, CheckCircle, Truck, Banknote, CreditCard, Shield, Lock, MapPin, Loader2, Tag, X, Phone, Gift, Star } from 'lucide-react'
 import PhoneInput from '@/components/checkout/PhoneInput'
+import { isValidAlgerianPhone } from '@/lib/validation/phone'
 import B2BInvoiceFields, { type B2BFields } from '@/components/checkout/B2BInvoiceFields'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useT, useLang } from '@/lib/store/langStore'
@@ -22,7 +23,7 @@ import VendorAnalyticsScripts from '@/components/analytics/VendorAnalyticsScript
 
 function normalizeW(s: string) {
   return s.toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/^wilaya\s+(d[e']?\s+)?/i, '')
     .trim()
 }
@@ -66,6 +67,7 @@ export default function CheckoutContent() {
   const { items, total, clearCart, cartStoreSlug, _hasHydrated } = useCartStore()
   const t = useT()
   const lang = useLang()
+  const baseId = useId()
   const cartTotal = total()
 
   const [payment, setPayment] = useState<PaymentMethod>('cash')
@@ -77,7 +79,7 @@ export default function CheckoutContent() {
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
   const [saving, setSaving] = useState(false)
-  // Ref-based lock for double-submit guard — synchronously reliable unlike state (Fix 1)
+  // Ref-based lock for double-submit guard â€” synchronously reliable unlike state (Fix 1)
   const submittingRef = useRef(false)
   const [saveError, setSaveError] = useState('')
   const [phoneError, setPhoneError] = useState('')
@@ -227,7 +229,7 @@ export default function CheckoutContent() {
     }
   }, [vendorPixelConfig, items, cartTotal, cartStoreSlug, form.email, form.phone])
 
-  // Stable vendorId derived from items — avoids re-firing on every render due to new array reference (Fix 7)
+  // Stable vendorId derived from items â€” avoids re-firing on every render due to new array reference (Fix 7)
   const primaryVendorId = useMemo(
     () => items[0]?.product?.vendorId ?? null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -269,7 +271,7 @@ export default function CheckoutContent() {
           setLiveDeliveryRates({ home: null, desk: null })
           setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
           setIsLiveRates(false)
-          setRateError(data.error || 'Impossible de calculer les frais de livraison. Veuillez réessayer.')
+          setRateError(data.error || 'Impossible de calculer les frais de livraison. Veuillez rÃ©essayer.')
         }
       } catch {
         setLiveDeliveryRates({ home: null, desk: null })
@@ -351,7 +353,7 @@ export default function CheckoutContent() {
           expired: t.checkout.promoExpired,
           maxed: t.checkout.promoMaxed,
           min_order: t.checkout.promoMinOrder,
-          already_used: 'Vous avez déjà utilisé ce code.',
+          already_used: 'Vous avez dÃ©jÃ  utilisÃ© ce code.',
         }
         setPromoError(msgMap[data.message] ?? t.checkout.promoInvalid)
       }
@@ -399,8 +401,7 @@ export default function CheckoutContent() {
 
   const validatePhone = (val: string) => {
     if (!val) { setPhoneError(''); return }
-    const clean = val.replace(/\s+/g, '')
-    if (!/^(\+?213|0)[5-7]\d{8}$/.test(clean)) {
+    if (!isValidAlgerianPhone(val)) {
       setPhoneError(t.checkout.phoneInvalid)
     } else {
       setPhoneError('')
@@ -410,12 +411,11 @@ export default function CheckoutContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     // Fix 4: Validate phone on submit (catches autofill/paste that bypasses onChange)
-    const cleanPhone = form.phone.replace(/[\s\-().]/g, '')
-    if (!cleanPhone || !/^(\+?213|0)[5-7]\d{8}$/.test(cleanPhone)) {
+    if (!form.phone || !isValidAlgerianPhone(form.phone)) {
       setPhoneError(t.checkout.phoneInvalid)
       return
     }
-    // Fix 1: Ref-based lock — synchronously prevents double-submit unlike state batching
+    // Fix 1: Ref-based lock â€” synchronously prevents double-submit unlike state batching
     if (submittingRef.current) return
     submittingRef.current = true
     if (phoneError) { submittingRef.current = false; return }
@@ -457,7 +457,7 @@ export default function CheckoutContent() {
       return
     }
     if (!form.phone.trim()) {
-      setSaveError('Numéro de téléphone requis')
+      setSaveError('NumÃ©ro de tÃ©lÃ©phone requis')
       setSaving(false)
       submittingRef.current = false
       return
@@ -537,7 +537,7 @@ export default function CheckoutContent() {
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
           setSaveError(errData.error ?? t.checkout.orderFailed)
-          // Fix 2: Explicitly release locks — early return bypasses the outer finally block
+          // Fix 2: Explicitly release locks â€” early return bypasses the outer finally block
           setSaving(false)
           submittingRef.current = false
           return
@@ -546,7 +546,7 @@ export default function CheckoutContent() {
         const resolvedOrderId = orderData.orderId ?? orderData.id
         if (!resolvedOrderId) {
           setSaveError(t.checkout.orderFailed)
-          // Fix 2: Same — explicit release needed because early return skips outer finally
+          // Fix 2: Same â€” explicit release needed because early return skips outer finally
           setSaving(false)
           submittingRef.current = false
           return
@@ -642,7 +642,7 @@ export default function CheckoutContent() {
           clearCart()
           window.location.href = data.formUrl
         } catch {
-          setSaveError('Erreur lors de la redirection vers le paiement. Réessayez.')
+          setSaveError('Erreur lors de la redirection vers le paiement. RÃ©essayez.')
         }
         return
       }
@@ -679,7 +679,7 @@ export default function CheckoutContent() {
   }
 
   // Fix 11: Wait for Zustand cart hydration before rendering to avoid stale pre-hydration state.
-  // IMPORTANT: keep ssr:false on the dynamic import in checkout/page.tsx — this guard is a second
+  // IMPORTANT: keep ssr:false on the dynamic import in checkout/page.tsx â€” this guard is a second
   // line of defence; removing ssr:false would still cause a hydration mismatch.
   if (!_hasHydrated) {
     return (
@@ -732,7 +732,7 @@ export default function CheckoutContent() {
   if (submitted) {
     return (
       <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <PixelConfetti trigger={!confettiDone} onComplete={() => setConfettiDone(true)} message="تبارك الله! طلبك تأكد" />
+        <PixelConfetti trigger={!confettiDone} onComplete={() => setConfettiDone(true)} message={t.checkout.confirmed} />
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-10 h-10 text-green-600" />
         </div>
@@ -782,7 +782,7 @@ export default function CheckoutContent() {
       <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-3 mb-6 flex items-center gap-3">
         <Shield className="w-5 h-5 text-green-600 flex-shrink-0" />
         <p className="text-green-800 text-sm font-semibold">
-          {t.trust.cod} — <span className="font-normal text-green-700">{t.trust.codText}</span>
+          {t.trust.cod} â€” <span className="font-normal text-green-700">{t.trust.codText}</span>
         </p>
       </div>
 
@@ -795,7 +795,7 @@ export default function CheckoutContent() {
 
       <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-6 text-sm text-indigo-800">
         <Lock className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-        <span><strong>{t.checkout.guestOrder}</strong> — {t.checkout.guestOrderDesc}</span>
+        <span><strong>{t.checkout.guestOrder}</strong> â€” {t.checkout.guestOrderDesc}</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -823,8 +823,8 @@ export default function CheckoutContent() {
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.fullName}</label>
-                <input required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
+                <label htmlFor={`fullName-${baseId}`} className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.fullName}</label>
+                <input id={`fullName-${baseId}`} required type="text" value={form.fullName} onChange={(e) => f('fullName', e.target.value)}
                   placeholder="Mohammed Amiri"
                   autoComplete="name"
                   inputMode="text"
@@ -842,8 +842,8 @@ export default function CheckoutContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.wilaya}</label>
-                <select required value={form.wilaya}
+                <label htmlFor={`wilaya-${baseId}`} className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.wilaya}</label>
+                <select id={`wilaya-${baseId}`} required value={form.wilaya}
                   onChange={(e) => { setCustomCommune(''); setForm((prev) => ({ ...prev, wilaya: e.target.value, city: '' })) }}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-400 bg-white">
                   <option value="">{t.checkout.selectWilaya}</option>
@@ -851,8 +851,9 @@ export default function CheckoutContent() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.commune}</label>
+                <label htmlFor={`commune-${baseId}`} className="block text-sm font-semibold text-gray-700 mb-1.5">{t.checkout.commune}</label>
                 <select
+                  id={`commune-${baseId}`}
                   required={form.city !== '__autre__'}
                   value={form.city === '__autre__' || !getCommunesForWilaya(form.wilaya).includes(form.city) && form.city ? '__autre__' : form.city}
                   onChange={(e) => {
@@ -872,8 +873,10 @@ export default function CheckoutContent() {
                 </select>
                 {form.city === '__autre__' && (
                   <input
+                    id={`customCommune-${baseId}`}
                     type="text"
                     required
+                    aria-label={t.checkout.otherCommunePlaceholder}
                     value={customCommune}
                     onChange={(e) => { setCustomCommune(e.target.value); f('city', e.target.value || '__autre__') }}
                     placeholder={t.checkout.otherCommunePlaceholder}
@@ -897,6 +900,7 @@ export default function CheckoutContent() {
                   <div className={`grid grid-cols-1 ${liveDeliveryRates.desk !== null ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
                     <button
                       type="button"
+                      aria-pressed={deliveryType === 'home'}
                       onClick={() => setDeliveryType('home')}
                       className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
                         deliveryType === 'home' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -909,12 +913,13 @@ export default function CheckoutContent() {
                         {liveDeliveryRates.home !== null ? (
                           liveDeliveryRates.home === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.home)
                         ) : (
-                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
+                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? 'â€¦' : formatPrice(delivery.cost)
                         )}
                       </span>
                     </button>
                     <button
                       type="button"
+                      aria-pressed={deliveryType === 'office'}
                       onClick={() => setDeliveryType('office')}
                       className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
                         deliveryType === 'office' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -927,13 +932,14 @@ export default function CheckoutContent() {
                         {liveDeliveryRates.home !== null ? (
                           liveDeliveryRates.home === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.home)
                         ) : (
-                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
+                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? 'â€¦' : formatPrice(delivery.cost)
                         )}
                       </span>
                     </button>
                     {liveDeliveryRates.desk !== null && (
                       <button
                         type="button"
+                        aria-pressed={deliveryType === 'stop_desk'}
                         onClick={() => setDeliveryType('stop_desk')}
                         className={`flex flex-col items-start p-4 rounded-xl border-2 text-left transition-all ${
                           deliveryType === 'stop_desk' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -946,7 +952,7 @@ export default function CheckoutContent() {
                           {liveDeliveryRates.desk !== null ? (
                             liveDeliveryRates.desk === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.desk)
                           ) : (
-                            delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
+                            delivery.isFree ? t.cart.freeShipping : deliveryFetching ? 'â€¦' : formatPrice(delivery.cost)
                           )}
                         </span>
                       </button>
@@ -971,10 +977,11 @@ export default function CheckoutContent() {
 
               {isStopDesk && (
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  <label htmlFor={`stopDeskCause-${baseId}`} className="block text-sm font-semibold text-gray-700 mb-1.5">
                     {t.checkout.stopDeskCause} <span className="text-gray-400 font-normal">{t.checkout.stopDeskCauseOptional}</span>
                   </label>
                   <textarea
+                    id={`stopDeskCause-${baseId}`}
                     value={form.stopDeskCause}
                     onChange={(e) => f('stopDeskCause', e.target.value)}
                     rows={2}
@@ -992,22 +999,22 @@ export default function CheckoutContent() {
                     <span className="font-semibold text-indigo-800">{t.checkout.estimatedDelivery} </span>
                     <span className="text-indigo-700">{delivery.days}</span>
                     {shippingCost === 0 ? (
-                      <span className="ml-2 text-green-600 font-bold">— {t.cart.freeShipping}!</span>
+                      <span className="ml-2 text-green-600 font-bold">â€” {t.cart.freeShipping}!</span>
                     ) : deliveryFetching ? (
-                      <span className="ml-2 text-gray-400">…</span>
+                      <span className="ml-2 text-gray-400">â€¦</span>
                     ) : (
-                      <span className="ml-2 text-gray-600">— {formatPrice(shippingCost)}</span>
+                      <span className="ml-2 text-gray-600">â€” {formatPrice(shippingCost)}</span>
                     )}
                   </div>
                 </div>
               )}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label htmlFor={`address-${baseId}`} className="block text-sm font-semibold text-gray-700 mb-1.5">
                   {t.checkout.address}
                   {deliveryType === 'office' && <span className="text-gray-400 font-normal text-xs ml-2">({t.checkout.officeDelivery})</span>}
                   {isStopDesk && <span className="text-gray-400 font-normal text-xs ml-2">({t.checkout.addressStopDesk})</span>}
                 </label>
-                <input type="text" value={form.address} onChange={(e) => f('address', e.target.value)}
+                <input id={`address-${baseId}`} type="text" value={form.address} onChange={(e) => f('address', e.target.value)}
                   placeholder={
                     isStopDesk 
                       ? t.checkout.addressStopDeskPlaceholder 
@@ -1026,10 +1033,11 @@ export default function CheckoutContent() {
                 )}
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label htmlFor={`notes-${baseId}`} className="block text-sm font-semibold text-gray-700 mb-1.5">
                   {t.checkout.deliveryNotes} <span className="text-gray-400 font-normal">{t.checkout.deliveryNotesOptional}</span>
                 </label>
                 <textarea
+                  id={`notes-${baseId}`}
                   value={form.notes}
                   onChange={(e) => f('notes', e.target.value)}
                   rows={2}
@@ -1057,6 +1065,7 @@ export default function CheckoutContent() {
                 <button
                   key={id}
                   type="button"
+                  aria-pressed={payment === id}
                   onClick={() => setPayment(id)}
                   className={`flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-colors relative ${
                     payment === id ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
@@ -1064,7 +1073,7 @@ export default function CheckoutContent() {
                 >
                   {recommended && (
                     <span className="absolute -top-2 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      ✓
+                      âœ“
                     </span>
                   )}
                   <div className={payment === id ? 'text-indigo-600' : 'text-gray-500'}>
@@ -1078,7 +1087,7 @@ export default function CheckoutContent() {
             {payment === 'cash' && (
               <div className="mt-4 bg-green-50 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-green-700">
                 <Shield className="w-4 h-4 flex-shrink-0" />
-                <span>{t.trust.cod} — {t.trust.codText}</span>
+                <span>{t.trust.cod} â€” {t.trust.codText}</span>
               </div>
             )}
           </div>
@@ -1096,7 +1105,7 @@ export default function CheckoutContent() {
             className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:pointer-events-none"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
-            {saving ? '...' : `${t.checkout.placeOrder} — ${formatPrice(orderTotal)}`}
+            {saving ? '...' : `${t.checkout.placeOrder} â€” ${formatPrice(orderTotal)}`}
           </button>
         </form>
 
@@ -1244,7 +1253,7 @@ export default function CheckoutContent() {
               <div className="flex justify-between text-gray-600">
                 <span>{t.cart.shipping}</span>
                 <span className={form.wilaya && shippingCost === 0 ? 'text-green-600 font-bold' : ''}>
-                  {!form.wilaya ? '—' : deliveryFetching ? '…' : (shippingCost === 0 ? t.cart.freeShipping : formatPrice(shippingCost))}
+                  {!form.wilaya ? 'â€”' : deliveryFetching ? 'â€¦' : (shippingCost === 0 ? t.cart.freeShipping : formatPrice(shippingCost))}
                 </span>
               </div>
               {!form.wilaya && (
@@ -1275,9 +1284,9 @@ export default function CheckoutContent() {
             </div>
             <div className="mt-4 pt-4 border-t space-y-2">
               {[
-                { icon: '🔒', text: t.trust.secure + ' — ' + t.trust.secureText },
-                { icon: '🚚', text: t.trust.delivery + ' — ' + t.trust.deliveryText },
-                { icon: '↩️', text: t.trust.returns + ' — ' + t.trust.returnsText },
+                { icon: 'ðŸ”’', text: t.trust.secure + ' â€” ' + t.trust.secureText },
+                { icon: 'ðŸšš', text: t.trust.delivery + ' â€” ' + t.trust.deliveryText },
+                { icon: 'â†©ï¸', text: t.trust.returns + ' â€” ' + t.trust.returnsText },
               ].map(({ icon, text }) => (
                 <div key={icon} className="flex items-center gap-2 text-xs text-gray-500">
                   <span>{icon}</span> {text}
@@ -1298,3 +1307,5 @@ export default function CheckoutContent() {
     </div>
   )
 }
+
+

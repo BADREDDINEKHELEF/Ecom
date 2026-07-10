@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
@@ -10,6 +10,7 @@ import {
 import { useSellerAuth } from '@/lib/seller/useSellerAuth'
 import { formatPrice } from '@/lib/utils'
 import { useT, useRTL, useLang } from '@/lib/store/langStore'
+import { useSearchParams } from 'next/navigation'
 import SellerSidebar from '@/components/seller/SellerSidebar'
 import OrderInvoicePrint from '@/components/ui/OrderInvoicePrint'
 import type { VendorOrderSummary } from '@/lib/supabase/queries'
@@ -83,10 +84,14 @@ export default function SellerOrdersPage() {
   }
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  const searchParams = useSearchParams()
   const [orders, setOrders]             = useState<VendorOrderSummary[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [search, setSearch]             = useState('')
-  const [statusTab, setStatusTab]       = useState('')
+  const [statusTab, setStatusTab]       = useState(() => {
+    const urlStatus = searchParams.get('status')
+    return urlStatus && STATUS_TABS.some((t) => t.key === urlStatus) ? urlStatus : ''
+  })
   const [expanded, setExpanded]         = useState<string | null>(null)
 
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -339,7 +344,7 @@ export default function SellerOrdersPage() {
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${cfg.badge}`}>
                               <StatusIcon className="w-3 h-3" />{cfg.label}
                             </span>
-                            <span className="text-xs text-gray-400">#{order.id.slice(0, 8)} · {order.wilaya}</span>
+                            <span className="text-xs text-gray-400">#{order.id.slice(0, 8)} Â· {order.wilaya}</span>
                             {urgency !== 'none' && (
                               <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
                                 urgency === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
@@ -391,7 +396,7 @@ export default function SellerOrdersPage() {
                                       : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                     }
                                     <div className="min-w-0">
-                                      <span className="text-gray-700 truncate block">{item.product_name} × {item.quantity}</span>
+                                      <span className="text-gray-700 truncate block">{item.product_name} Ã— {item.quantity}</span>
                                       {item.selected_color && (
                                         <span className="text-xs text-gray-400">Couleur : {item.selected_color}</span>
                                       )}
@@ -476,7 +481,7 @@ export default function SellerOrdersPage() {
                               )}
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              #{order.id.slice(0, 8)} ·{' '}
+                              #{order.id.slice(0, 8)} Â·{' '}
                               <a href={`tel:${order.phone}`}
                                 onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline">
@@ -532,7 +537,7 @@ export default function SellerOrdersPage() {
                                           : <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center flex-shrink-0"><Package className="w-3.5 h-3.5 text-gray-400" /></div>
                                         }
                                         <div>
-                                          <span className="text-gray-700">{item.product_name} × {item.quantity}</span>
+                                          <span className="text-gray-700">{item.product_name} Ã— {item.quantity}</span>
                                           {item.selected_color && (
                                             <p className="text-xs text-gray-400">Couleur : {item.selected_color}</p>
                                           )}
@@ -582,3 +587,5 @@ export default function SellerOrdersPage() {
     </div>
   )
 }
+
+

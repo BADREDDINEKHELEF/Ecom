@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
+import { copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit, checkUserDualRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
@@ -40,12 +40,9 @@ export async function GET(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
+    const result = await requireVendorPermission(req, 'promotions:read', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { vendor } } = result
 
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -71,9 +68,9 @@ export async function POST(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+    const result = await requireVendorPermission(req, 'promotions:update', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { user, vendor } } = result
 
     const userRl = await checkUserDualRateLimit(user.id, 'promo_codes', {
       burstMax: 5, burstWindowSecs: 60,
@@ -83,9 +80,6 @@ export async function POST(req: NextRequest) {
       { error: 'Limite atteinte. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
     ))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     let body: unknown
     try { body = await req.json() } catch {
@@ -134,9 +128,9 @@ export async function PATCH(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+    const result = await requireVendorPermission(req, 'promotions:update', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { user, vendor } } = result
 
     const userRl = await checkUserDualRateLimit(user.id, 'promo_codes', {
       burstMax: 5, burstWindowSecs: 60,
@@ -146,9 +140,6 @@ export async function PATCH(req: NextRequest) {
       { error: 'Limite atteinte. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
     ))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     let patchBody: unknown
     try { patchBody = await req.json() } catch {

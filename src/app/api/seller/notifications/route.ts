@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { copyCookies } from '@/lib/supabase/server'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import {
   getSellerNotifications,
   markNotificationRead,
@@ -25,12 +25,9 @@ export async function GET(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
+    const result = await requireVendorPermission(req, 'settings:read', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { vendor } } = result
 
     const notifications = await getSellerNotifications(vendor.id)
     return copyCookies(response, NextResponse.json({ notifications }))
@@ -49,12 +46,9 @@ export async function PATCH(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
+    const result = await requireVendorPermission(req, 'settings:read', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { vendor } } = result
 
     let patchBody: unknown
     try { patchBody = await req.json() } catch {

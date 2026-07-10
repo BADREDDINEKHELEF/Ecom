@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
-import { getVendorByUserIdServer, getVendorDeliveryConfig } from '@/lib/supabase/vendors'
+import { copyCookies } from '@/lib/supabase/server'
+import { getVendorDeliveryConfig } from '@/lib/supabase/vendors'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { saveIntegrationHealth } from '@/lib/supabase/health'
@@ -22,15 +23,12 @@ export async function POST(req: NextRequest) {
   const rl = await checkSellerRateLimit(ip, 'test_integration', 15, 60)
   if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Too many requests' }, { status: 429 }))
 
-  const supabase = createRouteClient(req, response)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+  const result = await requireVendorPermission(req, 'delivery:config', response)
+  if (result instanceof NextResponse) return result
+  const { ctx: { user, vendor } } = result
 
   const userRl = await checkUserRateLimit(user.id, 'test_integration', 15, 60)
   if (!userRl.allowed) return copyCookies(response, NextResponse.json({ error: 'Limit reached' }, { status: 429 }))
-
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
   let rawBody: unknown
   try { rawBody = await req.json() } catch { return copyCookies(response, NextResponse.json({ error: 'Invalid body' }, { status: 400 })) }

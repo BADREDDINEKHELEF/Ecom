@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
-import { getVendorByUserIdServer, updateVendor } from '@/lib/supabase/vendors'
+import { copyCookies } from '@/lib/supabase/server'
+import { updateVendor } from '@/lib/supabase/vendors'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
@@ -23,9 +24,9 @@ export async function PATCH(req: NextRequest) {
       ))
     }
 
-    const supabase = createRouteClient(req, response)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+    const result = await requireVendorPermission(req, 'settings:update', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { user, vendor } } = result
 
     const userRl = await checkUserRateLimit(user.id, 'vendor_vacation', 10, 3600)
     if (!userRl.allowed) {
@@ -34,9 +35,6 @@ export async function PATCH(req: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
       ))
     }
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Not a vendor' }, { status: 403 }))
 
     let body: unknown
     try { body = await req.json() } catch {

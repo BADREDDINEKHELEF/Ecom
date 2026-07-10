@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
+import { copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { checkVendorProductLimit } from '@/lib/supabase/server-utils'
 import { getClientIp } from '@/lib/utils/ip'
@@ -51,9 +51,9 @@ export async function POST(req: NextRequest) {
       { status: 429, headers: { 'Retry-After': String(ipRl.retryAfterSeconds) } }
     ))
 
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+    const result = await requireVendorPermission(req, 'products:import', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { user, vendor } } = result
 
     // Per-account gate — prevents one seller exhausting the limit for a shared NAT
     const userRl = await checkUserRateLimit(user.id, 'import', 3, 60 * 60)
@@ -61,9 +61,6 @@ export async function POST(req: NextRequest) {
       { error: 'Limite atteinte. Maximum 3 imports par heure.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
     ))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
 
     const text = await req.text()
     if (!text.trim()) return copyCookies(response, NextResponse.json({ error: 'CSV vide' }, { status: 400 }))

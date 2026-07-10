@@ -22,9 +22,10 @@ describe('Seller Returns GET API endpoint — /api/seller/returns', () => {
     expect(src).toContain('checkSellerRateLimit')
   })
 
-  it('authenticates vendor session via getUser / getVendorByUserIdServer', () => {
-    expect(src).toContain('getUser()')
-    expect(src).toContain('getVendorByUserIdServer')
+  it('authenticates vendor session via requireVendorPermission with orders:read', () => {
+    expect(src).toContain('requireVendorPermission')
+    expect(src).toContain("'orders:read'")
+    expect(src).not.toContain('getVendorByUserIdServer')
   })
 
   it('scopes return query strictly to logged-in vendor ID (data isolation)', () => {
@@ -43,9 +44,10 @@ describe('Seller Returns PATCH API endpoint — /api/seller/returns/[id]', () =>
     expect(src).toContain('checkUserDualRateLimit')
   })
 
-  it('authenticates vendor session via getUser / getVendorByUserIdServer', () => {
-    expect(src).toContain('getUser()')
-    expect(src).toContain('getVendorByUserIdServer')
+  it('authenticates vendor session via requireVendorPermission with orders:update', () => {
+    expect(src).toContain('requireVendorPermission')
+    expect(src).toContain("'orders:update'")
+    expect(src).not.toContain('getVendorByUserIdServer')
   })
 
   it('verifies ownership of the return request before executing update', () => {

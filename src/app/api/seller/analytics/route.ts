@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
+import { copyCookies } from '@/lib/supabase/server'
 import { getSellerAnalytics } from '@/lib/supabase/analytics'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { checkSellerRateLimit, checkUserRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 
@@ -14,22 +14,15 @@ export async function GET(req: NextRequest) {
       { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) {
-      return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-    }
+    const result = await requireVendorPermission(req, 'analytics:read', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { user, vendor } } = result
 
     const userRl = await checkUserRateLimit(user.id, 'analytics_read', 30, 3600)
     if (!userRl.allowed) return copyCookies(response, NextResponse.json(
       { error: 'Limite atteinte. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
     ))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) {
-      return copyCookies(response, NextResponse.json({ error: 'Vendor account not found' }, { status: 403 }))
-    }
 
     const { searchParams } = new URL(req.url)
     const rawDays = parseInt(searchParams.get('days') ?? '30')

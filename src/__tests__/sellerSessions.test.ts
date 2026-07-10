@@ -127,13 +127,17 @@ describe('sessions API route — source audit: auth & validation', () => {
     'utf-8'
   )
 
-  it('requires authentication (getUser call present)', () => {
-    expect(src).toContain('getUser()')
+  it('requires vendor permission via requireVendorPermission', () => {
+    expect(src).toContain('requireVendorPermission')
+    expect(src).not.toContain('getVendorByUserIdServer')
   })
 
-  it('returns 401 when not authenticated', () => {
-    expect(src).toContain('status: 401')
-    expect(src).toContain("'Unauthorized'")
+  it('GET requires sessions:read permission', () => {
+    expect(src).toContain("'sessions:read'")
+  })
+
+  it('DELETE requires sessions:revoke permission', () => {
+    expect(src).toContain("'sessions:revoke'")
   })
 
   it('validates session ID format (UUID regex) before DB query', () => {

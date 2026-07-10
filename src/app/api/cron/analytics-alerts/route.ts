@@ -1,24 +1,27 @@
-﻿import { NextResponse } from 'next/server'
-import { timingSafeEqual } from 'crypto'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+import { timingSafeEqual, createHash } from 'crypto'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendTelegramAlert } from '@/lib/notifications/telegram'
 import { logger } from '@/lib/logger'
+
+const HMAC_PAD_SIZE = 128
+
+function safeCompare(provided: string, expected: string): boolean {
+  const a = Buffer.alloc(HMAC_PAD_SIZE)
+  const b = Buffer.alloc(HMAC_PAD_SIZE)
+  Buffer.from(createHash('sha256').update(provided).digest()).copy(a)
+  Buffer.from(createHash('sha256').update(expected).digest()).copy(b)
+  return timingSafeEqual(a, b)
+}
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  const adminClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-  // Verify Vercel cron secret — use timingSafeEqual to prevent timing attacks.
-  // String equality (`!==`) short-circuits at the first differing character,
-  // leaking information about how many prefix bytes matched.
+  const adminClient = createAdminClient()
+
   const provided = (request.headers.get('authorization') ?? '').replace('Bearer ', '')
   const expected = process.env.CRON_SECRET ?? ''
-  const valid = expected.length > 0
-    && provided.length === expected.length
-    && timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+  const valid = expected.length > 0 && safeCompare(provided, expected)
   if (!valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

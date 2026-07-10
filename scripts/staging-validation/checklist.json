@@ -1,0 +1,24 @@
+{
+  "name": "ShopDZ Production Readiness Gate Checklist",
+  "version": "1.0.0",
+  "thresholds": {
+    "error_rate_max": 0.001,
+    "p95_latency_ms_max": 500,
+    "p99_latency_ms_max": 1000,
+    "warning_p95_latency_ms": 300,
+    "min_test_coverage_percent": 80
+  },
+  "required_checks": [
+    "type_check",
+    "unit_tests",
+    "contract_tests",
+    "database_consistency_tests",
+    "webhook_replay_security_tests",
+    "chaos_degradation_tests",
+    "pixel_capi_deduplication_tests"
+  ],
+  "critical_environments": [
+    "staging",
+    "production"
+  ]
+}

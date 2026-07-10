@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -16,6 +16,45 @@ interface UseSellerAuthState {
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Resolve the vendor for the current authenticated user.
+ * Priority: owner (vendors.user_id) -> team member (vendor_members.user_id).
+ * Mirrors the logic in @/lib/auth/vendorAuth so the client-side guard stays
+ * consistent with the API-side guard.
+ */
+async function resolveVendorForUser(userId: string): Promise<{ vendor: Vendor | null; error: Error | null }> {
+  const supabase = createClient()
+
+  // 1. Owner lookup
+  const { data: ownedVendor, error: ownerErr } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (ownerErr) return { vendor: null, error: new Error(ownerErr.message) }
+  if (ownedVendor) return { vendor: ownedVendor as unknown as Vendor, error: null }
+
+  // 2. Team member lookup (two-step to avoid Supabase join type errors)
+  const { data: membership, error: memberErr } = await supabase
+    .from('vendor_members')
+    .select('vendor_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (memberErr) return { vendor: null, error: new Error(memberErr.message) }
+  if (!membership) return { vendor: null, error: null }
+
+  const { data: memberVendor, error: vendorErr } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('id', membership.vendor_id)
+    .maybeSingle()
+
+  if (vendorErr) return { vendor: null, error: new Error(vendorErr.message) }
+  return { vendor: memberVendor as unknown as Vendor | null, error: null }
 }
 
 export function useSellerAuth() {
@@ -46,13 +85,9 @@ export function useSellerAuth() {
           return
         }
 
-        const { data: v, error: vendorErr } = await supabase
-          .from('vendors')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle()
+        const { vendor: v, error: resolveErr } = await resolveVendorForUser(user.id)
 
-        if (vendorErr) throw vendorErr
+        if (resolveErr) throw resolveErr
 
         if (cancelled) return
 

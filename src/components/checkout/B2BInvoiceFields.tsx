@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { Building2, ChevronDown, ChevronUp } from 'lucide-react'
 
 export interface B2BFields {
@@ -18,6 +18,7 @@ interface Props {
 
 export default function B2BInvoiceFields({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
+  const fieldId = useId()
 
   const set = (k: keyof B2BFields, v: string | boolean) =>
     onChange({ ...value, [k]: v })
@@ -27,6 +28,7 @@ export default function B2BInvoiceFields({ value, onChange }: Props) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -60,8 +62,9 @@ export default function B2BInvoiceFields({ value, onChange }: Props) {
                 { key: 'rc',         label: 'RC',              placeholder: 'Registre de Commerce' },
               ].map(({ key, label, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
+                  <label htmlFor={`${fieldId}-${key}`} className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
                   <input
+                    id={`${fieldId}-${key}`}
                     type="text"
                     value={value[key as keyof B2BFields] as string}
                     onChange={(e) => set(key as keyof B2BFields, e.target.value)}

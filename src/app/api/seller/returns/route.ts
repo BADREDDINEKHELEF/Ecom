@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
+import { copyCookies } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
@@ -16,12 +16,9 @@ export async function GET(req: NextRequest) {
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
 
-    const supabase = createRouteClient(req, response)
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
+    const result = await requireVendorPermission(req, 'orders:read', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { vendor } } = result
 
     const admin = createAdminClient()
     const { data, error } = await admin

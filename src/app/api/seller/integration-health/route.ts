@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteClient, copyCookies } from '@/lib/supabase/server'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { copyCookies } from '@/lib/supabase/server'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { getIntegrationHealth } from '@/lib/supabase/health'
 import { getClientIp } from '@/lib/utils/ip'
 import { checkSellerRateLimit } from '@/lib/auth/rateLimit'
@@ -11,12 +11,9 @@ export async function GET(req: NextRequest) {
   const rl = await checkSellerRateLimit(ip, 'health_stats', 60, 60)
   if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Too many requests' }, { status: 429 }))
 
-  const supabase = createRouteClient(req, response)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
-
-  const vendor = await getVendorByUserIdServer(user.id)
-  if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Vendor not found' }, { status: 403 }))
+  const result = await requireVendorPermission(req, 'delivery:read', response)
+  if (result instanceof NextResponse) return result
+  const { ctx: { vendor } } = result
 
   try {
     const health = await getIntegrationHealth(vendor.id)

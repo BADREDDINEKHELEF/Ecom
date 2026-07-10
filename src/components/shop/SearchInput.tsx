@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useT } from '@/lib/store/langStore'
 import { useRouter } from 'next/navigation'
 import { Search, X } from 'lucide-react'
 
@@ -11,6 +12,7 @@ interface SearchInputProps {
 export default function SearchInput({ initialValue = '' }: SearchInputProps) {
   const [value, setValue] = useState(initialValue)
   const router = useRouter()
+  const t = useT()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,7 +26,7 @@ export default function SearchInput({ initialValue = '' }: SearchInputProps) {
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Search products, categories…"
+        placeholder={t.nav.search}
         autoFocus
         className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-indigo-400 bg-white shadow-sm"
       />

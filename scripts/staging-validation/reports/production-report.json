@@ -1,0 +1,206 @@
+{
+  "generatedAt": "2026-07-10T18:22:50.964Z",
+  "overallStatus": "PASS",
+  "readinessScore": 100,
+  "totalTests": 22,
+  "passedTests": 22,
+  "failedTests": 0,
+  "checklist": {
+    "name": "ShopDZ Production Readiness Gate Checklist",
+    "version": "1.0.0",
+    "thresholds": {
+      "error_rate_max": 0.001,
+      "p95_latency_ms_max": 500,
+      "p99_latency_ms_max": 1000,
+      "warning_p95_latency_ms": 300,
+      "min_test_coverage_percent": 80
+    },
+    "required_checks": [
+      "type_check",
+      "unit_tests",
+      "contract_tests",
+      "database_consistency_tests",
+      "webhook_replay_security_tests",
+      "chaos_degradation_tests",
+      "pixel_capi_deduplication_tests"
+    ],
+    "critical_environments": [
+      "staging",
+      "production"
+    ]
+  },
+  "suites": [
+    {
+      "name": "database.test.ts",
+      "status": "passed",
+      "duration": 5.12353515625,
+      "assertionResults": [
+        {
+          "title": "rolls back stock reservations and returns a clean 500 error if order creation inserts throw",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "delivery.test.ts",
+      "status": "passed",
+      "duration": 354.098388671875,
+      "assertionResults": [
+        {
+          "title": "falls back to static shipping pricing if Yalidine quote API fails (network offline)",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "meta.test.ts",
+      "status": "passed",
+      "duration": 3.5361328125,
+      "assertionResults": [
+        {
+          "title": "does not block the payment callback checkout response when Meta Conversions API fails",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "payments.test.ts",
+      "status": "passed",
+      "duration": 128.531494140625,
+      "assertionResults": [
+        {
+          "title": "fails gracefully and cancels order when Satim status check throws a network error",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "redis.test.ts",
+      "status": "passed",
+      "duration": 4.234130859375,
+      "assertionResults": [
+        {
+          "title": "falls back gracefully to in-memory rate limiting when Redis REST connection throws",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "smtp.test.ts",
+      "status": "passed",
+      "duration": 5.93017578125,
+      "assertionResults": [
+        {
+          "title": "succeeds order completion even if email invoicing rejects",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "matrix.test.ts",
+      "status": "passed",
+      "duration": 19.330078125,
+      "assertionResults": [
+        {
+          "title": "validates Satim payment check query schemas correctly",
+          "status": "passed"
+        },
+        {
+          "title": "validates BaridiMob callback webhook payload contracts correctly",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "sync.test.ts",
+      "status": "passed",
+      "duration": 8.080078125,
+      "assertionResults": [
+        {
+          "title": "guarantees total price calculations and promo code validations align with subtotals",
+          "status": "passed"
+        },
+        {
+          "title": "guarantees stock restoration trigger behavior on cancellation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "matrix.test.ts",
+      "status": "passed",
+      "duration": 12.578857421875,
+      "assertionResults": [
+        {
+          "title": "maps raw provider status \"livre\" to normalized \"delivered\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"retourne\" to normalized \"returned\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"en_cours_de_livraison\" to normalized \"out_for_delivery\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"en_transit\" to normalized \"in_transit\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"ramasse\" to normalized \"picked_up\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"echoue\" to normalized \"failed\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"annule\" to normalized \"cancelled\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"pret_a_expedier\" to normalized \"pending\"",
+          "status": "passed"
+        },
+        {
+          "title": "maps raw provider status \"unknown_raw_state\" to normalized \"unknown\"",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "capi.test.ts",
+      "status": "passed",
+      "duration": 3.46826171875,
+      "assertionResults": [
+        {
+          "title": "uses the same unique event_id (orderId) across Pixel and Conversions API payloads",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "matrix.test.ts",
+      "status": "passed",
+      "duration": 388.00830078125,
+      "assertionResults": [
+        {
+          "title": "correctly maps payment methods and handles amount bounds",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "replay.test.ts",
+      "status": "passed",
+      "duration": 4.9208984375,
+      "assertionResults": [
+        {
+          "title": "correctly verifies valid BaridiMob webhooks and rejects invalid ones",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

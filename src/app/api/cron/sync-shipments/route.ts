@@ -6,6 +6,7 @@ import { updateShipmentStatus } from '@/lib/supabase/shipments'
 import { updateOrderStatus } from '@/lib/supabase/orders'
 import { dispatchTrack } from '@/lib/delivery/dispatch'
 import { logger } from '@/lib/logger'
+import { notifyOrderDelivered } from '@/lib/notifications/whatsapp'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
   // Oldest-first so stale shipments are always prioritised when >200 are active
   const { data: shipments, error } = await admin
     .from('shipments')
-    .select('id, vendor_id, provider, tracking_number, status, order_id')
+    .select('id, vendor_id, provider, tracking_number, status, order_id, recipient_name, recipient_phone, orders(email)')
     .in('status', ACTIVE_STATUSES)
     .not('tracking_number', 'is', null)
     .order('updated_at', { ascending: true })
@@ -123,6 +124,18 @@ export async function GET(request: Request) {
           // than a delivered order left pointing at an active shipment.
           if (result.status === 'delivered') {
             await updateOrderStatus(shipment.order_id, 'delivered')
+            if (shipment.recipient_phone && shipment.recipient_name) {
+              await notifyOrderDelivered(
+                shipment.recipient_phone,
+                shipment.recipient_name,
+                'fr'
+              ).catch((err) =>
+                logger.error('[cron/sync-shipments] WhatsApp delivery notification failed', {
+                  shipmentId: shipment.id,
+                  error: err instanceof Error ? err.message : String(err),
+                })
+              )
+            }
           } else if (result.status === 'returned') {
             await updateOrderStatus(shipment.order_id, 'returned')
           }

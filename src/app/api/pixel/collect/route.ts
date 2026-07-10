@@ -82,6 +82,18 @@ export async function GET(req: NextRequest) {
   return response
 }
 
+function corsResponse(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      'Access-Control-Allow-Origin':  '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Cache-Control':                'no-store, no-cache, must-revalidate',
+    },
+  })
+}
+
 const PixelCollectSchema = z.object({
   pixelId:  z.string().regex(UUID_RE),
   event:    z.string().min(1).max(50),
@@ -94,15 +106,15 @@ export async function POST(req: NextRequest) {
   // Rate-limit pixel events: 60/min per IP (normal visitor activity)
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? req.headers.get('x-real-ip') ?? 'unknown'
   const rl = await checkPublicRateLimit(clientIp, 'pixel_collect')
-  if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
+  if (!rl.allowed) return corsResponse({ ok: false }, 429)
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ ok: false }, { status: 400 })
+    return corsResponse({ ok: false }, 400)
   }
 
   const parsed = PixelCollectSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 })
+  if (!parsed.success) return corsResponse({ ok: false }, 400)
 
   const { pixelId, event, url, referrer, meta } = parsed.data
 
@@ -114,7 +126,7 @@ export async function POST(req: NextRequest) {
       .eq('pixel_id', pixelId)
       .single()
 
-    if (!vendor) return NextResponse.json({ ok: false }, { status: 404 })
+    if (!vendor) return corsResponse({ ok: false }, 404)
 
     await supabase.from('pixel_events').insert({
       vendor_id:  vendor.id,
@@ -126,18 +138,16 @@ export async function POST(req: NextRequest) {
       meta:       meta ?? {},
     })
 
-    return NextResponse.json({ ok: true }, {
-      headers: { 'Access-Control-Allow-Origin': '*' },
-    })
+    return corsResponse({ ok: true })
   } catch {
-    return NextResponse.json({ ok: false }, { status: 500 })
+    return corsResponse({ ok: false }, 500)
   }
 }
 
 export async function OPTIONS(req: NextRequest) {
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? req.headers.get('x-real-ip') ?? 'unknown'
   const rl = await checkPublicRateLimit(clientIp, 'pixel_collect_options')
-  if (!rl.allowed) return NextResponse.json({ ok: false }, { status: 429 })
+  if (!rl.allowed) return corsResponse({ ok: false }, 429)
 
   return new NextResponse(null, {
     status: 204,

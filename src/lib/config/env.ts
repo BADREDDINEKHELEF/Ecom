@@ -63,6 +63,28 @@ const OPTIONAL_ENV = {
   BARIDIMOB_API_KEY:        'BaridiMob API key',
   BARIDIMOB_BASE_URL:       'BaridiMob API base URL',
 
+  // ── Payment Security & Webhooks ──────────────────────────────────────
+  PAYMENT_CHECK_SECRET:     'HMAC secret for payment check token validation — openssl rand -hex 32',
+  SATIM_SHARED_SECRET:      'HMAC secret for Satim callback validation — shared secret from Satim',
+  BARIDIMOB_WEBHOOK_SECRET: 'HMAC secret for BaridiMob webhook validation',
+
+  // ── Platform-level Pixels ─────────────────────────────────────────────
+  NEXT_PUBLIC_META_PIXEL_ID: 'Meta Pixel ID for the platform',
+  NEXT_PUBLIC_TIKTOK_PIXEL_ID: 'TikTok Pixel ID for the platform',
+  NEXT_PUBLIC_GTAG_ID:       'Google Analytics 4 Measurement ID (e.g. G-XXXXXX) for the platform',
+
+  // ── Resend Configuration ──────────────────────────────────────────────
+  RESEND_API_KEY:           'Resend API key',
+  RESEND_FROM_EMAIL:        'Resend sender email address',
+  RESEND_FROM_NAME:         'Resend sender display name',
+
+  // ── SMTP Server Configuration ─────────────────────────────────────────
+  SMTP_HOST:                'SMTP server hostname',
+  SMTP_PORT:                'SMTP server port (e.g. 465 or 587)',
+  SMTP_USER:                'SMTP server username',
+  SMTP_PASS:                'SMTP server password',
+  SMTP_FROM_EMAIL:          'SMTP sender email address (defaults to username)',
+
   // ── Conversational API (Meta CAPI, TikTok, Google) ────────────────────
   META_CAPI_TOKEN:          'Meta Conversions API token — from Meta Events Manager',
   TIKTOK_CAPI_TOKEN:        'TikTok Conversions API token — from TikTok Events Manager',

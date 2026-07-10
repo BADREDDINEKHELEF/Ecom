@@ -7,7 +7,7 @@ export default defineConfig({
     environment: 'node',
     // Run tests sequentially to avoid cross-test env var pollution from vi.stubEnv
     pool:        'forks',
-    include:     ['src/**/*.test.ts'],
+    include:     ['src/**/*.test.ts', 'scripts/staging-validation/**/*.test.ts'],
     exclude:     ['e2e/**', 'node_modules/**'],
     coverage: {
       provider:  'v8',

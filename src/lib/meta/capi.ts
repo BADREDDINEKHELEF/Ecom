@@ -221,6 +221,9 @@ export async function fireStorePurchaseCAPI(
     return { ok: false, status: 0, message: 'Store not configured for Meta CAPI' }
   }
 
+  // Validate token scope in background (lazy, logged as warning if scope missing)
+  void ensureTokenScope(config.accessToken)
+
   const userData: MetaUserData = buildUserData(userDataInput)
 
   const body: MetaCAPIRequestBody = {

@@ -9,6 +9,8 @@ import { logger } from '@/lib/logger'
 import type { ShipmentInput } from '@/lib/delivery/types'
 import { checkAdminApiRateLimit } from '@/lib/auth/rateLimit'
 import { getClientIp } from '@/lib/utils/ip'
+import { notifyOrderShipped } from '@/lib/notifications/whatsapp'
+import { sendShippingUpdateEmail } from '@/lib/notifications/email'
 
 const SUPPORTED_PROVIDERS = ['yalidine', 'procolis', 'zr', 'colivraison', 'maystro', 'rex', 'yassir', 'ecom', 'apec', 'manual'] as const
 const TRACKING_REGEX = /^[A-Za-z0-9]{6,20}$/
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
     const [orderRes, itemsRes] = await Promise.all([
       admin
         .from('orders')
-        .select('full_name, phone, wilaya, city, address, total, status, is_stopdesk, stop_desk_cause')
+        .select('full_name, phone, email, wilaya, city, address, total, status, is_stopdesk, stop_desk_cause')
         .eq('id', orderId)
         .single(),
       admin
@@ -126,13 +128,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tracking number required' }, { status: 400 })
     }
 
-    await updateShippingInfo(orderId, finalTracking, provider, labelUrl)
+    if (finalTracking) {
+      await updateShippingInfo(orderId, finalTracking, provider, labelUrl)
 
-    // Only advance to 'shipped' from safe states — never regress a delivered/cancelled order
-    if (['pending', 'confirmed'].includes(order.status ?? '')) {
-      await updateOrderStatus(orderId, 'shipped')
+      // Only advance to 'shipped' from safe states — never regress a delivered/cancelled order
+      if (['pending', 'confirmed'].includes(order.status ?? '')) {
+        await updateOrderStatus(orderId, 'shipped')
+      }
+
+      if (order.phone) {
+        notifyOrderShipped(order.phone, order.full_name, finalTracking, provider, 'fr').catch((err) =>
+          logger.error('[delivery/shipment] WhatsApp shipped notification failed', { error: err })
+        )
+      }
+      if (order.email) {
+        sendShippingUpdateEmail({
+          to: order.email,
+          fullName: order.full_name,
+          orderId,
+          trackingNumber: finalTracking,
+          provider,
+        }).catch((err) =>
+          logger.error('[delivery/shipment] Email shipped notification failed', { error: err })
+        )
+      }
     }
-
     return NextResponse.json({ tracking: finalTracking, labelUrl })
   } catch (err) {
     logger.error('[POST /api/delivery/shipment]', { error: err instanceof Error ? err.message : String(err) })

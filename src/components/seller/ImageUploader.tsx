@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import {
   useState, useRef, useCallback, useEffect,
@@ -6,7 +6,7 @@ import {
 } from 'react'
 import { ImagePlus, X, Loader2, AlertCircle, GripVertical, CheckCircle2 } from 'lucide-react'
 
-// ── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ImageItem {
   id:         string
@@ -15,6 +15,7 @@ interface ImageItem {
   uploading:  boolean
   error?:     string
   color?:     string
+  file?:      File
 }
 
 interface Props {
@@ -40,7 +41,7 @@ const COLOR_PRESETS = [
   { label: 'Violet',  hex: '#8B5CF6', border: false  },
 ]
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function uid() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 8)
@@ -117,7 +118,7 @@ function isAllowedImage(type: string, name: string) {
 }
 const MAX_MB = 10
 
-// ── Component ────────────────────────────────────────────────────────────────
+// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function ImageUploader({ value, onChange, colors, onColorsChange, maxImages = 8 }: Props) {
   const [items, setItems] = useState<ImageItem[]>(() =>
@@ -140,11 +141,30 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     prevValue.current = value
     setItems((prev) => {
       if (prev.some((i) => i.uploading)) return prev
+      // Revoke stale local preview URLs before replacing them with server URLs
+      prev.forEach((i) => {
+        if (i.previewUrl && !i.finalUrl && !value.includes(i.previewUrl)) {
+          URL.revokeObjectURL(i.previewUrl)
+        }
+      })
       return value.map((url, i) => ({ id: uid(), previewUrl: url, finalUrl: url, uploading: false, color: colors?.[i] ?? '' }))
     })
   }, [value, colors])
 
-  // ── Upload a single file ─────────────────────────────────────────────────
+  // Cleanup local object URLs on unmount to avoid memory leaks
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  useEffect(() => {
+    return () => {
+      itemsRef.current.forEach((i) => {
+        if (i.previewUrl && !i.finalUrl) {
+          URL.revokeObjectURL(i.previewUrl)
+        }
+      })
+    }
+  }, [])
+
+  // â”€â”€ Upload a single file â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const uploadOne = useCallback(async (itemId: string, file: File) => {
     try {
@@ -155,7 +175,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
       const res = await fetch('/api/seller/upload', { method: 'POST', body: fd })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Échec de l\'upload')
+        throw new Error(body.error ?? 'Ã‰chec de l\'upload')
       }
       const { url } = await res.json() as { url: string }
 
@@ -175,7 +195,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     }
   }, [syncParent])
 
-  // ── Add confirmed files (with their chosen colors) ────────────────────────
+  // â”€â”€ Add confirmed files (with their chosen colors) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const addFiles = useCallback((files: File[], initialColors?: string[]) => {
     setItems((prev) => {
@@ -189,6 +209,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
         finalUrl:   null,
         uploading:  true,
         color:      initialColors?.[i] ?? '',
+        file:       f,
       }))
       const next = [...prev, ...newItems]
       toAdd.forEach((f, i) => uploadOne(newItems[i].id, f))
@@ -196,7 +217,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     })
   }, [maxImages, uploadOne])
 
-  // ── Handle incoming files: upload immediately, color chosen inline after ──
+  // â”€â”€ Handle incoming files: upload immediately, color chosen inline after â”€â”€
 
   const handleFilesSelected = useCallback((files: File[]) => {
     const valid = files.filter(
@@ -206,7 +227,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     addFiles(valid)
   }, [addFiles])
 
-  // ── Drop zone handlers ───────────────────────────────────────────────────
+  // â”€â”€ Drop zone handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleZoneDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -225,7 +246,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     e.target.value = ''
   }
 
-  // ── Item drag-to-reorder ─────────────────────────────────────────────────
+  // â”€â”€ Item drag-to-reorder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleItemDragStart = (e: DragEvent<HTMLDivElement>, idx: number) => {
     dragItemIdx.current = idx
@@ -255,13 +276,29 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
 
   const removeItem = (id: string) => {
     setItems((prev) => {
+      const removed = prev.find((i) => i.id === id)
+      if (removed?.previewUrl && !removed.finalUrl) {
+        URL.revokeObjectURL(removed.previewUrl)
+      }
       const next = prev.filter((i) => i.id !== id)
       syncParent(next)
       return next
     })
   }
 
-  const retryItem = (id: string) => removeItem(id)
+  const retryItem = (id: string) => {
+    setItems((prev) => {
+      const item = prev.find((i) => i.id === id)
+      if (!item?.file) {
+        const next = prev.filter((i) => i.id !== id)
+        syncParent(next)
+        return next
+      }
+      const next = prev.map((i) => (i.id === id ? { ...i, uploading: true, error: undefined } : i))
+      uploadOne(id, item.file)
+      return next
+    })
+  }
 
   const setItemColor = (id: string, color: string) => {
     setItems(prev => {
@@ -274,13 +311,13 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
   const canAdd    = items.length < maxImages
   const uploading = items.some((i) => i.uploading)
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <>
     <div className="space-y-3">
 
-      {/* ── Drop zone ── */}
+      {/* â”€â”€ Drop zone â”€â”€ */}
       {canAdd && (
         <div
           onDragOver={handleZoneDragOver}
@@ -302,7 +339,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
             accept="image/*,.heic,.heif"
             onChange={handleFileInput}
             className="sr-only"
-            aria-label="Sélectionner des images"
+            aria-label="SÃ©lectionner des images"
           />
 
           <div className={[
@@ -314,16 +351,16 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
 
           <div className="text-center">
             <p className="text-sm font-semibold text-gray-800">
-              {isDragOver ? 'Déposez les images ici' : 'Glissez-déposez ou cliquez pour ajouter'}
+              {isDragOver ? 'DÃ©posez les images ici' : 'Glissez-dÃ©posez ou cliquez pour ajouter'}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
-              JPG · PNG · WebP · GIF &nbsp;·&nbsp; Max {MAX_MB} Mo &nbsp;·&nbsp; {items.length}/{maxImages} photos
+              JPG Â· PNG Â· WebP Â· GIF &nbsp;Â·&nbsp; Max {MAX_MB} Mo &nbsp;Â·&nbsp; {items.length}/{maxImages} photos
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Thumbnail grid ── */}
+      {/* â”€â”€ Thumbnail grid â”€â”€ */}
       {items.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {items.map((item, idx) => (
@@ -357,7 +394,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
                 {item.uploading && (
                   <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5">
                     <Loader2 className="w-5 h-5 text-white animate-spin" />
-                    <span className="text-[10px] text-white/80 font-medium">Upload…</span>
+                    <span className="text-[10px] text-white/80 font-medium">Uploadâ€¦</span>
                   </div>
                 )}
 
@@ -405,7 +442,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
                 )}
               </div>
 
-              {/* Inline color swatches — always visible when color feature enabled */}
+              {/* Inline color swatches â€” always visible when color feature enabled */}
               {onColorsChange && !item.uploading && !item.error && (
                 <div className="flex flex-wrap gap-1 justify-center px-0.5">
                   {COLOR_PRESETS.map(c => (
@@ -447,23 +484,26 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
         </div>
       )}
 
-      {/* ── Status bar ── */}
+      {/* â”€â”€ Status bar â”€â”€ */}
       <div className="flex items-center justify-between text-xs text-gray-400 px-0.5">
         {uploading ? (
           <span className="flex items-center gap-1.5 text-amber-600 font-medium">
-            <Loader2 className="w-3 h-3 animate-spin" /> Upload en cours…
+            <Loader2 className="w-3 h-3 animate-spin" /> Upload en coursâ€¦
           </span>
         ) : items.length > 0 ? (
           <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-            <CheckCircle2 className="w-3 h-3" /> {items.filter(i => i.finalUrl).length} image{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''} prête{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''}
+            <CheckCircle2 className="w-3 h-3" /> {items.filter(i => i.finalUrl).length} image{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''} prÃªte{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''}
           </span>
         ) : (
-          <span>Aucune image ajoutée</span>
+          <span>Aucune image ajoutÃ©e</span>
         )}
-        <span>Glissez pour réorganiser</span>
+        <span>Glissez pour rÃ©organiser</span>
       </div>
     </div>
 
     </>
   )
 }
+
+
+

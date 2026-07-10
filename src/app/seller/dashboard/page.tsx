@@ -214,6 +214,11 @@ export default function SellerDashboardPage() {
   const [linkCopied, setLinkCopied] = useState(false)
   const [abandonedCount, setAbandonedCount] = useState<number | null>(null)
   const [cancelledCount, setCancelledCount] = useState<number | null>(null)
+  const [origin, setOrigin] = useState('https://storedz.dz')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setOrigin(window.location.origin)
+  }, [])
 
   useEffect(() => {
     if (!vendor) return
@@ -325,7 +330,7 @@ export default function SellerDashboardPage() {
           <div className="flex-1 min-w-0">
             <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Lien de votre boutique</p>
             <p className="text-white text-sm font-medium truncate">
-              {typeof window !== 'undefined' ? window.location.origin : 'https://storedz.dz'}/store/{vendor.store_slug}
+              {origin}/store/{vendor.store_slug}
             </p>
           </div>
           <a
@@ -340,7 +345,7 @@ export default function SellerDashboardPage() {
           <button
             type="button"
             onClick={() => {
-              const url = `${window.location.origin}/store/${vendor.store_slug}`
+              const url = `${origin}/store/${vendor.store_slug}`
               navigator.clipboard.writeText(url).then(() => {
                 setLinkCopied(true)
                 setTimeout(() => setLinkCopied(false), 2000)

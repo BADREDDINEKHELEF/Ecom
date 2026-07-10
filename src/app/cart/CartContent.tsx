@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Image from 'next/image'
 import Link from 'next/link'
@@ -17,7 +17,7 @@ function colorImage(product: { images: string[]; imageColors?: string[]; colorVa
 }
 
 export default function CartContent() {
-  const { items, removeItem, updateQuantity, clearCart } = useCartStore()
+  const { items, removeItem, updateQuantity, clearCart, cartStoreSlug } = useCartStore()
   const t = useT()
   const cartTotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
   const count = items.reduce((sum, i) => sum + i.quantity, 0)
@@ -29,7 +29,7 @@ export default function CartContent() {
         <h1 className="text-2xl font-black text-gray-900 mb-2">{t.cart.empty}</h1>
         <p className="text-gray-500 mb-8">{t.cart.emptyHint}</p>
         <Link
-          href="/"
+          href={cartStoreSlug ? `/store/${cartStoreSlug}` : '/'}
           className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-700 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> {t.cart.continueShopping}
@@ -61,14 +61,18 @@ export default function CartContent() {
             return (
               <div key={`${product.id}-${selectedColor ?? ''}`} className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
                 <Link href={productUrl}>
-                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                    <Image
-                      src={displayImg}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="112px"
-                    />
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                    {displayImg ? (
+                      <Image
+                        src={displayImg}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="112px"
+                      />
+                    ) : (
+                      <ShoppingBag className="w-8 h-8 text-gray-300" />
+                    )}
                   </div>
                 </Link>
 
@@ -81,6 +85,7 @@ export default function CartContent() {
                     </Link>
                     <button
                       onClick={() => removeItem(product.id, selectedColor)}
+                      aria-label='Remove item'
                       className="p-1.5 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -156,7 +161,7 @@ export default function CartContent() {
             </Link>
 
             <Link
-              href="/"
+              href={cartStoreSlug ? `/store/${cartStoreSlug}` : '/'}
               className="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> {t.cart.continueShopping}
@@ -172,3 +177,4 @@ export default function CartContent() {
     </div>
   )
 }
+

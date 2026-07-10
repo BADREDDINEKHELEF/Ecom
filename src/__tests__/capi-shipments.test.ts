@@ -34,20 +34,20 @@ vi.mock('@/lib/delivery/dispatch', () => ({
   normalizeProviderStatus: (raw: unknown) => String(raw),
 }))
 
-// Mock user session
-const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: 'u-123' } }, error: null })
+// Mock server helpers
 vi.mock('@/lib/supabase/server', () => ({
-  createRouteClient: () => ({
-    auth: {
-      getUser: mockGetUser,
-    },
-  }),
   copyCookies: (_response: Response, result: Response) => result,
+}))
+
+// Mock vendor auth — the route now delegates auth/permission to requireVendorPermission
+vi.mock('@/lib/auth/vendorAuth', () => ({
+  requireVendorPermission: () => Promise.resolve({
+    ctx: { user: { id: 'u-123' }, vendor: { id: 'v-123' }, role: 'owner' },
+  }),
 }))
 
 // Mock vendor helpers
 vi.mock('@/lib/supabase/vendors', () => ({
-  getVendorByUserIdServer: () => Promise.resolve({ id: 'v-123' }),
   getVendorDeliveryConfig: () => Promise.resolve({
     vendor_id: 'v-123',
     default_provider: 'yalidine',

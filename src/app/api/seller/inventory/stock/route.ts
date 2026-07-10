@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient, copyCookies } from '@/lib/supabase/server'
-import { getVendorByUserIdServer } from '@/lib/supabase/vendors'
+import { requireVendorPermission } from '@/lib/auth/vendorAuth'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 import { revalidateTag } from 'next/cache'
@@ -18,15 +18,13 @@ export async function PATCH(req: NextRequest) {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'inventory_stock', 30, 60)
     if (!rl.allowed) return copyCookies(response, NextResponse.json(
-      { error: 'Trop de requêtes. Réessayez plus tard.' },
+      { error: 'Trop de requÃªtes. RÃ©essayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
 
-    const supabase = createRouteClient(req, response)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return copyCookies(response, NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+    const result = await requireVendorPermission(req, 'products:update', response)
+    if (result instanceof NextResponse) return result
+    const { ctx: { user, vendor } } = result
 
     const userRl = await checkUserRateLimit(user.id, 'inventory_stock', 60, 3600)
     if (!userRl.allowed) return copyCookies(response, NextResponse.json(
@@ -34,8 +32,7 @@ export async function PATCH(req: NextRequest) {
       { status: 429, headers: { 'Retry-After': String(userRl.retryAfterSeconds) } }
     ))
 
-    const vendor = await getVendorByUserIdServer(user.id)
-    if (!vendor) return copyCookies(response, NextResponse.json({ error: 'Not a vendor' }, { status: 403 }))
+    const supabase = createRouteClient(req, response)
 
     let body: unknown
     try { body = await req.json() } catch {
@@ -64,6 +61,6 @@ export async function PATCH(req: NextRequest) {
     return copyCookies(response, NextResponse.json({ success: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/inventory/stock]', { error: err instanceof Error ? err.message : String(err) })
-    return copyCookies(response, NextResponse.json({ error: 'Erreur serveur. Réessayez.' }, { status: 500 }))
+    return copyCookies(response, NextResponse.json({ error: 'Erreur serveur. RÃ©essayez.' }, { status: 500 }))
   }
 }
