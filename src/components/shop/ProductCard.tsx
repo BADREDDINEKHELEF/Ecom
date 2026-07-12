@@ -40,6 +40,8 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount ? discount(product.price, product.comparePrice!) : 0
   const savings     = hasDiscount ? product.comparePrice! - product.price : 0
+  const stockNum    = product.stock ?? 0
+  const inStock     = stockNum > 0
 
   // Product page link — prefer store context if available
   const productHref = storeSlug
@@ -48,7 +50,8 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
-    addItem(product, 1, undefined, storeSlug ?? undefined)
+    const ok = addItem(product, 1, undefined, storeSlug ?? undefined)
+    if (!ok) return
     addToast(`${product.name} ${t.product.addedMsg}`)
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: 1 })
     const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
@@ -89,7 +92,7 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
               src={product.images[0]}
               alt={product.name}
               fill
-              className={`object-cover transition-transform duration-500 group-hover:scale-105 ${product.stock === 0 ? 'opacity-60' : ''}`}
+              className={`object-cover transition-transform duration-500 group-hover:scale-105 ${!inStock ? 'opacity-60' : ''}`}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               placeholder="blur"
               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+"
@@ -100,7 +103,7 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
             </div>
           )}
 
-          {product.stock === 0 && (
+          {!inStock && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
                 {t.product.outOfStock}
@@ -160,21 +163,21 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
           )}
         </div>
 
-        {product.stock > 0 && product.stock < 10 && (
+        {inStock && stockNum < 10 && (
           <div className="mb-3">
             <p className="text-xs text-orange-500 font-medium mb-1">
-              {t.common.lowStock.replace('{n}', String(product.stock))}
+              {t.common.lowStock.replace('{n}', String(stockNum))}
             </p>
             <div className="h-1 bg-orange-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-orange-400 rounded-full"
-                style={{ width: `${Math.min(100, (product.stock / 10) * 100)}%` }}
+                style={{ width: `${Math.min(100, (stockNum / 10) * 100)}%` }}
               />
             </div>
           </div>
         )}
 
-        {product.stock === 0 ? (
+        {!inStock ? (
           <button
             disabled
             className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed font-medium"

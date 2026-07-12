@@ -170,11 +170,13 @@ function ProductCard({
     ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
     : 0
   const savings = hasDiscount ? product.comparePrice! - product.price : 0
+  const stockNum = product.stock ?? 0
+  const inStock = stockNum > 0
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (product.stock === 0) return
+    if (!inStock) return
     // Products with color variants require the buyer to pick a color on the product page.
     if ((product.colorVariants?.length ?? 0) > 0) {
       window.location.href = `/store/${storeSlug}/${product.id}`
@@ -195,9 +197,9 @@ function ProductCard({
             src={product.images[0]}
             alt={product.name}
             fill
-            className={`object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06] ${
-              product.stock === 0 ? 'opacity-50 grayscale' : ''
-            }`}
+              className={`object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06] ${
+                !inStock ? 'opacity-50 grayscale' : ''
+              }`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             onError={() => setImgBroken(true)}
           />
@@ -208,7 +210,7 @@ function ProductCard({
         )}
 
         {/* Out of stock */}
-        {product.stock === 0 && (
+        {!inStock && (
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
             <span className="text-white text-xs font-semibold tracking-wide bg-black/50 px-4 py-2 rounded-full">
               {ts.soldOut}
@@ -234,16 +236,16 @@ function ProductCard({
         </div>
 
         {/* Low stock — overlay at bottom (only ≤3) */}
-        {product.stock > 0 && product.stock <= 3 && (
+        {inStock && stockNum <= 3 && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-3 pt-8 pb-3">
             <p className="text-white text-[11px] font-bold tracking-wide">
-              {ts.lowStock.replace('{n}', String(product.stock))}
+              {ts.lowStock.replace('{n}', String(stockNum))}
             </p>
           </div>
         )}
 
         {/* Quick add button — bottom right, appears on hover */}
-        {product.stock > 0 && (
+        {inStock && (
           <button
             onClick={handleQuickAdd}
             aria-label={added ? ts.addedToCart : ts.addToCartLabel}

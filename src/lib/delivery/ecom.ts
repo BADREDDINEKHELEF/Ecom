@@ -14,6 +14,12 @@ import { logger } from '@/lib/logger'
  */
 const BASE_URL = 'https://ecom-dz.net/Api_v1'
 
+// Ecom-specific static delivery fees when the live rate endpoint is unavailable.
+// Populated from seller feedback / Ecom rate cards.
+const ECOM_STATIC_RATES: Record<string, { homeDelivery: number; deskDelivery: number }> = {
+  'Biskra': { homeDelivery: 800, deskDelivery: 500 },
+}
+
 function authHeaders(key: string, token: string): Record<string, string> {
   return { 'Key': key, 'Token': token, 'Accept': 'application/json' }
 }
@@ -306,6 +312,14 @@ export async function ecomGetRateWithToken(
       const byId = await tryFetch(String(wilayaId))
       if (byId) return byId
     }
+
+    // If the live endpoint is not implemented, fall back to the provider-specific
+    // static rate table so the seller quote matches Ecom's actual pricing.
+    const staticRate = ECOM_STATIC_RATES[wilayaName]
+    if (staticRate != null) {
+      logger.info(`[ecomGetRateWithToken] using static rate for ${wilayaName}: home=${staticRate.homeDelivery} desk=${staticRate.deskDelivery}`)
+      return staticRate
+    }
     return null
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -324,6 +338,54 @@ export async function ecomTrack(trackingNumber: string, key: string, token: stri
     return res.json()
   } catch (err: unknown) {
     logger.error('[ecomTrack]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+/** Fetch all communes (or communes for a single wilaya). */
+export async function ecomGetCommunes(key: string, token: string, wilayaId?: number) {
+  try {
+    const suffix = wilayaId != null ? `/${wilayaId}` : ''
+    const res = await deliveryFetch(`${BASE_URL}/Commune${suffix}`, {
+      headers: authHeaders(key, token),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch (err: unknown) {
+    logger.error('[ecomGetCommunes]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+/** Fetch all Ecom stop desks. */
+export async function ecomGetStopdesks(key: string, token: string) {
+  try {
+    const res = await deliveryFetch(`${BASE_URL}/Stopdesk`, {
+      headers: authHeaders(key, token),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch (err: unknown) {
+    logger.error('[ecomGetStopdesks]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+/** Fetch Ecom stop desks for a specific wilaya. */
+export async function ecomGetStopdesksByWilaya(wilayaName: string, key: string, token: string) {
+  const wilayaId = wilayaNameToId(wilayaName)
+  if (wilayaId == null) {
+    logger.warn(`[ecomGetStopdesksByWilaya] unknown wilaya "${wilayaName}"`)
+    return null
+  }
+  try {
+    const res = await deliveryFetch(`${BASE_URL}/Stopdesk/${wilayaId}`, {
+      headers: authHeaders(key, token),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch (err: unknown) {
+    logger.error('[ecomGetStopdesksByWilaya]', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }

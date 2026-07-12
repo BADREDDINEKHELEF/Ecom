@@ -46,8 +46,9 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (product, quantity = 1, selectedColor, storeSlug) => {
         const state = get()
+        const stock = product.stock ?? 0
 
-        if (product.stock <= 0) return false
+        if (stock <= 0) return false
 
         // Detect store conflict: cart has items from a different store
         if (
@@ -64,7 +65,7 @@ export const useCartStore = create<CartStore>()(
           (i) => i.product.id === product.id && i.selectedColor === selectedColor
         )
         const requestedQty = existing ? existing.quantity + quantity : quantity
-        if (requestedQty > product.stock) return false
+        if (requestedQty > stock) return false
 
         set((s) => {
           if (existing) {
