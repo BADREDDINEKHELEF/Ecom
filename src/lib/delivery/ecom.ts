@@ -191,6 +191,23 @@ export async function ecomDeleteParcels(trackingNumbers: string[], key: string, 
   }
 }
 
+export async function ecomTestConnection(key: string, token: string) {
+  try {
+    const res = await deliveryFetch(`${BASE_URL}/Test`, {
+      headers: authHeaders(key, token),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      logger.warn(`[ecomTestConnection] failed: status=${res.status} body=${body}`)
+      return null
+    }
+    return res.json()
+  } catch (err: unknown) {
+    logger.error('[ecomTestConnection]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
 export async function ecomListParcels(key: string, token: string, page = 1) {
   try {
     const res = await deliveryFetch(`${BASE_URL}/Colis`, {

@@ -9,7 +9,7 @@ import { dispatchGetRate } from '@/lib/delivery/dispatch'
 
 // Import specific carrier clients/calls
 import { yassirListParcels } from '@/lib/delivery/yassir'
-import { ecomListParcels, ecomGetRateWithToken } from '@/lib/delivery/ecom'
+import { ecomTestConnection, ecomGetRateWithToken } from '@/lib/delivery/ecom'
 import { procolisListParcels } from '@/lib/delivery/procolis'
 import { zrListParcels } from '@/lib/delivery/zrexpress'
 import { maystroListParcels } from '@/lib/delivery/maystro'
@@ -96,7 +96,10 @@ export async function POST(req: NextRequest) {
         const token = config?.zr_token
         if (!token) {
           await saveIntegrationHealth(vendor.id, 'zr', { health_status: 'needs_configuration' })
-          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
+          const error = config?._decryptionFailed
+            ? 'Stored credentials cannot be decrypted. Check FIELD_ENCRYPTION_KEY.'
+            : 'Credentials not configured'
+          return copyCookies(response, NextResponse.json({ ok: false, error }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await zrListParcels(token, config?.zr_key ?? undefined, 1)
@@ -141,7 +144,10 @@ export async function POST(req: NextRequest) {
         const key = config?.procolis_key
         if (!token || !key) {
           await saveIntegrationHealth(vendor.id, 'procolis', { health_status: 'needs_configuration' })
-          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
+          const error = config?._decryptionFailed
+            ? 'Stored credentials cannot be decrypted. Check FIELD_ENCRYPTION_KEY.'
+            : 'Credentials not configured'
+          return copyCookies(response, NextResponse.json({ ok: false, error }, { status: 400 }))
         }
         if (action === 'test_connection') {
           const res = await procolisListParcels(token, key, 1)
@@ -231,20 +237,15 @@ export async function POST(req: NextRequest) {
         const tk = config?.ecom_api_token
         if (!key || !tk) {
           await saveIntegrationHealth(vendor.id, 'ecom', { health_status: 'needs_configuration' })
-          return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
+          const error = config?._decryptionFailed
+            ? 'Stored credentials cannot be decrypted. Check FIELD_ENCRYPTION_KEY.'
+            : 'Credentials not configured'
+          return copyCookies(response, NextResponse.json({ ok: false, error }, { status: 400 }))
         }
         if (action === 'test_connection') {
-          let raw: unknown = await ecomListParcels(key, tk, 1)
-          let ok = raw !== null
-          // The parcel-list endpoint may reject empty accounts; fall back to a
-          // lightweight rate lookup to confirm the credentials are valid.
-          if (!ok) {
-            const rateCheck = await ecomGetRateWithToken('Alger', key, tk)
-            if (rateCheck) {
-              ok = true
-              raw = rateCheck
-            }
-          }
+          // Docs provide a dedicated /Api_v1/Test endpoint for connection checks.
+          const raw = await ecomTestConnection(key, tk)
+          const ok = raw !== null
           await recordResult(ok, { error: ok ? null : 'Ecom API connection failed' })
           return copyCookies(response, NextResponse.json({ ok, raw }))
         }

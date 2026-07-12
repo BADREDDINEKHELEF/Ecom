@@ -75,6 +75,8 @@ export interface VendorDeliveryConfig {
   auto_create_shipment: boolean
   notify_whatsapp:      boolean
   notify_sms:           boolean
+  /** Internal flag set when an encrypted credential could not be decrypted. */
+  _decryptionFailed?:   boolean
 }
 
 // â”€â”€ Vendor CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -176,8 +178,17 @@ function encryptConfigCredentials(
 }
 
 function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryConfig {
-  const dec = (v: string | null | undefined): string | null =>
-    v ? (isEncrypted(v) ? decryptField(v) : v) : null
+  let decryptionFailed = false
+  const dec = (v: string | null | undefined): string | null => {
+    if (!v) return null
+    if (!isEncrypted(v)) return v
+    const plain = decryptField(v)
+    if (plain === '') {
+      decryptionFailed = true
+      return null
+    }
+    return plain
+  }
 
   return {
     ...config,
@@ -195,6 +206,7 @@ function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryC
     ecom_api_token:     dec(config.ecom_api_token),
     apec_api_id:        dec(config.apec_api_id),
     apec_api_token:     dec(config.apec_api_token),
+    _decryptionFailed:  decryptionFailed || undefined,
   }
 }
 
