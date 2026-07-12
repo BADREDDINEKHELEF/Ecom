@@ -59,11 +59,14 @@ export async function GET(req: NextRequest) {
     const config = await getVendorDeliveryConfig(vendor.id)
     if (!config) return NextResponse.json(staticRate(wilaya))
 
+    const vendorRes = await supabase.from('vendors').select('wilaya').eq('id', vendor.id).maybeSingle()
+    const vendorWilaya = vendorRes.data?.wilaya as string | undefined
+
     const provider = config.default_provider ?? 'yalidine'
     const isLiveProvider = provider !== 'manual' && provider !== 'yassir'
 
     try {
-      const rate = await dispatchGetRate(provider, wilaya, config, true)
+      const rate = await dispatchGetRate(provider, wilaya, { ...config, from_wilaya: vendorWilaya }, true)
 
       if (!rate) {
         if (isLiveProvider) {

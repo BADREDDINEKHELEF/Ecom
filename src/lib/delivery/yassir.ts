@@ -1,8 +1,13 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { deliveryFetch } from './client'
+import { toLocalAlgerianPhone } from './utils'
 import { logger } from '@/lib/logger'
 
-// Yassir Express Business API — package delivery
+/**
+ * Yassir Express Business API — package delivery.
+ * No public documentation could be located; this payload follows common Algerian carrier patterns.
+ * Verify field names and endpoints with Yassir before enabling in production.
+ */
 const BASE_URL = 'https://api.yassir.com/v1'
 
 export function yassirConfigured(): boolean {
@@ -29,12 +34,12 @@ export async function yassirCreateShipmentWithKey(
   const body = {
     sender: {
       name:    senderName,
-      phone:   senderPhone,
+      phone:   toLocalAlgerianPhone(senderPhone),
       address: senderAddress,
     },
     recipient: {
       name:    input.fullName,
-      phone:   input.phone,
+      phone:   toLocalAlgerianPhone(input.phone),
       address: `${input.address}, ${input.city}, ${input.wilaya}`,
     },
     package: {

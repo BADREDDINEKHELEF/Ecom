@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest'
 import { deliveryFetch } from '@/lib/delivery/client'
-import { splitName, extractRates, normalizeAlgiersPhone, findWilayaRow } from '@/lib/delivery/utils'
+import { splitName, extractRates, normalizeAlgiersPhone, findWilayaRow, toLocalAlgerianPhone, wilayaNameToId } from '@/lib/delivery/utils'
 
 // Import providers to verify mapping works end-to-end
 import { yalidineCreateShipmentWithCreds, yalidineGetRateWithCreds } from '@/lib/delivery/yalidine'
 import { zrCreateShipmentWithToken, zrGetRateWithToken } from '@/lib/delivery/zrexpress'
-import { maystroCreateShipmentWithToken, maystroGetRateWithToken } from '@/lib/delivery/maystro'
+import { maystroCreateShipmentWithToken } from '@/lib/delivery/maystro'
 import { procolisCreateShipmentWithToken, procolisGetRateWithToken } from '@/lib/delivery/procolis'
 import { colivraisonCreateShipmentWithToken, colivraisonGetRateWithToken } from '@/lib/delivery/colivraison'
 import { rexCreateShipmentWithToken, rexGetRateWithToken } from '@/lib/delivery/rex'
@@ -105,11 +105,19 @@ describe('Delivery utility tests', () => {
     expect(splitName('  Spaces  Around  ')).toEqual({ firstname: 'Spaces', familyname: 'Around' })
   })
 
-  it('normalizes Algerian phone numbers', () => {
+  it('normalizes Algerian phone numbers to local format', () => {
+    expect(toLocalAlgerianPhone('+213 551 23 45 67')).toBe('0551234567')
+    expect(toLocalAlgerianPhone('213661234567')).toBe('0661234567')
+    expect(toLocalAlgerianPhone('0771234567')).toBe('0771234567')
+    expect(toLocalAlgerianPhone('0551-234-567')).toBe('0551234567')
     expect(normalizeAlgiersPhone('+213 551 23 45 67')).toBe('0551234567')
-    expect(normalizeAlgiersPhone('213661234567')).toBe('0661234567')
-    expect(normalizeAlgiersPhone('0771234567')).toBe('0771234567')
-    expect(normalizeAlgiersPhone('0551-234-567')).toBe('0551234567')
+  })
+
+  it('maps wilaya names to official 1–58 numeric IDs', () => {
+    expect(wilayaNameToId('Adrar')).toBe(1)
+    expect(wilayaNameToId('Alger')).toBe(16)
+    expect(wilayaNameToId('oran')).toBe(31)
+    expect(wilayaNameToId('Unknown')).toBeNull()
   })
 
   it('extracts home and stop-desk rates', () => {
@@ -211,7 +219,7 @@ describe('E2E Provider Payload Mapping', () => {
       ok: true,
       status: 200,
       json: async () => ({
-        data: [{ home_fee: 600, desk_fee: 400 }],
+        data: [{ to_wilaya_name: 'Alger', home_fee: 600, desk_fee: 400 }],
       }),
     } as Response)
 
@@ -287,19 +295,6 @@ describe('E2E Provider Payload Mapping', () => {
     })
   })
 
-  it('maystro rate fetch maps response', async () => {
-    fetchSpy.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        results: [{ home_delivery_fee: 700, desk_delivery_fee: 500 }],
-      }),
-    } as Response)
-
-    const res = await maystroGetRateWithToken('Alger', 'token')
-    expect(res).toEqual({ homeDelivery: 700, deskDelivery: 500 })
-  })
-
   it('procolis shipment creation maps response', async () => {
     fetchSpy.mockResolvedValueOnce({
       ok: true,
@@ -319,7 +314,8 @@ describe('E2E Provider Payload Mapping', () => {
         wilaya: 'Alger',
         total: 1500,
       },
-      'token'
+      'token',
+      'key'
     )
 
     expect(res).toEqual({
@@ -338,7 +334,7 @@ describe('E2E Provider Payload Mapping', () => {
       }),
     } as Response)
 
-    const res = await procolisGetRateWithToken('Alger', 'token')
+    const res = await procolisGetRateWithToken('Alger', 'token', 'key')
     expect(res).toEqual({ homeDelivery: 650, deskDelivery: 450 })
   })
 
@@ -376,7 +372,7 @@ describe('E2E Provider Payload Mapping', () => {
       ok: true,
       status: 200,
       json: async () => ({
-        data: [{ home_fee: 600, stop_desk_fee: 400 }],
+        data: [{ wilaya_name: 'Alger', home_fee: 600, stop_desk_fee: 400 }],
       }),
     } as Response)
 
@@ -413,12 +409,14 @@ describe('E2E Provider Payload Mapping', () => {
     })
   })
 
-  it('rex rate fetch maps response', async () => {
+  it('rex rate fetch maps EcoTrack fees response', async () => {
     fetchSpy.mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({
-        data: [{ price: 580, stop_desk_fee: 380 }],
+        livraison: [
+          { wilaya_id: 16, wilaya_name: 'Alger', prix: 580, stop_desk: 380 },
+        ],
       }),
     } as Response)
 
@@ -463,7 +461,11 @@ describe('E2E Provider Payload Mapping', () => {
       ok: true,
       status: 200,
       json: async () => ({
-        tracking: 'ECO123',
+        Quota: { Consommer_1min: 1, Limite_1min: 40 },
+        Colis: [{
+          Tracking: 'ECO123',
+          label: 'SiteWeb/SYSTEM2025_WEB/FR/Fournisseur_A/Page.awp?P1=ECO123',
+        }],
       }),
     } as Response)
 
@@ -483,7 +485,7 @@ describe('E2E Provider Payload Mapping', () => {
 
     expect(res).toEqual({
       tracking: 'ECO123',
-      labelUrl: undefined,
+      labelUrl: 'SiteWeb/SYSTEM2025_WEB/FR/Fournisseur_A/Page.awp?P1=ECO123',
     })
   })
 
@@ -534,7 +536,7 @@ describe('E2E Provider Payload Mapping', () => {
       ok: true,
       status: 200,
       json: async () => ({
-        data: [{ home_fee: 590, desk_fee: 390 }],
+        data: [{ to_wilaya_name: 'Alger', home_fee: 590, desk_fee: 390 }],
       }),
     } as Response)
 

@@ -1,28 +1,22 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates, findWilayaRow } from './utils'
+import { toLocalAlgerianPhone, wilayaNameToId } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
-const BASE_URL = 'https://maystro-delivery.com/api/v1'
+/**
+ * Maystro Delivery API.
+ * Official docs: https://maystro.gitbook.io/maystro-delivery-documentation
+ * We use the deprecated-but-documented /stores/orders_store/ endpoint because
+ * the newest endpoint requires a product UUID catalog that ShopDZ does not yet sync.
+ */
+const BASE_URL = 'https://backend.maystro-delivery.com/api'
 
-// Maystro API requires numeric wilaya codes, not name strings
-const WILAYA_TO_ID: Record<string, number> = {
-  'Adrar': 1, 'Chlef': 2, 'Laghouat': 3, 'Oum El Bouaghi': 4, 'Batna': 5,
-  'Béjaïa': 6, 'Biskra': 7, 'Béchar': 8, 'Blida': 9, 'Bouira': 10,
-  'Tamanrasset': 11, 'Tébessa': 12, 'Tlemcen': 13, 'Tiaret': 14, 'Tizi Ouzou': 15,
-  'Alger': 16, 'Djelfa': 17, 'Jijel': 18, 'Sétif': 19, 'Saïda': 20,
-  'Skikda': 21, 'Sidi Bel Abbès': 22, 'Annaba': 23, 'Guelma': 24, 'Constantine': 25,
-  'Médéa': 26, 'Mostaganem': 27, 'Msila': 28, 'Mascara': 29, 'Ouargla': 30,
-  'Oran': 31, 'El Bayadh': 32, 'Illizi': 33, 'Bordj Bou Arreridj': 34, 'Boumerdès': 35,
-  'El Tarf': 36, 'Tindouf': 37, 'Tissemsilt': 38, 'El Oued': 39, 'Khenchela': 40,
-  'Souk Ahras': 41, 'Tipaza': 42, 'Mila': 43, 'Aïn Defla': 44, 'Naâma': 45,
-  'Aïn Témouchent': 46, 'Ghardaïa': 47, 'Relizane': 48, 'Timimoun': 49,
-  'Bordj Badji Mokhtar': 50, 'Ouled Djellal': 51, 'Béni Abbès': 52,
-  'In Salah': 53, 'In Guezzam': 54, 'Touggourt': 55, 'Djanet': 56,
-  'El Meghaier': 57, 'El Meniaa': 58,
-}
-
-function wilayaToId(name: string): number | null {
-  return WILAYA_TO_ID[name] ?? WILAYA_TO_ID[name.trim()] ?? null
+function authHeaders(token: string): Record<string, string> {
+  // Official examples use "Token <token>" (DRF knox token auth).
+  return {
+    'Content-Type':  'application/json',
+    'Authorization': `Token ${token}`,
+  }
 }
 
 export function maystroConfigured(): boolean {
@@ -33,29 +27,42 @@ export async function maystroCreateShipmentWithToken(
   input: ShipmentInput,
   token: string
 ): Promise<ShipmentResult> {
-  const wilayaId = wilayaToId(input.wilaya)
-  if (!wilayaId) throw new Error(`Maystro: unknown wilaya "${input.wilaya}"`)
+  const wilayaId = wilayaNameToId(input.wilaya)
+  if (wilayaId == null) throw new Error(`Maystro: unknown wilaya "${input.wilaya}"`)
 
-  const body = {
-    client_name:      input.fullName,
-    client_phone:     input.phone,
+  /**
+   * Deprecated endpoint: POST /stores/orders_store/
+   * Docs show wilaya as string id ("16") and commune as integer id.
+   * ShopDZ currently sends the commune name; a numeric commune mapping is required
+   * for production use. The products array is mandatory; we use orderId as a
+   * placeholder product_id because ShopDZ does not yet sync Maystro product catalog.
+   */
+  const body: Record<string, unknown> = {
+    source: 4,
+    external_order_id: input.orderId,
     destination_text: input.address,
-    wilaya:           wilayaId,
-    commune:          input.city,
-    product_price:    input.total,
-    note:             input.isStopDesk && input.stopDeskCause ? `${input.items || 'Colis'} — ${input.stopDeskCause}` : (input.items || ''),
-    product_name:     input.items || 'Colis',
-    can_open_package: false,
-    is_exchange:      false,
-    is_stopdesk:      !!input.isStopDesk,
+    product_price: input.total,
+    customer_name: input.fullName,
+    customer_phone: toLocalAlgerianPhone(input.phone),
+    express: false,
+    wilaya: String(wilayaId),
+    commune: input.city,
+    note_to_driver: input.isStopDesk && input.stopDeskCause
+      ? `${input.items || 'Colis'} — ${input.stopDeskCause}`
+      : (input.items || ''),
+    delivery_type: input.isStopDesk ? 2 : 1,
+    products: [
+      {
+        product_id: input.orderId,
+        quantity: 1,
+        logistical_description: input.items || 'Colis',
+      },
+    ],
   }
 
-  const res = await deliveryFetch(`${BASE_URL}/orders/`, {
+  const res = await deliveryFetch(`${BASE_URL}/stores/orders_store/`, {
     method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: authHeaders(token),
     body: JSON.stringify(body),
   })
 
@@ -66,9 +73,10 @@ export async function maystroCreateShipmentWithToken(
 
   const data = await res.json()
   const tracking = String(
-    data?.tracking ?? data?.tracking_code ?? data?.order_id ?? data?.id ?? ''
+    data?.display_id ?? data?.tracking ?? data?.tracking_code ?? data?.order_id ?? data?.id ?? ''
   )
-  const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
+  const labelUrl: string | undefined = data?.label ?? data?.label_url ??
+    (tracking ? `${BASE_URL}/stores/orders_store/${tracking}/label/` : undefined)
 
   return { tracking, labelUrl }
 }
@@ -80,39 +88,26 @@ export async function maystroCreateShipment(input: ShipmentInput): Promise<Shipm
 
 export async function maystroListParcels(token: string, pageSize = 100) {
   try {
-    const res = await deliveryFetch(`${BASE_URL}/orders/?page=1&page_size=${pageSize}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await deliveryFetch(`${BASE_URL}/stores/orders/?page=1&page_size=${pageSize}`, {
+      headers: authHeaders(token),
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
-}
-
-export async function maystroGetRateWithToken(
-  wilayaName: string,
-  token: string
-): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
-  const wilayaId = wilayaToId(wilayaName)
-  if (!wilayaId) return null
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/shipping-prices/?wilaya=${wilayaId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
+  } catch (err: unknown) {
+    logger.error('[maystroListParcels]', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
 
 export async function maystroTrack(trackingCode: string, token: string) {
   try {
-    const res = await deliveryFetch(`${BASE_URL}/orders/${encodeURIComponent(trackingCode)}/`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+    const res = await deliveryFetch(`${BASE_URL}/stores/orders/${encodeURIComponent(trackingCode)}/`, {
+      headers: authHeaders(token),
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
+  } catch (err: unknown) {
+    logger.error('[maystroTrack]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }

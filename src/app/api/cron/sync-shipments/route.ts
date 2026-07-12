@@ -75,10 +75,17 @@ export async function GET(request: Request) {
     byVendor.set(s.vendor_id, list)
   }
 
-  // Pre-fetch all vendor configs in parallel to avoid serialising N round-trips
+  // Pre-fetch all vendor configs and origin wilayas in parallel
   const vendorIds = Array.from(byVendor.keys())
-  const configResults = await Promise.all(vendorIds.map(id => getVendorDeliveryConfig(id)))
+  const [configResults, vendorWilayaResults] = await Promise.all([
+    Promise.all(vendorIds.map(id => getVendorDeliveryConfig(id))),
+    Promise.all(vendorIds.map(async (id) => {
+      const { data } = await admin.from('vendors').select('wilaya').eq('id', id).maybeSingle()
+      return data?.wilaya as string | undefined
+    })),
+  ])
   const vendorConfigMap = new Map(vendorIds.map((id, i) => [id, configResults[i]]))
+  const vendorWilayaMap = new Map(vendorIds.map((id, i) => [id, vendorWilayaResults[i]]))
 
   let synced = 0
   let errors = 0
@@ -95,15 +102,18 @@ export async function GET(request: Request) {
       yalidine_api_id:    config?.yalidine_api_id    ?? undefined,
       yalidine_api_token: config?.yalidine_api_token ?? undefined,
       procolis_token:     config?.procolis_token     ?? undefined,
+      procolis_key:       config?.procolis_key       ?? undefined,
       zr_token:           config?.zr_token           ?? undefined,
+      zr_key:             config?.zr_key             ?? undefined,
       colivraison_token:  config?.colivraison_token  ?? undefined,
       maystro_token:      config?.maystro_token      ?? undefined,
       rex_token:          config?.rex_token          ?? undefined,
       yassir_api_key:     config?.yassir_api_key     ?? undefined,
       ecom_api_key:       config?.ecom_api_key       ?? undefined,
-      ecom_api_token:      config?.ecom_api_token      ?? undefined,
+      ecom_api_token:     config?.ecom_api_token     ?? undefined,
       apec_api_id:        config?.apec_api_id        ?? undefined,
       apec_api_token:     config?.apec_api_token     ?? undefined,
+      from_wilaya:        vendorWilayaMap.get(vendorId),
     }
 
     for (let i = 0; i < vendorShipments.length; i += 5) {

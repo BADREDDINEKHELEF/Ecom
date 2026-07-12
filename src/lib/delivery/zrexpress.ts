@@ -1,66 +1,67 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates, findWilayaRow } from './utils'
+import { extractRates, findWilayaRow, toLocalAlgerianPhone, wilayaNameToId } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
 const BASE_URL = 'https://www.zrexpress.dz/api'
 
-// ZR Express uses numeric wilaya IDs (1–58) matching the official DZ order
-const WILAYA_NAME_TO_ZR_ID: Record<string, number> = {
-  'Adrar': 1, 'Chlef': 2, 'Laghouat': 3, 'Oum El Bouaghi': 4, 'Batna': 5,
-  'Béjaïa': 6, 'Biskra': 7, 'Béchar': 8, 'Blida': 9, 'Bouira': 10,
-  'Tamanrasset': 11, 'Tébessa': 12, 'Tlemcen': 13, 'Tiaret': 14, 'Tizi Ouzou': 15,
-  'Alger': 16, 'Djelfa': 17, 'Jijel': 18, 'Sétif': 19, 'Saïda': 20,
-  'Skikda': 21, 'Sidi Bel Abbès': 22, 'Annaba': 23, 'Guelma': 24, 'Constantine': 25,
-  'Médéa': 26, 'Mostaganem': 27, 'Msila': 28, 'Mascara': 29, 'Ouargla': 30,
-  'Oran': 31, 'El Bayadh': 32, 'Illizi': 33, 'Bordj Bou Arreridj': 34, 'Boumerdès': 35,
-  'El Tarf': 36, 'Tindouf': 37, 'Tissemsilt': 38, 'El Oued': 39, 'Khenchela': 40,
-  'Souk Ahras': 41, 'Tipaza': 42, 'Mila': 43, 'Aïn Defla': 44, 'Naâma': 45,
-  'Aïn Témouchent': 46, 'Ghardaïa': 47, 'Relizane': 48, 'Timimoun': 49, 'Bordj Badji Mokhtar': 50,
-  'Ouled Djellal': 51, 'Béni Abbès': 52, 'In Salah': 53, 'In Guezzam': 54, 'Touggourt': 55,
-  'Djanet': 56, 'El Meghaier': 57, 'El Meniaa': 58,
-}
-
 function wilayaToZrId(name: string): number {
-  const id = WILAYA_NAME_TO_ZR_ID[name] ?? WILAYA_NAME_TO_ZR_ID[name.trim()]
-  if (!id) throw new Error(`ZR Express: unknown wilaya "${name}"`)
+  const id = wilayaNameToId(name)
+  if (id == null) throw new Error(`ZR Express: unknown wilaya "${name}"`)
   return id
 }
 
 function wilayaToZrIdOrNull(name: string): number | null {
-  return WILAYA_NAME_TO_ZR_ID[name] ?? WILAYA_NAME_TO_ZR_ID[name.trim()] ?? null
+  return wilayaNameToId(name)
+}
+
+function authHeaders(token: string, key?: string): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (key) {
+    // ZR classic / Procolis-v1-compatible auth
+    headers.token = token
+    headers.key = key
+  } else {
+    // Legacy ZR auth (kept for backward compatibility)
+    headers.Authorization = `Token ${token}`
+  }
+  return headers
 }
 
 export function zrConfigured(): boolean {
+  // ZR classic requires token+key per DZBuild docs; legacy token-only is accepted as fallback.
   return !!process.env.ZR_TOKEN
 }
 
 export async function zrCreateShipmentWithToken(
   input: ShipmentInput,
-  token: string
+  token: string,
+  key?: string
 ): Promise<ShipmentResult> {
-  const body = {
+  const parcel = {
+    Tracking: input.externalReference ?? '',
     TypeLivraison: input.isStopDesk ? 1 : 0,
-    TypeColis: 0,
+    TypeColis: input.isExchange ? 1 : 0,
     Confrimee: 1,
     Client: input.fullName,
-    MobileA: input.phone,
-    MobileB: '',
+    MobileA: toLocalAlgerianPhone(input.phone),
+    MobileB: input.phoneSecondary ? toLocalAlgerianPhone(input.phoneSecondary) : '',
     Adresse: input.address,
     IDWilaya: wilayaToZrId(input.wilaya),
     Commune: input.city,
     Total: input.total,
-    Note: input.isStopDesk && input.stopDeskCause ? `${input.items || ''} — ${input.stopDeskCause}` : (input.items || ''),
-    TProduit: 'N/A',
+    Note: input.isStopDesk && input.stopDeskCause ? input.stopDeskCause : (input.items || ''),
+    TProduit: input.items || 'Colis',
     id_Externe: input.orderId ?? '',
-    Source: 0,
+    Source: 'ShopDZ',
   }
 
-  const res = await deliveryFetch(`${BASE_URL}/parcel`, {
+  // Procolis-v1-compatible ZR expects { Colis: [parcel] }; legacy ZR accepts the flat object.
+  const body = key ? { Colis: [parcel] } : parcel
+
+  const res = await deliveryFetch(`${BASE_URL}/add_colis`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Token ${token}`,
-    },
+    headers: authHeaders(token, key),
     body: JSON.stringify(body),
   })
 
@@ -70,53 +71,74 @@ export async function zrCreateShipmentWithToken(
   }
 
   const data = await res.json()
-  const tracking = String(data?.codsv ?? data?.tracking ?? data?.id ?? '')
+  const parcelRes = key && Array.isArray(data?.Colis) ? data.Colis[0] : data
+  const tracking = String(parcelRes?.code_suivi ?? parcelRes?.codsv ?? parcelRes?.tracking ?? parcelRes?.id ?? '')
+  const labelUrl = String(parcelRes?.label ?? parcelRes?.label_url ?? parcelRes?.bon_url ?? '') || undefined
 
-  return { tracking }
+  return { tracking, labelUrl }
 }
 
 export async function zrCreateShipment(input: ShipmentInput): Promise<ShipmentResult> {
   if (!zrConfigured()) throw new Error('ZR Express token not configured')
-  return zrCreateShipmentWithToken(input, process.env.ZR_TOKEN!)
+  return zrCreateShipmentWithToken(input, process.env.ZR_TOKEN!, process.env.ZR_KEY)
 }
 
-export async function zrListParcels(token: string, pageSize = 100) {
+export async function zrListParcels(token: string, key?: string, pageSize = 100) {
   try {
-    const res = await deliveryFetch(`${BASE_URL}/parcel?page=1&page_size=${pageSize}`, {
-      headers: { Authorization: `Token ${token}` },
+    const res = await deliveryFetch(`${BASE_URL}/colis?page=1&per_page=${pageSize}`, {
+      headers: authHeaders(token, key),
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
-}
-
-export async function zrGetRateWithToken(
-  wilayaName: string,
-  token: string
-): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
-  const id = wilayaToZrIdOrNull(wilayaName)
-  if (id === null) return null
-  try {
-    const res = await deliveryFetch(`${BASE_URL}/tarif?IDWilaya=${id}`, {
-      headers: { Authorization: `Token ${token}` },
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const row = findWilayaRow(data, wilayaName)
-    return extractRates(row)
-  } catch {
+  } catch (err: unknown) {
+    logger.error('[zrListParcels]', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
 
-export async function zrTrack(trackingNumber: string, token: string) {
+export async function zrGetRateWithToken(
+  wilayaName: string,
+  token: string,
+  key?: string
+): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
+  const id = wilayaToZrIdOrNull(wilayaName)
+  if (id === null) return null
   try {
+    const url = key
+      ? `${BASE_URL}/tarification`
+      : `${BASE_URL}/tarif?IDWilaya=${id}`
+    const init: RequestInit = { headers: authHeaders(token, key) }
+    if (key) init.method = 'POST'
+    const res = await deliveryFetch(url, init)
+    if (!res.ok) return null
+    const data = await res.json()
+    const row = findWilayaRow(data, wilayaName)
+    return extractRates(row)
+  } catch (err: unknown) {
+    logger.error('[zrGetRateWithToken]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+export async function zrTrack(trackingNumber: string, token: string, key?: string) {
+  try {
+    if (key) {
+      const body = { Colis: [{ Tracking: trackingNumber }] }
+      const res = await deliveryFetch(`${BASE_URL}/lire`, {
+        method: 'POST',
+        headers: authHeaders(token, key),
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) return null
+      return res.json()
+    }
     const res = await deliveryFetch(`${BASE_URL}/parcel/${encodeURIComponent(trackingNumber)}`, {
-      headers: { Authorization: `Token ${token}` },
+      headers: authHeaders(token),
     })
     if (!res.ok) return null
     return res.json()
-  } catch {
+  } catch (err: unknown) {
+    logger.error('[zrTrack]', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }

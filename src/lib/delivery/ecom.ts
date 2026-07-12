@@ -1,16 +1,34 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { deliveryFetch } from './client'
-import { extractRates, isValidWilaya, findWilayaRow } from './utils'
+import { extractRates, isValidWilaya, findWilayaRow, toLocalAlgerianPhone, wilayaNameToId } from './utils'
 import { logger } from '@/lib/logger'
 
+/**
+ * Ecom Delivery API.
+ * Docs provided by Ecom:
+ *   POST   /Api_v1/Colis           — create one or more parcels
+ *   PUT    /Api_v1/Colis/{Tracking} — update a single parcel while still "En Préparation"
+ *   PUT    /Api_v1/aExpédier        — mark parcels as ready to ship
+ *   PUT    /Api_v1/Supprimer        — delete parcels
+ *   Headers: Key, Token
+ */
 const BASE_URL = 'https://ecom-dz.net/Api_v1'
 
 function authHeaders(key: string, token: string): Record<string, string> {
   return { 'Key': key, 'Token': token, 'Accept': 'application/json' }
 }
 
+function buildBody(data: unknown): string {
+  return JSON.stringify(data)
+}
+
 export function ecomConfigured(): boolean {
   return !!process.env.ECOM_API_KEY && !!process.env.ECOM_API_TOKEN
+}
+
+function parseError(_res: Response, data: unknown): string {
+  const d = data as Record<string, unknown> | null
+  return String(d?.message ?? d?.error ?? d?.Message ?? JSON.stringify(data))
 }
 
 export async function ecomCreateShipmentWithToken(
@@ -18,38 +36,40 @@ export async function ecomCreateShipmentWithToken(
   key: string,
   token: string
 ): Promise<ShipmentResult> {
-  const body = {
-    name:         input.fullName,
-    phone:        input.phone,
-    address:      input.address,
-    wilaya:       input.wilaya,
-    commune:      input.city,
-    price:        input.total,
-    product:      input.items || 'Colis',
-    note:         input.isStopDesk && input.stopDeskCause ? input.stopDeskCause : '',
-    is_stopdesk:  input.isStopDesk ? 1 : 0,
-    can_open:     false,
+  const wilayaId = wilayaNameToId(input.wilaya)
+  if (wilayaId == null) throw new Error(`Ecom: unknown wilaya "${input.wilaya}"`)
+
+  const parcel: Record<string, unknown> = {
+    Echange: input.isExchange ? 1 : 0,
+    Stopdesk: input.isStopDesk ? 1 : 0,
+    CodeStopdesk: input.isStopDesk ? (input.stopDeskId ?? '') : '',
+    NomComplet: input.fullName,
+    Mobile_1: toLocalAlgerianPhone(input.phone),
+    Mobile_2: input.phoneSecondary ? toLocalAlgerianPhone(input.phoneSecondary) : '',
+    Adresse: input.address,
+    Wilaya: String(wilayaId),
+    Commune: input.city,
+    Article: input.items || 'Colis',
+    Ref_Article: input.externalReference ?? input.orderId ?? '',
+    NoteFournisseur: input.isStopDesk && input.stopDeskCause ? input.stopDeskCause : '',
+    Total: String(input.total),
+    ID_Externe: input.orderId ?? '',
+    Source: 'ShopDZ',
   }
 
-  let res: Response
-  try {
-    res = await deliveryFetch(`${BASE_URL}/parcels`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeaders(key, token),
-      },
-      body: JSON.stringify(body),
-    })
-  } catch (networkErr) {
-    throw new Error(`Ecom Delivery network error: ${networkErr instanceof Error ? networkErr.message : String(networkErr)}`)
-  }
+  const res = await deliveryFetch(`${BASE_URL}/Colis`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(key, token),
+    },
+    body: buildBody({ Colis: [parcel] }),
+  })
 
   if (!res.ok) {
     let detail = ''
     try {
-      const json = await res.json()
-      detail = json?.message ?? json?.error ?? JSON.stringify(json)
+      detail = parseError(res, await res.json())
     } catch {
       detail = await res.text().catch(() => '')
     }
@@ -57,11 +77,12 @@ export async function ecomCreateShipmentWithToken(
   }
 
   const data = await res.json()
+  const created = Array.isArray(data?.Colis) ? data.Colis[0] : null
   const tracking = String(
-    data?.tracking ?? data?.tracking_code ?? data?.tracking_number ??
-    data?.code_suivi ?? data?.parcel_id ?? data?.id ?? ''
+    created?.Tracking ?? created?.tracking ?? created?.tracking_code ??
+    data?.tracking ?? data?.tracking_code ?? ''
   )
-  const labelUrl: string | undefined = data?.label ?? data?.label_url ?? undefined
+  const labelUrl: string | undefined = created?.label ?? data?.label ?? undefined
 
   return { tracking, labelUrl }
 }
@@ -71,15 +92,164 @@ export async function ecomCreateShipment(input: ShipmentInput): Promise<Shipment
   return ecomCreateShipmentWithToken(input, process.env.ECOM_API_KEY!, process.env.ECOM_API_TOKEN!)
 }
 
-export async function ecomListParcels(key: string, token: string, pageSize = 100) {
+/**
+ * Update an Ecom parcel while it is still in "En Préparation".
+ * Endpoint: PUT /Api_v1/Colis/{Tracking}
+ */
+export async function ecomUpdateShipmentWithToken(
+  tracking: string,
+  updates: Partial<Pick<ShipmentInput, 'fullName' | 'phone' | 'phoneSecondary' | 'address' | 'city' | 'items' | 'total' | 'orderId'>>,
+  key: string,
+  token: string
+): Promise<void> {
+  const body: Record<string, unknown> = {
+    NomComplet: updates.fullName,
+    Mobile_1: updates.phone ? toLocalAlgerianPhone(updates.phone) : undefined,
+    Mobile_2: updates.phoneSecondary ? toLocalAlgerianPhone(updates.phoneSecondary) : undefined,
+    Adresse: updates.address,
+    Commune: updates.city,
+    Article: updates.items,
+    Ref_Article: updates.orderId ?? '',
+    NoteFournisseur: '',
+    Total: updates.total !== undefined ? String(updates.total) : undefined,
+    ID_Externe: updates.orderId ?? '',
+    Source: 'ShopDZ',
+  }
+
+  // Remove undefined fields to avoid overwriting existing data with nulls.
+  Object.keys(body).forEach((k) => {
+    if (body[k] === undefined) delete body[k]
+  })
+
+  const res = await deliveryFetch(`${BASE_URL}/Colis/${encodeURIComponent(tracking)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(key, token),
+    },
+    body: buildBody({ Colis: body }),
+  })
+
+  if (!res.ok) {
+    let detail = ''
+    try {
+      detail = parseError(res, await res.json())
+    } catch {
+      detail = await res.text().catch(() => '')
+    }
+    throw new Error(`Ecom update ${res.status}: ${detail || res.statusText}`)
+  }
+}
+
+/**
+ * Mark Ecom parcels as ready to ship ("En Préparation" → "En Traitement").
+ * Endpoint: PUT /Api_v1/aExpédier
+ */
+export async function ecomReadyToShip(trackingNumbers: string[], key: string, token: string): Promise<void> {
+  const res = await deliveryFetch(`${BASE_URL}/aExpédier`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(key, token),
+    },
+    body: buildBody({ Colis: trackingNumbers.map((t) => ({ Tracking: t })) }),
+  })
+
+  if (!res.ok) {
+    let detail = ''
+    try {
+      detail = parseError(res, await res.json())
+    } catch {
+      detail = await res.text().catch(() => '')
+    }
+    throw new Error(`Ecom ready-to-ship ${res.status}: ${detail || res.statusText}`)
+  }
+}
+
+/**
+ * Delete Ecom parcels.
+ * Endpoint: PUT /Api_v1/Supprimer
+ */
+export async function ecomDeleteParcels(trackingNumbers: string[], key: string, token: string): Promise<void> {
+  const res = await deliveryFetch(`${BASE_URL}/Supprimer`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(key, token),
+    },
+    body: buildBody({ Colis: trackingNumbers.map((t) => ({ Tracking: t })) }),
+  })
+
+  if (!res.ok) {
+    let detail = ''
+    try {
+      detail = parseError(res, await res.json())
+    } catch {
+      detail = await res.text().catch(() => '')
+    }
+    throw new Error(`Ecom delete ${res.status}: ${detail || res.statusText}`)
+  }
+}
+
+export async function ecomListParcels(key: string, token: string, page = 1) {
   try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels?page=1&per_page=${pageSize}`, {
-      headers: authHeaders(key, token),
+    const res = await deliveryFetch(`${BASE_URL}/Colis`, {
+      headers: {
+        ...authHeaders(key, token),
+        'Page': String(page),
+      },
     })
     if (!res.ok) return null
     return res.json()
   } catch (err: unknown) {
     logger.error('[ecomListParcels]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+export async function ecomTrackList(trackingNumbers: string[], key: string, token: string) {
+  try {
+    const res = await deliveryFetch(`${BASE_URL}/Colis/Liste`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(key, token),
+      },
+      body: buildBody({ Colis: trackingNumbers.map((t) => ({ Tracking: t })) }),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch (err: unknown) {
+    logger.error('[ecomTrackList]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+export async function ecomHistoryByDate(date: string, key: string, token: string, page = 1) {
+  try {
+    const res = await deliveryFetch(`${BASE_URL}/Historique/${encodeURIComponent(date)}`, {
+      headers: {
+        ...authHeaders(key, token),
+        'Page': String(page),
+      },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch (err: unknown) {
+    logger.error('[ecomHistoryByDate]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
+export async function ecomHistoryByTracking(trackingNumber: string, key: string, token: string) {
+  try {
+    const res = await deliveryFetch(`${BASE_URL}/Historique/Tracking/${encodeURIComponent(trackingNumber)}`, {
+      headers: authHeaders(key, token),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch (err: unknown) {
+    logger.error('[ecomHistoryByTracking]', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -95,13 +265,13 @@ export async function ecomGetRateWithToken(
     const res = await deliveryFetch(url, {
       headers: authHeaders(key, token),
     })
-    
+
     if (!res.ok) {
       const body = await res.text().catch(() => '')
       logger.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaName}: status=${res.status} body=${body}`)
       return null
     }
-    
+
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     const rate = extractRates(row)
@@ -115,7 +285,7 @@ export async function ecomGetRateWithToken(
 
 export async function ecomTrack(trackingNumber: string, key: string, token: string) {
   try {
-    const res = await deliveryFetch(`${BASE_URL}/parcels/${encodeURIComponent(trackingNumber)}`, {
+    const res = await deliveryFetch(`${BASE_URL}/Colis/Tracking/${encodeURIComponent(trackingNumber)}`, {
       headers: authHeaders(key, token),
     })
     if (!res.ok) return null

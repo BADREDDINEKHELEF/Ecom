@@ -60,20 +60,25 @@ export async function GET(req: NextRequest) {
 
       if (vendor) {
         const config = await getVendorDeliveryConfig(vendor.id)
+        const vendorInfo = await supabase.from('vendors').select('wilaya').eq('id', vendor.id).maybeSingle()
+        const vendorWilaya = vendorInfo.data?.wilaya as string | undefined
         if (config) {
           vendorCreds = {
             yalidine_api_id:    config.yalidine_api_id    ?? undefined,
             yalidine_api_token: config.yalidine_api_token ?? undefined,
             procolis_token:     config.procolis_token     ?? undefined,
+            procolis_key:       config.procolis_key       ?? undefined,
             zr_token:           config.zr_token           ?? undefined,
+            zr_key:             config.zr_key             ?? undefined,
             colivraison_token:  config.colivraison_token  ?? undefined,
             maystro_token:      config.maystro_token      ?? undefined,
             rex_token:          config.rex_token          ?? undefined,
             yassir_api_key:     config.yassir_api_key     ?? undefined,
             ecom_api_key:       config.ecom_api_key       ?? undefined,
-            ecom_api_token:      config.ecom_api_token      ?? undefined,
+            ecom_api_token:     config.ecom_api_token     ?? undefined,
             apec_api_id:        config.apec_api_id        ?? undefined,
             apec_api_token:     config.apec_api_token     ?? undefined,
+            from_wilaya:        vendorWilaya,
           }
           defaultProvider = config.default_provider ?? undefined
           vendorOnly = true

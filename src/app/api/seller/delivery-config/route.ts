@@ -12,7 +12,9 @@ const PatchSchema = z.object({
   yalidine_api_id:     z.string().max(200).nullable().optional(),
   yalidine_api_token:  z.string().max(500).nullable().optional(),
   procolis_token:      z.string().max(500).nullable().optional(),
+  procolis_key:        z.string().max(500).nullable().optional(),
   zr_token:            z.string().max(500).nullable().optional(),
+  zr_key:              z.string().max(500).nullable().optional(),
   colivraison_token:   z.string().max(500).nullable().optional(),
   maystro_token:       z.string().max(500).nullable().optional(),
   rex_token:           z.string().max(500).nullable().optional(),
@@ -50,7 +52,9 @@ export async function GET(req: NextRequest) {
       yalidine_api_id:      mask(config.yalidine_api_id),
       yalidine_api_token:   mask(config.yalidine_api_token),
       procolis_token:       mask(config.procolis_token),
+      procolis_key:         mask(config.procolis_key),
       zr_token:             mask(config.zr_token),
+      zr_key:               mask(config.zr_key),
       colivraison_token:    mask(config.colivraison_token),
       maystro_token:        mask(config.maystro_token),
       rex_token:            mask(config.rex_token),
@@ -60,7 +64,7 @@ export async function GET(req: NextRequest) {
       apec_api_id:          mask(config.apec_api_id),
       apec_api_token:       mask(config.apec_api_token),
       has_yalidine:         !!(config.yalidine_api_id && config.yalidine_api_token),
-      has_procolis:         !!config.procolis_token,
+      has_procolis:         !!(config.procolis_token && config.procolis_key),
       has_zr:               !!config.zr_token,
       has_colivraison:      !!config.colivraison_token,
       has_maystro:          !!config.maystro_token,
@@ -113,7 +117,9 @@ export async function PATCH(req: NextRequest) {
       if (updates.yalidine_api_id !== undefined)    updates.yalidine_api_id    = merge(updates.yalidine_api_id, existing.yalidine_api_id)
       if (updates.yalidine_api_token !== undefined) updates.yalidine_api_token = merge(updates.yalidine_api_token, existing.yalidine_api_token)
       if (updates.procolis_token !== undefined)     updates.procolis_token     = merge(updates.procolis_token, existing.procolis_token)
+      if (updates.procolis_key !== undefined)       updates.procolis_key       = merge(updates.procolis_key, existing.procolis_key)
       if (updates.zr_token !== undefined)           updates.zr_token           = merge(updates.zr_token, existing.zr_token)
+      if (updates.zr_key !== undefined)             updates.zr_key             = merge(updates.zr_key, existing.zr_key)
       if (updates.colivraison_token !== undefined)  updates.colivraison_token  = merge(updates.colivraison_token, existing.colivraison_token)
       if (updates.maystro_token !== undefined)      updates.maystro_token      = merge(updates.maystro_token, existing.maystro_token)
       if (updates.rex_token !== undefined)          updates.rex_token          = merge(updates.rex_token, existing.rex_token)

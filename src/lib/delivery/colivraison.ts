@@ -1,7 +1,13 @@
 import { ShipmentInput, ShipmentResult } from './types'
-import { extractRates, isValidWilaya, findWilayaRow } from './utils'
+import { extractRates, isValidWilaya, findWilayaRow, toLocalAlgerianPhone } from './utils'
 import { deliveryFetch } from './client'
+import { logger } from '@/lib/logger'
 
+/**
+ * Colivraison delivery API.
+ * No public documentation could be located; payload mirrors Algerian carrier conventions.
+ * Verify field names with the provider before enabling in production.
+ */
 const BASE_URL = 'https://api.colivraison.com/api'
 
 export function colivraisonConfigured(): boolean {
@@ -14,7 +20,7 @@ export async function colivraisonCreateShipmentWithToken(
 ): Promise<ShipmentResult> {
   const body = {
     name:       input.fullName,
-    phone:      input.phone,
+    phone:      toLocalAlgerianPhone(input.phone),
     address:    input.address,
     wilaya:     input.wilaya,
     commune:    input.city,
@@ -61,7 +67,10 @@ export async function colivraisonListParcels(token: string, pageSize = 100) {
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
+  } catch (err: unknown) {
+    logger.error('[colivraisonListParcels]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }
 
 export async function colivraisonGetRateWithToken(
@@ -73,11 +82,15 @@ export async function colivraisonGetRateWithToken(
     const res = await deliveryFetch(`${BASE_URL}/pricing?wilaya=${encodeURIComponent(wilayaName)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      logger.warn(`[colivraisonGetRateWithToken] failed: ${res.status}`)
+      return null
+    }
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
     return extractRates(row)
-  } catch {
+  } catch (err: unknown) {
+    logger.error('[colivraisonGetRateWithToken]', { error: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -89,5 +102,8 @@ export async function colivraisonTrack(trackingCode: string, token: string) {
     })
     if (!res.ok) return null
     return res.json()
-  } catch { return null }
+  } catch (err: unknown) {
+    logger.error('[colivraisonTrack]', { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
 }

@@ -61,7 +61,9 @@ export interface VendorDeliveryConfig {
   yalidine_api_id:      string | null
   yalidine_api_token:   string | null
   procolis_token?:      string | null
+  procolis_key?:        string | null
   zr_token?:            string | null
+  zr_key?:              string | null
   colivraison_token?:   string | null
   maystro_token?:       string | null
   rex_token?:           string | null
@@ -161,7 +163,9 @@ function encryptConfigCredentials(
   if (e.yalidine_api_id)    e.yalidine_api_id    = enc(e.yalidine_api_id)
   if (e.yalidine_api_token) e.yalidine_api_token = enc(e.yalidine_api_token)
   if (e.procolis_token)     e.procolis_token     = enc(e.procolis_token)
+  if (e.procolis_key)       e.procolis_key       = enc(e.procolis_key)
   if (e.zr_token)           e.zr_token           = enc(e.zr_token)
+  if (e.zr_key)             e.zr_key             = enc(e.zr_key)
   if (e.colivraison_token)  e.colivraison_token  = enc(e.colivraison_token)
   if (e.maystro_token)      e.maystro_token      = enc(e.maystro_token)
   if (e.rex_token)          e.rex_token          = enc(e.rex_token)
@@ -180,7 +184,9 @@ function decryptConfigCredentials(config: VendorDeliveryConfig): VendorDeliveryC
     yalidine_api_id:    dec(config.yalidine_api_id),
     yalidine_api_token: dec(config.yalidine_api_token),
     procolis_token:     dec(config.procolis_token),
+    procolis_key:       dec(config.procolis_key),
     zr_token:           dec(config.zr_token),
+    zr_key:             dec(config.zr_key),
     colivraison_token:  dec(config.colivraison_token),
     maystro_token:      dec(config.maystro_token),
     rex_token:          dec(config.rex_token),
@@ -198,7 +204,7 @@ export async function getVendorDeliveryConfig(
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('vendor_delivery_config')
-    .select('id, vendor_id, default_provider, yalidine_api_id, yalidine_api_token, procolis_token, zr_token, colivraison_token, maystro_token, rex_token, yassir_api_key, ecom_api_key, ecom_api_token, apec_api_id, apec_api_token, auto_create_shipment, notify_whatsapp, notify_sms')
+    .select('id, vendor_id, default_provider, yalidine_api_id, yalidine_api_token, procolis_token, procolis_key, zr_token, zr_key, colivraison_token, maystro_token, rex_token, yassir_api_key, ecom_api_key, ecom_api_token, apec_api_id, apec_api_token, auto_create_shipment, notify_whatsapp, notify_sms')
     .eq('vendor_id', vendorId)
     .maybeSingle()
   if (!data) return null

@@ -72,6 +72,13 @@ export async function POST(req: NextRequest) {
         .not('vendor_id', 'is', null),
     ])
 
+    // Fetch vendor origin wilaya for carriers that require it (Yalidine/APEC fees)
+    const firstVendorId = itemsRes.data?.[0]?.vendor_id as string | undefined
+    const vendorRes = firstVendorId
+      ? await admin.from('vendors').select('wilaya').eq('id', firstVendorId).maybeSingle()
+      : null
+    const vendorWilaya = vendorRes?.data?.wilaya as string | undefined
+
     if (orderRes.error) {
       if (orderRes.error.code === 'PGRST116') {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -83,8 +90,7 @@ export async function POST(req: NextRequest) {
     const order = orderRes.data
 
     // Resolve vendor delivery credentials (use first vendor found in order)
-    const vendorId = itemsRes.data?.[0]?.vendor_id as string | undefined
-    const vendorConfig = vendorId ? await getVendorDeliveryConfig(vendorId) : null
+    const vendorConfig = firstVendorId ? await getVendorDeliveryConfig(firstVendorId) : null
 
     // Construct items string from fetched order_items as fallback
     const fetchedItemsString = itemsRes.data?.map(item => `${item.product_name} x ${item.quantity}`).join(', ') ?? ''
@@ -109,15 +115,18 @@ export async function POST(req: NextRequest) {
         yalidine_api_id:    vendorConfig.yalidine_api_id    ?? undefined,
         yalidine_api_token: vendorConfig.yalidine_api_token ?? undefined,
         procolis_token:     vendorConfig.procolis_token     ?? undefined,
+        procolis_key:       vendorConfig.procolis_key       ?? undefined,
         zr_token:           vendorConfig.zr_token           ?? undefined,
+        zr_key:             vendorConfig.zr_key             ?? undefined,
         colivraison_token:  vendorConfig.colivraison_token  ?? undefined,
         maystro_token:      vendorConfig.maystro_token      ?? undefined,
         rex_token:          vendorConfig.rex_token          ?? undefined,
         yassir_api_key:     vendorConfig.yassir_api_key     ?? undefined,
         ecom_api_key:       vendorConfig.ecom_api_key       ?? undefined,
-        ecom_api_token:      vendorConfig.ecom_api_token      ?? undefined,
+        ecom_api_token:     vendorConfig.ecom_api_token     ?? undefined,
         apec_api_id:        vendorConfig.apec_api_id        ?? undefined,
         apec_api_token:     vendorConfig.apec_api_token     ?? undefined,
+        from_wilaya:        vendorWilaya,
       } : undefined
       const result = await dispatchShipment(provider, input, creds)
       finalTracking = result.tracking

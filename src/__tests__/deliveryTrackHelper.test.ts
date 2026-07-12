@@ -80,6 +80,7 @@ describe('dispatchTrack carrier response parser tests', () => {
 
     const res = await dispatchTrack('procolis', 'PROCOLIS111', {
       procolis_token: 'test-token',
+      procolis_key: 'test-key',
     })
 
     expect(res).toEqual({
@@ -104,6 +105,34 @@ describe('dispatchTrack carrier response parser tests', () => {
     expect(res).toEqual({
       status: 'pending',
       detail: 'Prêt à expédier',
+    })
+  })
+
+  it('ecom tracking maps Avancement/Situation response correctly', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        Quota: {},
+        Nb_Colis: 1,
+        Colis: [
+          {
+            Tracking: 'ECO123',
+            Avancement: 'En livraison',
+            Situation: 'Ne Réponde pas #1',
+          },
+        ],
+      }),
+    } as Response)
+
+    const res = await dispatchTrack('ecom', 'ECO123', {
+      ecom_api_key: 'test-key',
+      ecom_api_token: 'test-token',
+    })
+
+    expect(res).toEqual({
+      status: 'failed',
+      detail: 'En livraison — Ne Réponde pas #1',
     })
   })
 })

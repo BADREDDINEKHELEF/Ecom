@@ -54,6 +54,20 @@ export async function getShipmentByOrderId(orderId: string): Promise<ShipmentRow
   return (data as ShipmentRow) ?? null
 }
 
+export async function getShipmentByTracking(
+  trackingNumber: string,
+  provider: string
+): Promise<ShipmentRow | null> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('shipments')
+    .select('id,order_id,vendor_id,provider,tracking_number,label_url,status,status_detail,wilaya,city,recipient_name,recipient_phone,declared_value,delivery_cost,notes,created_at,updated_at,delivered_at')
+    .eq('tracking_number', trackingNumber)
+    .eq('provider', provider)
+    .maybeSingle()
+  return (data as ShipmentRow) ?? null
+}
+
 export async function getVendorShipments(
   vendorId: string,
   page = 0,

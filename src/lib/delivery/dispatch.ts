@@ -5,7 +5,7 @@ import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfig
 import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured, procolisTrack, procolisListParcels, procolisGetRateWithToken } from './procolis'
 import { zrCreateShipment, zrCreateShipmentWithToken, zrConfigured, zrTrack, zrListParcels, zrGetRateWithToken } from './zrexpress'
 import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivraisonConfigured, colivraisonTrack, colivraisonListParcels, colivraisonGetRateWithToken } from './colivraison'
-import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels, maystroGetRateWithToken } from './maystro'
+import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels } from './maystro'
 import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels, rexGetRateWithToken } from './rex'
 import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
 import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
@@ -20,7 +20,9 @@ type VendorDispatchCreds = {
   yalidine_api_id?: string
   yalidine_api_token?: string
   procolis_token?: string
+  procolis_key?: string
   zr_token?: string
+  zr_key?: string
   colivraison_token?: string
   maystro_token?: string
   rex_token?: string
@@ -32,6 +34,8 @@ type VendorDispatchCreds = {
   ecom_api_token?: string
   apec_api_id?: string
   apec_api_token?: string
+  /** Origin wilaya of the store/vendor — forwarded to providers that require it. */
+  from_wilaya?: string
 }
 
 export async function dispatchShipment(
@@ -42,26 +46,28 @@ export async function dispatchShipment(
   try {
     switch (provider) {
       case 'yalidine': {
-        const { yalidine_api_id, yalidine_api_token } = vendorCreds ?? {}
+        const { yalidine_api_id, yalidine_api_token, from_wilaya } = vendorCreds ?? {}
+        const yalidineInput = from_wilaya ? { ...input, fromWilaya: from_wilaya } : input
         if (vendorCreds) {
           if (!yalidine_api_id || !yalidine_api_token) {
             return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
           }
-          const result = await yalidineCreateShipmentWithCreds(input, yalidine_api_id, yalidine_api_token)
+          const result = await yalidineCreateShipmentWithCreds(yalidineInput, yalidine_api_id, yalidine_api_token)
           return { ...result, provider, requiresManual: false }
         }
         if (!yalidineConfigured()) {
           return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
         }
-        const result = await yalidineCreateShipment(input)
+        const result = await yalidineCreateShipment(yalidineInput)
         return { ...result, provider, requiresManual: false }
       }
 
       case 'procolis': {
         const token = vendorCreds?.procolis_token
+        const key = vendorCreds?.procolis_key
         if (vendorCreds) {
-          if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
-          const result = await procolisCreateShipmentWithToken(input, token)
+          if (!token || !key) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
+          const result = await procolisCreateShipmentWithToken(input, token, key)
           return { ...result, provider, requiresManual: false }
         }
         if (!procolisConfigured()) {
@@ -73,9 +79,10 @@ export async function dispatchShipment(
 
       case 'zr': {
         const token = vendorCreds?.zr_token
+        const key = vendorCreds?.zr_key
         if (vendorCreds) {
           if (!token) return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
-          const result = await zrCreateShipmentWithToken(input, token)
+          const result = await zrCreateShipmentWithToken(input, token, key)
           return { ...result, provider, requiresManual: false }
         }
         if (!zrConfigured()) {
@@ -157,18 +164,19 @@ export async function dispatchShipment(
       }
 
       case 'apec': {
-        const { apec_api_id, apec_api_token } = vendorCreds ?? {}
+        const { apec_api_id, apec_api_token, from_wilaya } = vendorCreds ?? {}
+        const apecInput = from_wilaya ? { ...input, fromWilaya: from_wilaya } : input
         if (vendorCreds) {
           if (!apec_api_id || !apec_api_token) {
             return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
           }
-          const result = await apecCreateShipmentWithCreds(input, apec_api_id, apec_api_token)
+          const result = await apecCreateShipmentWithCreds(apecInput, apec_api_id, apec_api_token)
           return { ...result, provider, requiresManual: false }
         }
         if (!apecConfigured()) {
           return { provider, tracking: '', labelUrl: undefined, requiresManual: true }
         }
-        const result = await apecCreateShipment(input)
+        const result = await apecCreateShipment(apecInput)
         return { ...result, provider, requiresManual: false }
       }
 
@@ -191,14 +199,16 @@ export function normalizeProviderStatus(raw: unknown): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[- ]/g, '_')
-  if (['delivered', 'livre', 'livraison_effectuee', 'success', '4'].includes(s)) return 'delivered'
-  if (['returned', 'retour', 'retourne', 'return', '5', '6'].includes(s)) return 'returned'
-  if (['out_for_delivery', 'en_livraison', 'en_cours_de_livraison', 'dernier_km', '3'].includes(s)) return 'out_for_delivery'
-  if (['in_transit', 'en_transit', 'en_route', 'transit', 'dispatched', 'shipped', '2'].includes(s)) return 'in_transit'
-  if (['picked_up', 'enleve', 'collected', 'pris_en_charge', 'ramasse', '1'].includes(s)) return 'picked_up'
-  if (['failed', 'echec', 'echoue', 'failed_delivery'].includes(s)) return 'failed'
-  if (['cancelled', 'annule', 'canceled', '7'].includes(s)) return 'cancelled'
-  if (['pending', 'waiting', 'wait_for_pickup', 'created', '0', 'pret_a_expedier'].includes(s)) return 'pending'
+  const matches = (terms: string[]) => terms.some((t) => s.includes(t))
+
+  if (matches(['delivered', 'livre', 'livraison_effectuee', 'success', 'recouvert']) || s === '4') return 'delivered'
+  if (matches(['returned', 'retour', 'retourne', 'return', 'retour_fournisseur', 'annule_x3']) || s === '5' || s === '6') return 'returned'
+  if (matches(['out_for_delivery', 'en_livraison', 'en_cours_de_livraison', 'dernier_km', 'sortir_en_livraison']) || s === '3') return 'out_for_delivery'
+  if (matches(['in_transit', 'en_transit', 'en_route', 'transit', 'dispatched', 'shipped', 'au_bureau', 'en_traitement', 'dispatcher', 'encours']) || s === '2') return 'in_transit'
+  if (matches(['picked_up', 'enleve', 'collected', 'pris_en_charge', 'ramasse', 'recuperer']) || s === '1') return 'picked_up'
+  if (matches(['failed', 'echec', 'echoue', 'failed_delivery', 'ne_repond_pas', 'ne_reponde_pas', 'reponde', 'biz', 'perdu'])) return 'failed'
+  if (matches(['cancelled', 'annule', 'canceled']) || s === '7') return 'cancelled'
+  if (matches(['pending', 'waiting', 'wait_for_pickup', 'created', 'pret_a_expedier', 'en_preparation', 'attend_information', 'appel_tel', 'sms_envoye', 'reporte']) || s === '0') return 'pending'
   // Unknown status — log so new provider status codes can be added above.
   // Return 'unknown' rather than 'in_transit' so the cron does not poll indefinitely
   // for shipments whose terminal state it cannot classify.
@@ -221,8 +231,24 @@ function getParcelStatusAndDetail(data: unknown): TrackResult | null {
       : (Array.isArray(d.Colis) ? d.Colis[0] : d))
   if (!parcel || typeof parcel !== 'object') return null
   const p = parcel as Record<string, unknown>
-  const raw = p.status ?? p.etat ?? p.state ?? p.Statut ?? p.Etat ?? p.StatutColis
-  const detail = p.status_detail ?? p.detail ?? p.notes ?? raw
+
+  // Ecom exposes both Avancement (high-level state) and Situation (fine-grained).
+  // Prefer the terminal Situation when it carries a stronger signal, otherwise Avancement.
+  let raw: unknown
+  let detail: unknown
+  if (p.Avancement !== undefined || p.Situation !== undefined) {
+    const avancement = String(p.Avancement ?? '')
+    const situation = String(p.Situation ?? '')
+    const normalizedSituation = situation.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const terminalKeywords = ['livre', 'annule', 'retour', 'perdu', 'repond']
+    const terminalSituation = terminalKeywords.some((k) => normalizedSituation.includes(k))
+    raw = terminalSituation ? situation : (avancement || situation)
+    detail = [avancement, situation].filter(Boolean).join(' — ') || raw
+  } else {
+    raw = p.status ?? p.etat ?? p.state ?? p.Statut ?? p.Etat ?? p.StatutColis
+    detail = p.status_detail ?? p.detail ?? p.notes ?? raw
+  }
+
   return { status: normalizeProviderStatus(raw), detail: detail ? String(detail) : undefined }
 }
 
@@ -233,7 +259,9 @@ export async function dispatchTrack(
     yalidine_api_id?: string
     yalidine_api_token?: string
     procolis_token?: string
+    procolis_key?: string
     zr_token?: string
+    zr_key?: string
     colivraison_token?: string
     maystro_token?: string
     rex_token?: string
@@ -255,14 +283,16 @@ export async function dispatchTrack(
       }
       case 'procolis': {
         const token = vendorCreds?.procolis_token ?? process.env.PROCOLIS_TOKEN ?? ''
-        if (!token) return null
-        const data = await procolisTrack(trackingNumber, token)
+        const key = vendorCreds?.procolis_key ?? process.env.PROCOLIS_KEY ?? ''
+        if (!token || !key) return null
+        const data = await procolisTrack(trackingNumber, token, key)
         return getParcelStatusAndDetail(data)
       }
       case 'zr': {
         const token = vendorCreds?.zr_token ?? process.env.ZR_TOKEN ?? ''
+        const key = vendorCreds?.zr_key ?? process.env.ZR_KEY ?? ''
         if (!token) return null
-        const data = await zrTrack(trackingNumber, token)
+        const data = await zrTrack(trackingNumber, token, key || undefined)
         return getParcelStatusAndDetail(data)
       }
       case 'colivraison': {
@@ -359,7 +389,8 @@ export async function dispatchGetStats(
   provider: string,
   vendorCreds?: {
     yalidine_api_id?: string; yalidine_api_token?: string
-    procolis_token?: string; zr_token?: string
+    procolis_token?: string; procolis_key?: string
+    zr_token?: string; zr_key?: string
     colivraison_token?: string; maystro_token?: string
     rex_token?: string; yassir_api_key?: string
     ecom_api_key?: string; ecom_api_token?: string; apec_api_id?: string; apec_api_token?: string
@@ -377,14 +408,16 @@ export async function dispatchGetStats(
       }
       case 'procolis': {
         const token = vendorCreds?.procolis_token ?? process.env.PROCOLIS_TOKEN ?? ''
-        if (!token) return null
-        data = await procolisListParcels(token)
+        const key = vendorCreds?.procolis_key ?? process.env.PROCOLIS_KEY ?? ''
+        if (!token || !key) return null
+        data = await procolisListParcels(token, key)
         break
       }
       case 'zr': {
         const token = vendorCreds?.zr_token ?? process.env.ZR_TOKEN ?? ''
+        const key = vendorCreds?.zr_key ?? process.env.ZR_KEY ?? ''
         if (!token) return null
-        data = await zrListParcels(token)
+        data = await zrListParcels(token, key || undefined)
         break
       }
       case 'colivraison': {
@@ -445,10 +478,13 @@ export interface RateResult {
 
 type VendorCreds = {
   yalidine_api_id?: string | null; yalidine_api_token?: string | null
-  procolis_token?: string | null; zr_token?: string | null
+  procolis_token?: string | null; procolis_key?: string | null
+  zr_token?: string | null; zr_key?: string | null
   colivraison_token?: string | null; maystro_token?: string | null
   rex_token?: string | null; yassir_api_key?: string | null
   ecom_api_key?: string | null; ecom_api_token?: string | null; apec_api_id?: string | null; apec_api_token?: string | null
+  /** Vendor/store origin wilaya — required by Yalidine/APEC fee endpoint. */
+  from_wilaya?: string | null
 }
 
 // vendorOnly=true prevents null vendor tokens from falling through to platform env vars.
@@ -476,25 +512,27 @@ export async function dispatchGetRate(
           console.warn(`[dispatchGetRate] yalidine: missing credentials (id=${!!id}, tk=${!!tk})`)
           return null
         }
-        const r = await yalidineGetRateWithCreds(wilayaName, id, tk)
+        const r = await yalidineGetRateWithCreds(wilayaName, id, tk, vendorCreds?.from_wilaya ?? undefined)
         return r ? { ...r, provider } : null
       }
       case 'procolis': {
         const token = tok(vendorCreds?.procolis_token, process.env.PROCOLIS_TOKEN)
-        if (!token) {
-          console.warn(`[dispatchGetRate] procolis: missing token`)
+        const key = tok(vendorCreds?.procolis_key, process.env.PROCOLIS_KEY)
+        if (!token || !key) {
+          console.warn(`[dispatchGetRate] procolis: missing token or key`)
           return null
         }
-        const r = await procolisGetRateWithToken(wilayaName, token)
+        const r = await procolisGetRateWithToken(wilayaName, token, key)
         return r ? { ...r, provider } : null
       }
       case 'zr': {
         const token = tok(vendorCreds?.zr_token, process.env.ZR_TOKEN)
+        const key = tok(vendorCreds?.zr_key, process.env.ZR_KEY)
         if (!token) {
           console.warn(`[dispatchGetRate] zr: missing token`)
           return null
         }
-        const r = await zrGetRateWithToken(wilayaName, token)
+        const r = await zrGetRateWithToken(wilayaName, token, key || undefined)
         return r ? { ...r, provider } : null
       }
       case 'colivraison': {
@@ -507,13 +545,8 @@ export async function dispatchGetRate(
         return r ? { ...r, provider } : null
       }
       case 'maystro': {
-        const token = tok(vendorCreds?.maystro_token, process.env.MAYSTRO_TOKEN)
-        if (!token) {
-          console.warn(`[dispatchGetRate] maystro: missing token`)
-          return null
-        }
-        const r = await maystroGetRateWithToken(wilayaName, token)
-        return r ? { ...r, provider } : null
+        // Maystro does not expose a public rate endpoint; rely on static pricing.
+        return null
       }
       case 'rex': {
         const token = tok(vendorCreds?.rex_token, process.env.REX_TOKEN)
@@ -531,7 +564,7 @@ export async function dispatchGetRate(
           console.warn(`[dispatchGetRate] apec: missing credentials (id=${!!id}, tk=${!!tk})`)
           return null
         }
-        const r = await apecGetRateWithCreds(wilayaName, id, tk)
+        const r = await apecGetRateWithCreds(wilayaName, id, tk, vendorCreds?.from_wilaya ?? undefined)
         return r ? { ...r, provider } : null
       }
       case 'ecom': {

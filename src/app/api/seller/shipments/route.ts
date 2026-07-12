@@ -126,15 +126,18 @@ export async function POST(req: NextRequest) {
             yalidine_api_id:    config?.yalidine_api_id    ?? undefined,
             yalidine_api_token: config?.yalidine_api_token ?? undefined,
             procolis_token:     config?.procolis_token     ?? undefined,
+            procolis_key:       config?.procolis_key       ?? undefined,
             zr_token:           config?.zr_token           ?? undefined,
+            zr_key:             config?.zr_key             ?? undefined,
             colivraison_token:  config?.colivraison_token  ?? undefined,
             maystro_token:      config?.maystro_token      ?? undefined,
             rex_token:          config?.rex_token          ?? undefined,
             yassir_api_key:     config?.yassir_api_key     ?? undefined,
             ecom_api_key:       config?.ecom_api_key       ?? undefined,
-            ecom_api_token:      config?.ecom_api_token      ?? undefined,
+            ecom_api_token:     config?.ecom_api_token     ?? undefined,
             apec_api_id:        config?.apec_api_id        ?? undefined,
             apec_api_token:     config?.apec_api_token     ?? undefined,
+            from_wilaya:        vendor.wilaya ?? undefined,
           }
         )
       } catch (providerErr) {
@@ -151,7 +154,7 @@ export async function POST(req: NextRequest) {
     let resolvedDeliveryCost = 0
     if (provider !== 'manual') {
       try {
-        const rate = await dispatchGetRate(provider, order.wilaya, config ?? undefined, true)
+        const rate = await dispatchGetRate(provider, order.wilaya, config ? { ...config, from_wilaya: vendor.wilaya } : undefined, true)
         if (rate) {
           resolvedDeliveryCost = (order.is_stopdesk && rate.deskDelivery != null) ? rate.deskDelivery : rate.homeDelivery
         } else {
