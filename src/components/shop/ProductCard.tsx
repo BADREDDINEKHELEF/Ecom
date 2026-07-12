@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { ShoppingCart } from 'lucide-react'
-import { memo, useRef } from 'react'
+import { memo, useRef, useState } from 'react'
 import { Product } from '@/types'
 import { useCartStore } from '@/lib/store/cartStore'
 import { useToastStore } from '@/lib/store/toastStore'
@@ -33,6 +33,7 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
   const addToast = useToastStore((s) => s.add)
   const imgRef  = useRef<HTMLImageElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const [imgError, setImgError] = useState(false)
   const { triggerPop } = usePixelCartPop()
   const { floatState, triggerFloat, resetFloat } = usePixelCartFloat()
   const t = useT()
@@ -86,20 +87,22 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
     <div ref={cardRef} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
       <Link href={productHref}>
         <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
-          {product.images[0] ? (
+          {product.images[0] && !imgError ? (
             <Image
               ref={imgRef}
               src={product.images[0]}
               alt={product.name}
               fill
+              onError={() => setImgError(true)}
               className={`object-cover transition-transform duration-500 group-hover:scale-105 ${!inStock ? 'opacity-60' : ''}`}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               placeholder="blur"
               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300" role="img" aria-label="Image indisponible">
               <ShoppingCart className="w-10 h-10" />
+              <span className="sr-only">Image indisponible</span>
             </div>
           )}
 
@@ -180,7 +183,7 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
         {!inStock ? (
           <button
             disabled
-            className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed font-medium"
+            className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed font-medium focus-visible:outline-none"
           >
             {t.product.outOfStock}
           </button>
@@ -188,7 +191,7 @@ function ProductCard({ product, storeSlug }: ProductCardProps) {
           <button
             onClick={handleAddToCart}
             aria-label={`${t.cart.add} ${product.name}`}
-            className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all font-semibold"
+            className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
             <ShoppingCart className="w-4 h-4" />
             {t.cart.add}

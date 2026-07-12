@@ -247,15 +247,15 @@ export default function AuthPage() {
           </div>
 
           {success && (
-            <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-4 text-sm text-emerald-700">
-              <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div role="status" className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-4 text-sm text-emerald-700">
+              <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
               {success}
             </div>
           )}
 
           {error && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+            <div role="alert" className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" aria-hidden="true" />
               <span>{error}</span>
             </div>
           )}
@@ -263,10 +263,11 @@ export default function AuthPage() {
           <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nom complet</label>
+                <label htmlFor="auth-name" className="block text-sm font-semibold text-gray-700 mb-1.5">Nom complet</label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
                   <input
+                    id="auth-name"
                     type="text"
                     required
                     autoComplete="name"
@@ -274,7 +275,9 @@ export default function AuthPage() {
                     onChange={(e) => f('name', e.target.value)}
                     onBlur={() => handleBlur('name')}
                     placeholder="Mohammed Amiri"
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                    aria-invalid={touched.name && !!errors.name}
+                    aria-describedby={touched.name && errors.name ? 'auth-name-error' : undefined}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all focus-visible:ring-2 focus-visible:ring-indigo-500/30 ${
                       touched.name && errors.name
                         ? 'border-red-300 focus:border-red-500 bg-red-50/10'
                         : 'border-gray-200 focus:border-indigo-400'
@@ -282,8 +285,8 @@ export default function AuthPage() {
                   />
                 </div>
                 {touched.name && errors.name && (
-                  <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
-                    <AlertCircle className="w-3 h-3 text-red-500" />
+                  <p id="auth-name-error" className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium" role="alert">
+                    <AlertCircle className="w-3 h-3 text-red-500" aria-hidden="true" />
                     {errors.name}
                   </p>
                 )}
@@ -291,10 +294,11 @@ export default function AuthPage() {
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Adresse e-mail</label>
+              <label htmlFor="auth-email" className="block text-sm font-semibold text-gray-700 mb-1.5">Adresse e-mail</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
                 <input
+                  id="auth-email"
                   type="email"
                   required
                   autoComplete={mode === 'login' ? 'username' : 'email'}
@@ -302,7 +306,9 @@ export default function AuthPage() {
                   onChange={(e) => f('email', e.target.value)}
                   onBlur={() => handleBlur('email')}
                   placeholder="vous@exemple.com"
-                  className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                  aria-invalid={touched.email && !!errors.email}
+                  aria-describedby={touched.email && errors.email ? 'auth-email-error' : undefined}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm focus:outline-none transition-all focus-visible:ring-2 focus-visible:ring-indigo-500/30 ${
                     touched.email && errors.email
                       ? 'border-red-300 focus:border-red-500 bg-red-50/10'
                       : 'border-gray-200 focus:border-indigo-400'
@@ -310,18 +316,19 @@ export default function AuthPage() {
                 />
               </div>
               {touched.email && errors.email && (
-                <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
-                  <AlertCircle className="w-3 h-3 text-red-500" />
+                <p id="auth-email-error" className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium" role="alert">
+                  <AlertCircle className="w-3 h-3 text-red-500" aria-hidden="true" />
                   {errors.email}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mot de passe</label>
+              <label htmlFor="auth-password" className="block text-sm font-semibold text-gray-700 mb-1.5">Mot de passe</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
                 <input
+                  id="auth-password"
                   type={showPwd ? 'text' : 'password'}
                   required
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -329,7 +336,9 @@ export default function AuthPage() {
                   onChange={(e) => f('password', e.target.value)}
                   onBlur={() => handleBlur('password')}
                   placeholder="••••••••"
-                  className={`w-full pl-10 pr-12 py-3 border rounded-xl text-sm focus:outline-none transition-all ${
+                  aria-invalid={touched.password && !!errors.password}
+                  aria-describedby={touched.password && errors.password ? 'auth-password-error' : undefined}
+                  className={`w-full pl-10 pr-12 py-3 border rounded-xl text-sm focus:outline-none transition-all focus-visible:ring-2 focus-visible:ring-indigo-500/30 ${
                     touched.password && errors.password
                       ? 'border-red-300 focus:border-red-500 bg-red-50/10'
                       : 'border-gray-200 focus:border-indigo-400'
@@ -339,14 +348,14 @@ export default function AuthPage() {
                   type="button"
                   onClick={() => setShowPwd(!showPwd)}
                   aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 rounded p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
-                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPwd ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                 </button>
               </div>
               {touched.password && errors.password && (
-                <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
-                  <AlertCircle className="w-3 h-3 text-red-500" />
+                <p id="auth-password-error" className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium" role="alert">
+                  <AlertCircle className="w-3 h-3 text-red-500" aria-hidden="true" />
                   {errors.password}
                 </p>
               )}
@@ -360,7 +369,7 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-xs text-indigo-600 hover:underline font-medium animate-pulse-slow"
+                  className="text-xs text-indigo-600 hover:underline font-medium rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
                   Mot de passe oublié ?
                 </button>
@@ -370,7 +379,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none hover:shadow-lg hover:shadow-indigo-500/20 active:scale-[0.98]"
+              className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none hover:shadow-lg hover:shadow-indigo-500/20 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}

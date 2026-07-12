@@ -51,7 +51,7 @@ export default function SellerSidebar({
       <Link
         href={href}
         onClick={onMobileClose}
-        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
           active ? 'bg-emerald-600/20 text-emerald-400' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
         }`}
       >
@@ -78,6 +78,7 @@ export default function SellerSidebar({
       )}
 
       <aside
+        aria-label="Navigation vendeur"
         dir={isRTL ? 'rtl' : 'ltr'}
         className={[
           'w-64 bg-gray-950 text-gray-300 flex flex-col flex-shrink-0 fixed h-full z-40 overflow-y-auto transition-transform duration-300 ease-in-out',
@@ -162,8 +163,10 @@ export default function SellerSidebar({
               <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">{sd.catSettings}</p>
             </div>
             <button
+              type="button"
               onClick={() => setSettingsOpen(!settingsOpen)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              aria-expanded={settingsOpen}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
                 isActive('/seller/settings') ? 'bg-emerald-600/20 text-emerald-400' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               }`}
             >
@@ -176,7 +179,7 @@ export default function SellerSidebar({
                 <Link
                   href="/seller/settings"
                   onClick={onMobileClose}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
                     pathname === '/seller/settings' ? 'text-emerald-400 bg-emerald-600/10' : 'text-gray-400 hover:text-white hover:bg-gray-800'
                   }`}
                 >
@@ -213,8 +216,10 @@ export default function SellerSidebar({
                 return (
                   <button
                     key={code}
+                    type="button"
+                    aria-pressed={lang === code}
                     onClick={() => setLang(code)}
-                    className={`flex-1 py-1 rounded-md text-xs font-bold transition-all ${
+                    className={`flex-1 py-1 rounded-md text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
                       lang === code ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'
                     }`}
                   >
@@ -227,14 +232,15 @@ export default function SellerSidebar({
               href={`/store/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
             >
               <ExternalLink className="w-4 h-4 text-gray-500" />
               {t.sellerDash.viewMyStore}
             </a>
             <button
+              type="button"
               onClick={onLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
             >
               <LogOut className="w-4 h-4 text-gray-500" />
               {t.sellerDash.logout}

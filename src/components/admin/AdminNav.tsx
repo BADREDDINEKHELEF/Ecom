@@ -53,25 +53,26 @@ export default function AdminNav({ onNavClick }: { onNavClick?: () => void } = {
         {NAV.map(({ href, label, icon: Icon, exact, badge }) => {
           const isActive = exact ? pathname === href : pathname.startsWith(href)
           return (
-            <Link key={href} href={href} onClick={onNavClick}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              <Icon className={`w-4 h-4 transition-colors flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-500'}`} />
-              <span className="flex-1">{label}</span>
-              {badge && pending > 0 && (
-                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">
-                  {pending > 99 ? '99+' : pending}
-                </span>
-              )}
-            </Link>
+          <Link key={href} href={href} onClick={onNavClick}
+            aria-current={isActive ? 'page' : undefined}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
+              isActive ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+            }`}
+          >
+            <Icon className={`w-4 h-4 transition-colors flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+            <span className="flex-1">{label}</span>
+            {badge && pending > 0 && (
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">
+                {pending > 99 ? '99+' : pending}
+              </span>
+            )}
+          </Link>
           )
         })}
       </div>
-      <button onClick={handleLogout}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors mt-2">
-        <LogOut className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      <button type="button" onClick={handleLogout} aria-label="Déconnexion"
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+        <LogOut className="w-4 h-4 text-gray-500 flex-shrink-0" aria-hidden="true" />
         Logout
       </button>
     </nav>

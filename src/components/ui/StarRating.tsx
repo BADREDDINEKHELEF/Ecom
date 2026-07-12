@@ -10,8 +10,11 @@ interface StarRatingProps {
 
 export default function StarRating({ rating, reviewCount, size = 'sm', className }: StarRatingProps) {
   return (
-    <div className={cn('flex items-center gap-1', className)}>
-      <div className="flex items-center">
+    <div
+      className={cn('flex items-center gap-1', className)}
+      aria-label={`Note ${rating.toFixed(1)} sur 5, ${reviewCount ?? 0} avis`}
+    >
+      <div className="flex items-center" aria-hidden="true">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}

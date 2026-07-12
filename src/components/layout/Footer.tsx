@@ -44,10 +44,9 @@ export default function Footer() {
   ]
 
   const serviceLinks = [
-    { label: t.footer.trackOrder,    href: '/orders' },
-    { label: t.footer.returnsRefunds, href: '/faq' },
-    { label: t.footer.faq,           href: '/faq' },
-    { label: t.footer.contactUs,     href: '/contact' },
+    { label: t.footer.trackOrder, href: '/track' },
+    { label: t.footer.faq,        href: '/faq' },
+    { label: t.footer.contactUs,  href: '/contact' },
   ]
 
   return (
@@ -64,10 +63,12 @@ export default function Footer() {
                 href={`https://wa.me/${WA_NUMBER}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Contacter sur WhatsApp (s'ouvre dans une nouvelle fenêtre)"
                 className="flex items-center gap-2 hover:text-white transition-colors"
               >
                 {WA_SVG}
                 <span>07 79 52 83 30</span>
+                <span className="sr-only">(nouvelle fenêtre)</span>
               </a>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-indigo-400 flex-shrink-0" />
@@ -132,7 +133,7 @@ export default function Footer() {
                   required
                   aria-label={t.footer.emailAriaLabel}
                   disabled={subState === 'loading'}
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 disabled:opacity-60"
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500/30 disabled:opacity-60"
                 />
                 {subState === 'error' && (
                   <p className="text-red-400 text-xs" role="alert">{t.footer.subscribeError}</p>
@@ -140,7 +141,7 @@ export default function Footer() {
                 <button
                   type="submit"
                   disabled={subState === 'loading'}
-                  className="bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                  className="bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:outline-none"
                 >
                   {subState === 'loading' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {t.footer.subscribe}

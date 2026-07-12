@@ -32,8 +32,8 @@ export default function ProductGallery({ images, name }: Props) {
 
   if (images.length === 0) {
     return (
-      <div className="aspect-square bg-[#f5f5f7] rounded-3xl flex items-center justify-center">
-        <span className="text-6xl opacity-20">📦</span>
+      <div className="aspect-square bg-[#f5f5f7] rounded-3xl flex items-center justify-center" role="img" aria-label="Image indisponible">
+        <span className="text-6xl opacity-20" aria-hidden="true">📦</span>
       </div>
     )
   }
@@ -42,7 +42,7 @@ export default function ProductGallery({ images, name }: Props) {
     <>
       {/* Main image */}
       <div
-        className="relative aspect-square sm:aspect-[4/3] lg:aspect-square overflow-hidden bg-[#f5f5f7] rounded-2xl lg:rounded-3xl cursor-zoom-in"
+        className="relative aspect-square overflow-hidden bg-[#f5f5f7] rounded-2xl lg:rounded-3xl cursor-zoom-in"
         onClick={() => setZoomed(true)}
       >
         <Image
@@ -55,14 +55,14 @@ export default function ProductGallery({ images, name }: Props) {
           onError={() => markBroken(active)}
         />
         {broken.has(active) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f7]">
-            <span className="text-6xl opacity-20">📦</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f7]" role="img" aria-label="Image indisponible">
+            <span className="text-6xl opacity-20" aria-hidden="true">📦</span>
           </div>
         )}
 
-        {/* Zoom hint */}
-        <div className="absolute top-3 right-3 w-8 h-8 bg-white/70 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-          <ZoomIn className="w-4 h-4 text-[#1d1d1f]" />
+        {/* Zoom hint — always visible on touch, hover-only on desktop */}
+        <div className="absolute top-3 right-3 w-8 h-8 bg-white/70 backdrop-blur-sm rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:hover:opacity-100 transition-opacity pointer-events-none">
+          <ZoomIn className="w-4 h-4 text-[#1d1d1f]" aria-hidden="true" />
         </div>
 
         {/* Prev / Next */}
@@ -72,7 +72,7 @@ export default function ProductGallery({ images, name }: Props) {
               aria-label="Image précédente"
               onClick={e => { e.stopPropagation(); prev() }}
               disabled={active === 0}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm disabled:opacity-0 hover:bg-white transition-all duration-200"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm disabled:opacity-0 hover:bg-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
             >
               <ChevronLeft className="w-4 h-4 text-[#1d1d1f]" />
             </button>
@@ -80,7 +80,7 @@ export default function ProductGallery({ images, name }: Props) {
               aria-label="Image suivante"
               onClick={e => { e.stopPropagation(); next() }}
               disabled={active === images.length - 1}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm disabled:opacity-0 hover:bg-white transition-all duration-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm disabled:opacity-0 hover:bg-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
             >
               <ChevronRight className="w-4 h-4 text-[#1d1d1f]" />
             </button>
@@ -90,8 +90,10 @@ export default function ProductGallery({ images, name }: Props) {
               {images.map((_, i) => (
                 <button
                   key={i}
+                  aria-label={`Image ${i + 1}`}
+                  aria-current={i === active ? 'true' : undefined}
                   onClick={e => { e.stopPropagation(); setActive(i) }}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                  className={`h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
                     i === active ? 'w-6 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'
                   }`}
                 />
@@ -107,17 +109,19 @@ export default function ProductGallery({ images, name }: Props) {
           {images.map((img, i) => (
             <button
               key={i}
+              aria-label={`Afficher ${name} — photo ${i + 1}`}
+              aria-current={i === active ? 'true' : undefined}
               onClick={() => setActive(i)}
-              className={`flex-shrink-0 w-[72px] h-[72px] rounded-xl overflow-hidden bg-[#f5f5f7] transition-all duration-200 ${
+              className={`relative flex-shrink-0 w-[72px] h-[72px] rounded-xl overflow-hidden bg-[#f5f5f7] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                 i === active
                   ? 'ring-2 ring-[#1d1d1f] ring-offset-1'
                   : 'opacity-50 hover:opacity-80'
               }`}
             >
-              <Image src={img} alt={`${name} — photo ${i + 1}`} width={72} height={72} className="object-cover w-full h-full" onError={() => markBroken(i)} />
+              <Image src={img} alt="" width={72} height={72} className="object-cover w-full h-full" onError={() => markBroken(i)} />
               {broken.has(i) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f7]">
-                  <span className="text-2xl opacity-20">📦</span>
+                <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f7]" role="img" aria-label="Image indisponible">
+                  <span className="text-2xl opacity-20" aria-hidden="true">📦</span>
                 </div>
               )}
             </button>
@@ -139,7 +143,7 @@ export default function ProductGallery({ images, name }: Props) {
             ref={closeButtonRef}
             aria-label="Fermer"
             onClick={() => setZoomed(false)}
-            className="absolute top-5 right-5 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+            className="absolute top-5 right-5 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
             <X className="w-5 h-5 text-white" />
           </button>
@@ -150,7 +154,7 @@ export default function ProductGallery({ images, name }: Props) {
                 aria-label="Image précédente"
                 onClick={e => { e.stopPropagation(); prev() }}
                 disabled={active === 0}
-                className="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                className="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center disabled:opacity-20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
                 <ChevronLeft className="w-5 h-5 text-white" />
               </button>
@@ -158,7 +162,7 @@ export default function ProductGallery({ images, name }: Props) {
                 aria-label="Image suivante"
                 onClick={e => { e.stopPropagation(); next() }}
                 disabled={active === images.length - 1}
-                className="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                className="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center disabled:opacity-20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
                 <ChevronRight className="w-5 h-5 text-white" />
               </button>
@@ -178,8 +182,8 @@ export default function ProductGallery({ images, name }: Props) {
               onError={() => markBroken(active)}
             />
             {broken.has(active) && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-6xl opacity-20">📦</span>
+              <div className="absolute inset-0 flex items-center justify-center" role="img" aria-label="Image indisponible">
+                <span className="text-6xl opacity-20" aria-hidden="true">📦</span>
               </div>
             )}
           </div>

@@ -18,6 +18,21 @@ export default function CartSidebar() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
+  // Close cart on Escape and lock body scroll while open.
+  useEffect(() => {
+    if (!isOpen) return
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeCart()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = originalOverflow
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [isOpen, closeCart])
+
   // Don't render until client-side hydration is complete to avoid SSR mismatch
   if (!mounted) return null
 
@@ -25,29 +40,40 @@ export default function CartSidebar() {
     <>
       {/* Store-switch conflict modal */}
       {mounted && storeConflict && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={cancelStoreSwitch}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cart-conflict-title"
+            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <AlertTriangle className="w-5 h-5 text-amber-600" aria-hidden="true" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 mb-1">Panier d&apos;une autre boutique</h3>
+                <h2 id="cart-conflict-title" className="font-bold text-gray-900 mb-1">Panier d&apos;une autre boutique</h2>
                 <p className="text-sm text-gray-500">
                   Votre panier contient des articles d&apos;une autre boutique. Voulez-vous vider le panier et ajouter ce produit ?
                 </p>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button
+                type="button"
                 onClick={cancelStoreSwitch}
-                className="flex-1 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex-1 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               >
                 Annuler
               </button>
               <button
+                type="button"
                 onClick={confirmStoreSwitch}
-                className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+                className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               >
                 Vider et ajouter
               </button>
@@ -80,12 +106,13 @@ export default function CartSidebar() {
             <div>
               <h2 className="font-bold text-gray-900 leading-none">{t.cart.title}</h2>
               {cartStoreSlug && (
-                <a
+                <Link
                   href={`/store/${cartStoreSlug}`}
+                  onClick={closeCart}
                   className="text-[11px] text-indigo-500 font-medium hover:underline leading-none"
                 >
                   boutique/{cartStoreSlug}
-                </a>
+                </Link>
               )}
             </div>
             {count > 0 && (
@@ -94,8 +121,13 @@ export default function CartSidebar() {
               </span>
             )}
           </div>
-          <button onClick={closeCart} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
+          <button
+            type="button"
+            onClick={closeCart}
+            aria-label="Fermer le panier"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          >
+            <X className="w-5 h-5 text-gray-500" aria-hidden="true" />
           </button>
         </div>
 
@@ -104,8 +136,9 @@ export default function CartSidebar() {
             <ShoppingBag className="w-16 h-16 text-gray-200" />
             <p className="text-gray-500 font-medium">{t.cart.empty}</p>
             <button
+              type="button"
               onClick={closeCart}
-              className="text-indigo-600 font-semibold text-sm hover:underline"
+              className="text-indigo-600 font-semibold text-sm hover:underline rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               {t.cart.continueShopping}
             </button>
@@ -156,27 +189,30 @@ export default function CartSidebar() {
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
+                        type="button"
                         onClick={() => updateQuantity(product.id, quantity - 1, selectedColor)}
-                        className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
-                        aria-label="Decrease quantity"
+                        className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        aria-label="Diminuer la quantité"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3 h-3" aria-hidden="true" />
                       </button>
                       <span className="text-sm font-semibold w-6 text-center">{quantity}</span>
                       <button
+                        type="button"
                         onClick={() => updateQuantity(product.id, Math.min(product.stock, quantity + 1), selectedColor)}
                         disabled={quantity >= product.stock}
-                        className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-                        aria-label="Increase quantity"
+                        className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        aria-label="Augmenter la quantité"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3 h-3" aria-hidden="true" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => removeItem(product.id, selectedColor)}
-                        className="ms-auto w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        aria-label="Remove item"
+                        className="ms-auto w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                        aria-label="Retirer l'article"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -206,14 +242,14 @@ export default function CartSidebar() {
               <Link
                 href="/checkout"
                 onClick={closeCart}
-                className="block w-full bg-indigo-600 text-white text-center font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors"
+                className="block w-full bg-indigo-600 text-white text-center font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
               >
                 {t.cart.checkout}
               </Link>
               <Link
                 href="/cart"
                 onClick={closeCart}
-                className="block w-full text-center text-indigo-600 font-semibold text-sm hover:underline"
+                className="block w-full text-center text-indigo-600 font-semibold text-sm hover:underline rounded py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               >
                 {t.cart.viewFullCart}
               </Link>

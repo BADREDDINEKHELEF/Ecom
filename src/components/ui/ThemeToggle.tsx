@@ -35,10 +35,10 @@ export default function ThemeToggle() {
   if (!mounted) {
     return (
       <button
-        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         aria-label="Basculer le thème"
       >
-        <Moon className="w-4 h-4 text-gray-600" />
+        <Moon className="w-4 h-4 text-gray-600" aria-hidden="true" />
       </button>
     )
   }
@@ -47,13 +47,16 @@ export default function ThemeToggle() {
 
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={isDark}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
       aria-label="Basculer le thème"
     >
       {isDark
-        ? <Sun className="w-4 h-4 text-amber-500" />
-        : <Moon className="w-4 h-4 text-gray-600" />
+        ? <Sun className="w-4 h-4 text-amber-500" aria-hidden="true" />
+        : <Moon className="w-4 h-4 text-gray-600" aria-hidden="true" />
       }
     </button>
   )

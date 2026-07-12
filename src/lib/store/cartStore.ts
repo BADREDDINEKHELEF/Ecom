@@ -64,8 +64,12 @@ export const useCartStore = create<CartStore>()(
         const existing = state.items.find(
           (i) => i.product.id === product.id && i.selectedColor === selectedColor
         )
+        const sameProductTotal = state.items
+          .filter((i) => i.product.id === product.id)
+          .reduce((sum, i) => sum + i.quantity, 0)
         const requestedQty = existing ? existing.quantity + quantity : quantity
-        if (requestedQty > stock) return false
+        // Prevent the total quantity of the same product (across colours/variants) from exceeding stock
+        if (sameProductTotal + quantity > stock) return false
 
         set((s) => {
           if (existing) {

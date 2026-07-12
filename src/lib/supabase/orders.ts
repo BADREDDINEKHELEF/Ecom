@@ -205,6 +205,12 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     (products ?? []).map((p) => [p.id, { price: p.price, stock: p.stock, name: p.name, isActive: p.is_active, vendorId: p.vendor_id as string | null }])
   )
 
+  // Aggregate quantities per product (e.g. same product in different colours)
+  const quantityByProduct = new Map<string, number>()
+  for (const item of input.items) {
+    quantityByProduct.set(item.productId, (quantityByProduct.get(item.productId) ?? 0) + item.quantity)
+  }
+
   // ── 2. Validate and compute server-side subtotals ─────────────────
   let computedSubtotal = 0
   const validatedItems = input.items.map((item) => {
@@ -215,7 +221,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     if (product.isActive === false) {
       throw new Error(`Product "${product.name}" is no longer available`)
     }
-    if (product.stock < item.quantity) {
+    const totalRequested = quantityByProduct.get(item.productId) ?? item.quantity
+    if (product.stock < totalRequested) {
       throw new Error(`Insufficient stock for "${product.name}" (available: ${product.stock})`)
     }
     const subtotal = product.price * item.quantity
@@ -350,7 +357,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   // decrement_product_stocks reserves stock for all items in a single DB round-trip.
   // It returns per-item success/failure so we can roll back any successful
   // decrements if one item fails (e.g. last-unit race).
-  const stockItems = validatedItems.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+  const stockItems = Array.from(quantityByProduct.entries()).map(([productId, quantity]) => ({ productId, quantity }))
   const decrementedItems: Array<{ productId: string; quantity: number }> = []
 
   const { data: stockResult, error: stockErr } = await supabase.rpc('decrement_product_stocks', {

@@ -18,22 +18,25 @@ export default function Toaster() {
   if (toasts.length === 0) return null
 
   return (
-    <div className={`fixed bottom-5 ${isRTL ? 'left-5' : 'right-5'} z-[100] flex flex-col gap-2 pointer-events-none`}>
+    <div role="region" aria-label="Notifications" aria-live="polite" className={`fixed bottom-5 ${isRTL ? 'left-5' : 'right-5'} z-[100] flex flex-col gap-2 pointer-events-none`}>
       {toasts.map((toast) => (
         <div
           key={toast.id}
+          role={toast.type === 'error' ? 'alert' : 'status'}
           className={cn(
             'flex items-center gap-3 bg-white rounded-xl shadow-lg border px-4 py-3 min-w-[260px] max-w-sm pointer-events-auto animate-fade-in',
             toast.type === 'error' ? 'border-red-100' : toast.type === 'info' ? 'border-indigo-100' : 'border-green-100'
           )}
         >
-          {ICONS[toast.type]}
+          <span aria-hidden="true">{ICONS[toast.type]}</span>
           <p className="text-sm font-medium text-gray-800 flex-1">{toast.message}</p>
           <button
+            type="button"
+            aria-label="Fermer la notification"
             onClick={() => remove(toast.id)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors rounded p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
       ))}

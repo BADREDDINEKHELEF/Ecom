@@ -38,17 +38,17 @@ export default function BottomNav() {
       <div className="flex items-stretch h-14">
 
         {/* Home */}
-        <Link href="/" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+        <Link href="/" aria-current={isActive('/') ? 'page' : undefined} className="flex-1 flex flex-col items-center justify-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/30">
           <Home className={`w-5 h-5 transition-colors ${isActive('/') ? 'text-indigo-600' : 'text-gray-400'}`} />
-          <span className={`text-[10px] font-medium leading-none ${isActive('/') ? 'text-indigo-600' : 'text-gray-400'}`}>
+          <span className={`text-xs font-medium leading-none ${isActive('/') ? 'text-indigo-600' : 'text-gray-400'}`}>
             {t.nav.home}
           </span>
         </Link>
 
         {/* Track order */}
-        <Link href="/track" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+        <Link href="/track" aria-current={isActive('/track') ? 'page' : undefined} className="flex-1 flex flex-col items-center justify-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/30">
           <Package className={`w-5 h-5 transition-colors ${isActive('/track') ? 'text-indigo-600' : 'text-gray-400'}`} />
-          <span className={`text-[10px] font-medium leading-none ${isActive('/track') ? 'text-indigo-600' : 'text-gray-400'}`}>
+          <span className={`text-xs font-medium leading-none ${isActive('/track') ? 'text-indigo-600' : 'text-gray-400'}`}>
             {t.orders.title}
           </span>
         </Link>
@@ -57,7 +57,7 @@ export default function BottomNav() {
         <button
           onClick={() => toggleCart()}
           aria-label={`Panier${mounted && cartCount > 0 ? ` (${cartCount})` : ''}`}
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/30"
         >
           <div className="relative">
             <ShoppingCart className={`w-5 h-5 transition-colors ${isActive('/cart') ? 'text-indigo-600' : 'text-gray-400'}`} />
@@ -67,21 +67,21 @@ export default function BottomNav() {
               </span>
             )}
           </div>
-          <span className="text-[10px] font-medium leading-none text-gray-400">{t.nav.cart}</span>
+          <span className="text-xs font-medium leading-none text-gray-400">{t.nav.cart}</span>
         </button>
 
         {/* Seller dashboard */}
-        <Link href="/seller/dashboard" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+        <Link href="/seller/dashboard" aria-current={isActive('/seller') ? 'page' : undefined} className="flex-1 flex flex-col items-center justify-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/30">
           <Store className={`w-5 h-5 transition-colors ${isActive('/seller') ? 'text-indigo-600' : 'text-gray-400'}`} />
-          <span className={`text-[10px] font-medium leading-none ${isActive('/seller') ? 'text-indigo-600' : 'text-gray-400'}`}>
+          <span className={`text-xs font-medium leading-none ${isActive('/seller') ? 'text-indigo-600' : 'text-gray-400'}`}>
             {t.sellerDash.sellerDashboard}
           </span>
         </Link>
 
         {/* Profile */}
-        <Link href="/profile" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+        <Link href="/profile" aria-current={isActive('/profile') ? 'page' : undefined} className="flex-1 flex flex-col items-center justify-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/30">
           <User className={`w-5 h-5 transition-colors ${isActive('/profile') ? 'text-indigo-600' : 'text-gray-400'}`} />
-          <span className={`text-[10px] font-medium leading-none ${isActive('/profile') ? 'text-indigo-600' : 'text-gray-400'}`}>
+          <span className={`text-xs font-medium leading-none ${isActive('/profile') ? 'text-indigo-600' : 'text-gray-400'}`}>
             {t.nav.profile}
           </span>
         </Link>
