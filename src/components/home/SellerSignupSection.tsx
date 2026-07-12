@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Store, Mail, Lock, User, Phone, MapPin, Eye, EyeOff,
-  Loader2, CheckCircle, TrendingUp, Shield, Zap, Users,
+  Loader2, TrendingUp, Shield, Zap, Users,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { ALL_WILAYAS } from '@/lib/data/wilayas'
 import { useT } from '@/lib/store/langStore'
 
@@ -14,12 +14,20 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').slice(0, 40)
 }
 
+function buildQuery(form: Record<string, string>): string {
+  const params = new URLSearchParams()
+  Object.entries(form).forEach(([key, val]) => {
+    if (val) params.set(key, val)
+  })
+  return params.toString()
+}
+
 export default function SellerSignupSection() {
   const t = useT()
+  const router = useRouter()
   const [showPwd, setShowPwd]   = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const [done, setDone]         = useState(false)
   const [form, setForm] = useState({
     fullName: '', email: '', password: '',
     storeName: '', storeSlug: '', phone: '', wilaya: '',
@@ -41,42 +49,13 @@ export default function SellerSignupSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.storeName || !form.storeSlug) { setError(t.seller.storeNameRequired); return }
+    if (!form.email || !form.password) { setError(t.seller.registrationFailed); return }
     setLoading(true); setError('')
 
-    const supabase = createClient()
-    const { data: authData, error: signUpErr } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: { data: { full_name: form.fullName } },
-    })
-    if (signUpErr) { setError(signUpErr.message); setLoading(false); return }
-    if (!authData.user) { setError(t.seller.registrationFailed); setLoading(false); return }
-
-    try {
-      const res = await fetch('/api/seller/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_name: form.storeName,
-          store_slug: form.storeSlug,
-          phone:      form.phone || null,
-          wilaya:     form.wilaya || null,
-          description: null,
-          logo_url:   null,
-        }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? t.seller.registrationFailed)
-      }
-      setDone(true)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t.seller.registrationFailed
-      setError(msg.includes('duplicate') || msg.includes('unique') || msg.includes('déjà') ? t.seller.urlTaken : msg)
-      await supabase.auth.signOut()
-    } finally {
-      setLoading(false)
-    }
+    // The full seller registration requires email OTP verification. Redirect to
+    // the dedicated registration page, prefilling the data collected here.
+    const query = buildQuery(form)
+    router.push(`/seller/register${query ? `?${query}` : ''}`)
   }
 
   return (
@@ -128,21 +107,7 @@ export default function SellerSignupSection() {
 
           {/* Right — form */}
           <div className="bg-white rounded-3xl p-8 shadow-2xl">
-            {done ? (
-              <div className="text-center py-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="text-xl font-black text-gray-900 mb-2">{t.seller.storeCreated}</h3>
-                <p className="text-gray-500 text-sm mb-6">{t.seller.storeCreatedMsg}</p>
-                <Link href="/seller/login"
-                  className="block w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors text-center">
-                  {t.seller.goToLogin}
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
                     <Store className="w-5 h-5 text-white" />
                   </div>
@@ -259,8 +224,6 @@ export default function SellerSignupSection() {
                     {' · '}{t.seller.commissionNote}
                   </p>
                 </form>
-              </>
-            )}
           </div>
         </div>
       </div>

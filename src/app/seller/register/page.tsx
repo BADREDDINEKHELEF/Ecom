@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Mail, Lock, User, Store, Phone, MapPin, FileText,
   Eye, EyeOff, Loader2, CheckCircle, KeyRound, AlertCircle,
@@ -350,6 +351,7 @@ function normalizePhone(raw: string): string {
 export default function SellerRegisterPage() {
   const t = useT()
   const lang = useLang()
+  const searchParams = useSearchParams()
   const isRTL = lang === 'ar'
   const msgs = validationMsgs[lang] || validationMsgs.fr
   const hints = fieldHints[lang] || fieldHints.fr
@@ -367,6 +369,25 @@ export default function SellerRegisterPage() {
     wilaya: t.seller.wilayaLabel,
   }
 
+  // Prefill form from the homepage short signup form (or any external link).
+  const initialForm = useMemo(() => {
+    const normalize = (val: string | null) => {
+      if (!val) return ''
+      try { return decodeURIComponent(val) } catch { return val }
+    }
+    return {
+      fullName: normalize(searchParams.get('fullName')),
+      email: normalize(searchParams.get('email')),
+      password: '',
+      passwordConfirm: '',
+      storeName: normalize(searchParams.get('storeName')),
+      storeSlug: slugify(normalize(searchParams.get('storeSlug')) || normalize(searchParams.get('storeName'))),
+      phone: normalize(searchParams.get('phone')),
+      wilaya: normalize(searchParams.get('wilaya')),
+      description: '',
+    }
+  }, [searchParams])
+
   const [view, setView] = useState<View>('form')
   const [showPwd, setShowPwd] = useState(false)
   const [showPwdConfirm, setShowPwdConfirm] = useState(false)
@@ -379,10 +400,7 @@ export default function SellerRegisterPage() {
   const [slugStatus, setSlugStatus] = useState<SlugStatus>('idle')
   const slugCheckRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [form, setForm] = useState({
-    fullName: '', email: '', password: '', passwordConfirm: '',
-    storeName: '', storeSlug: '', phone: '', wilaya: '', description: '',
-  })
+  const [form, setForm] = useState(initialForm)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -494,6 +512,14 @@ export default function SellerRegisterPage() {
     const id = setTimeout(() => setResendSeconds((s) => s - 1), 1000)
     return () => clearTimeout(id)
   }, [resendSeconds])
+
+  // If the form was prefilled from the homepage, validate the slug availability.
+  useEffect(() => {
+    if (form.storeSlug) {
+      checkSlug(form.storeSlug)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

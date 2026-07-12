@@ -19,7 +19,9 @@ export default function DeliverySettingsPage() {
     yalidine_api_id:      '',
     yalidine_api_token:   '',
     procolis_token:       '',
+    procolis_key:         '',
     zr_token:             '',
+    zr_key:               '',
     maystro_token:        '',
     colivraison_token:    '',
     rex_token:            '',
@@ -55,7 +57,9 @@ export default function DeliverySettingsPage() {
             yalidine_api_id:      cfg.yalidine_api_id ?? '',
             yalidine_api_token:   cfg.yalidine_api_token ?? '',
             procolis_token:       cfg.procolis_token ?? '',
+            procolis_key:         cfg.procolis_key ?? '',
             zr_token:             cfg.zr_token ?? '',
+            zr_key:               cfg.zr_key ?? '',
             maystro_token:        cfg.maystro_token ?? '',
             colivraison_token:    cfg.colivraison_token ?? '',
             rex_token:            cfg.rex_token ?? '',
@@ -93,7 +97,9 @@ export default function DeliverySettingsPage() {
           yalidine_api_id:      form.yalidine_api_id || null,
           yalidine_api_token:   form.yalidine_api_token || null,
           procolis_token:       form.procolis_token || null,
+          procolis_key:         form.procolis_key || null,
           zr_token:             form.zr_token || null,
+          zr_key:               form.zr_key || null,
           maystro_token:        form.maystro_token || null,
           colivraison_token:    form.colivraison_token || null,
           rex_token:            form.rex_token || null,
@@ -316,13 +322,26 @@ export default function DeliverySettingsPage() {
                     <ExternalLink className="w-3 h-3" /> {a.openDashboard}
                   </a>
                 </p>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
-                <input type="password" value={form.procolis_token}
-                  onChange={(e) => setForm({ ...form, procolis_token: e.target.value })}
-                  placeholder="•¢•¢•¢•¢•¢•¢•¢•¢•¢•¢"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                {encNote}
-                {autoShipmentCheckbox}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
+                    <input type="password" value={form.procolis_token}
+                      onChange={(e) => setForm({ ...form, procolis_token: e.target.value })}
+                      placeholder="•¢•¢•¢•¢•¢•¢•¢•¢•¢•¢"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      API Key <span className="text-gray-400 font-normal">(clé Procolis)</span>
+                    </label>
+                    <input type="password" value={form.procolis_key}
+                      onChange={(e) => setForm({ ...form, procolis_key: e.target.value })}
+                      placeholder="•¢•¢•¢•¢•¢•¢•¢•¢•¢•¢"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                  </div>
+                  {encNote}
+                  {autoShipmentCheckbox}
+                </div>
               </div>
             )}
 
@@ -338,13 +357,26 @@ export default function DeliverySettingsPage() {
                     <ExternalLink className="w-3 h-3" /> {a.openDashboard}
                   </a>
                 </p>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
-                <input type="password" value={form.zr_token}
-                  onChange={(e) => setForm({ ...form, zr_token: e.target.value })}
-                  placeholder="•¢•¢•¢•¢•¢•¢•¢•¢•¢•¢"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
-                {encNote}
-                {autoShipmentCheckbox}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{a.tokenLabel}</label>
+                    <input type="password" value={form.zr_token}
+                      onChange={(e) => setForm({ ...form, zr_token: e.target.value })}
+                      placeholder="•¢•¢•¢•¢•¢•¢•¢•¢•¢•¢"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      API Key <span className="text-gray-400 font-normal">(clé — optionnelle)</span>
+                    </label>
+                    <input type="password" value={form.zr_key}
+                      onChange={(e) => setForm({ ...form, zr_key: e.target.value })}
+                      placeholder="•¢•¢•¢•¢•¢•¢•¢•¢•¢•¢"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 font-mono" />
+                  </div>
+                  {encNote}
+                  {autoShipmentCheckbox}
+                </div>
               </div>
             )}
 

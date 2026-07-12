@@ -96,10 +96,20 @@ export async function POST(req: NextRequest) {
       try {
         await sendOTPEmail(email, otp)
         logger.info('[send-email-otp] OTP sent', { email })
+        // In development, surface the OTP so testing works without a real email provider.
+        if (process.env.NODE_ENV === 'development') {
+          return NextResponse.json({ success: true, _devOtp: otp })
+        }
+        return NextResponse.json({ success: true })
       } catch (err) {
         const emailError = err instanceof Error ? `${err.message}\n${err.stack}` : String(err)
         logger.warn('[send-email-otp] email delivery failed', { error: emailError })
-        
+
+        // In development, still allow registration to proceed by returning the OTP.
+        if (process.env.NODE_ENV === 'development') {
+          return NextResponse.json({ success: true, _devOtp: otp, _emailError: emailError.slice(0, 120) })
+        }
+
         // Log to security_events table in Supabase so we can read it on Vercel
         await logSecurityFailure({
           actorType: 'system',
@@ -114,8 +124,6 @@ export async function POST(req: NextRequest) {
           { status: 503 },
         )
       }
-
-      return NextResponse.json({ success: true })
     } catch (err) {
       otpStoreErr = err instanceof Error ? err.message : String(err)
       logger.error('[send-email-otp] OTP storage failed', { error: otpStoreErr })

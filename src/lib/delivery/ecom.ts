@@ -209,7 +209,8 @@ export async function ecomListParcels(key: string, token: string, page = 1) {
 
 export async function ecomTrackList(trackingNumbers: string[], key: string, token: string) {
   try {
-    const res = await deliveryFetch(`${BASE_URL}/Colis/Liste`, {
+    // Docs specify /API_v1 (uppercase) for this endpoint.
+    const res = await deliveryFetch(`${BASE_URL.replace('/Api_v1', '/API_v1')}/Colis/Liste`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -260,22 +261,35 @@ export async function ecomGetRateWithToken(
   token: string
 ): Promise<{ homeDelivery: number; deskDelivery?: number } | null> {
   if (!isValidWilaya(wilayaName)) return null
-  try {
-    const url = `${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaName)}`
+
+  const tryFetch = async (wilayaParam: string): Promise<{ homeDelivery: number; deskDelivery?: number } | null> => {
+    const url = `${BASE_URL}/delivery-fees?wilaya=${encodeURIComponent(wilayaParam)}`
     const res = await deliveryFetch(url, {
       headers: authHeaders(key, token),
     })
 
     if (!res.ok) {
       const body = await res.text().catch(() => '')
-      logger.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaName}: status=${res.status} body=${body}`)
+      logger.warn(`[ecomGetRateWithToken] failed for wilaya=${wilayaParam}: status=${res.status} body=${body}`)
       return null
     }
 
     const data = await res.json()
     const row = findWilayaRow(data, wilayaName)
-    const rate = extractRates(row)
-    return rate
+    return extractRates(row)
+  }
+
+  try {
+    // Most carriers accept the wilaya name; try the numeric ID as a fallback.
+    const byName = await tryFetch(wilayaName)
+    if (byName) return byName
+
+    const wilayaId = wilayaNameToId(wilayaName)
+    if (wilayaId != null) {
+      const byId = await tryFetch(String(wilayaId))
+      if (byId) return byId
+    }
+    return null
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     logger.error(`[ecomGetRateWithToken] error for wilaya=${wilayaName}:`, { error: msg })
@@ -285,7 +299,8 @@ export async function ecomGetRateWithToken(
 
 export async function ecomTrack(trackingNumber: string, key: string, token: string) {
   try {
-    const res = await deliveryFetch(`${BASE_URL}/Colis/Tracking/${encodeURIComponent(trackingNumber)}`, {
+    // Docs specify /API_v1 (uppercase) for this endpoint.
+    const res = await deliveryFetch(`${BASE_URL.replace('/Api_v1', '/API_v1')}/Colis/Tracking/${encodeURIComponent(trackingNumber)}`, {
       headers: authHeaders(key, token),
     })
     if (!res.ok) return null

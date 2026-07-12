@@ -1,5 +1,6 @@
 import { ShipmentInput, ShipmentResult } from './types'
 import { DELIVERY_PROVIDERS } from './providers'
+import { WILAYA_DATA, ZONE_CONFIG } from '@/lib/data/wilayas'
 import { logger } from '@/lib/logger'
 import { yalidineCreateShipment, yalidineCreateShipmentWithCreds, yalidineConfigured, yalidineTrack, yalidineListParcels, yalidineGetRateWithCreds } from './yalidine'
 import { procolisCreateShipment, procolisCreateShipmentWithToken, procolisConfigured, procolisTrack, procolisListParcels, procolisGetRateWithToken } from './procolis'
@@ -8,7 +9,7 @@ import { colivraisonCreateShipment, colivraisonCreateShipmentWithToken, colivrai
 import { maystroCreateShipment, maystroCreateShipmentWithToken, maystroConfigured, maystroTrack, maystroListParcels } from './maystro'
 import { rexCreateShipment, rexCreateShipmentWithToken, rexConfigured, rexTrack, rexListParcels, rexGetRateWithToken } from './rex'
 import { yassirCreateShipment, yassirCreateShipmentWithKey, yassirConfigured, yassirTrack, yassirListParcels } from './yassir'
-import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels } from './ecom'
+import { ecomCreateShipment, ecomCreateShipmentWithToken, ecomConfigured, ecomTrack, ecomListParcels, ecomGetRateWithToken } from './ecom'
 import { apecCreateShipment, apecCreateShipmentWithCreds, apecConfigured, apecTrack, apecListParcels, apecGetRateWithCreds } from './apec'
 
 export interface DispatchResult extends ShipmentResult {
@@ -568,8 +569,18 @@ export async function dispatchGetRate(
         return r ? { ...r, provider } : null
       }
       case 'ecom': {
-        // Ecom-DZ does not expose a live rate endpoint — uses static pricing
-        return null
+        const key = tok(vendorCreds?.ecom_api_key, process.env.ECOM_API_KEY)
+        const tk = tok(vendorCreds?.ecom_api_token, process.env.ECOM_API_TOKEN)
+        if (!key || !tk) {
+          console.warn(`[dispatchGetRate] ecom: missing credentials`)
+          return null
+        }
+        // Try the live rate endpoint first; if Ecom does not expose one or it fails,
+        // fall back to the static zone pricing table so sellers can still get a quote.
+        const live = await ecomGetRateWithToken(wilayaName, key, tk)
+        if (live) return { ...live, provider }
+        const zone = WILAYA_DATA[wilayaName]?.zone ?? 3
+        return { provider, homeDelivery: ZONE_CONFIG[zone].cost }
       }
       // yassir: no rate endpoint — fall back to static
       default:

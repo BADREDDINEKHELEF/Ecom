@@ -9,7 +9,11 @@ import { dispatchGetRate } from '@/lib/delivery/dispatch'
 
 // Import specific carrier clients/calls
 import { yassirListParcels } from '@/lib/delivery/yassir'
-import { ecomListParcels } from '@/lib/delivery/ecom'
+import { ecomListParcels, ecomGetRateWithToken } from '@/lib/delivery/ecom'
+import { procolisListParcels } from '@/lib/delivery/procolis'
+import { zrListParcels } from '@/lib/delivery/zrexpress'
+import { maystroListParcels } from '@/lib/delivery/maystro'
+import { rexListParcels } from '@/lib/delivery/rex'
 
 // Import CAPI calls
 import { fireTikTokPurchase, fireGA4Purchase } from '@/lib/analytics/server'
@@ -95,15 +99,10 @@ export async function POST(req: NextRequest) {
           return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
-          const res = await fetch('https://www.zrexpress.dz/api/tarif/16', {
-            headers: { 'Authorization': `Token ${token}` },
-            signal: AbortSignal.timeout(10_000)
-          })
-          const ok = res.ok
-          const status = res.status
-          const resBody = await res.json().catch(() => ({}))
-          await recordResult(ok, { status, error: ok ? null : `ZR Express API returned HTTP ${status}` })
-          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
+          const res = await zrListParcels(token, config?.zr_key ?? undefined, 1)
+          const ok = res !== null
+          await recordResult(ok, { error: ok ? null : 'ZR connection failed' })
+          return copyCookies(response, NextResponse.json({ ok, raw: res }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
@@ -122,15 +121,10 @@ export async function POST(req: NextRequest) {
           return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
-          const res = await fetch('https://maystro-delivery.com/api/v1/shipping-prices/?wilaya=Alger', {
-            headers: { 'Authorization': `Bearer ${token}` },
-            signal: AbortSignal.timeout(10_000)
-          })
-          const ok = res.ok
-          const status = res.status
-          const resBody = await res.json().catch(() => ({}))
-          await recordResult(ok, { status, error: ok ? null : `Maystro API returned HTTP ${status}` })
-          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
+          const res = await maystroListParcels(token, 1)
+          const ok = res !== null
+          await recordResult(ok, { error: ok ? null : 'Maystro connection failed' })
+          return copyCookies(response, NextResponse.json({ ok, raw: res }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
@@ -144,20 +138,16 @@ export async function POST(req: NextRequest) {
 
       case 'procolis': {
         const token = config?.procolis_token
-        if (!token) {
+        const key = config?.procolis_key
+        if (!token || !key) {
           await saveIntegrationHealth(vendor.id, 'procolis', { health_status: 'needs_configuration' })
           return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
-          const res = await fetch('https://procolis.com/api_v2/tarif?Wilaya=Alger', {
-            headers: { 'Authorization': `Bearer ${token}` },
-            signal: AbortSignal.timeout(10_000)
-          })
-          const ok = res.ok
-          const status = res.status
-          const resBody = await res.json().catch(() => ({}))
-          await recordResult(ok, { status, error: ok ? null : `Procolis API returned HTTP ${status}` })
-          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
+          const res = await procolisListParcels(token, key, 1)
+          const ok = res !== null
+          await recordResult(ok, { error: ok ? null : 'Procolis connection failed' })
+          return copyCookies(response, NextResponse.json({ ok, raw: res }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
@@ -203,15 +193,10 @@ export async function POST(req: NextRequest) {
           return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
-          const res = await fetch('https://rexlivraison.com/api/v1/rates?wilaya=Alger', {
-            headers: { 'Authorization': `Bearer ${token}` },
-            signal: AbortSignal.timeout(10_000)
-          })
-          const ok = res.ok
-          const status = res.status
-          const resBody = await res.json().catch(() => ({}))
-          await recordResult(ok, { status, error: ok ? null : `Rex API returned HTTP ${status}` })
-          return copyCookies(response, NextResponse.json({ ok, status, raw: resBody }))
+          const res = await rexListParcels(token, 1)
+          const ok = res !== null
+          await recordResult(ok, { error: ok ? null : 'Rex connection failed' })
+          return copyCookies(response, NextResponse.json({ ok, raw: res }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
@@ -249,10 +234,19 @@ export async function POST(req: NextRequest) {
           return copyCookies(response, NextResponse.json({ ok: false, error: 'Credentials not configured' }, { status: 400 }))
         }
         if (action === 'test_connection') {
-          const parcels = await ecomListParcels(key, tk, 1)
-          const ok = parcels !== null
+          let raw: unknown = await ecomListParcels(key, tk, 1)
+          let ok = raw !== null
+          // The parcel-list endpoint may reject empty accounts; fall back to a
+          // lightweight rate lookup to confirm the credentials are valid.
+          if (!ok) {
+            const rateCheck = await ecomGetRateWithToken('Alger', key, tk)
+            if (rateCheck) {
+              ok = true
+              raw = rateCheck
+            }
+          }
           await recordResult(ok, { error: ok ? null : 'Ecom API connection failed' })
-          return copyCookies(response, NextResponse.json({ ok, raw: parcels }))
+          return copyCookies(response, NextResponse.json({ ok, raw }))
         }
         if (action === 'test_quote') {
           const wilaya = params?.wilaya || 'Alger'
