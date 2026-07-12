@@ -237,7 +237,7 @@ async function postHandler(req: NextRequest) {
       action: 'initiate_payment',
     })
     if (msg.includes('stock') || msg.includes('Insufficient')) {
-      return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 }))
+      return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.', detail: msg }, { status: 409 }))
     }
     if (msg.includes('not found') || msg.includes('not available') || msg.includes('no longer')) {
       return copyCookies(response, NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 }))

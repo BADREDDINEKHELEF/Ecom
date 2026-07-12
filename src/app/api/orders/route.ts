@@ -319,7 +319,7 @@ async function postHandler(req: NextRequest) {
     })
 
     if (message.includes('stock') || message.includes('Insufficient') || code === 'PGRST204') {
-      return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.' }, { status: 409 }))
+      return copyCookies(response, NextResponse.json({ error: 'One or more items are out of stock. Please update your cart.', detail: message }, { status: 409 }))
     }
     if (message.includes('not found') || message.includes('not available') || message.includes('no longer')) {
       return copyCookies(response, NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 }))
