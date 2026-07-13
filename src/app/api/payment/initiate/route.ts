@@ -13,11 +13,12 @@ import { computeCheckToken } from '@/lib/payment/checkToken'
 import { createRouteClient, copyCookies } from '@/lib/supabase/server'
 
 const OrderItemSchema = z.object({
-  productId:    z.string().min(1),
-  productName:  z.string().min(1).max(500),
-  productImage: z.string().max(1000).default(''),
-  quantity:     z.number().int().min(1).max(100),
-  vendorId:     z.string().uuid().nullable().optional(),
+  productId:     z.string().min(1),
+  productName:   z.string().min(1).max(500),
+  productImage:  z.string().max(1000).default(''),
+  quantity:      z.number().int().min(1).max(100),
+  vendorId:      z.string().uuid().nullable().optional(),
+  selectedColor: z.string().max(100).nullable().optional(),
 })
 
 const InitiateSchema = z.object({
@@ -137,6 +138,16 @@ async function postHandler(req: NextRequest) {
     })
     logger.setContext({ orderId })
 
+    // A duplicate idempotency key means the order was already created by a
+    // concurrent submission. Do not register a new gateway session and do not
+    // cancel the existing order on transient gateway errors.
+    if (isDuplicate) {
+      return copyCookies(response, NextResponse.json(
+        { error: 'Cette commande est déjà en cours de traitement.' },
+        { status: 409 }
+      ))
+    }
+
     // Use the server-computed total (DZD) returned by createOrder — never trust client amounts.
     // Satim expects centimes (DZD × 100).
     // NEXT_PUBLIC_APP_URL must be set — never fall back to the Host header, which is
@@ -241,6 +252,15 @@ async function postHandler(req: NextRequest) {
     }
     if (msg.includes('not found') || msg.includes('not available') || msg.includes('no longer')) {
       return copyCookies(response, NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 }))
+    }
+    if (msg.includes('Minimum order quantity')) {
+      return copyCookies(response, NextResponse.json({ error: 'La quantité minimum de commande n\'est pas atteinte.', detail: msg }, { status: 409 }))
+    }
+    if (msg.includes('Promo code already used')) {
+      return copyCookies(response, NextResponse.json({ error: 'Ce code promo a déjà été utilisé.' }, { status: 409 }))
+    }
+    if (msg.includes('Loyalty points redemption failed')) {
+      return copyCookies(response, NextResponse.json({ error: 'Échec de l\'utilisation des points de fidélité. Veuillez réessayer.' }, { status: 409 }))
     }
     return copyCookies(response, NextResponse.json({ error: 'Une erreur est survenue.' }, { status: 500 }))
   }

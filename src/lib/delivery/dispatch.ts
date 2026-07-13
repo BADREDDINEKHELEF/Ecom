@@ -580,7 +580,9 @@ export async function dispatchGetRate(
         const live = await ecomGetRateWithToken(wilayaName, key, tk)
         if (live) return { ...live, provider }
         const zone = WILAYA_DATA[wilayaName]?.zone ?? 3
-        return { provider, homeDelivery: ZONE_CONFIG[zone].cost }
+        const home = ZONE_CONFIG[zone].cost
+        const desk = Math.max(150, home - 200)
+        return { provider, homeDelivery: home, deskDelivery: desk }
       }
       // yassir: no rate endpoint — fall back to static
       default:

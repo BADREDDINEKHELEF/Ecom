@@ -8,6 +8,7 @@ import { getClientIp } from '@/lib/utils/ip'
 import { logger } from '@/lib/logger'
 import { sendOrderConfirmationEmail } from '@/lib/notifications/email'
 import { notifyOrderConfirmed } from '@/lib/notifications/whatsapp'
+import { createSellerNotification } from '@/lib/notifications/seller'
 import { recordFinancialTransaction } from '@/lib/supabase/orders'
 import { BaridiMobWebhookSchema } from '@/lib/validation/apiSchemas'
 import { triggerConversionsApiOnSuccess } from '@/lib/analytics/server'
@@ -180,6 +181,7 @@ export async function GET(req: NextRequest) {
 
     await satimConfirmOrder(satimId)
     await markOrderPaid(orderId, satimId, order)
+    void notifySellersOnPayment(orderId, order.total)
 
     if (order.email) {
       const { count } = await createAdminClient()
@@ -298,6 +300,32 @@ async function markOrderFailed(
   }
 }
 
+// Notify sellers of a newly-paid order (used by both Satim and BaridiMob callbacks).
+async function notifySellersOnPayment(orderId: string, total: number) {
+  try {
+    const supabase = createAdminClient()
+    const { data: itemRows } = await supabase
+      .from('order_items')
+      .select('vendor_id')
+      .eq('order_id', orderId)
+      .not('vendor_id', 'is', null)
+    const vendorIds = [...new Set((itemRows ?? []).map((r: { vendor_id: string }) => r.vendor_id).filter(Boolean))]
+    await Promise.all(
+      vendorIds.map((vid) =>
+        createSellerNotification({
+          vendorId: vid,
+          type: 'new_order',
+          title: 'Nouvelle commande reçue',
+          body: `Commande #${orderId.slice(0, 8).toUpperCase()} — ${total.toLocaleString('fr-DZ')} DA`,
+          link: '/seller/orders',
+        })
+      )
+    )
+  } catch (err) {
+    logger.error('[payment/callback] seller notification failed', { error: err instanceof Error ? err.message : String(err) })
+  }
+}
+
 // ── BaridiMob push webhook (POST) ────────────────────────────────────────────
 // BaridiMob sends a POST to /api/payment/callback with a JSON body containing
 // at minimum { payment_id, order_id }.  We authenticate via HMAC-SHA256 on the
@@ -408,6 +436,7 @@ export async function POST(req: NextRequest) {
 
     // Trigger non-blocking server-side CAPI event tracking
     void triggerConversionsApiOnSuccess(orderId)
+    void notifySellersOnPayment(orderId, order.total)
 
     await recordFinancialTransaction({
       orderId,

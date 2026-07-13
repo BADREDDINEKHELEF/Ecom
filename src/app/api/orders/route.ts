@@ -324,6 +324,9 @@ async function postHandler(req: NextRequest) {
     if (message.includes('not found') || message.includes('not available') || message.includes('no longer')) {
       return copyCookies(response, NextResponse.json({ error: 'One or more items are no longer available.' }, { status: 409 }))
     }
+    if (message.includes('Minimum order quantity')) {
+      return copyCookies(response, NextResponse.json({ error: 'La quantité minimum de commande n\'est pas atteinte.', detail: message }, { status: 409 }))
+    }
     if (message.includes('validate products') || message.includes('Product not found')) {
       return copyCookies(response, NextResponse.json({ error: 'Could not validate your cart. Please refresh and try again.' }, { status: 409 }))
     }

@@ -682,7 +682,7 @@ describe('Loyalty points — order-bound redemption', () => {
     const { resolve } = await import('path')
     const src = readFileSync(resolve(__dirname, '../lib/supabase/orders.ts'), 'utf-8')
     expect(src).toContain('Guests are not allowed to earn or redeem loyalty points')
-    expect(src).toContain('input.userId ? pointsRequested : 0')
+    expect(src).toContain('const pointsDeduction = input.userId ? Math.min(pointsRequested, maxPoints) : 0')
   })
 
   it('redeemPoints passes orderId to the order-bound RPC', async () => {

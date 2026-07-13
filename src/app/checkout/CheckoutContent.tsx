@@ -855,7 +855,12 @@ export default function CheckoutContent() {
                 <select
                   id={`commune-${baseId}`}
                   required={form.city !== '__autre__'}
-                  value={form.city === '__autre__' || !getCommunesForWilaya(form.wilaya).includes(form.city) && form.city ? '__autre__' : form.city}
+                  value={
+                    form.city === '__autre__' ||
+                    (!getCommunesForWilaya(form.wilaya).includes(form.city) && !!form.city)
+                      ? '__autre__'
+                      : (form.city || '')
+                  }
                   onChange={(e) => {
                     if (e.target.value === '__autre__') {
                       setCustomCommune('')

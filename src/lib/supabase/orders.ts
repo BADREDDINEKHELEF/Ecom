@@ -196,13 +196,20 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const productIds = input.items.map((i) => i.productId)
   const { data: products, error: priceErr } = await supabase
     .from('products')
-    .select('id, price, stock, name, is_active, vendor_id')
+    .select('id, price, stock, name, is_active, vendor_id, min_order_quantity')
     .in('id', productIds)
 
   if (priceErr) throw new Error('Could not validate products')
 
   const priceMap = new Map(
-    (products ?? []).map((p) => [p.id, { price: p.price, stock: p.stock, name: p.name, isActive: p.is_active, vendorId: p.vendor_id as string | null }])
+    (products ?? []).map((p) => [p.id, {
+      price: p.price,
+      stock: p.stock,
+      name: p.name,
+      isActive: p.is_active,
+      vendorId: p.vendor_id as string | null,
+      minOrderQuantity: (p.min_order_quantity as number | null | undefined) ?? 1,
+    }])
   )
 
   // Aggregate quantities per product (e.g. same product in different colours)
@@ -222,6 +229,10 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       throw new Error(`Product "${product.name}" is no longer available`)
     }
     const totalRequested = quantityByProduct.get(item.productId) ?? item.quantity
+    const moq = product.minOrderQuantity ?? 1
+    if (totalRequested < moq) {
+      throw new Error(`Minimum order quantity for "${product.name}" is ${moq}`)
+    }
     if (product.stock < totalRequested) {
       throw new Error(`Insufficient stock for "${product.name}" (available: ${product.stock})`)
     }
@@ -291,7 +302,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       }
 
       discountAmount = promo.discount_type === 'percentage'
-        ? Math.round((computedSubtotal * promo.discount_value) / 100)
+        ? Math.min(computedSubtotal, Math.round((computedSubtotal * promo.discount_value) / 100))
         : Math.min(promo.discount_value, computedSubtotal)
     }
   }
@@ -314,8 +325,10 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   // Guests are not allowed to earn or redeem loyalty points. If a guest payload
   // includes pointsRedeemed we ignore it instead of giving a discount they did not earn.
+  // Cap the deduction so users cannot burn more points than the order value.
   const pointsRequested = Math.max(0, input.pointsRedeemed ?? 0)
-  const pointsDeduction = input.userId ? pointsRequested : 0
+  const maxPoints = Math.max(0, computedSubtotal + shippingCost - discountAmount)
+  const pointsDeduction = input.userId ? Math.min(pointsRequested, maxPoints) : 0
   if (pointsRequested > 0 && !input.userId) {
     console.warn('[createOrder] guest checkout attempted points redemption — ignored')
   }
@@ -474,8 +487,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   if (orderErr) {
     // Idempotency: Postgres unique violation on idempotency_key (code 23505).
     // Look up the existing order and return it without touching stock or promos.
+    // Do NOT restoreStock() here — the existing order already holds the stock.
     if (orderErr.code === '23505' && input.idempotencyKey) {
-      await restoreStock()
       const { data: existing } = await supabase
         .from('orders')
         .select('id, total')
