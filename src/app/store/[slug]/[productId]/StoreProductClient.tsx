@@ -31,13 +31,20 @@ const WA_SVG_SM = (
 
 export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName, storeSlug }: Props) {
   const addItem = useCartStore(s => s.addItem)
+  const cartItems = useCartStore(s => s.items)
   const t  = useT()
   const ts = t.store
   const tp = t.product
   const [qty,           setQty]           = useState(1)
   const [added,         setAdded]         = useState(false)
+  const [addError,      setAddError]      = useState('')
   const [visible,       setVisible]       = useState(false)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
+
+  const sameProductCartQty = cartItems
+    .filter((i) => i.product.id === product.id)
+    .reduce((sum, i) => sum + i.quantity, 0)
+  const maxSelectableQty = Math.max(1, (product.stock ?? 0) - sameProductCartQty)
 
   useEffect(() => {
     const handler = () => setVisible(window.scrollY > 300)
@@ -54,9 +61,23 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
     return () => window.removeEventListener('productColorChanged', handler)
   }, [])
 
+  // Clear add-to-cart error when the user changes quantity or colour.
+  useEffect(() => {
+    setAddError('')
+  }, [qty, selectedColor])
+
   const handleAdd = () => {
+    setAddError('')
     const ok = addItem(product, qty, selectedColor ?? undefined, storeSlug)
-    if (!ok) return // store conflict modal shown by CartSidebar
+    if (!ok) {
+      // Store conflict is handled by the CartSidebar modal. Because React state
+      // updates are async, read the store directly to know the failure reason.
+      const conflict = useCartStore.getState().storeConflict
+      if (!conflict) {
+        setAddError(tp.stockLimitReached ?? 'Quantité maximale atteinte')
+      }
+      return
+    }
     trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: qty })
     const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
     if (metaPixelId) {
@@ -136,9 +157,10 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
           </button>
           <span className="w-10 text-center text-sm font-bold text-[#1d1d1f] tabular-nums">{qty}</span>
           <button
-            onClick={() => setQty(q => Math.min(product.stock, q + 1))}
+            onClick={() => setQty(q => Math.min(maxSelectableQty, q + 1))}
+            disabled={qty >= maxSelectableQty}
             aria-label={ts.increaseQty ?? 'Augmenter la quantité'}
-            className="w-10 h-10 flex items-center justify-center text-[#1d1d1f] hover:bg-[#e8e8ed] transition-colors"
+            className="w-10 h-10 flex items-center justify-center text-[#1d1d1f] hover:bg-[#e8e8ed] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -177,6 +199,9 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
           <><ShoppingCart className="w-4 h-4" /> {tp.addToCart}</>
         )}
       </button>
+      {addError && (
+        <p className="text-xs text-red-600 font-medium -mt-2">{addError}</p>
+      )}
 
       {/* ── Mobile sticky bottom bar — slides up on scroll ──────────── */}
       <div

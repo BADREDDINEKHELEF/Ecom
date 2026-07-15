@@ -29,10 +29,15 @@ function rowToConfig(row: VendorRow | null): StoreMetaConfig | null {
   if (!row || !row.id) return null
   const pixelId     = row.meta_pixel_id   ? String(row.meta_pixel_id)  : null
   const accessToken = row.meta_capi_token ? String(row.meta_capi_token) : null
-  // The vendors table only has meta_pixel_id and meta_capi_token columns.
-  // Treat a vendor as enabled when they have configured a pixel ID, unless
-  // an explicit meta_enabled flag is present and set to false.
-  const enabled = pixelId ? (row.meta_enabled !== false) : false
+  // The vendors table has a meta_enabled kill-switch, but it defaults to false
+  // and there is currently no seller-facing toggle. A store that has taken the
+  // trouble to configure both a Pixel ID and a CAPI token should be considered
+  // active. The meta_enabled flag is still honoured when explicitly true/false
+  // for admin-level overrides once a toggle is exposed.
+  const hasCredentials = Boolean(pixelId) && Boolean(accessToken)
+  const adminEnabled = row.meta_enabled === true
+  const adminDisabled = row.meta_enabled === false
+  const enabled = adminEnabled || (!adminDisabled && hasCredentials)
   return {
     storeId:       String(row.id),
     storeSlug:     String(row.store_slug ?? ''),

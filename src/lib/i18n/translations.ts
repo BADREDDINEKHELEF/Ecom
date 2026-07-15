@@ -22,6 +22,7 @@ export const translations = {
     },
     product: {
       addToCart: 'Add to Cart', added: 'Added!', outOfStock: 'Out of Stock',
+      stockLimitReached: 'Maximum quantity reached',
       onlyLeft: 'Only {n} left', freeShipping: 'Free delivery on orders over 5,000 DZD',
       deliveryTime: 'Delivered in 2–5 business days across Algeria',
       orderWhatsApp: 'Order via WhatsApp', quantity: 'Quantity',
@@ -665,6 +666,7 @@ export const translations = {
     },
     product: {
       addToCart: 'Ajouter au panier', added: 'Ajouté !', outOfStock: 'Rupture de stock',
+      stockLimitReached: 'Quantité maximale atteinte',
       onlyLeft: 'Seulement {n} restants', freeShipping: 'Livraison gratuite dès 5 000 DA',
       deliveryTime: 'Livré en 2–5 jours ouvrables partout en Algérie',
       orderWhatsApp: 'Commander via WhatsApp', quantity: 'Quantité',
@@ -1308,6 +1310,7 @@ export const translations = {
     },
     product: {
       addToCart: 'أضف للسلة', added: 'تمت الإضافة!', outOfStock: 'غير متوفر',
+      stockLimitReached: 'تم الوصول إلى الحد الأقصى للكمية',
       onlyLeft: 'متبقي {n} فقط', freeShipping: 'توصيل مجاني للطلبات فوق 5,000 دج',
       deliveryTime: 'التوصيل خلال 2–5 أيام عمل في جميع أنحاء الجزائر',
       orderWhatsApp: 'اطلب عبر واتساب', quantity: 'الكمية',

@@ -117,17 +117,27 @@ export const useCartStore = create<CartStore>()(
           get().removeItem(productId, selectedColor)
           return
         }
-        set((s) => {
-          const item = s.items.find(i => i.product.id === productId && i.selectedColor === selectedColor)
-          const maxQty = item?.product?.stock ?? quantity
-          return {
-            items: s.items.map((i) =>
-              i.product.id === productId && i.selectedColor === selectedColor
-                ? { ...i, quantity: Math.min(quantity, maxQty) }
-                : i
-            ),
-          }
-        })
+        const item = get().items.find(i => i.product.id === productId && i.selectedColor === selectedColor)
+        if (!item) return
+        const stock = item.product.stock ?? Infinity
+        // Prevent the total quantity of the same product (across colours/variants)
+        // from exceeding stock when the user increases one variant.
+        const otherQty = get().items
+          .filter((i) => i.product.id === productId && i.selectedColor !== selectedColor)
+          .reduce((sum, i) => sum + i.quantity, 0)
+        const maxAllowed = Math.max(0, stock - otherQty)
+        const newQty = Math.min(quantity, maxAllowed)
+        if (newQty <= 0) {
+          get().removeItem(productId, selectedColor)
+          return
+        }
+        set((s) => ({
+          items: s.items.map((i) =>
+            i.product.id === productId && i.selectedColor === selectedColor
+              ? { ...i, quantity: newQty }
+              : i
+          ),
+        }))
       },
 
       clearCart: () => set({ items: [], cartStoreSlug: null, storeConflict: null }),

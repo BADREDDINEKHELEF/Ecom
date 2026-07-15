@@ -150,6 +150,10 @@ export default function CartSidebar() {
                 const variant = selectedColor ? (product.colorVariants ?? []).find(v => v.name === selectedColor) : null
                 const colorIdx = !variant && selectedColor ? (product.imageColors ?? []).indexOf(selectedColor) : -1
                 const displayImg = variant?.images?.[0] ?? (colorIdx !== -1 ? product.images[colorIdx] : product.images?.[0])
+                const otherQty = items
+                  .filter((i) => i.product.id === product.id && i.selectedColor !== selectedColor)
+                  .reduce((sum, i) => sum + i.quantity, 0)
+                const maxForThisVariant = Math.max(0, (product.stock ?? 0) - otherQty)
                 return (
                 <div key={`${product.id}-${selectedColor ?? ''}`} className="flex gap-3">
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
@@ -199,8 +203,8 @@ export default function CartSidebar() {
                       <span className="text-sm font-semibold w-6 text-center">{quantity}</span>
                       <button
                         type="button"
-                        onClick={() => updateQuantity(product.id, Math.min(product.stock, quantity + 1), selectedColor)}
-                        disabled={quantity >= product.stock}
+                        onClick={() => updateQuantity(product.id, Math.min(maxForThisVariant, quantity + 1), selectedColor)}
+                        disabled={quantity >= maxForThisVariant || maxForThisVariant <= 0}
                         className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                         aria-label="Augmenter la quantité"
                       >
