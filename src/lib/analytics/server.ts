@@ -136,7 +136,10 @@ function decryptCred(v: string | null | undefined): string | null {
  * Loads order details and involved vendor configs, then fires purchase conversion events
  * to Meta CAPI, TikTok CAPI, and Google GA4 MP for both the platform and individual vendors.
  */
-export async function triggerConversionsApiOnSuccess(orderId: string): Promise<void> {
+export async function triggerConversionsApiOnSuccess(
+  orderId: string,
+  cookies?: { fbp?: string | null; fbc?: string | null }
+): Promise<void> {
   try {
     const supabase = createAdminClient()
     const { data: order, error: orderErr } = await supabase
@@ -175,6 +178,8 @@ export async function triggerConversionsApiOnSuccess(orderId: string): Promise<v
           email: buyerEmail, phone: order.phone,
           clientIp, clientUserAgent,
           eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+          fbp: cookies?.fbp || null,
+          fbc: cookies?.fbc || null,
         },
         {
           contentIds: items.map(i => i.product_id),
@@ -214,6 +219,8 @@ export async function triggerConversionsApiOnSuccess(orderId: string): Promise<v
             email: buyerEmail, phone: order.phone,
             clientIp, clientUserAgent,
             eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+            fbp: cookies?.fbp || null,
+            fbc: cookies?.fbc || null,
           },
           purchaseMeta,
         ).catch((err) => logger.error('[analytics/server/capi] multi-store Meta CAPI failed', { error: err instanceof Error ? err.message : String(err) }))

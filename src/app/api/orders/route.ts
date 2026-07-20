@@ -209,6 +209,8 @@ async function postHandler(req: NextRequest) {
               clientIp: ip,
               clientUserAgent: req.headers.get('user-agent') ?? undefined,
               eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+              fbp: req.cookies.get('_fbp')?.value || null,
+              fbc: req.cookies.get('_fbc')?.value || null,
             },
             purchaseMeta,
           )
@@ -259,6 +261,8 @@ async function postHandler(req: NextRequest) {
           clientIp: ip,
           clientUserAgent: req.headers.get('user-agent') ?? undefined,
           eventSourceUrl: appUrl ? `${appUrl}/checkout` : undefined,
+          fbp: req.cookies.get('_fbp')?.value || null,
+          fbc: req.cookies.get('_fbc')?.value || null,
         },
         {
           contentIds: input.items.map(i => i.productId),

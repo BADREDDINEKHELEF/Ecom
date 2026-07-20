@@ -14,18 +14,9 @@ export function sha256(value: string): string {
   return crypto.createHash('sha256').update(value.trim().toLowerCase()).digest('hex')
 }
 
-// ── Normalization ──────────────────────────────────────────────────────
+import { normalizePhone, normalizeEmail } from './normalize'
 
-export function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.startsWith('213')) return digits
-  if (digits.startsWith('0')) return '213' + digits.slice(1)
-  return digits
-}
-
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase()
-}
+export { normalizePhone, normalizeEmail }
 
 export function anonymizeIp(ip: string): string {
   // Return raw IP to maximize Meta CAPI / TikTok match keys in production.

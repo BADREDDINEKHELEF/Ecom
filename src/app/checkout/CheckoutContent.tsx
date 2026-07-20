@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useMemo, useEffect, useRef, useId } from 'react'
 import dynamic from 'next/dynamic'
@@ -111,7 +111,7 @@ export default function CheckoutContent() {
             gtagId: data.gtag_id,
             tiktokPixelId: data.tiktok_pixel_id,
             pixelId: data.pixel_id,
-            metaEnabled: data.meta_enabled !== false,
+            metaEnabled: !!data.meta_pixel_id,
             metaTestEventCode: data.meta_test_event_code,
           })
         }

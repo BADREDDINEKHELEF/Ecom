@@ -222,7 +222,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Trigger non-blocking server-side CAPI event tracking
-    void triggerConversionsApiOnSuccess(orderId)
+    const fbp = req.cookies?.get('_fbp')?.value || null
+    const fbc = req.cookies?.get('_fbc')?.value || null
+    void triggerConversionsApiOnSuccess(orderId, { fbp, fbc })
 
     return NextResponse.redirect(`${appUrl}/payment/success?orderId=${orderId}`)
   } catch (err) {

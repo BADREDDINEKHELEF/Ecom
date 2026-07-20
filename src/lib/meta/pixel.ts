@@ -36,22 +36,38 @@ function _fbq(...args: unknown[]) {
 
 // ── Pixel singleton tracker ────────────────────────────────────────────
 const initializedPixels = new Set<string>()
+const initializedWithUserData = new Set<string>()
 
 /**
- * Initialize a Meta Pixel for a store.
- * Safe to call multiple times — only initializes once per pixel ID.
+ * Initialize a Meta Pixel for a store, optionally with advanced matching user data.
+ * Safe to call multiple times.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function initMetaPixel(pixelId: string, _testEventCode?: string | null): void {
+export function initMetaPixel(
+  pixelId: string,
+  _testEventCode?: string | null,
+  userData?: { em?: string | null; ph?: string | null } | null
+): void {
   if (typeof window === 'undefined') return
-  if (initializedPixels.has(pixelId)) return
 
-  // testEventCode is NOT a valid fbq('init') parameter — it must be passed
-  // on individual fbq('track') calls. Passing it here is silently ignored by
-  // the Meta Pixel SDK. The parameter is kept in the signature for backwards
-  // compatibility but is intentionally unused here.
-  _fbq('init', pixelId)
-  initializedPixels.add(pixelId)
+  const hasUserData = userData?.em || userData?.ph
+
+  if (hasUserData) {
+    // If already initialized with user data, don't re-initialize
+    if (initializedWithUserData.has(pixelId)) return
+
+    _fbq('init', pixelId, {
+      ...(userData.em && { em: userData.em }),
+      ...(userData.ph && { ph: userData.ph }),
+    })
+    initializedPixels.add(pixelId)
+    initializedWithUserData.add(pixelId)
+  } else {
+    // If already initialized (with or without user data), don't overwrite it with a blank init
+    if (initializedPixels.has(pixelId)) return
+
+    _fbq('init', pixelId)
+    initializedPixels.add(pixelId)
+  }
 }
 
 /**
@@ -59,6 +75,7 @@ export function initMetaPixel(pixelId: string, _testEventCode?: string | null): 
  */
 export function resetPixels(): void {
   initializedPixels.clear()
+  initializedWithUserData.clear()
 }
 
 // ── Event tracking ─────────────────────────────────────────────────────

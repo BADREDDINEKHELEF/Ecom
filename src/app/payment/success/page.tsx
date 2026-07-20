@@ -85,7 +85,7 @@ function SuccessContent() {
               gtagId: vendorData.gtag_id,
               tiktokPixelId: vendorData.tiktok_pixel_id,
               pixelId: vendorData.pixel_id,
-              metaEnabled: vendorData.meta_enabled !== false,
+              metaEnabled: !!vendorData.meta_pixel_id,
               metaTestEventCode: vendorData.meta_test_event_code,
             })
           }

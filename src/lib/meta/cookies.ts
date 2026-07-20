@@ -7,8 +7,8 @@
  * https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc
  */
 
-const FBP_REGEX = /^fb\.1\.\d+\.\d+$/
-const FBC_REGEX = /^fb\.1\.\d+\.[\w-]+$/
+const FBP_REGEX = /^fb\.\d+\.\d+\.\d+$/
+const FBC_REGEX = /^fb\.\d+\.\d+\.[\w-]+$/
 
 /**
  * Read the _fbp cookie from the browser.
