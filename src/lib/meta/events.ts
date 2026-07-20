@@ -23,7 +23,6 @@ import type {
 } from './types'
 
 import { initMetaPixel } from './pixel'
-import { normalizePhone } from './normalize'
 import {
   trackPageView as pixelPageView,
   trackViewContent as pixelViewContent,
@@ -47,13 +46,13 @@ export interface MetaUserDataInput {
 export function initializeMeta(config: StoreMetaConfig, userData?: MetaUserDataInput): void {
   if (typeof window === 'undefined') return
   if (!config.enabled || !config.pixelId) return
-  
   if (userData?.em || userData?.ph) {
-    const cleanUserData = {
-      em: userData.em ? userData.em.trim().toLowerCase() : null,
-      ph: userData.ph ? normalizePhone(userData.ph) : null,
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('init', config.pixelId, {
+        ...(userData.em && { em: userData.em.trim().toLowerCase() }),
+        ...(userData.ph && { ph: userData.ph.replace(/\D/g, '') }),
+      })
     }
-    initMetaPixel(config.pixelId, config.testEventCode, cleanUserData)
   } else {
     initMetaPixel(config.pixelId, config.testEventCode)
   }

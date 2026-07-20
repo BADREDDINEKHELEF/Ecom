@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
@@ -304,7 +304,7 @@ export default function SellerProductsPage() {
         comparePrice: form.comparePrice || undefined,
         images: form.images,
         imageColors: form.imageColors.filter(Boolean).length ? form.imageColors : undefined,
-        stock: form.stock,
+        stock: form.hasVariants ? variants.reduce((sum, v) => sum + (v.stock || 0), 0) : form.stock,
         tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean),
         isNew: form.isNew,
         isFeatured: form.isFeatured,
