@@ -1,6 +1,8 @@
-import { createAdminClient } from '../../../src/lib/supabase/admin'
+import { loadEnvConfig } from '@next/env'
+loadEnvConfig(process.cwd())
 
 async function run() {
+  const { createAdminClient } = await import('../../../src/lib/supabase/admin')
   const supabase = createAdminClient()
 
   const { data: vendors, error } = await supabase

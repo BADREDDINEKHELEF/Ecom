@@ -217,8 +217,13 @@ export async function fireStorePurchaseCAPI(
   purchaseMeta?: { contentIds?: string[]; numItems?: number },
 ): Promise<CAPIResult> {
   if (!config.enabled || !config.pixelId || !config.accessToken) {
-    log('Skipped — store not configured', { storeId: config.storeId, storeSlug: config.storeSlug })
-    return { ok: false, status: 0, message: 'Store not configured for Meta CAPI' }
+    const reasons = []
+    if (!config.enabled) reasons.push('enabled is false')
+    if (!config.pixelId) reasons.push('pixelId is missing')
+    if (!config.accessToken) reasons.push('accessToken is missing')
+    const detail = reasons.join(', ')
+    log('Skipped — store not configured', { storeId: config.storeId, storeSlug: config.storeSlug, detail })
+    return { ok: false, status: 0, message: `Store not configured for Meta CAPI (${detail})` }
   }
 
   // Validate token scope in background (lazy, logged as warning if scope missing)
