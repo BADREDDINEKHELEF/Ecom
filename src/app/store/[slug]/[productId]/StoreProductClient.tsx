@@ -15,6 +15,11 @@ interface Props {
   vendorWhatsApp?: string | null
   storeName: string
   storeSlug: string
+  vendorPixelConfig?: {
+    pixelId: string | null
+    testEventCode: string | null
+    enabled: boolean
+  } | null
 }
 
 const WA_SVG = (
@@ -29,7 +34,7 @@ const WA_SVG_SM = (
   </svg>
 )
 
-export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName, storeSlug }: Props) {
+export default function StoreProductClient({ product, accent, vendorWhatsApp, storeName, storeSlug, vendorPixelConfig }: Props) {
   const addItem = useCartStore(s => s.addItem)
   const cartItems = useCartStore(s => s.items)
   const t  = useT()
@@ -88,6 +93,28 @@ export default function StoreProductClient({ product, accent, vendorWhatsApp, st
           pixelId:       metaPixelId,
           accessToken:   null,
           testEventCode: null,
+          datasetId:     null,
+          enabled:       true,
+        },
+        {
+          content_ids:  [product.id],
+          content_name: product.name,
+          content_type: 'product',
+          value:        product.price * qty,
+          currency:     'DZD',
+          contents:     [{ id: product.id, quantity: qty, price: product.price }],
+        },
+      )
+    }
+
+    if (vendorPixelConfig?.enabled && vendorPixelConfig.pixelId) {
+      trackMetaAddToCart(
+        {
+          storeId:       '__vendor__',
+          storeSlug:     '',
+          pixelId:       vendorPixelConfig.pixelId,
+          accessToken:   null,
+          testEventCode: vendorPixelConfig.testEventCode,
           datasetId:     null,
           enabled:       true,
         },

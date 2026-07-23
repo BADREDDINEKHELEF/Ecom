@@ -20,8 +20,8 @@ const WebhookSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const secret = searchParams.get('secret')
+    const authHeader = req.headers.get('authorization')
+    const secret = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
     const expected = process.env.ECOM_WEBHOOK_SECRET
 
     if (!expected) {

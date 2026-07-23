@@ -34,6 +34,9 @@ export const metadata: Metadata = {
     description: 'Créez votre boutique en ligne en Algérie. Livraison vers les 58 wilayas. 0% de commission.',
     images: ['/og-default.png'],
   },
+  other: {
+    ...(process.env.NEXT_PUBLIC_FB_APP_ID && { 'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID }),
+  },
 }
 
 export const viewport = {

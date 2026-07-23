@@ -6,9 +6,14 @@ import { trackViewContent as trackMetaViewContent } from '@/lib/meta/events'
 
 interface Props {
   product: { id: string; name: string; price: number }
+  vendorPixelConfig?: {
+    pixelId: string | null
+    testEventCode: string | null
+    enabled: boolean
+  } | null
 }
 
-export default function TrackViewContent({ product }: Props) {
+export default function TrackViewContent({ product, vendorPixelConfig }: Props) {
   useEffect(() => {
     trackViewContent(product)
 
@@ -21,6 +26,28 @@ export default function TrackViewContent({ product }: Props) {
           pixelId,
           accessToken:   null,
           testEventCode: null,
+          datasetId:     null,
+          enabled:       true,
+        },
+        {
+          content_ids:  [product.id],
+          content_name: product.name,
+          content_type: 'product',
+          value:        product.price,
+          currency:     'DZD',
+          contents:     [{ id: product.id, quantity: 1, price: product.price }],
+        },
+      )
+    }
+
+    if (vendorPixelConfig?.enabled && vendorPixelConfig.pixelId) {
+      trackMetaViewContent(
+        {
+          storeId:       '__vendor__',
+          storeSlug:     '',
+          pixelId:       vendorPixelConfig.pixelId,
+          accessToken:   null,
+          testEventCode: vendorPixelConfig.testEventCode,
           datasetId:     null,
           enabled:       true,
         },

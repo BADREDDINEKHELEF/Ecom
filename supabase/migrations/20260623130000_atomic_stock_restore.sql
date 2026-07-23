@@ -14,7 +14,7 @@ BEGIN
   LOOP
     UPDATE public.products
     SET    stock = stock + (item->>'quantity')::INT
-    WHERE  id   = (item->>'productId')::UUID;
+    WHERE  id   = (item->>'productId')::TEXT;
   END LOOP;
 END;
 $$;

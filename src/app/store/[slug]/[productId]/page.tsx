@@ -64,7 +64,8 @@ export async function generateMetadata({ params }: PageProps) {
     }
     const firstImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null
     const validOgImage = typeof firstImage === 'string' && /^https?:\/\//i.test(firstImage) ? firstImage : null
-    const description = product.meta_description ?? (typeof product.description === 'string' ? product.description.slice(0, 160) : product.name)
+    const rawDesc = product.meta_description?.trim() || product.description?.trim() || product.name || ''
+    const description = rawDesc.slice(0, 160)
     return {
       title: product.meta_title ?? `${product.name} — ${vendor.store_name}`,
       description,
@@ -78,6 +79,11 @@ export async function generateMetadata({ params }: PageProps) {
         siteName: 'StoreDz',
         images: validOgImage ? [{ url: validOgImage, alt: product.name }] : [],
       },
+      ...(process.env.NEXT_PUBLIC_FB_APP_ID && {
+        other: {
+          'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID,
+        },
+      }),
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -116,6 +122,12 @@ export default async function StoreProductPage({ params }: PageProps) {
   const accent         = v.accent_color ?? '#4f46e5'
   const vendorWhatsApp = v.social_whatsapp || v.phone || null
 
+  const vendorPixelConfig = v.meta_pixel_id ? {
+    pixelId:       v.meta_pixel_id,
+    testEventCode: v.meta_test_event_code ?? null,
+    enabled:       v.meta_enabled !== false,
+  } : null
+
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
     ? Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)
@@ -129,12 +141,14 @@ export default async function StoreProductPage({ params }: PageProps) {
     : 'https://schema.org/OutOfStock'
 
   const productJsonLd = {
-    '@context': 'https://schema.org',
-    '@type':    'Product',
-    name:        product.name,
-    description: product.description ?? product.name,
-    image:       product.images,
-    url:         canonicalUrl,
+    '@context':  'https://schema.org',
+    '@type':     'Product',
+    name:         product.name,
+    description:  product.description ?? product.name,
+    image:        product.images,
+    url:          canonicalUrl,
+    sku:          product.id,
+    productID:    product.id,
     brand: {
       '@type': 'Brand',
       name:     vendor.store_name,
@@ -145,6 +159,7 @@ export default async function StoreProductPage({ params }: PageProps) {
       priceCurrency:  'DZD',
       availability,
       url:             canonicalUrl,
+      sku:             product.id,
     },
     ...(product.rating > 0 && {
       aggregateRating: {
@@ -324,7 +339,10 @@ export default async function StoreProductPage({ params }: PageProps) {
             <div className="h-px bg-[#f5f5f7]" />
 
             {/* Analytics: fires ViewContent once on mount */}
-            <TrackViewContent product={{ id: product.id, name: product.name, price: product.price }} />
+            <TrackViewContent
+              product={{ id: product.id, name: product.name, price: product.price }}
+              vendorPixelConfig={vendorPixelConfig}
+            />
 
             {/* CTA buttons */}
             <StoreProductClient
@@ -333,6 +351,7 @@ export default async function StoreProductPage({ params }: PageProps) {
               vendorWhatsApp={vendorWhatsApp}
               storeName={vendor.store_name ?? ''}
               storeSlug={slug}
+              vendorPixelConfig={vendorPixelConfig}
             />
 
             {/* Separator */}
