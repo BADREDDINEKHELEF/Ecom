@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     images: ['/og-default.png'],
   },
   other: {
-    ...(process.env.NEXT_PUBLIC_FB_APP_ID && { 'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID }),
+    'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID || '966876503482162',
   },
 }
 

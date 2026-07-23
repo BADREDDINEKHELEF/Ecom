@@ -79,11 +79,9 @@ export async function generateMetadata({ params }: PageProps) {
         siteName: 'StoreDz',
         images: validOgImage ? [{ url: validOgImage, alt: product.name }] : [],
       },
-      ...(process.env.NEXT_PUBLIC_FB_APP_ID && {
-        other: {
-          'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID,
-        },
-      }),
+      other: {
+        'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID || '966876503482162',
+      },
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
