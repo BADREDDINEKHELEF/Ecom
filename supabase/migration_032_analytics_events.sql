@@ -104,7 +104,7 @@ CREATE OR REPLACE VIEW public.search_analytics AS
 SELECT
   metadata->>'query'                             AS search_term,
   COUNT(*)                                       AS search_count,
-  COALESCE(AVG((metadata->>'results_count')::int FILTER (WHERE metadata->>'results_count' ~ '^\d+$')), 0) AS avg_results,
+  COALESCE(AVG((metadata->>'results_count')::int) FILTER (WHERE metadata->>'results_count' ~ '^\d+$'), 0) AS avg_results,
   COUNT(*) FILTER (WHERE (metadata->>'results_count')::text = '0') AS zero_result_count,
   DATE_TRUNC('day', created_at AT TIME ZONE 'Africa/Algiers') AS day
 FROM public.analytics_events
