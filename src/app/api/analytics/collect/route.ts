@@ -8,7 +8,7 @@ import { getVendorContext } from '@/lib/auth/vendorAuth'
 import { logger } from '@/lib/logger'
 
 const CollectSchema = z.object({
-  event:       z.enum(['product_view','add_to_cart','checkout_start','checkout_complete','search','seller_profile_view']),
+  event:       z.enum(['product_view','add_to_cart','checkout_start','checkout_complete','search','seller_profile_view','stock_update']),
   session_id:  z.string().max(100).optional(),
   product_id:  z.string().max(100).optional().nullable(),
   vendor_id:   z.string().uuid().optional().nullable(),

@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Loader2, Search } from 'lucide-react'
 import Image from 'next/image'
+import { track } from '@/lib/analytics/track'
 
 export interface InventoryProduct {
   id: string
@@ -44,6 +45,15 @@ function EditableStockCell({ product, onUpdate }: { product: InventoryProduct; o
         })
         if (!res.ok) throw new Error('Failed to update stock')
         toast.success(`Stock pour "${product.name}" mis à jour.`)
+        
+        // Track the stock update in analytics
+        track('stock_update', {
+          product_id: product.id,
+          name: product.name,
+          old_stock: product.stock,
+          new_stock: stock,
+        })
+
         onUpdate(product.id, stock)
       } catch {
         toast.error('Erreur lors de la mise à jour du stock.')

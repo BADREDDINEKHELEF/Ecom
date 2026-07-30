@@ -11,6 +11,7 @@ export type TrackEvent =
   | 'checkout_complete'
   | 'search'
   | 'seller_profile_view'
+  | 'stock_update'
 
 function getDeviceType(): 'mobile' | 'tablet' | 'desktop' {
   if (typeof window === 'undefined') return 'desktop'
@@ -35,14 +36,17 @@ function getSessionId(): string {
 
 export function track(
   event: TrackEvent,
-  metadata: Record<string, unknown> = {}
+  metadata: Record<string, unknown> & { product_id?: string; vendor_id?: string } = {}
 ): void {
   if (typeof window === 'undefined') return
+  const { product_id, vendor_id, ...rest } = metadata
   const payload = {
     event,
     session_id:  getSessionId(),
     device_type: getDeviceType(),
-    metadata,
+    product_id,
+    vendor_id,
+    metadata:    rest,
   }
   fetch('/api/analytics/collect', {
     method:  'POST',
