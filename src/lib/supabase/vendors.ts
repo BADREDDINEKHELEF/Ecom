@@ -1,7 +1,7 @@
 import { createAdminClient } from './admin'
 import { encryptField, decryptField, isEncrypted } from '@/lib/utils/crypto'
 
-// â”€â”€ Vendor Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Vendor Types ───────────────────────────────────────────────────
 export interface Vendor {
   id:                    string
   user_id:               string
@@ -79,7 +79,7 @@ export interface VendorDeliveryConfig {
   _decryptionFailed?:   boolean
 }
 
-// â”€â”€ Vendor CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Vendor CRUD ───────────────────────────────────────────────────
 const VENDOR_COLS = 'id,user_id,owner_id,store_name,store_slug,logo_url,banner_url,cover_url,accent_color,seo_title,seo_description,description,phone,wilaya,commission_rate,is_approved,is_active,social_instagram,social_facebook,social_whatsapp,social_tiktok,theme_preset,business_type,is_on_vacation,vacation_message,bank_rib,bank_ccp,bank_baridimob,bank_account_name,low_stock_threshold,verified_at,return_policy,shipping_policy,referral_code,subscription_status,subscription_plan_id,subscription_expires_at,admin_note,meta_pixel_id,gtag_id,tiktok_pixel_id,pixel_id,meta_capi_token,tiktok_capi_token,gtag_api_secret,meta_test_event_code,meta_enabled,created_at'
 
 export async function getVendorByUserId(userId: string): Promise<Vendor | null> {
@@ -153,7 +153,7 @@ export async function getVendorByUserIdServer(userId: string): Promise<Vendor | 
   return data as Vendor
 }
 
-// â”€â”€ Vendor Delivery Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Vendor Delivery Config ────────────────────────────────────────────
 function encryptConfigCredentials(
   config: Partial<Omit<VendorDeliveryConfig, 'id' | 'vendor_id'>>
 ): typeof config {
@@ -241,7 +241,7 @@ export async function saveVendorDeliveryConfig(
   if (error) throw error
 }
 
-// â”€â”€ Subscription Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Subscription Types ───────────────────────────────────────────────────
 export interface SubscriptionPlan {
   id:                 string
   name:               string
@@ -277,7 +277,7 @@ export interface VendorSubscription {
   updated_at:      string
 }
 
-// â”€â”€ Subscription Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Subscription Functions ───────────────────────────────────────────────────
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   const supabase = createAdminClient()
   const { data } = await supabase

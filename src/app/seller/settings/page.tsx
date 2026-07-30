@@ -15,10 +15,10 @@ import SellerSidebar from '@/components/seller/SellerSidebar'
 import { slugify, isReservedSlug } from '@/lib/validation/slug'
 
 const THEME_PRESETS = [
-  { id: 'default',  label: 'DÃ©faut',    bg: '#4f46e5', text: 'white' },
+  { id: 'default',  label: 'Défaut',    bg: '#4f46e5', text: 'white' },
   { id: 'minimal',  label: 'Minimal',   bg: '#111827', text: 'white' },
   { id: 'bold',     label: 'Audacieux', bg: '#dc2626', text: 'white' },
-  { id: 'elegant',  label: 'Ã‰lÃ©gant',   bg: '#78716c', text: 'white' },
+  { id: 'elegant',  label: 'Élégant',   bg: '#78716c', text: 'white' },
   { id: 'earthy',   label: 'Nature',    bg: '#16a34a', text: 'white' },
 ]
 
@@ -29,7 +29,7 @@ const BUSINESS_TYPES = [
   { id: 'brand',         label: 'Marque' },
 ]
 
-// â”€â”€ Accordion section wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Accordion section wrapper ─────────────────────────────────────────────────
 function Section({
   id, open, onToggle, icon: Icon, title, subtitle, badge, children,
 }: {
@@ -58,7 +58,7 @@ function Section({
             <p className="font-bold text-gray-900 text-sm">{title}</p>
             {badge && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeMap[badge]}`}>
-                {badge === 'required' ? 'Requis' : badge === 'advanced' ? 'AvancÃ©' : 'Optionnel'}
+                {badge === 'required' ? 'Requis' : badge === 'advanced' ? 'Avancé' : 'Optionnel'}
               </span>
             )}
           </div>
@@ -73,7 +73,7 @@ function Section({
   )
 }
 
-// â”€â”€ Field helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Field helpers ─────────────────────────────────────────────────────────────
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
@@ -87,7 +87,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 const INPUT = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400'
 const TEXTAREA = `${INPUT} resize-none`
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function SellerSettingsPage() {
   const { vendor, loading, signOut } = useSellerAuth()
@@ -192,7 +192,7 @@ export default function SellerSettingsPage() {
     if (!vendor) return
     const slug = slugify(form.store_slug)
     if (isReservedSlug(slug)) {
-      setError("Ce nom d'URL est rÃ©servÃ©. Choisissez un autre nom.")
+      setError("Ce nom d'URL est réservé. Choisissez un autre nom.")
       return
     }
     setSaving(true)
@@ -235,11 +235,11 @@ export default function SellerSettingsPage() {
           meta_test_event_code: pixels.meta_test_event_code || null,
         }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Ã‰chec de la sauvegarde')
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Échec de la sauvegarde')
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ã‰chec de la sauvegarde')
+      setError(err instanceof Error ? err.message : 'Échec de la sauvegarde')
     } finally {
       setSaving(false)
     }
@@ -272,8 +272,8 @@ export default function SellerSettingsPage() {
         {/* Page header */}
         <div className="mb-6 flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black text-gray-900">ParamÃ¨tres de la boutique</h1>
-            <p className="text-gray-500 text-sm mt-1">GÃ©rez votre profil et les dÃ©tails de votre boutique</p>
+            <h1 className="text-2xl font-black text-gray-900">Paramètres de la boutique</h1>
+            <p className="text-gray-500 text-sm mt-1">Gérez votre profil et les détails de votre boutique</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
@@ -288,7 +288,7 @@ export default function SellerSettingsPage() {
               className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-800 bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors"
             >
               {linkCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{linkCopied ? 'CopiÃ© !' : 'Copier le lien'}</span>
+              <span className="hidden sm:inline">{linkCopied ? 'Copié !' : 'Copier le lien'}</span>
             </button>
             <Link
               href={`/store/${vendor.store_slug}`}
@@ -309,7 +309,7 @@ export default function SellerSettingsPage() {
               <div>
                 <p className="font-bold text-gray-900 text-sm">Mode vacances</p>
                 <p className="text-xs text-gray-500">
-                  {vacation.isOnVacation ? 'âš ï¸ Boutique en pause ? aucune commande acceptÃ©e' : 'Boutique active ? commandes acceptÃ©es'}
+                  {vacation.isOnVacation ? '⚠️ Boutique en pause ? aucune commande acceptée' : 'Boutique active ? commandes acceptées'}
                 </p>
               </div>
             </div>
@@ -338,7 +338,7 @@ export default function SellerSettingsPage() {
                 className="flex items-center justify-center gap-2 bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm hover:bg-amber-600 disabled:opacity-60 transition-colors"
               >
                 {vacationSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : vacationSaved ? <Check className="w-4 h-4" /> : null}
-                {vacationSaved ? 'EnregistrÃ© !' : 'Enregistrer'}
+                {vacationSaved ? 'Enregistré !' : 'Enregistrer'}
               </button>
             </div>
           )}
@@ -351,7 +351,7 @@ export default function SellerSettingsPage() {
           <Section id="essential" open={openSection === 'essential'} onToggle={toggle}
             icon={Store} badge="required"
             title="Informations essentielles"
-            subtitle="Nom, URL, tÃ©lÃ©phone WhatsApp, description ? remplissez ces champs en premier"
+            subtitle="Nom, URL, téléphone WhatsApp, description ? remplissez ces champs en premier"
           >
             <Field label="Nom de la boutique">
               <input required type="text" value={form.store_name}
@@ -369,7 +369,7 @@ export default function SellerSettingsPage() {
             </Field>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="TÃ©lÃ©phone WhatsApp" hint="NumÃ©ro sur lequel vous recevrez les commandes clients">
+              <Field label="Téléphone WhatsApp" hint="Numéro sur lequel vous recevrez les commandes clients">
                 <div className="flex gap-2">
                   <input type="tel" value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -390,7 +390,7 @@ export default function SellerSettingsPage() {
                   )}
                 </div>
               </Field>
-              <Field label="Wilaya" hint="UtilisÃ©e pour estimer les dÃ©lais de livraison">
+              <Field label="Wilaya" hint="Utilisée pour estimer les délais de livraison">
                 <select value={form.wilaya} onChange={(e) => setForm({ ...form, wilaya: e.target.value })}
                   className={`${INPUT} bg-white`}>
                   <option value="">Choisir une wilaya?</option>
@@ -420,11 +420,11 @@ export default function SellerSettingsPage() {
               </Field>
             </div>
 
-            <Field label="Description de la boutique" hint={`${form.description.length}/300 ? DÃ©crivez vos produits et ce qui vous rend unique`}>
+            <Field label="Description de la boutique" hint={`${form.description.length}/300 ? Décrivez vos produits et ce qui vous rend unique`}>
               <textarea value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3} maxLength={300}
-                placeholder="Ex: Boutique spÃ©cialisÃ©e dans la mode kabyle traditionnelle. Livraison dans toute l'AlgÃ©rie?"
+                placeholder="Ex: Boutique spécialisée dans la mode kabyle traditionnelle. Livraison dans toute l'Algérie?"
                 className={TEXTAREA} />
             </Field>
           </Section>
@@ -433,9 +433,9 @@ export default function SellerSettingsPage() {
           <Section id="appearance" open={openSection === 'appearance'} onToggle={toggle}
             icon={Palette} badge="optional"
             title="Apparence de la boutique"
-            subtitle="ThÃ¨me, couleur principale, banniÃ¨re et image de couverture"
+            subtitle="Thème, couleur principale, bannière et image de couverture"
           >
-            <Field label="ThÃ¨me de couleur" hint="Choisissez le style visuel qui correspond Ã   votre marque">
+            <Field label="Thème de couleur" hint="Choisissez le style visuel qui correspond à  votre marque">
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-1">
                 {THEME_PRESETS.map((t) => (
                   <button key={t.id} type="button"
@@ -450,7 +450,7 @@ export default function SellerSettingsPage() {
               </div>
             </Field>
 
-            <Field label="Couleur personnalisÃ©e" hint="Code hexadÃ©cimal (ex: #4f46e5)">
+            <Field label="Couleur personnalisée" hint="Code hexadécimal (ex: #4f46e5)">
               <div className="flex items-center gap-3">
                 <input type="color" value={form.accent_color}
                   onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
@@ -461,14 +461,14 @@ export default function SellerSettingsPage() {
               </div>
             </Field>
 
-            <Field label="Image banniÃ¨re" hint="Format recommandÃ© : 1200 Ã— 300 px ? apparaÃ®t en haut de votre boutique">
+            <Field label="Image bannière" hint="Format recommandé : 1200 × 300 px ? apparaît en haut de votre boutique">
               <input type="url" value={form.banner_url}
                 onChange={(e) => setForm({ ...form, banner_url: e.target.value })}
                 placeholder="https://example.com/banner.jpg"
                 className={INPUT} />
             </Field>
 
-            <Field label="Image de couverture" hint="Format recommandÃ© : 1600 Ã— 400 px ? grande image hÃ©ro">
+            <Field label="Image de couverture" hint="Format recommandé : 1600 × 400 px ? grande image héro">
               <input type="url" value={form.cover_url}
                 onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
                 placeholder="https://example.com/cover.jpg"
@@ -479,7 +479,7 @@ export default function SellerSettingsPage() {
           {/* 3 ? Social */}
           <Section id="social" open={openSection === 'social'} onToggle={toggle}
             icon={Share2} badge="optional"
-            title="RÃ©seaux sociaux"
+            title="Réseaux sociaux"
             subtitle="Liens vers vos pages Instagram, Facebook, TikTok"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -501,7 +501,7 @@ export default function SellerSettingsPage() {
                     className="flex-1 px-3 py-3 text-sm focus:outline-none" />
                 </div>
               </Field>
-              <Field label="WhatsApp" hint="NumÃ©ro affichÃ© sur la page boutique pour contacter le vendeur">
+              <Field label="WhatsApp" hint="Numéro affiché sur la page boutique pour contacter le vendeur">
                 <div className="flex gap-2">
                   <input type="tel" value={form.social_whatsapp}
                     onChange={(e) => setForm({ ...form, social_whatsapp: e.target.value })}
@@ -535,24 +535,24 @@ export default function SellerSettingsPage() {
           <Section id="policies" open={openSection === 'policies'} onToggle={toggle}
             icon={FileText} badge="optional"
             title="Politiques de la boutique"
-            subtitle="Livraison et retours ? affichÃ©es aux acheteurs sur votre boutique"
+            subtitle="Livraison et retours ? affichées aux acheteurs sur votre boutique"
           >
             <div className="bg-blue-50 rounded-xl p-3 flex gap-2 text-xs text-blue-700">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              Les boutiques avec des politiques claires convertissent mieux ? les clients savent Ã   quoi s&apos;attendre.
+              Les boutiques avec des politiques claires convertissent mieux ? les clients savent à  quoi s&apos;attendre.
             </div>
-            <Field label="Politique de livraison" hint="DÃ©lais, zones couvertes, transporteur utilisÃ©">
+            <Field label="Politique de livraison" hint="Délais, zones couvertes, transporteur utilisé">
               <textarea value={form.shipping_policy}
                 onChange={(e) => setForm({ ...form, shipping_policy: e.target.value })}
                 rows={4}
-                placeholder="Ex: Livraison sous 3-5 jours ouvrables dans toute l'AlgÃ©rie via Yalidine. Retrait possible Ã   Alger sur rendez-vous?"
+                placeholder="Ex: Livraison sous 3-5 jours ouvrables dans toute l'Algérie via Yalidine. Retrait possible à  Alger sur rendez-vous?"
                 className={TEXTAREA} />
             </Field>
-            <Field label="Politique de retour" hint="Conditions d'acceptation des retours et dÃ©lais">
+            <Field label="Politique de retour" hint="Conditions d'acceptation des retours et délais">
               <textarea value={form.return_policy}
                 onChange={(e) => setForm({ ...form, return_policy: e.target.value })}
                 rows={4}
-                placeholder="Ex: Retours acceptÃ©s sous 7 jours aprÃ¨s rÃ©ception, produit non utilisÃ© dans son emballage d'origine?"
+                placeholder="Ex: Retours acceptés sous 7 jours après réception, produit non utilisé dans son emballage d'origine?"
                 className={TEXTAREA} />
             </Field>
           </Section>
@@ -560,20 +560,20 @@ export default function SellerSettingsPage() {
           {/* 5 ? SEO */}
           <Section id="seo" open={openSection === 'seo'} onToggle={toggle}
             icon={Search} badge="optional"
-            title="RÃ©fÃ©rencement (SEO)"
-            subtitle="Titre et description affichÃ©s dans Google ? augmentez votre visibilitÃ©"
+            title="Référencement (SEO)"
+            subtitle="Titre et description affichés dans Google ? augmentez votre visibilité"
           >
-            <Field label="Titre SEO" hint={`${form.seo_title.length}/70 caractÃ¨res ? apparaÃ®t dans l'onglet du navigateur et Google`}>
+            <Field label="Titre SEO" hint={`${form.seo_title.length}/70 caractères ? apparaît dans l'onglet du navigateur et Google`}>
               <input type="text" value={form.seo_title} maxLength={70}
                 onChange={(e) => setForm({ ...form, seo_title: e.target.value })}
                 placeholder={`${form.store_name} ? StoreDz`}
                 className={INPUT} />
             </Field>
-            <Field label="MÃ©ta-description" hint={`${form.seo_description.length}/160 caractÃ¨res ? rÃ©sumÃ© affichÃ© dans les rÃ©sultats Google`}>
+            <Field label="Méta-description" hint={`${form.seo_description.length}/160 caractères ? résumé affiché dans les résultats Google`}>
               <textarea value={form.seo_description} maxLength={160}
                 onChange={(e) => setForm({ ...form, seo_description: e.target.value })}
                 rows={3}
-                placeholder="Description courte de votre boutique affichÃ©e dans Google?"
+                placeholder="Description courte de votre boutique affichée dans Google?"
                 className={TEXTAREA} />
             </Field>
           </Section>
@@ -581,8 +581,8 @@ export default function SellerSettingsPage() {
           {/* 6 ? Bank */}
           <Section id="bank" open={openSection === 'bank'} onToggle={toggle}
             icon={Banknote} badge="optional"
-            title="CoordonnÃ©es bancaires"
-            subtitle="Pour recevoir vos virements de la plateforme ? stockÃ©es de faÃ§on sÃ©curisÃ©e"
+            title="Coordonnées bancaires"
+            subtitle="Pour recevoir vos virements de la plateforme ? stockées de façon sécurisée"
           >
             <div className="bg-amber-50 rounded-xl p-3 flex gap-2 text-xs text-amber-700">
               <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -601,13 +601,13 @@ export default function SellerSettingsPage() {
                   placeholder="00000-00000-000000000000-00"
                   className={`${INPUT} font-mono`} />
               </Field>
-              <Field label="Compte CCP" hint="NumÃ©ro de compte postal">
+              <Field label="Compte CCP" hint="Numéro de compte postal">
                 <input type="text" value={form.bank_ccp}
                   onChange={(e) => setForm({ ...form, bank_ccp: e.target.value })}
-                  placeholder="0000000 / clÃ© 00"
+                  placeholder="0000000 / clé 00"
                   className={`${INPUT} font-mono`} />
               </Field>
-              <Field label="NumÃ©ro BaridiMob" hint="NumÃ©ro de tÃ©lÃ©phone liÃ© Ã   votre compte BaridiMob">
+              <Field label="Numéro BaridiMob" hint="Numéro de téléphone lié à  votre compte BaridiMob">
                 <input type="text" value={form.bank_baridimob}
                   onChange={(e) => setForm({ ...form, bank_baridimob: e.target.value })}
                   placeholder="05xx xxx xxx"
@@ -622,14 +622,14 @@ export default function SellerSettingsPage() {
             title="Alerte stock bas"
             subtitle="Recevez une alerte quand un produit descend sous un seuil critique"
           >
-            <Field label="Seuil d'alerte" hint="Vous serez notifiÃ© dans le tableau de bord quand un produit a ce nombre d'unitÃ©s ou moins">
+            <Field label="Seuil d'alerte" hint="Vous serez notifié dans le tableau de bord quand un produit a ce nombre d'unités ou moins">
               <div className="flex items-center gap-3">
                 <input type="number" min={0} max={100}
                   value={form.low_stock_threshold}
                   onChange={(e) => setForm({ ...form, low_stock_threshold: parseInt(e.target.value) || 0 })}
                   className="w-28 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400"
                 />
-                <span className="text-sm text-gray-500">unitÃ©s restantes</span>
+                <span className="text-sm text-gray-500">unités restantes</span>
               </div>
             </Field>
           </Section>
@@ -642,25 +642,25 @@ export default function SellerSettingsPage() {
           >
             <div className="bg-violet-50 rounded-xl p-3 flex gap-2 text-xs text-violet-700 mb-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              Section rÃ©servÃ©e aux vendeurs qui font de la publicitÃ© payante. Laissez vide si vous n&apos;utilisez pas ces outils.
+              Section réservée aux vendeurs qui font de la publicité payante. Laissez vide si vous n&apos;utilisez pas ces outils.
             </div>
 
             {/* Meta */}
             <div className="bg-[#f0f2ff] rounded-2xl p-4 space-y-3">
               <p className="text-xs font-bold text-[#1877F2] uppercase tracking-wider">Meta (Facebook / Instagram)</p>
-              <Field label="Pixel ID" hint="Meta Business Suite â†’ Events Manager â†’ votre pixel â†’ ParamÃ¨tres">
+              <Field label="Pixel ID" hint="Meta Business Suite → Events Manager → votre pixel → Paramètres">
                 <input type="text" value={pixels.meta_pixel_id}
                   onChange={(e) => setPixels({ ...pixels, meta_pixel_id: e.target.value })}
                   placeholder="1234567890123456"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
-              <Field label="Conversions API Token (server-side)" hint="Events Manager â†’ votre pixel â†’ ParamÃ¨tres â†’ Conversions API â†’ GÃ©nÃ©rer un token">
+              <Field label="Conversions API Token (server-side)" hint="Events Manager → votre pixel → Paramètres → Conversions API → Générer un token">
                 <input type="password" value={pixels.meta_capi_token}
                   onChange={(e) => setPixels({ ...pixels, meta_capi_token: e.target.value })}
                   placeholder="EAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
-              <Field label="Test Event Code (facultatif)" hint="Events Manager â†’ Test Events â†’ Code d'Ã©vÃ©nement de test (ex: TEST12345)">
+              <Field label="Test Event Code (facultatif)" hint="Events Manager → Test Events → Code d'événement de test (ex: TEST12345)">
                 <input type="text" value={pixels.meta_test_event_code}
                   onChange={(e) => setPixels({ ...pixels, meta_test_event_code: e.target.value })}
                   placeholder="TEST12345"
@@ -671,13 +671,13 @@ export default function SellerSettingsPage() {
             {/* Google */}
             <div className="bg-[#f0fdf4] rounded-2xl p-4 space-y-3">
               <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Google Analytics 4</p>
-              <Field label="Measurement ID" hint="GA4 â†’ Admin â†’ Flux de donnÃ©es â†’ votre flux web â†’ Measurement ID">
+              <Field label="Measurement ID" hint="GA4 → Admin → Flux de données → votre flux web → Measurement ID">
                 <input type="text" value={pixels.gtag_id}
                   onChange={(e) => setPixels({ ...pixels, gtag_id: e.target.value })}
                   placeholder="G-XXXXXXXXXX"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
-              <Field label="API Secret (Measurement Protocol)" hint="GA4 â†’ Admin â†’ Flux de donnÃ©es â†’ votre flux â†’ Measurement Protocol API secrets">
+              <Field label="API Secret (Measurement Protocol)" hint="GA4 → Admin → Flux de données → votre flux → Measurement Protocol API secrets">
                 <input type="password" value={pixels.gtag_api_secret}
                   onChange={(e) => setPixels({ ...pixels, gtag_api_secret: e.target.value })}
                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -688,13 +688,13 @@ export default function SellerSettingsPage() {
             {/* TikTok */}
             <div className="bg-[#fff0f3] rounded-2xl p-4 space-y-3">
               <p className="text-xs font-bold text-[#fe2c55] uppercase tracking-wider">TikTok</p>
-              <Field label="Pixel ID" hint="TikTok Ads Manager â†’ Assets â†’ Events â†’ votre pixel â†’ ParamÃ¨tres">
+              <Field label="Pixel ID" hint="TikTok Ads Manager → Assets → Events → votre pixel → Paramètres">
                 <input type="text" value={pixels.tiktok_pixel_id}
                   onChange={(e) => setPixels({ ...pixels, tiktok_pixel_id: e.target.value })}
                   placeholder="CXXXXXXXXXXXXXXXXXX"
                   className={`${INPUT} font-mono bg-white`} />
               </Field>
-              <Field label="Events API Access Token (server-side)" hint="TikTok Ads Manager â†’ Assets â†’ Events â†’ votre pixel â†’ API Access Token">
+              <Field label="Events API Access Token (server-side)" hint="TikTok Ads Manager → Assets → Events → votre pixel → API Access Token">
                 <input type="password" value={pixels.tiktok_capi_token}
                   onChange={(e) => setPixels({ ...pixels, tiktok_capi_token: e.target.value })}
                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -709,7 +709,7 @@ export default function SellerSettingsPage() {
                   <p className="text-sm font-bold text-gray-800">Pixel StoreDz (1st party)</p>
                   <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">ACTIF</span>
                 </div>
-                <p className="text-xs text-gray-500">Snippet Ã   intÃ©grer sur n&apos;importe quelle page externe pour collecter des donnÃ©es dans votre tableau de bord StoreDz.</p>
+                <p className="text-xs text-gray-500">Snippet à  intégrer sur n&apos;importe quelle page externe pour collecter des données dans votre tableau de bord StoreDz.</p>
                 <div className="relative">
                   <pre className="bg-gray-900 text-green-400 text-[11px] rounded-xl p-3 overflow-x-auto leading-relaxed whitespace-pre-wrap break-all">
 {`<img src="https://storedz.dz/api/pixel/collect?pid=${vendor.pixel_id}&e=pageview" width="1" height="1" style="display:none" />`}
@@ -722,7 +722,7 @@ export default function SellerSettingsPage() {
                     }}
                     className="absolute top-2 right-2 flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-[11px] font-semibold px-2 py-1 rounded-lg transition-colors">
                     {pixelCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {pixelCopied ? 'CopiÃ©' : 'Copier'}
+                    {pixelCopied ? 'Copié' : 'Copier'}
                   </button>
                 </div>
               </div>
@@ -740,15 +740,15 @@ export default function SellerSettingsPage() {
           <div className="bg-white rounded-2xl shadow-sm px-6 py-4 flex items-center justify-between gap-4">
             <div className="text-xs text-gray-400">
               Commission sur vos ventes : <span className="font-bold text-emerald-600">0%</span>
-              {' Â· '}
+              {' · '}
               Statut du compte : <span className={`font-bold ${vendor.is_approved ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {vendor.is_approved ? 'ApprouvÃ©' : 'En attente'}
+                {vendor.is_approved ? 'Approuvé' : 'En attente'}
               </span>
             </div>
             <button type="submit" disabled={saving}
               className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors whitespace-nowrap">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
-              {saved ? 'EnregistrÃ© !' : 'Enregistrer les modifications'}
+              {saved ? 'Enregistré !' : 'Enregistrer les modifications'}
             </button>
           </div>
 

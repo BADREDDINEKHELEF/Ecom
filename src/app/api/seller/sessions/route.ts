@@ -21,12 +21,12 @@ async function requireSeller(
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// GET /api/seller/sessions â€” list active sessions for the current user
+// GET /api/seller/sessions — list active sessions for the current user
 export async function GET(req: NextRequest) {
   const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'seller_sessions_list')
-  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requÃªtes.' }, { status: 429 }))
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 }))
 
   const seller = await requireSeller(req, response, 'sessions:read')
   if (seller instanceof NextResponse) return seller
@@ -40,12 +40,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// DELETE /api/seller/sessions?id=<sessionId|all> â€” revoke one or all sessions
+// DELETE /api/seller/sessions?id=<sessionId|all> — revoke one or all sessions
 export async function DELETE(req: NextRequest) {
   const response = NextResponse.next()
   const ip = getClientIp(req)
   const rl = await checkPublicRateLimit(ip, 'session_revoke')
-  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requÃªtes.' }, { status: 429 }))
+  if (!rl.allowed) return copyCookies(response, NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 }))
 
   const seller = await requireSeller(req, response, 'sessions:revoke')
   if (seller instanceof NextResponse) return seller

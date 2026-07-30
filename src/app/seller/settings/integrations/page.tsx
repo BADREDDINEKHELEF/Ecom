@@ -127,14 +127,14 @@ export default function IntegrationsHealthPage() {
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
             <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-            {isRTL ? 'فشل Ø§Ù„Ø§ØªØµØ§Ù„' : 'Échec d\'authentification'}
+            {isRTL ? 'فشل الاتصال' : 'Échec d\'authentification'}
           </span>
         )
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-50 text-gray-500 border border-gray-200">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-            {isRTL ? 'Ø¨Ø­Ø§Ø¬Ø© Ø¥Ù„Ù‰ تهيئة' : 'Configuration requise'}
+            {isRTL ? 'بحاجة إلى تهيئة' : 'Configuration requise'}
           </span>
         )
     }
@@ -153,9 +153,9 @@ export default function IntegrationsHealthPage() {
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <Gauge className="w-6 h-6 text-indigo-600" /> {isRTL ? 'Ø§Ù„ØªØ­Ù‚Ù‚ من Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª' : 'Vérification des Intégrations'}
+              <Gauge className="w-6 h-6 text-indigo-600" /> {isRTL ? 'التحقق من الإعدادات' : 'Vérification des Intégrations'}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">{isRTL ? 'ØªØ­Ù‚Ù‚ من Ø±Ø¨Ø· شركات الشحن والبكسل في Ø§Ù„ÙˆÙ‚Øª الفعلي' : 'Testez et validez vos API de livraison et tracking publicitaire en temps réel.'}</p>
+            <p className="text-gray-500 text-sm mt-1">{isRTL ? 'تحقق من ربط شركات الشحن والبكسل في الوقت الفعلي' : 'Testez et validez vos API de livraison et tracking publicitaire en temps réel.'}</p>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <button
@@ -165,7 +165,7 @@ export default function IntegrationsHealthPage() {
               }`}
             >
               <Code className="w-3.5 h-3.5" />
-              <span>{isRTL ? 'ÙˆØ¶Ø¹ المطور' : 'Mode Développeur'}</span>
+              <span>{isRTL ? 'وضع المطور' : 'Mode Développeur'}</span>
             </button>
             <button
               onClick={loadHealth}
@@ -198,7 +198,7 @@ export default function IntegrationsHealthPage() {
               <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-gray-100 sm:pl-4">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
                 <div>
-                  <p className="text-xs text-gray-400 font-bold uppercase">{isRTL ? 'فشل Ø§Ù„Ø±Ø¨Ø·' : 'Erreurs Authentification'}</p>
+                  <p className="text-xs text-gray-400 font-bold uppercase">{isRTL ? 'فشل الربط' : 'Erreurs Authentification'}</p>
                   <p className="text-xl font-black text-gray-900">
                     {INTEGRATION_KEYS.filter((k) => healthData[k.name]?.health_status === 'failed').length}
                   </p>
@@ -243,7 +243,7 @@ export default function IntegrationsHealthPage() {
                             className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-950 text-white font-bold rounded-xl text-xs hover:bg-gray-800 disabled:opacity-60 transition-colors"
                           >
                             {connTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                            <span>{isRTL ? 'فحص Ø§Ù„Ø§ØªØµØ§Ù„' : 'Tester la Connexion'}</span>
+                            <span>{isRTL ? 'فحص الاتصال' : 'Tester la Connexion'}</span>
                           </button>
                         ) : (
                           <button
@@ -261,19 +261,19 @@ export default function IntegrationsHealthPage() {
                     {/* Historical Health Info */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs bg-gray-50/50 rounded-xl p-4 border border-gray-100">
                       <div>
-                        <p className="text-gray-400 font-bold uppercase">{isRTL ? 'Ø¢Ø®Ø± نجاح' : 'Dernier succès'}</p>
+                        <p className="text-gray-400 font-bold uppercase">{isRTL ? 'آخر نجاح' : 'Dernier succès'}</p>
                         <p className="text-gray-700 font-semibold mt-0.5">
                           {health?.last_success_at ? new Date(health.last_success_at).toLocaleString() : '?'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-400 font-bold uppercase">{isRTL ? 'Ø¢Ø®Ø± فشل' : 'Dernier échec'}</p>
+                        <p className="text-gray-400 font-bold uppercase">{isRTL ? 'آخر فشل' : 'Dernier échec'}</p>
                         <p className="text-gray-700 font-semibold mt-0.5">
                           {health?.last_failure_at ? new Date(health.last_failure_at).toLocaleString() : '?'}
                         </p>
                       </div>
                       <div className="sm:col-span-2 md:col-span-1">
-                        <p className="text-gray-400 font-bold uppercase">{isRTL ? 'Ø¢Ø®Ø± Ø®Ø·Ø£' : 'Dernier message d\'erreur'}</p>
+                        <p className="text-gray-400 font-bold uppercase">{isRTL ? 'آخر خطأ' : 'Dernier message d\'erreur'}</p>
                         <p className="text-red-600 font-semibold mt-0.5 truncate" title={health?.last_error_message || ''}>
                           {health?.last_error_message || 'Aucun'}
                         </p>
@@ -283,7 +283,7 @@ export default function IntegrationsHealthPage() {
                     {/* Quote testing actions for delivery */}
                     {integration.type === 'delivery' && integration.name !== 'yassir' && (
                       <div className="border-t border-gray-100 pt-4 space-y-3">
-                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isRTL ? 'ØªØ¬Ø±Ø¨Ø© Ø­Ø³Ø§Ø¨ Ø§Ù„ØªØ³Ø¹ÙŠØ±Ø©' : 'Test de Tarification Temps Réel'}</p>
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isRTL ? 'تجربة حساب التسعيرة' : 'Test de Tarification Temps Réel'}</p>
                         <div className="flex flex-col sm:flex-row gap-3">
                           <select
                             value={selectedWilaya[integration.name] || ''}
@@ -299,7 +299,7 @@ export default function IntegrationsHealthPage() {
                             className="flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 disabled:opacity-60 transition-colors"
                           >
                             {quoteTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                            <span>{isRTL ? 'Ø­Ø³Ø§Ø¨ Ø§Ù„Ø³Ø¹Ø±' : 'Calculer le tarif'}</span>
+                            <span>{isRTL ? 'حساب السعر' : 'Calculer le tarif'}</span>
                           </button>
                         </div>
 

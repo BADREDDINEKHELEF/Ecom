@@ -6,7 +6,7 @@ import {
 } from 'react'
 import { ImagePlus, X, Loader2, AlertCircle, GripVertical, CheckCircle2 } from 'lucide-react'
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Types ───────────────────────────────────────────────────────────────────
 
 interface ImageItem {
   id:         string
@@ -41,7 +41,7 @@ const COLOR_PRESETS = [
   { label: 'Violet',  hex: '#8B5CF6', border: false  },
 ]
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function uid() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 8)
@@ -118,7 +118,7 @@ function isAllowedImage(type: string, name: string) {
 }
 const MAX_MB = 10
 
-// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function ImageUploader({ value, onChange, colors, onColorsChange, maxImages = 8 }: Props) {
   const [items, setItems] = useState<ImageItem[]>(() =>
@@ -164,7 +164,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     }
   }, [])
 
-  // â”€â”€ Upload a single file â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Upload a single file ─────────────────────────────────────────────────
 
   const uploadOne = useCallback(async (itemId: string, file: File) => {
     try {
@@ -175,7 +175,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
       const res = await fetch('/api/seller/upload', { method: 'POST', body: fd })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Ã‰chec de l\'upload')
+        throw new Error(body.error ?? 'Échec de l\'upload')
       }
       const { url } = await res.json() as { url: string }
 
@@ -195,7 +195,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     }
   }, [syncParent])
 
-  // â”€â”€ Add confirmed files (with their chosen colors) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Add confirmed files (with their chosen colors) ────────────────────────
 
   const addFiles = useCallback((files: File[], initialColors?: string[]) => {
     setItems((prev) => {
@@ -217,7 +217,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     })
   }, [maxImages, uploadOne])
 
-  // â”€â”€ Handle incoming files: upload immediately, color chosen inline after â”€â”€
+  // ── Handle incoming files: upload immediately, color chosen inline after ──
 
   const handleFilesSelected = useCallback((files: File[]) => {
     const valid = files.filter(
@@ -227,7 +227,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     addFiles(valid)
   }, [addFiles])
 
-  // â”€â”€ Drop zone handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Drop zone handlers ───────────────────────────────────────────────────
 
   const handleZoneDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -246,7 +246,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
     e.target.value = ''
   }
 
-  // â”€â”€ Item drag-to-reorder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Item drag-to-reorder ─────────────────────────────────────────────────
 
   const handleItemDragStart = (e: DragEvent<HTMLDivElement>, idx: number) => {
     dragItemIdx.current = idx
@@ -311,13 +311,13 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
   const canAdd    = items.length < maxImages
   const uploading = items.some((i) => i.uploading)
 
-  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <>
     <div className="space-y-3">
 
-      {/* â”€â”€ Drop zone â”€â”€ */}
+      {/* ── Drop zone ── */}
       {canAdd && (
         <div
           onDragOver={handleZoneDragOver}
@@ -339,7 +339,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
             accept="image/*,.heic,.heif"
             onChange={handleFileInput}
             className="sr-only"
-            aria-label="SÃ©lectionner des images"
+            aria-label="Sélectionner des images"
           />
 
           <div className={[
@@ -351,16 +351,16 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
 
           <div className="text-center">
             <p className="text-sm font-semibold text-gray-800">
-              {isDragOver ? 'DÃ©posez les images ici' : 'Glissez-dÃ©posez ou cliquez pour ajouter'}
+              {isDragOver ? 'Déposez les images ici' : 'Glissez-déposez ou cliquez pour ajouter'}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
-              JPG Â· PNG Â· WebP Â· GIF &nbsp;Â·&nbsp; Max {MAX_MB} Mo &nbsp;Â·&nbsp; {items.length}/{maxImages} photos
+              JPG · PNG · WebP · GIF &nbsp;·&nbsp; Max {MAX_MB} Mo &nbsp;·&nbsp; {items.length}/{maxImages} photos
             </p>
           </div>
         </div>
       )}
 
-      {/* â”€â”€ Thumbnail grid â”€â”€ */}
+      {/* ── Thumbnail grid ── */}
       {items.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {items.map((item, idx) => (
@@ -394,7 +394,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
                 {item.uploading && (
                   <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5">
                     <Loader2 className="w-5 h-5 text-white animate-spin" />
-                    <span className="text-[10px] text-white/80 font-medium">Uploadâ€¦</span>
+                    <span className="text-[10px] text-white/80 font-medium">Upload…</span>
                   </div>
                 )}
 
@@ -442,7 +442,7 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
                 )}
               </div>
 
-              {/* Inline color swatches â€” always visible when color feature enabled */}
+              {/* Inline color swatches — always visible when color feature enabled */}
               {onColorsChange && !item.uploading && !item.error && (
                 <div className="flex flex-wrap gap-1 justify-center px-0.5">
                   {COLOR_PRESETS.map(c => (
@@ -484,20 +484,20 @@ export default function ImageUploader({ value, onChange, colors, onColorsChange,
         </div>
       )}
 
-      {/* â”€â”€ Status bar â”€â”€ */}
+      {/* ── Status bar ── */}
       <div className="flex items-center justify-between text-xs text-gray-400 px-0.5">
         {uploading ? (
           <span className="flex items-center gap-1.5 text-amber-600 font-medium">
-            <Loader2 className="w-3 h-3 animate-spin" /> Upload en coursâ€¦
+            <Loader2 className="w-3 h-3 animate-spin" /> Upload en cours…
           </span>
         ) : items.length > 0 ? (
           <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-            <CheckCircle2 className="w-3 h-3" /> {items.filter(i => i.finalUrl).length} image{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''} prÃªte{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''}
+            <CheckCircle2 className="w-3 h-3" /> {items.filter(i => i.finalUrl).length} image{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''} prête{items.filter(i => i.finalUrl).length !== 1 ? 's' : ''}
           </span>
         ) : (
-          <span>Aucune image ajoutÃ©e</span>
+          <span>Aucune image ajoutée</span>
         )}
-        <span>Glissez pour rÃ©organiser</span>
+        <span>Glissez pour réorganiser</span>
       </div>
     </div>
 

@@ -79,7 +79,7 @@ export default function CheckoutContent() {
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
   const [saving, setSaving] = useState(false)
-  // Ref-based lock for double-submit guard â€” synchronously reliable unlike state (Fix 1)
+  // Ref-based lock for double-submit guard — synchronously reliable unlike state (Fix 1)
   const submittingRef = useRef(false)
   const [saveError, setSaveError] = useState('')
   const [phoneError, setPhoneError] = useState('')
@@ -229,7 +229,7 @@ export default function CheckoutContent() {
     }
   }, [vendorPixelConfig, items, cartTotal, cartStoreSlug, form.email, form.phone])
 
-  // Stable vendorId derived from items â€” avoids re-firing on every render due to new array reference (Fix 7)
+  // Stable vendorId derived from items — avoids re-firing on every render due to new array reference (Fix 7)
   const primaryVendorId = useMemo(
     () => items[0]?.product?.vendorId ?? null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -271,7 +271,7 @@ export default function CheckoutContent() {
           setLiveDeliveryRates({ home: null, desk: null })
           setDeliveryType((prev) => prev === 'stop_desk' ? 'home' : prev)
           setIsLiveRates(false)
-          setRateError(data.error || 'Impossible de calculer les frais de livraison. Veuillez rÃ©essayer.')
+          setRateError(data.error || 'Impossible de calculer les frais de livraison. Veuillez réessayer.')
         }
       } catch {
         setLiveDeliveryRates({ home: null, desk: null })
@@ -353,7 +353,7 @@ export default function CheckoutContent() {
           expired: t.checkout.promoExpired,
           maxed: t.checkout.promoMaxed,
           min_order: t.checkout.promoMinOrder,
-          already_used: 'Vous avez dÃ©jÃ  utilisÃ© ce code.',
+          already_used: 'Vous avez déjà utilisé ce code.',
         }
         setPromoError(msgMap[data.message] ?? t.checkout.promoInvalid)
       }
@@ -415,7 +415,7 @@ export default function CheckoutContent() {
       setPhoneError(t.checkout.phoneInvalid)
       return
     }
-    // Fix 1: Ref-based lock â€” synchronously prevents double-submit unlike state batching
+    // Fix 1: Ref-based lock — synchronously prevents double-submit unlike state batching
     if (submittingRef.current) return
     submittingRef.current = true
     if (phoneError) { submittingRef.current = false; return }
@@ -457,7 +457,7 @@ export default function CheckoutContent() {
       return
     }
     if (!form.phone.trim()) {
-      setSaveError('NumÃ©ro de tÃ©lÃ©phone requis')
+      setSaveError('Numéro de téléphone requis')
       setSaving(false)
       submittingRef.current = false
       return
@@ -537,7 +537,7 @@ export default function CheckoutContent() {
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
           setSaveError(errData.error ?? t.checkout.orderFailed)
-          // Fix 2: Explicitly release locks â€” early return bypasses the outer finally block
+          // Fix 2: Explicitly release locks — early return bypasses the outer finally block
           setSaving(false)
           submittingRef.current = false
           return
@@ -546,7 +546,7 @@ export default function CheckoutContent() {
         const resolvedOrderId = orderData.orderId ?? orderData.id
         if (!resolvedOrderId) {
           setSaveError(t.checkout.orderFailed)
-          // Fix 2: Same â€” explicit release needed because early return skips outer finally
+          // Fix 2: Same — explicit release needed because early return skips outer finally
           setSaving(false)
           submittingRef.current = false
           return
@@ -642,7 +642,7 @@ export default function CheckoutContent() {
           clearCart()
           window.location.href = data.formUrl
         } catch {
-          setSaveError('Erreur lors de la redirection vers le paiement. RÃ©essayez.')
+          setSaveError('Erreur lors de la redirection vers le paiement. Réessayez.')
         }
         return
       }
@@ -679,7 +679,7 @@ export default function CheckoutContent() {
   }
 
   // Fix 11: Wait for Zustand cart hydration before rendering to avoid stale pre-hydration state.
-  // IMPORTANT: keep ssr:false on the dynamic import in checkout/page.tsx â€” this guard is a second
+  // IMPORTANT: keep ssr:false on the dynamic import in checkout/page.tsx — this guard is a second
   // line of defence; removing ssr:false would still cause a hydration mismatch.
   if (!_hasHydrated) {
     return (
@@ -782,7 +782,7 @@ export default function CheckoutContent() {
       <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-3 mb-6 flex items-center gap-3">
         <Shield className="w-5 h-5 text-green-600 flex-shrink-0" />
         <p className="text-green-800 text-sm font-semibold">
-          {t.trust.cod} â€” <span className="font-normal text-green-700">{t.trust.codText}</span>
+          {t.trust.cod} — <span className="font-normal text-green-700">{t.trust.codText}</span>
         </p>
       </div>
 
@@ -795,7 +795,7 @@ export default function CheckoutContent() {
 
       <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-6 text-sm text-indigo-800">
         <Lock className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-        <span><strong>{t.checkout.guestOrder}</strong> â€” {t.checkout.guestOrderDesc}</span>
+        <span><strong>{t.checkout.guestOrder}</strong> — {t.checkout.guestOrderDesc}</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -918,7 +918,7 @@ export default function CheckoutContent() {
                         {liveDeliveryRates.home !== null ? (
                           liveDeliveryRates.home === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.home)
                         ) : (
-                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? 'â€¦' : formatPrice(delivery.cost)
+                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
                         )}
                       </span>
                     </button>
@@ -937,7 +937,7 @@ export default function CheckoutContent() {
                         {liveDeliveryRates.home !== null ? (
                           liveDeliveryRates.home === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.home)
                         ) : (
-                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? 'â€¦' : formatPrice(delivery.cost)
+                          delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
                         )}
                       </span>
                     </button>
@@ -957,7 +957,7 @@ export default function CheckoutContent() {
                           {liveDeliveryRates.desk !== null ? (
                             liveDeliveryRates.desk === 0 ? t.cart.freeShipping : formatPrice(liveDeliveryRates.desk)
                           ) : (
-                            delivery.isFree ? t.cart.freeShipping : deliveryFetching ? 'â€¦' : formatPrice(delivery.cost)
+                            delivery.isFree ? t.cart.freeShipping : deliveryFetching ? '…' : formatPrice(delivery.cost)
                           )}
                         </span>
                       </button>
@@ -1004,11 +1004,11 @@ export default function CheckoutContent() {
                     <span className="font-semibold text-indigo-800">{t.checkout.estimatedDelivery} </span>
                     <span className="text-indigo-700">{delivery.days}</span>
                     {shippingCost === 0 ? (
-                      <span className="ml-2 text-green-600 font-bold">â€” {t.cart.freeShipping}!</span>
+                      <span className="ml-2 text-green-600 font-bold">— {t.cart.freeShipping}!</span>
                     ) : deliveryFetching ? (
-                      <span className="ml-2 text-gray-400">â€¦</span>
+                      <span className="ml-2 text-gray-400">…</span>
                     ) : (
-                      <span className="ml-2 text-gray-600">â€” {formatPrice(shippingCost)}</span>
+                      <span className="ml-2 text-gray-600">— {formatPrice(shippingCost)}</span>
                     )}
                   </div>
                 </div>
@@ -1078,7 +1078,7 @@ export default function CheckoutContent() {
                 >
                   {recommended && (
                     <span className="absolute -top-2 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      âœ“
+                      ✓
                     </span>
                   )}
                   <div className={payment === id ? 'text-indigo-600' : 'text-gray-500'}>
@@ -1092,7 +1092,7 @@ export default function CheckoutContent() {
             {payment === 'cash' && (
               <div className="mt-4 bg-green-50 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-green-700">
                 <Shield className="w-4 h-4 flex-shrink-0" />
-                <span>{t.trust.cod} â€” {t.trust.codText}</span>
+                <span>{t.trust.cod} — {t.trust.codText}</span>
               </div>
             )}
           </div>
@@ -1110,7 +1110,7 @@ export default function CheckoutContent() {
             className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:pointer-events-none"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
-            {saving ? '...' : `${t.checkout.placeOrder} â€” ${formatPrice(orderTotal)}`}
+            {saving ? '...' : `${t.checkout.placeOrder} — ${formatPrice(orderTotal)}`}
           </button>
         </form>
 
@@ -1258,7 +1258,7 @@ export default function CheckoutContent() {
               <div className="flex justify-between text-gray-600">
                 <span>{t.cart.shipping}</span>
                 <span className={form.wilaya && shippingCost === 0 ? 'text-green-600 font-bold' : ''}>
-                  {!form.wilaya ? 'â€”' : deliveryFetching ? 'â€¦' : (shippingCost === 0 ? t.cart.freeShipping : formatPrice(shippingCost))}
+                  {!form.wilaya ? '—' : deliveryFetching ? '…' : (shippingCost === 0 ? t.cart.freeShipping : formatPrice(shippingCost))}
                 </span>
               </div>
               {!form.wilaya && (
@@ -1289,9 +1289,9 @@ export default function CheckoutContent() {
             </div>
             <div className="mt-4 pt-4 border-t space-y-2">
               {[
-                { icon: 'ðŸ”’', text: t.trust.secure + ' â€” ' + t.trust.secureText },
-                { icon: 'ðŸšš', text: t.trust.delivery + ' â€” ' + t.trust.deliveryText },
-                { icon: 'â†©ï¸', text: t.trust.returns + ' â€” ' + t.trust.returnsText },
+                { icon: '🔒', text: t.trust.secure + ' — ' + t.trust.secureText },
+                { icon: '🚚', text: t.trust.delivery + ' — ' + t.trust.deliveryText },
+                { icon: '↩️', text: t.trust.returns + ' — ' + t.trust.returnsText },
               ].map(({ icon, text }) => (
                 <div key={icon} className="flex items-center gap-2 text-xs text-gray-500">
                   <span>{icon}</span> {text}

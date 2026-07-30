@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest) {
     const ip = getClientIp(req)
     const rl = await checkSellerRateLimit(ip, 'inventory_stock', 30, 60)
     if (!rl.allowed) return copyCookies(response, NextResponse.json(
-      { error: 'Trop de requÃªtes. RÃ©essayez plus tard.' },
+      { error: 'Trop de requêtes. Réessayez plus tard.' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
     ))
 
@@ -61,6 +61,6 @@ export async function PATCH(req: NextRequest) {
     return copyCookies(response, NextResponse.json({ success: true }))
   } catch (err) {
     logger.error('[PATCH /api/seller/inventory/stock]', { error: err instanceof Error ? err.message : String(err) })
-    return copyCookies(response, NextResponse.json({ error: 'Erreur serveur. RÃ©essayez.' }, { status: 500 }))
+    return copyCookies(response, NextResponse.json({ error: 'Erreur serveur. Réessayez.' }, { status: 500 }))
   }
 }

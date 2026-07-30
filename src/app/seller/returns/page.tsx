@@ -85,7 +85,7 @@ export default function SellerReturnsPage() {
       setNotes(initialNotes)
       setRefundAmounts(initialRefunds)
     } catch {
-      setLoadError(lang === 'ar' ? 'فشل تحميل Ø·Ù„Ø¨Ø§Øª المرتجعات' : (lang === 'fr' ? 'Impossible de charger les retours' : 'Could not load return requests'))
+      setLoadError(lang === 'ar' ? 'فشل تحميل طلبات المرتجعات' : (lang === 'fr' ? 'Impossible de charger les retours' : 'Could not load return requests'))
     } finally {
       setLoading(false)
     }
@@ -149,14 +149,14 @@ export default function SellerReturnsPage() {
   // UI translations
   const ui = {
     title: lang === 'ar' ? 'المرتجعات والمستردات' : (lang === 'fr' ? 'Retours & Remboursements' : 'Returns & Refunds'),
-    subtitle: lang === 'ar' ? `لديك ${returns.length} Ø·Ù„Ø¨ مرتجع` : (lang === 'fr' ? `${returns.length} demande(s) de retour` : `${returns.length} return request(s)`),
-    reason: lang === 'ar' ? 'Ø§Ù„Ø³Ø¨Ø¨' : (lang === 'fr' ? 'Raison' : 'Reason'),
-    sellerNote: lang === 'ar' ? 'ملاحظة Ø§Ù„Ø¨Ø§Ø¦Ø¹' : (lang === 'fr' ? 'Note du vendeur' : 'Seller Note'),
-    sellerNotePlaceholder: lang === 'ar' ? 'أضف ØªØ¹Ù„ÙŠÙ‚ Ø¯Ø§Ø®Ù„ÙŠ هنا...' : (lang === 'fr' ? 'Commentaire interne (visible uniquement par vous)...' : 'Internal comment (visible only to you)...'),
-    refundAmountLabel: lang === 'ar' ? 'مبلغ Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯ (Ø¯Ø¬)' : (lang === 'fr' ? 'Montant à  rembourser (DA)' : 'Refund Amount (DA)'),
-    noReturns: lang === 'ar' ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª مرتجعات Ø­Ø§Ù„ÙŠØ§Ù‹.' : (lang === 'fr' ? 'Aucune demande de retour pour le moment.' : 'No return requests found.'),
-    actions: lang === 'ar' ? 'ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø­Ø§Ù„Ø© Ø¥Ù„Ù‰' : (lang === 'fr' ? 'Changer le statut en' : 'Update status to'),
-    saveNotes: lang === 'ar' ? 'حفظ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª' : (lang === 'fr' ? 'Enregistrer les notes' : 'Save Notes'),
+    subtitle: lang === 'ar' ? `لديك ${returns.length} طلب مرتجع` : (lang === 'fr' ? `${returns.length} demande(s) de retour` : `${returns.length} return request(s)`),
+    reason: lang === 'ar' ? 'السبب' : (lang === 'fr' ? 'Raison' : 'Reason'),
+    sellerNote: lang === 'ar' ? 'ملاحظة البائع' : (lang === 'fr' ? 'Note du vendeur' : 'Seller Note'),
+    sellerNotePlaceholder: lang === 'ar' ? 'أضف تعليق داخلي هنا...' : (lang === 'fr' ? 'Commentaire interne (visible uniquement par vous)...' : 'Internal comment (visible only to you)...'),
+    refundAmountLabel: lang === 'ar' ? 'مبلغ الاسترداد (دج)' : (lang === 'fr' ? 'Montant à  rembourser (DA)' : 'Refund Amount (DA)'),
+    noReturns: lang === 'ar' ? 'لا توجد طلبات مرتجعات حالياً.' : (lang === 'fr' ? 'Aucune demande de retour pour le moment.' : 'No return requests found.'),
+    actions: lang === 'ar' ? 'تحديث الحالة إلى' : (lang === 'fr' ? 'Changer le statut en' : 'Update status to'),
+    saveNotes: lang === 'ar' ? 'حفظ التعديلات' : (lang === 'fr' ? 'Enregistrer les notes' : 'Save Notes'),
   }
 
   return (

@@ -1,8 +1,8 @@
 ﻿/**
- * Seller session tracking â€” device-level fingerprinting and revocation.
+ * Seller session tracking — device-level fingerprinting and revocation.
  *
  * Each unique (user_id, device_hash) pair is one session row.
- * device_hash = SHA-256(userAgent || ip)[:16] â€” opaque, no raw PII stored.
+ * device_hash = SHA-256(userAgent || ip)[:16] — opaque, no raw PII stored.
  *
  * On every authenticated seller request, call upsertSellerSession() to keep
  * last_seen_at fresh. Use the 30-minute debounce to avoid a DB write per request.
@@ -10,7 +10,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
-/** Stable opaque fingerprint â€” same UA+IP always yields same hash.
+/** Stable opaque fingerprint — same UA+IP always yields same hash.
  *  Uses the Web Crypto API so it works in both Node.js and Edge Runtime.
  */
 export async function deviceHash(userAgent: string, ip: string): Promise<string> {
@@ -36,7 +36,7 @@ export interface SellerSession {
 /**
  * Upsert a session record for the current device.
  * Debounced: only updates last_seen_at if it is more than 30 minutes old.
- * Non-blocking â€” errors are silently swallowed.
+ * Non-blocking — errors are silently swallowed.
  */
 const DEBOUNCE_MS = 30 * 60 * 1000 // 30 minutes
 
@@ -108,7 +108,7 @@ export async function revokeSellerSession(userId: string, sessionId: string): Pr
     .from('seller_sessions')
     .update({ is_revoked: true, revoked_at: new Date().toISOString() })
     .eq('id', sessionId)
-    .eq('user_id', userId) // IDOR guard â€” user can only revoke their own sessions
+    .eq('user_id', userId) // IDOR guard — user can only revoke their own sessions
     .select('id')
     .maybeSingle()
   return !!data
@@ -138,7 +138,7 @@ export async function isSessionRevoked(userId: string, ua: string, ip: string): 
     .eq('device_hash', hash)
     .maybeSingle()
 
-  // No session record â†’ not revoked (new device, session tracking not yet active)
+  // No session record → not revoked (new device, session tracking not yet active)
   if (!data) return false
   if (data.is_revoked === true) return true
   if (data.revoked_at != null) return true

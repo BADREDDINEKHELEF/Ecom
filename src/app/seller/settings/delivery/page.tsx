@@ -300,7 +300,7 @@ export default function DeliverySettingsPage() {
                       )}
                       {testResult === 'unsaved' && (
                         <span className="text-sm font-semibold text-amber-500">
-                          {isRTL ? 'ÙŠØ±Ø¬Ù‰ حفظ Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª Ø£ÙˆÙ„Ø§Ù‹ Ù„Ù„ØªØ¬Ø±Ø¨Ø©' : "Sauvegardez d'abord pour tester."}
+                          {isRTL ? 'يرجى حفظ التغييرات أولاً للتجربة' : "Sauvegardez d'abord pour tester."}
                         </span>
                       )}
                     </div>
@@ -544,7 +544,7 @@ export default function DeliverySettingsPage() {
                       )}
                       {testResultApec === 'unsaved' && (
                         <span className="text-sm font-semibold text-amber-500">
-                          {isRTL ? 'ÙŠØ±Ø¬Ù‰ حفظ Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª Ø£ÙˆÙ„Ø§Ù‹ Ù„Ù„ØªØ¬Ø±Ø¨Ø©' : "Sauvegardez d'abord pour tester."}
+                          {isRTL ? 'يرجى حفظ التغييرات أولاً للتجربة' : "Sauvegardez d'abord pour tester."}
                         </span>
                       )}
                     </div>

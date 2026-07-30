@@ -128,7 +128,7 @@ export default function SellerProductsPage() {
       setMarketingResult(data)
       setMarketingActiveTab('fr')
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Une erreur est survenue lors de la gÃ©nÃ©ration.', 'error')
+      addToast(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération.', 'error')
       setShowMarketingModal(false)
     } finally {
       setMarketingLoading(false)
@@ -163,7 +163,7 @@ export default function SellerProductsPage() {
       setAiResult(data)
       setAiActiveTab('fr')
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Une erreur est survenue lors de la gÃ©nÃ©ration.', 'error')
+      addToast(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération.', 'error')
     } finally {
       setAiLoading(false)
     }
@@ -197,7 +197,7 @@ export default function SellerProductsPage() {
         tags: Array.isArray(data.tags) ? data.tags.join(', ') : prev.tags,
       }))
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Une erreur est survenue lors de la gÃ©nÃ©ration SEO.', 'error')
+      addToast(err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération SEO.', 'error')
     } finally {
       setSeoLoading(false)
     }
@@ -285,7 +285,7 @@ export default function SellerProductsPage() {
         const limitCheck = await checkVendorProductLimit(vendor.id)
         if (!limitCheck.allowed) {
           const limitMsg = limitCheck.limit !== null
-            ? `Limite atteinte : ${limitCheck.count}/${limitCheck.limit} produits. Passez Ã   un plan supÃ©rieur pour ajouter plus de produits.`
+            ? `Limite atteinte : ${limitCheck.count}/${limitCheck.limit} produits. Passez à  un plan supérieur pour ajouter plus de produits.`
             : 'Limite de produits atteinte. Veuillez contacter le support.'
           setFormError(limitMsg)
           setSaving(false)
@@ -337,7 +337,7 @@ export default function SellerProductsPage() {
       await deleteProduct(id)
       setProducts((prev) => prev.filter((p) => p.id !== id))
     } catch {
-      setFormError('Impossible de supprimer ce produit. RÃ©essayez.')
+      setFormError('Impossible de supprimer ce produit. Réessayez.')
     }
   }
 
@@ -383,7 +383,7 @@ export default function SellerProductsPage() {
                 </div>
                 <div>
                   <h2 className="font-black text-gray-900 text-base leading-tight">{editing ? sp.editTitle : sp.newTitle}</h2>
-                  <p className="text-xs text-gray-400">ComplÃ©tez en moins d&apos;une minute</p>
+                  <p className="text-xs text-gray-400">Complétez en moins d&apos;une minute</p>
                 </div>
               </div>
               <button onClick={closeForm} aria-label={sp.cancelBtn} type="button"
@@ -394,7 +394,7 @@ export default function SellerProductsPage() {
 
             <form onSubmit={handleSave} className="divide-y divide-gray-50">
 
-              {/* â”€â”€ Section 1: Photos & Colors â”€â”€ */}
+              {/* ── Section 1: Photos & Colors ── */}
               <div className="px-6 py-5">
                 <div className="flex items-center gap-2.5 mb-4">
                   <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -402,7 +402,7 @@ export default function SellerProductsPage() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 text-sm leading-tight">Photos du produit</p>
-                    <p className="text-xs text-gray-400">Ajoutez vos photos Â· sÃ©lectionnez une couleur pour chaque photo Â· max 8</p>
+                    <p className="text-xs text-gray-400">Ajoutez vos photos · sélectionnez une couleur pour chaque photo · max 8</p>
                   </div>
                 </div>
                 <ImageUploader
@@ -415,7 +415,7 @@ export default function SellerProductsPage() {
                 />
               </div>
 
-              {/* â”€â”€ Section 3: Essential info â”€â”€ */}
+              {/* ── Section 3: Essential info ── */}
               <div className="px-6 py-5 space-y-4">
                 <div className="flex items-center gap-2.5 mb-1">
                   <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -447,20 +447,20 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'name' && translatingField?.lang === 'ar' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'ðŸ‡©ðŸ‡¿ AR'
+                            '🇩🇿 AR'
                           )}
                         </button>
                         <button
                           type="button"
                           disabled={translatingField !== null}
                           onClick={() => handleTranslateField('name', 'fr')}
-                          title="Traduire en FranÃ§ais"
+                          title="Traduire en Français"
                           className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
                         >
                           {translatingField?.field === 'name' && translatingField?.lang === 'fr' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'ðŸ‡«ðŸ‡· FR'
+                            '🇫🇷 FR'
                           )}
                         </button>
                         <button
@@ -473,7 +473,7 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'name' && translatingField?.lang === 'en' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'ðŸ‡¬ðŸ‡§ EN'
+                            '🇬🇧 EN'
                           )}
                         </button>
                       </div>
@@ -497,7 +497,7 @@ export default function SellerProductsPage() {
                     <input
                       type="number" min="0" value={form.comparePrice || ''}
                       onChange={(e) => setForm({ ...form, comparePrice: Number(e.target.value) })}
-                      placeholder="â€”"
+                      placeholder="—"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400 transition-colors"
                     />
                   </div>
@@ -535,7 +535,7 @@ export default function SellerProductsPage() {
                 </div>
               </div>
 
-              {/* â”€â”€ Section 3: Description â”€â”€ */}
+              {/* ── Section 3: Description ── */}
               <div className="px-6 py-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2.5">
@@ -546,7 +546,7 @@ export default function SellerProductsPage() {
                       <p className="font-bold text-gray-900 text-sm leading-tight">
                         Description <span className="font-normal text-gray-400">(optionnel)</span>
                       </p>
-                      <p className="text-xs text-gray-400">Astuce : utilisez une ligne par caractÃ©ristique</p>
+                      <p className="text-xs text-gray-400">Astuce : utilisez une ligne par caractéristique</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -562,20 +562,20 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'description' && translatingField?.lang === 'ar' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'ðŸ‡©ðŸ‡¿ AR'
+                            '🇩🇿 AR'
                           )}
                         </button>
                         <button
                           type="button"
                           disabled={translatingField !== null}
                           onClick={() => handleTranslateField('description', 'fr')}
-                          title="Traduire en FranÃ§ais"
+                          title="Traduire en Français"
                           className="px-2 py-1 bg-gray-100 hover:bg-gray-250 text-[10px] font-bold text-gray-600 rounded border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[32px]"
                         >
                           {translatingField?.field === 'description' && translatingField?.lang === 'fr' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'ðŸ‡«ðŸ‡· FR'
+                            '🇫🇷 FR'
                           )}
                         </button>
                         <button
@@ -588,7 +588,7 @@ export default function SellerProductsPage() {
                           {translatingField?.field === 'description' && translatingField?.lang === 'en' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            'ðŸ‡¬ðŸ‡§ EN'
+                            '🇬🇧 EN'
                           )}
                         </button>
                       </div>
@@ -599,7 +599,7 @@ export default function SellerProductsPage() {
                       className="flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100 transition-colors"
                     >
                       <Sparkles className="w-3 h-3" />
-                      GÃ©nÃ©rer avec l&apos;IA
+                      Générer avec l&apos;IA
                     </button>
                   </div>
                 </div>
@@ -612,7 +612,7 @@ export default function SellerProductsPage() {
                 />
               </div>
 
-              {/* â”€â”€ More options (accordion) â”€â”€ */}
+              {/* ── More options (accordion) ── */}
               <div className="px-6 py-4">
                 <button
                   type="button"
@@ -622,7 +622,7 @@ export default function SellerProductsPage() {
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
                   <span>Plus d&apos;options</span>
                   {!showAdvanced && (
-                    <span className="text-xs font-normal text-gray-400 ml-1">Ã©tat Â· SEO Â· tags Â· MOQ?</span>
+                    <span className="text-xs font-normal text-gray-400 ml-1">état · SEO · tags · MOQ?</span>
                   )}
                 </button>
 
@@ -634,7 +634,7 @@ export default function SellerProductsPage() {
                       {[
                         { key: 'isNew',      label: sp.markNew },
                         { key: 'isFeatured', label: sp.markFeatured },
-                        { key: 'isPreOrder', label: 'PrÃ©-commande' },
+                        { key: 'isPreOrder', label: 'Pré-commande' },
                         { key: 'isBundle',   label: 'Pack / bundle' },
                       ].map(({ key, label }) => (
                         <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
@@ -652,7 +652,7 @@ export default function SellerProductsPage() {
                     {/* Pre-order date */}
                     {form.isPreOrder && (
                       <div className="max-w-xs">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Date de disponibilitÃ©</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Date de disponibilité</label>
                         <input type="date" value={form.preOrderDate}
                           onChange={(e) => setForm({ ...form, preOrderDate: e.target.value })}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
@@ -662,17 +662,17 @@ export default function SellerProductsPage() {
                     {/* Condition + MOQ */}
                     <div className="grid grid-cols-2 gap-3 max-w-sm">
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ã‰tat</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">État</label>
                         <select value={form.condition}
                           onChange={(e) => setForm({ ...form, condition: e.target.value as 'new' | 'used' | 'refurbished' })}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-emerald-400">
                           <option value="new">Neuf</option>
                           <option value="used">Occasion</option>
-                          <option value="refurbished">ReconditionnÃ©</option>
+                          <option value="refurbished">Reconditionné</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">QtÃ© min. (MOQ)</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Qté min. (MOQ)</label>
                         <input type="number" min="1" value={form.minOrderQuantity}
                           onChange={(e) => setForm({ ...form, minOrderQuantity: Number(e.target.value) })}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
@@ -697,7 +697,7 @@ export default function SellerProductsPage() {
                         <Layers className="w-4 h-4 text-indigo-600" />
                         <div>
                           <p className="text-sm font-bold text-gray-900">Ce produit a des variantes de taille / prix</p>
-                          <p className="text-xs text-gray-500">Taille Ã— Pointure? avec stock et prix individuels</p>
+                          <p className="text-xs text-gray-500">Taille × Pointure? avec stock et prix individuels</p>
                         </div>
                       </div>
                     </label>
@@ -729,7 +729,7 @@ export default function SellerProductsPage() {
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Titre SEO</label>
                         <input type="text" maxLength={120} value={form.metaTitle}
                           onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
-                          placeholder="Titre affichÃ© dans Google"
+                          placeholder="Titre affiché dans Google"
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400" />
                       </div>
                       <div>
@@ -744,7 +744,7 @@ export default function SellerProductsPage() {
                 )}
               </div>
 
-              {/* â”€â”€ Submit bar â”€â”€ */}
+              {/* ── Submit bar ── */}
               <div className="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row items-center gap-3">
                 {formError && <p className="w-full sm:flex-1 text-sm text-red-500 text-center sm:text-left">{formError}</p>}
                 <div className="flex gap-3 w-full sm:w-auto justify-end sm:ml-auto">
@@ -755,7 +755,7 @@ export default function SellerProductsPage() {
                   <button type="submit" disabled={saving}
                     className="flex-grow sm:flex-initial flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 active:scale-95 disabled:opacity-60 transition-all text-sm shadow-sm shadow-emerald-200">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    {editing ? sp.saveBtn : 'ðŸš€ ' + sp.addBtn}
+                    {editing ? sp.saveBtn : '🚀 ' + sp.addBtn}
                   </button>
                 </div>
               </div>
@@ -807,7 +807,7 @@ export default function SellerProductsPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <span className="font-bold text-gray-900 text-sm">{formatPrice(p.price)}</span>
                         <span className={`text-xs font-medium ${p.stock === 0 ? 'text-red-500' : p.stock < 5 ? 'text-amber-500' : 'text-green-600'}`}>
-                          Â· {sp.colStock}: {p.stock}
+                          · {sp.colStock}: {p.stock}
                         </span>
                       </div>
                     </div>
@@ -890,7 +890,7 @@ export default function SellerProductsPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-gray-500">
-              Page {page} sur {totalPages} Â· {totalProducts} produits
+              Page {page} sur {totalPages} · {totalProducts} produits
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -898,7 +898,7 @@ export default function SellerProductsPage() {
                 disabled={page <= 1 || loadingProds}
                 className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                PrÃ©cÃ©dent
+                Précédent
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -921,7 +921,7 @@ export default function SellerProductsPage() {
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
-                  <h3 className="font-black text-gray-900">GÃ©nÃ©rer la description avec l&apos;IA</h3>
+                  <h3 className="font-black text-gray-900">Générer la description avec l&apos;IA</h3>
                 </div>
                 <button type="button" onClick={() => { setShowAiModal(false); setAiResult(null); setAiPrompt(''); }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
                   <X className="w-4 h-4" />
@@ -932,13 +932,13 @@ export default function SellerProductsPage() {
                 {!aiResult ? (
                   <div className="space-y-4">
                     <label className="block text-sm font-semibold text-gray-700">
-                      DÃ©crivez votre produit en quelques mots (en franÃ§ais ou arabe/darija) :
+                      Décrivez votre produit en quelques mots (en français ou arabe/darija) :
                     </label>
                     <textarea
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                       rows={4}
-                      placeholder="ex: Robe kabyle moderne avec broderie fine bleu et blanc, tissu en lin lÃ©ger, confortable..."
+                      placeholder="ex: Robe kabyle moderne avec broderie fine bleu et blanc, tissu en lin léger, confortable..."
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500"
                     />
                     <button
@@ -950,12 +950,12 @@ export default function SellerProductsPage() {
                       {aiLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          GÃ©nÃ©ration en cours...
+                          Génération en cours...
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4" />
-                          GÃ©nÃ©rer la description
+                          Générer la description
                         </>
                       )}
                     </button>
@@ -975,7 +975,7 @@ export default function SellerProductsPage() {
                               : 'border-transparent text-gray-400 hover:text-gray-600'
                           }`}
                         >
-                          {lang === 'fr' ? 'FranÃ§ais' : lang === 'ar' ? 'Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â±Ã˜Â¨Ã™Å Ã˜Â©' : 'English'}
+                          {lang === 'fr' ? 'Français' : lang === 'ar' ? 'العربية' : 'English'}
                         </button>
                       ))}
                     </div>
@@ -996,7 +996,7 @@ export default function SellerProductsPage() {
                         onClick={() => setAiResult(null)}
                         className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50 text-gray-600"
                       >
-                        RÃ©Ã©crire / Retour
+                        Réécrire / Retour
                       </button>
                       <button
                         type="button"
@@ -1008,7 +1008,7 @@ export default function SellerProductsPage() {
                         }}
                         className="flex-grow py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md shadow-purple-100"
                       >
-                        InsÃ©rer cette version
+                        Insérer cette version
                       </button>
                     </div>
                   </div>
@@ -1035,7 +1035,7 @@ export default function SellerProductsPage() {
                 {marketingLoading ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
                     <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-                    <p className="font-semibold text-sm">GÃ©nÃ©ration du kit marketing en cours...</p>
+                    <p className="font-semibold text-sm">Génération du kit marketing en cours...</p>
                   </div>
                 ) : marketingResult ? (
                   <div className="space-y-4">
@@ -1052,7 +1052,7 @@ export default function SellerProductsPage() {
                               : 'border-transparent text-gray-400 hover:text-gray-600'
                           }`}
                         >
-                          {lang === 'fr' ? 'FranÃ§ais' : lang === 'ar' ? 'Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â±Ã˜Â¨Ã™Å Ã˜Â©' : 'English'}
+                          {lang === 'fr' ? 'Français' : lang === 'ar' ? 'العربية' : 'English'}
                         </button>
                       ))}
                     </div>
@@ -1068,7 +1068,7 @@ export default function SellerProductsPage() {
                         >
                           {copiedField === 'sms' ? (
                             <>
-                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> CopiÃ© !
+                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> Copié !
                             </>
                           ) : (
                             <>
@@ -1088,7 +1088,7 @@ export default function SellerProductsPage() {
                     {/* Instagram/Facebook Section */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest font-mono">Publication RÃ©seaux Sociaux</label>
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest font-mono">Publication Réseaux Sociaux</label>
                         <button
                           type="button"
                           onClick={() => handleCopyText(marketingResult.instagram[marketingActiveTab], 'insta')}
@@ -1096,7 +1096,7 @@ export default function SellerProductsPage() {
                         >
                           {copiedField === 'insta' ? (
                             <>
-                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> CopiÃ© !
+                              <Check className="w-3 h-3 text-green-600 animate-in zoom-in duration-200" /> Copié !
                             </>
                           ) : (
                             <>
