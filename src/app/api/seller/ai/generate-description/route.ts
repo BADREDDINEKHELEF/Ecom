@@ -55,6 +55,13 @@ export async function POST(req: NextRequest) {
     return copyCookies(response, NextResponse.json(result))
   } catch (err) {
     logger.error('[POST /api/seller/ai/generate-description]', { error: err instanceof Error ? err.message : String(err) })
+    const errMsg = err instanceof Error ? err.message : String(err)
+    if (errMsg.includes('GEMINI_API_KEY')) {
+      return copyCookies(response, NextResponse.json(
+        { error: "La clé API Gemini n'est pas configurée sur le serveur. Veuillez configurer la variable d'environnement GEMINI_API_KEY dans votre tableau de bord." },
+        { status: 503 }
+      ))
+    }
     return copyCookies(response, NextResponse.json({ error: 'Internal server error' }, { status: 500 }))
   }
 }
