@@ -95,7 +95,9 @@ CREATE TRIGGER trigger_commission_on_delivery
 
 -- Unique constraint to prevent duplicate commissions per order
 ALTER TABLE public.commissions
-  ADD CONSTRAINT IF NOT EXISTS commissions_order_id_key UNIQUE (order_id);
+  DROP CONSTRAINT IF EXISTS commissions_order_id_key;
+ALTER TABLE public.commissions
+  ADD CONSTRAINT commissions_order_id_key UNIQUE (order_id);
 
 -- ── Search events helper view ─────────────────────────────────────────────────
 CREATE OR REPLACE VIEW public.search_analytics AS
